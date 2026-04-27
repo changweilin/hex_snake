@@ -188,6 +188,13 @@
       filter: brightness(1.05);
     }
 
+    button.secondary {
+      width: 100%;
+      background: #151b25;
+      color: var(--ink);
+      border: 1px solid var(--line);
+    }
+
     .side {
       min-height: 100%;
       border-radius: 8px;
@@ -207,6 +214,35 @@
     .section h2 {
       margin: 0 0 10px;
       font-size: 1rem;
+    }
+
+    .field {
+      display: grid;
+      gap: 8px;
+    }
+
+    .field label {
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    .field input {
+      width: 100%;
+      min-height: 42px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: #151b25;
+      color: var(--ink);
+      font: inherit;
+      font-weight: 800;
+      padding: 8px 10px;
+    }
+
+    .field input:focus {
+      border-color: var(--accent);
+      outline: 2px solid rgba(125, 213, 111, 0.22);
+      outline-offset: 2px;
     }
 
     .keys {
@@ -321,6 +357,9 @@
           <div class="metric"><span>分數</span><strong id="score">0</strong></div>
           <div class="metric"><span>最佳</span><strong id="best">0</strong></div>
           <div class="metric"><span>速度</span><strong id="speed">1x</strong></div>
+          <div class="metric"><span>總時間</span><strong id="totalTime">0:00</strong></div>
+          <div class="metric"><span>上次餵食</span><strong id="lastFeedTime">0:00</strong></div>
+          <div class="metric"><span>最佳總時間</span><strong id="bestTime">0:00</strong></div>
         </div>
       </header>
 
@@ -337,6 +376,15 @@
     </section>
 
     <aside class="side" aria-label="控制面板">
+      <section class="section">
+        <h2>棋盤設定</h2>
+        <div class="field">
+          <label for="gridSize">格子數</label>
+          <input id="gridSize" type="number" min="6" max="12" step="1" value="10" inputmode="numeric">
+        </div>
+        <button id="resetBestTimeButton" class="secondary" type="button">刷新最佳總時間</button>
+      </section>
+
       <section class="section">
         <h2>六方向鍵</h2>
         <div class="keys" id="keys">
@@ -378,11 +426,19 @@
     const scoreEl = document.querySelector("#score");
     const bestEl = document.querySelector("#best");
     const speedEl = document.querySelector("#speed");
+    const totalTimeEl = document.querySelector("#totalTime");
+    const lastFeedTimeEl = document.querySelector("#lastFeedTime");
+    const bestTimeEl = document.querySelector("#bestTime");
     const stick = document.querySelector("#stick");
     const joyZone = document.querySelector("#joyZone");
+    const gridSizeInput = document.querySelector("#gridSize");
+    const resetBestTimeButton = document.querySelector("#resetBestTimeButton");
     const keyEls = [...document.querySelectorAll(".key")];
 
-    const radius = 9;
+    const minGridSize = 6;
+    const maxGridSize = 12;
+    let gridSize = 10;
+    let radius = gridSize - 1;
     const directions = [
       { q: 0, r: -1, angle: -90, key: "w" },
       { q: 1, r: -1, angle: -30, key: "e" },
@@ -404,15 +460,7 @@
       eye: "#10160f"
     };
     const keyToDir = new Map(directions.map((dir, index) => [dir.key, index]));
-    const cells = [];
-
-    for (let q = -radius; q <= radius; q += 1) {
-      const r1 = Math.max(-radius, -q - radius);
-      const r2 = Math.min(radius, -q + radius);
-      for (let r = r1; r <= r2; r += 1) {
-        cells.push({ q, r });
-      }
-    }
+    let cells = [];
 
     let cellSize = 28;
     let center = { x: 0, y: 0 };
@@ -422,15 +470,50 @@
     let nextDir;
     let score;
     let best = Number(localStorage.getItem("hexSnakeBest") || 0);
+    let bestTotalMs = Number(localStorage.getItem("hexSnakeBestTotalMs") || 0);
+    let totalElapsedMs = 0;
+    let lastFeedElapsedMs = 0;
     let running = false;
     let paused = false;
     let gameOver = false;
     let stepMs = 190;
     let lastStep = 0;
+    let lastTimerFrame = 0;
     let rafId = 0;
     let pointerId = null;
 
     bestEl.textContent = best;
+
+    function formatTime(ms) {
+      const totalSeconds = Math.floor(ms / 1000);
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      return `${minutes}:${String(seconds).padStart(2, "0")}`;
+    }
+
+    function clampGridSize(value) {
+      const parsed = Number.parseInt(value, 10);
+      if (!Number.isFinite(parsed)) return gridSize;
+      return Math.min(maxGridSize, Math.max(minGridSize, parsed));
+    }
+
+    function buildCells() {
+      cells = [];
+      for (let q = -radius; q <= radius; q += 1) {
+        const r1 = Math.max(-radius, -q - radius);
+        const r2 = Math.min(radius, -q + radius);
+        for (let r = r1; r <= r2; r += 1) {
+          cells.push({ q, r });
+        }
+      }
+    }
+
+    function setGridSize(value) {
+      gridSize = clampGridSize(value);
+      radius = gridSize - 1;
+      gridSizeInput.value = gridSize;
+      buildCells();
+    }
 
     function keyOf(cell) {
       return `${cell.q},${cell.r}`;
@@ -483,6 +566,9 @@
       nextDir = 0;
       score = 0;
       stepMs = 190;
+      totalElapsedMs = 0;
+      lastFeedElapsedMs = 0;
+      lastTimerFrame = 0;
       gameOver = false;
       paused = false;
       placeFood();
@@ -495,6 +581,7 @@
       running = true;
       overlay.classList.remove("show");
       lastStep = performance.now();
+      lastTimerFrame = lastStep;
       cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(loop);
     }
@@ -508,6 +595,9 @@
     function updateHud() {
       scoreEl.textContent = score;
       bestEl.textContent = best;
+      totalTimeEl.textContent = formatTime(totalElapsedMs);
+      lastFeedTimeEl.textContent = formatTime(lastFeedElapsedMs);
+      bestTimeEl.textContent = formatTime(bestTotalMs);
       const speed = Math.max(1, Math.round((190 / stepMs) * 10) / 10);
       speedEl.textContent = `${speed}x`;
       keyEls.forEach(el => el.classList.toggle("active", Number(el.dataset.dir) === nextDir));
@@ -551,6 +641,7 @@
         score += 1;
         best = Math.max(best, score);
         localStorage.setItem("hexSnakeBest", String(best));
+        lastFeedElapsedMs = 0;
         stepMs = Math.max(78, stepMs - 5);
         placeFood();
       } else {
@@ -563,6 +654,11 @@
     function endGame() {
       running = false;
       gameOver = true;
+      if (totalElapsedMs > bestTotalMs) {
+        bestTotalMs = totalElapsedMs;
+        localStorage.setItem("hexSnakeBestTotalMs", String(Math.floor(bestTotalMs)));
+      }
+      updateHud();
       setStatus("遊戲結束");
       overlayTitle.textContent = "撞到了";
       overlayText.textContent = `這次分數 ${score}，再來一局。`;
@@ -575,10 +671,19 @@
         draw();
         return;
       }
+      if (!paused) {
+        const delta = lastTimerFrame ? now - lastTimerFrame : 0;
+        totalElapsedMs += delta;
+        lastFeedElapsedMs += delta;
+        lastTimerFrame = now;
+      } else {
+        lastTimerFrame = now;
+      }
       if (!paused && now - lastStep >= stepMs) {
         step();
         lastStep = now;
       }
+      updateHud();
       draw();
       rafId = requestAnimationFrame(loop);
     }
@@ -662,12 +767,31 @@
       stick.style.transform = "translate(0, 0)";
     }
 
+    gridSizeInput.addEventListener("change", () => {
+      setGridSize(gridSizeInput.value);
+      running = false;
+      cancelAnimationFrame(rafId);
+      resetGame();
+      resize();
+      overlayTitle.textContent = "棋盤已更新";
+      overlayText.textContent = `格子數已設定為 ${gridSize}，按開始重新遊玩。`;
+      startButton.textContent = "開始";
+      overlay.classList.add("show");
+    });
+
+    resetBestTimeButton.addEventListener("click", () => {
+      bestTotalMs = 0;
+      localStorage.setItem("hexSnakeBestTotalMs", "0");
+      updateHud();
+    });
+
     startButton.addEventListener("click", () => {
       if (paused && running && !gameOver) {
         paused = false;
         setStatus("移動中");
         overlay.classList.remove("show");
         lastStep = performance.now();
+        lastTimerFrame = lastStep;
         return;
       }
       overlayTitle.textContent = "準備好了";
@@ -708,7 +832,10 @@
         overlayText.textContent = "按空白鍵或開始鍵繼續。";
         startButton.textContent = "繼續";
         overlay.classList.toggle("show", paused);
-        if (!paused) lastStep = performance.now();
+        if (!paused) {
+          lastStep = performance.now();
+          lastTimerFrame = lastStep;
+        }
         return;
       }
 
@@ -717,6 +844,7 @@
           paused = false;
           overlay.classList.remove("show");
           lastStep = performance.now();
+          lastTimerFrame = lastStep;
         }
         setDirection(keyToDir.get(key));
       }
@@ -724,6 +852,7 @@
 
     window.addEventListener("resize", resize);
 
+    setGridSize(gridSizeInput.value);
     resetGame();
     resize();
   </script>
