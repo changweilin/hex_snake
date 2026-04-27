@@ -458,7 +458,8 @@
           <div class="status" id="status">拖曳搖桿或按 A W E F X Z 開始移動</div>
         </div>
         <div class="metrics" aria-label="遊戲分數">
-          <div class="metric"><span>分數</span><strong id="score">0</strong></div>
+          <div class="metric"><span>你</span><strong id="score">0</strong></div>
+          <div class="metric"><span>電腦</span><strong id="computerScore">0</strong></div>
           <div class="metric"><span>最佳</span><strong id="best">0</strong></div>
           <div class="metric"><span>速度</span><strong id="speed">1x</strong></div>
           <div class="metric"><span>總時間</span><strong id="totalTime">0:00</strong></div>
@@ -472,7 +473,7 @@
         <div class="overlay show" id="overlay">
           <div class="dialog">
             <h2 id="overlayTitle">準備好了</h2>
-            <p id="overlayText">吃下金色食物，別撞到自己或離開六角盤面。</p>
+            <p id="overlayText">搶下金色食物，別撞到自己、牆或對手。</p>
             <button id="startButton" type="button">開始</button>
           </div>
         </div>
@@ -514,6 +515,7 @@
           <li><b>滑鼠 / 觸控</b>：拖曳圓形搖桿決定下一個方向。</li>
           <li><b>A W E F X Z</b>：對應六個相鄰方向。</li>
           <li><b>空白鍵</b>：暫停或繼續。</li>
+          <li><b>勝負</b>：任一方撞牆、撞自己或撞對手即落敗；同時出局比分高者勝，同分平手。</li>
         </ul>
       </section>
     </aside>
@@ -529,6 +531,7 @@
     const startButton = document.querySelector("#startButton");
     const statusEl = document.querySelector("#status");
     const scoreEl = document.querySelector("#score");
+    const computerScoreEl = document.querySelector("#computerScore");
     const bestEl = document.querySelector("#best");
     const speedEl = document.querySelector("#speed");
     const totalTimeEl = document.querySelector("#totalTime");
@@ -563,6 +566,10 @@
       body: "#62c95f",
       headLine: "#e9ffd7",
       bodyLine: "#245c34",
+      computerHead: "#7db7ff",
+      computerBody: "#4b82dd",
+      computerHeadLine: "#e5f1ff",
+      computerBodyLine: "#1d457c",
       eye: "#10160f"
     };
     const keyToDir = new Map(directions.map((dir, index) => [dir.key, index]));
@@ -571,9 +578,12 @@
     let cellSize = 28;
     let center = { x: 0, y: 0 };
     let snake;
+    let computerSnake;
     let food;
     let dir;
     let nextDir;
+    let computerDir;
+    let computerScore;
     let score;
     let best = Number(localStorage.getItem("hexSnakeBest") || 0);
     let bestTotalMs = Number(localStorage.getItem("hexSnakeBestTotalMs") || 0);
@@ -663,14 +673,22 @@
     }
 
     function resetGame() {
+      const offset = Math.min(2, Math.max(1, radius - 3));
       snake = [
-        { q: 0, r: 1 },
-        { q: 0, r: 2 },
-        { q: 0, r: 3 }
+        { q: -offset, r: offset },
+        { q: -offset, r: offset + 1 },
+        { q: -offset, r: offset + 2 }
+      ];
+      computerSnake = [
+        { q: offset, r: -offset },
+        { q: offset, r: -offset - 1 },
+        { q: offset, r: -offset - 2 }
       ];
       dir = 0;
       nextDir = 0;
+      computerDir = 3;
       score = 0;
+      computerScore = 0;
       stepMs = 190;
       totalElapsedMs = 0;
       lastFeedElapsedMs = 0;
@@ -679,12 +697,13 @@
       paused = false;
       placeFood();
       updateHud();
-      setStatus("移動中");
+      setStatus("準備競賽");
     }
 
     function startGame() {
       resetGame();
       running = true;
+      setStatus("移動中");
       overlay.classList.remove("show");
       lastStep = performance.now();
       lastTimerFrame = lastStep;
@@ -693,13 +712,17 @@
     }
 
     function placeFood() {
-      const occupied = new Set(snake.map(keyOf));
+      const occupied = new Set([
+        ...snake.map(keyOf),
+        ...computerSnake.map(keyOf)
+      ]);
       const openCells = cells.filter(cell => !occupied.has(keyOf(cell)));
       food = openCells[Math.floor(Math.random() * openCells.length)];
     }
 
     function updateHud() {
       scoreEl.textContent = score;
+      computerScoreEl.textContent = computerScore;
       bestEl.textContent = best;
       totalTimeEl.textContent = formatTime(totalElapsedMs);
       lastFeedTimeEl.textContent = formatTime(lastFeedElapsedMs);
@@ -717,6 +740,49 @@
       return snake.length < 2 || (newDir + 3) % 6 !== dir;
     }
 
+    function canComputerTurn(newDir) {
+      return computerSnake.length < 2 || (newDir + 3) % 6 !== computerDir;
+    }
+
+    function hexDistance(a, b) {
+      const as = -a.q - a.r;
+      const bs = -b.q - b.r;
+      return (Math.abs(a.q - b.q) + Math.abs(a.r - b.r) + Math.abs(as - bs)) / 2;
+    }
+
+    function nextCell(head, direction) {
+      const delta = directions[direction];
+      return { q: head.q + delta.q, r: head.r + delta.r };
+    }
+
+    function chooseComputerDirection() {
+      const playerHead = snake[0];
+      const playerThreat = nextCell(playerHead, nextDir);
+      const occupied = new Set([
+        ...snake.map(keyOf),
+        ...computerSnake.slice(0, -1).map(keyOf)
+      ]);
+      let bestChoice = computerDir;
+      let bestValue = Number.POSITIVE_INFINITY;
+
+      directions.forEach((_, candidate) => {
+        if (!canComputerTurn(candidate)) return;
+        const next = nextCell(computerSnake[0], candidate);
+        const nextKey = keyOf(next);
+        if (!isInside(next) || occupied.has(nextKey)) return;
+
+        const danger = keyOf(playerThreat) === nextKey ? 20 : 0;
+        const wallPressure = cells.filter(cell => hexDistance(cell, next) <= 1 && !occupied.has(keyOf(cell))).length;
+        const value = hexDistance(next, food) + danger - wallPressure * 0.08;
+        if (value < bestValue) {
+          bestValue = value;
+          bestChoice = candidate;
+        }
+      });
+
+      return bestChoice;
+    }
+
     function setDirection(newDir) {
       if (!Number.isInteger(newDir) || newDir < 0 || newDir > 5) return;
       if (canTurn(newDir)) {
@@ -728,20 +794,37 @@
 
     function step() {
       dir = nextDir;
-      const head = snake[0];
-      const delta = directions[dir];
-      const next = { q: head.q + delta.q, r: head.r + delta.r };
-      const nextKey = keyOf(next);
-      const eating = next.q === food.q && next.r === food.r;
-      const body = eating ? snake : snake.slice(0, -1);
-      const hitSelf = body.some(segment => keyOf(segment) === nextKey);
+      computerDir = chooseComputerDirection();
 
-      if (!isInside(next) || hitSelf) {
-        endGame();
+      const next = nextCell(snake[0], dir);
+      const computerNext = nextCell(computerSnake[0], computerDir);
+      const nextKey = keyOf(next);
+      const computerNextKey = keyOf(computerNext);
+      const eating = next.q === food.q && next.r === food.r;
+      const computerEating = computerNext.q === food.q && computerNext.r === food.r;
+      const body = eating ? snake : snake.slice(0, -1);
+      const computerBody = computerEating ? computerSnake : computerSnake.slice(0, -1);
+      let playerLost = !isInside(next) || body.some(segment => keyOf(segment) === nextKey);
+      let computerLost = !isInside(computerNext) || computerBody.some(segment => keyOf(segment) === computerNextKey);
+
+      if (computerBody.some(segment => keyOf(segment) === nextKey)) playerLost = true;
+      if (body.some(segment => keyOf(segment) === computerNextKey)) computerLost = true;
+      if (nextKey === computerNextKey) {
+        playerLost = true;
+        computerLost = true;
+      }
+      if (nextKey === keyOf(computerSnake[0]) && computerNextKey === keyOf(snake[0])) {
+        playerLost = true;
+        computerLost = true;
+      }
+
+      if (playerLost || computerLost) {
+        endGame(playerLost, computerLost);
         return;
       }
 
       snake.unshift(next);
+      computerSnake.unshift(computerNext);
 
       if (eating) {
         score += 1;
@@ -749,15 +832,23 @@
         localStorage.setItem("hexSnakeBest", String(best));
         lastFeedElapsedMs = 0;
         stepMs = Math.max(78, stepMs - 5);
-        placeFood();
       } else {
         snake.pop();
       }
 
+      if (computerEating) {
+        computerScore += 1;
+        stepMs = Math.max(78, stepMs - 5);
+      } else {
+        computerSnake.pop();
+      }
+
+      if (eating || computerEating) placeFood();
+
       updateHud();
     }
 
-    function endGame() {
+    function endGame(playerLost = true, computerLost = false) {
       running = false;
       gameOver = true;
       if (totalElapsedMs > bestTotalMs) {
@@ -765,9 +856,16 @@
         localStorage.setItem("hexSnakeBestTotalMs", String(Math.floor(bestTotalMs)));
       }
       updateHud();
-      setStatus("遊戲結束");
-      overlayTitle.textContent = "撞到了";
-      overlayText.textContent = `這次分數 ${score}，再來一局。`;
+      let title = "你贏了";
+      if (playerLost && !computerLost) title = "電腦贏了";
+      if (playerLost && computerLost) {
+        if (score > computerScore) title = "你贏了";
+        else if (computerScore > score) title = "電腦贏了";
+        else title = "平手";
+      }
+      setStatus(`遊戲結束：${title}`);
+      overlayTitle.textContent = title;
+      overlayText.textContent = `你 ${score}：電腦 ${computerScore}。先撞牆、撞自己或撞對手的一方落敗。`;
       startButton.textContent = "重新開始";
       overlay.classList.add("show");
     }
@@ -821,13 +919,32 @@
         ctx.stroke();
       }
 
+      if (computerSnake) {
+        drawSnake(computerSnake, {
+          head: colors.computerHead,
+          body: colors.computerBody,
+          headLine: colors.computerHeadLine,
+          bodyLine: colors.computerBodyLine
+        });
+      }
+
       if (snake) {
-        snake.forEach((segment, index) => {
+        drawSnake(snake, {
+          head: colors.head,
+          body: colors.body,
+          headLine: colors.headLine,
+          bodyLine: colors.bodyLine
+        });
+      }
+    }
+
+    function drawSnake(parts, palette) {
+      parts.forEach((segment, index) => {
           const { x, y } = axialToPixel(segment);
           hexPath(x, y, cellSize * (index === 0 ? 0.82 : 0.76));
-          ctx.fillStyle = index === 0 ? colors.head : colors.body;
+          ctx.fillStyle = index === 0 ? palette.head : palette.body;
           ctx.fill();
-          ctx.strokeStyle = index === 0 ? colors.headLine : colors.bodyLine;
+          ctx.strokeStyle = index === 0 ? palette.headLine : palette.bodyLine;
           ctx.lineWidth = index === 0 ? 3 : 1.5;
           ctx.stroke();
 
@@ -840,7 +957,6 @@
             ctx.fill();
           }
         });
-      }
     }
 
     function pointerToDirection(event, rect) {
@@ -901,7 +1017,7 @@
         return;
       }
       overlayTitle.textContent = "準備好了";
-      overlayText.textContent = "吃下金色食物，別撞到自己或離開六角盤面。";
+      overlayText.textContent = "搶下金色食物，別撞到自己、牆或對手。";
       startButton.textContent = "開始";
       startGame();
     });
