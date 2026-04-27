@@ -1,0 +1,11 @@
+{
+  "name": "hex-snake",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A hex-grid snake game with virtual joystick and AWEFXZ controls.",
+  "scripts": {
+    "dev": "node server.js",
+    "build": "node build.js",
+    "start": "node server.js --dist"
+  }
+}
