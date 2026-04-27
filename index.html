@@ -371,6 +371,13 @@
       box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.35);
     }
 
+    .joystick.locked {
+      border-color: var(--accent);
+      box-shadow:
+        inset 0 0 30px rgba(0, 0, 0, 0.35),
+        0 0 0 3px rgba(245, 158, 11, 0.2);
+    }
+
     .stick {
       position: absolute;
       left: 50%;
@@ -455,24 +462,15 @@
       }
 
       .canvas-wrap {
-        min-height: clamp(440px, 74dvh, 760px);
+        min-height: clamp(360px, 58dvh, 620px);
       }
 
       canvas {
-        min-height: clamp(440px, 74dvh, 760px);
+        min-height: clamp(360px, 58dvh, 620px);
       }
 
       .side .section:nth-of-type(4) {
-        position: fixed;
-        left: 0;
-        right: 0;
-        bottom: calc(14px + env(safe-area-inset-bottom));
-        z-index: 12;
-        margin: 0;
-        padding: 0 14px;
-        background: transparent;
-        border: 0;
-        pointer-events: none;
+        padding: 10px 12px max(10px, env(safe-area-inset-bottom));
       }
 
       .side .section:nth-of-type(4) h2 {
@@ -480,14 +478,13 @@
       }
 
       .control-row {
-        display: flex;
-        justify-content: space-between;
-        pointer-events: none;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
       }
 
       .control-card {
-        width: min(42vw, 164px);
-        pointer-events: auto;
+        width: 100%;
       }
 
       .joystick {
@@ -571,7 +568,7 @@
           <div class="key" data-dir="1">E</div>
           <div class="key" data-dir="4">Z</div>
           <div class="key" data-dir="3">X</div>
-          <div class="key" data-dir="2">F</div>
+          <div class="key" data-dir="2">D</div>
         </div>
       </section>
 
@@ -653,7 +650,7 @@
     const directions = [
       { q: 0, r: -1, angle: -90, key: "w" },
       { q: 1, r: -1, angle: -30, key: "e" },
-      { q: 1, r: 0, angle: 30, key: "f" },
+      { q: 1, r: 0, angle: 30, key: "d" },
       { q: 0, r: 1, angle: 90, key: "x" },
       { q: -1, r: 1, angle: 150, key: "z" },
       { q: -1, r: 0, angle: -150, key: "a" }
@@ -713,6 +710,9 @@
     let rafId = 0;
     let movePointerId = null;
     let targetPointerId = null;
+    let moveStickLocked = false;
+    let movePointerStartedAt = 0;
+    let movePointerMoved = false;
     let targetCell = null;
     let targetActive = false;
 
@@ -1010,6 +1010,16 @@
     function nextCell(head, direction) {
       const delta = directions[direction];
       return { q: head.q + delta.q, r: head.r + delta.r };
+    }
+
+    function directionalAttackTarget(direction) {
+      let target = { ...snake[0] };
+      for (let step = 0; step < targetMaxHex; step += 1) {
+        const next = nextCell(target, direction);
+        if (!isInside(next)) break;
+        target = next;
+      }
+      return target;
     }
 
     function nearestFoodDistance(cell) {
@@ -1400,10 +1410,40 @@
       const angle = Math.atan2(dy, dx);
       stick.style.transform = `translate(${Math.cos(angle) * distance}px, ${Math.sin(angle) * distance}px)`;
       const newDir = pointerToDirection(event, rect);
-      if (newDir !== null) setDirection(newDir);
+      if (newDir !== null) {
+        movePointerMoved = true;
+        setDirection(newDir);
+      }
     }
 
-    function releaseMoveStick() {
+    function setMoveStickLocked(locked) {
+      moveStickLocked = locked;
+      joyZone.querySelector(".joystick").classList.toggle("locked", locked);
+      if (!locked) {
+        movePointerId = null;
+        stick.style.transform = "translate(0, 0)";
+      }
+    }
+
+    function pointerNearMoveCenter(event) {
+      const rect = joyZone.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      return Math.hypot(event.clientX - cx, event.clientY - cy) < Math.min(34, rect.width * 0.22);
+    }
+
+    function releaseMoveStick(event) {
+      const wasQuickCenterTap = event
+        && event.pointerId === movePointerId
+        && pointerNearMoveCenter(event)
+        && !movePointerMoved
+        && performance.now() - movePointerStartedAt < 260;
+
+      if (wasQuickCenterTap) {
+        setMoveStickLocked(!moveStickLocked);
+        return;
+      }
+      if (moveStickLocked) return;
       movePointerId = null;
       stick.style.transform = "translate(0, 0)";
     }
@@ -1442,6 +1482,28 @@
         }
       }
       targetActive = false;
+    }
+
+    function launchPlayerAttack(target) {
+      if (!running || gameOver) startGame();
+      if (launchAttack("player", target, performance.now())) {
+        targetCell = { ...target };
+        targetActive = true;
+        draw();
+        setTimeout(() => {
+          targetActive = false;
+          draw();
+        }, 180);
+        setStatus("Player attack launched.");
+        return true;
+      }
+      setStatus("Need 6 total food stock before attacking.");
+      return false;
+    }
+
+    function launchPlayerAttackDirection(direction) {
+      if (!running || gameOver) startGame();
+      return launchPlayerAttack(directionalAttackTarget(direction));
     }
 
     gridSizeInput.addEventListener("change", () => {
@@ -1501,6 +1563,8 @@
 
     joyZone.addEventListener("pointerdown", event => {
       movePointerId = event.pointerId;
+      movePointerStartedAt = performance.now();
+      movePointerMoved = false;
       joyZone.setPointerCapture(movePointerId);
       moveStick(event);
     });
@@ -1511,6 +1575,13 @@
 
     joyZone.addEventListener("pointerup", releaseMoveStick);
     joyZone.addEventListener("pointercancel", releaseMoveStick);
+
+    window.addEventListener("pointermove", event => {
+      if (!moveStickLocked) return;
+      if (event.pointerId === movePointerId || event.pointerType === "mouse") {
+        moveStick(event);
+      }
+    });
 
     targetZone.addEventListener("pointerdown", event => {
       targetPointerId = event.pointerId;
@@ -1527,8 +1598,7 @@
 
     playArea.addEventListener("pointerdown", event => {
       if (event.target.closest(".overlay")) return;
-      const newDir = pointerToDirection(event, playArea.getBoundingClientRect());
-      if (newDir !== null) setDirection(newDir);
+      if (!running || gameOver) startGame();
     });
 
     window.addEventListener("keydown", event => {
@@ -1564,13 +1634,9 @@
       }
 
       if (keyToDir.has(key)) {
-        if (paused) {
-          paused = false;
-          overlay.classList.remove("show");
-          lastStep = performance.now();
-          lastTimerFrame = lastStep;
-        }
-        setDirection(keyToDir.get(key));
+        event.preventDefault();
+        launchPlayerAttackDirection(keyToDir.get(key));
+        return;
       }
     });
 
