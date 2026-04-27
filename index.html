@@ -728,7 +728,7 @@
         <div class="overlay show" id="overlay">
           <div class="dialog">
             <h2 id="overlayTitle">準備開局</h2>
-            <p id="overlayText">吃紅黃綠藍四種食物累積營養。總量 6 且四種各至少 1 時，左搖桿放開可投擲砲彈。</p>
+            <p id="overlayText">每吃 6 個食物獲得 1 枚砲彈，最多 3 枚；發射時會消耗紅黃綠藍各 1 點。</p>
             <button id="startButton" type="button">開始</button>
           </div>
         </div>
@@ -800,7 +800,7 @@
         <h2>規則</h2>
         <ul class="legend">
           <li><b>食物</b>：紅是蛋白質、黃是油脂、綠是纖維素、藍是碳水。</li>
-          <li><b>攻擊</b>：總食物至少 6，且四種庫存各有 1 才能發動；每次四種各消耗 1。</li>
+          <li><b>攻擊</b>：每吃 6 個食物獲得 1 枚砲彈，最多 3 枚；發射時四種庫存各消耗 1。</li>
           <li><b>砲彈</b>：發射後 2 秒落地，殺傷範圍約為六角距離 2 的圓。</li>
           <li><b>控制</b>：右搖桿改變前進方向；左搖桿長按拖曳目標，放開投擲。</li>
         </ul>
@@ -841,9 +841,15 @@
     const minFoodCount = 1;
     const maxFoodCount = 4;
     const attackNeedTotal = 6;
-    const attackDelayMs = 2000;
+    const maxAmmo = 3;
+    const baseAttackDelayMs = 2000;
+    const baseAttackCooldownMs = 2400;
+    const baseStepMs = 380;
     const blastDurationMs = 520;
-    const blastHexRadius = 2;
+    const baseBlastHexRadius = 2;
+    const maxFoodBonus = 3;
+    const foodBonusPerPoint = 0.1;
+    const maxFoodStock = 31;
     const targetMaxHex = 6;
     let gridSize = 10;
     let radius = gridSize - 1;
@@ -896,8 +902,14 @@
     let computerDir;
     let computerScore;
     let score;
+    let playerHp;
+    let computerHp;
     let playerStock;
     let computerStock;
+    let playerAmmo;
+    let computerAmmo;
+    let playerAmmoCharge;
+    let computerAmmoCharge;
     let best = Number(localStorage.getItem("hexSnakeBest") || 0);
     let bestTotalMs = Number(localStorage.getItem("hexSnakeBestTotalMs") || 0);
     let totalElapsedMs = 0;
@@ -905,9 +917,10 @@
     let running = false;
     let paused = false;
     let gameOver = false;
-    let stepMs = 380;
-    let lastStep = 0;
+    let lastPlayerStep = 0;
+    let lastComputerStep = 0;
     let lastTimerFrame = 0;
+    let lastPlayerAttackMs = -Infinity;
     let lastComputerAttackMs = 0;
     let rafId = 0;
     let movePointerId = null;
@@ -930,7 +943,7 @@
       ].forEach(group => {
         const panel = document.createElement("div");
         panel.className = "resource-panel";
-        panel.innerHTML = `<div class="resource-title">${group.title}<span data-total="${group.owner}">0 / 6</span></div>`;
+        panel.innerHTML = `<div class="resource-title">${group.title}<span data-total="${group.owner}">0 / ${attackNeedTotal}</span></div>`;
         foodTypes.forEach(type => {
           const row = document.createElement("div");
           row.className = "resource-row";
@@ -954,22 +967,86 @@
       return Object.fromEntries(foodTypes.map(type => [type.id, 0]));
     }
 
-    function stockTotal(stock) {
-      return foodTypes.reduce((total, type) => total + stock[type.id], 0);
+    function foodBonus(stock, typeId) {
+      return Math.min(maxFoodBonus, stock[typeId] * foodBonusPerPoint);
     }
 
-    function canAttack(stock) {
-      return stockTotal(stock) >= attackNeedTotal && foodTypes.every(type => stock[type.id] > 0);
+    function moveMultiplier(stock) {
+      return 1 + foodBonus(stock, "fat");
     }
 
-    function consumeAttackStock(stock) {
+    function damageMultiplier(stock) {
+      return 1 + foodBonus(stock, "protein");
+    }
+
+    function areaMultiplier(stock) {
+      return 1 + foodBonus(stock, "carb");
+    }
+
+    function attackSpeedMultiplier(stock) {
+      return 1 + foodBonus(stock, "fiber");
+    }
+
+    function moveInterval(stock) {
+      return baseStepMs / moveMultiplier(stock);
+    }
+
+    function attackDelay(stock) {
+      return baseAttackDelayMs / attackSpeedMultiplier(stock);
+    }
+
+    function attackCooldown(stock) {
+      return baseAttackCooldownMs / attackSpeedMultiplier(stock);
+    }
+
+    function blastRadius(stock) {
+      return Math.max(1, Math.round(baseBlastHexRadius * Math.sqrt(areaMultiplier(stock))));
+    }
+
+    function hasAttackFoodCost(stock) {
+      return foodTypes.every(type => stock[type.id] > 0);
+    }
+
+    function ammoFor(owner) {
+      return owner === "player" ? playerAmmo : computerAmmo;
+    }
+
+    function canAttack(owner) {
+      const stock = owner === "player" ? playerStock : computerStock;
+      return ammoFor(owner) > 0 && hasAttackFoodCost(stock);
+    }
+
+    function consumeAttackCost(owner, stock) {
       foodTypes.forEach(type => {
-        stock[type.id] -= 1;
+        stock[type.id] = Math.max(0, stock[type.id] - 1);
       });
+      if (owner === "player") playerAmmo = Math.max(0, playerAmmo - 1);
+      else computerAmmo = Math.max(0, computerAmmo - 1);
     }
 
     function addStock(stock, typeId) {
-      stock[typeId] += 1;
+      stock[typeId] = Math.min(maxFoodStock, stock[typeId] + 1);
+    }
+
+    function addAmmoCharge(owner) {
+      if (owner === "player") {
+        playerAmmoCharge += 1;
+        if (playerAmmoCharge >= attackNeedTotal) {
+          playerAmmo = Math.min(maxAmmo, playerAmmo + 1);
+          playerAmmoCharge = 0;
+        }
+      } else {
+        computerAmmoCharge += 1;
+        if (computerAmmoCharge >= attackNeedTotal) {
+          computerAmmo = Math.min(maxAmmo, computerAmmo + 1);
+          computerAmmoCharge = 0;
+        }
+      }
+    }
+
+    function collectFood(owner, typeId) {
+      addStock(owner === "player" ? playerStock : computerStock, typeId);
+      addAmmoCharge(owner);
     }
 
     function formatTime(ms) {
@@ -1114,17 +1191,25 @@
       computerDir = 3;
       score = 0;
       computerScore = 0;
+      playerHp = snake.length;
+      computerHp = computerSnake.length;
       playerStock = emptyStock();
       computerStock = emptyStock();
+      playerAmmo = 0;
+      computerAmmo = 0;
+      playerAmmoCharge = 0;
+      computerAmmoCharge = 0;
       foods = [];
       projectiles = [];
       blasts = [];
       targetCell = { ...snake[0] };
       targetActive = false;
-      stepMs = 380;
       totalElapsedMs = 0;
       lastFeedElapsedMs = 0;
       lastTimerFrame = 0;
+      lastPlayerStep = 0;
+      lastComputerStep = 0;
+      lastPlayerAttackMs = -Infinity;
       lastComputerAttackMs = 0;
       gameOver = false;
       paused = false;
@@ -1141,8 +1226,9 @@
       setSettingsLocked(true);
       setStatus("對戰中：吃四種食物累積砲彈資源。");
       overlay.classList.remove("show");
-      lastStep = performance.now();
-      lastTimerFrame = lastStep;
+      lastPlayerStep = performance.now();
+      lastComputerStep = lastPlayerStep;
+      lastTimerFrame = lastPlayerStep;
       cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(loop);
     }
@@ -1166,31 +1252,31 @@
       }
     }
 
-    function updateStockHud(owner, stock) {
-      const total = stockTotal(stock);
+    function updateStockHud(owner, stock, ammo, ammoCharge) {
       const totalEl = resourceEls.get(owner);
-      if (totalEl) totalEl.textContent = `${total} / ${attackNeedTotal}`;
+      if (totalEl) totalEl.textContent = `${ammo}/${maxAmmo} · ${ammoCharge}/${attackNeedTotal}`;
       foodTypes.forEach(type => {
         const count = stock[type.id];
         const countEl = resourceBoard.querySelector(`[data-count="${owner}-${type.id}"]`);
         const fill = resourceBoard.querySelector(`[data-fill="${owner}-${type.id}"]`);
         if (countEl) countEl.textContent = count;
-        if (fill) fill.style.width = `${Math.min(100, count / attackNeedTotal * 100)}%`;
+        if (fill) fill.style.width = `${Math.min(100, count / maxFoodStock * 100)}%`;
       });
     }
 
     function updateHud() {
-      scoreEl.textContent = score;
-      computerScoreEl.textContent = computerScore;
+      scoreEl.textContent = `${score} HP ${Math.max(0, Math.ceil(playerHp))}/${snake.length}`;
+      computerScoreEl.textContent = `${computerScore} HP ${Math.max(0, Math.ceil(computerHp))}/${computerSnake.length}`;
       bestEl.textContent = best;
       totalTimeEl.textContent = formatTime(totalElapsedMs);
       lastFeedTimeEl.textContent = formatTime(lastFeedElapsedMs);
       bestTimeEl.textContent = formatTime(bestTotalMs);
-      const speed = Math.max(0.5, Math.round((190 / stepMs) * 10) / 10);
-      speedEl.textContent = `${speed}x`;
+      const playerSpeed = Math.round(moveMultiplier(playerStock) * 10) / 10;
+      const computerSpeed = Math.round(moveMultiplier(computerStock) * 10) / 10;
+      speedEl.textContent = `${playerSpeed}x/${computerSpeed}x`;
       keyEls.forEach(el => el.classList.toggle("active", Number(el.dataset.dir) === nextDir));
-      updateStockHud("player", playerStock);
-      updateStockHud("computer", computerStock);
+      updateStockHud("player", playerStock, playerAmmo, playerAmmoCharge);
+      updateStockHud("computer", computerStock, computerAmmo, computerAmmoCharge);
     }
 
     function setStatus(text) {
@@ -1319,21 +1405,31 @@
 
     function launchAttack(owner, target, now) {
       const stock = owner === "player" ? playerStock : computerStock;
-      if (!canAttack(stock)) return false;
-      consumeAttackStock(stock);
+      const lastAttack = owner === "player" ? lastPlayerAttackMs : lastComputerAttackMs;
+      if (!canAttack(owner)) return false;
+      if (now - lastAttack < attackCooldown(stock)) return false;
+      const delay = attackDelay(stock);
+      const radius = blastRadius(stock);
+      const damage = damageMultiplier(stock);
+      consumeAttackCost(owner, stock);
+      if (owner === "player") lastPlayerAttackMs = now;
+      else lastComputerAttackMs = now;
       projectiles.push({
         owner,
         target: { q: target.q, r: target.r },
         createdAt: now,
-        impactAt: now + attackDelayMs
+        impactAt: now + delay,
+        delay,
+        radius,
+        damage
       });
       updateHud();
       return true;
     }
 
     function maybeComputerAttack(now) {
-      const cooldown = { low: 6200, medium: 4700, high: 3400 }[computerDifficulty];
-      if (now - lastComputerAttackMs < cooldown || !canAttack(computerStock)) return;
+      const cooldown = { low: 6200, medium: 4700, high: 3400 }[computerDifficulty] / attackSpeedMultiplier(computerStock);
+      if (now - lastComputerAttackMs < cooldown || !canAttack("computer")) return;
       const spread = computerDifficulty === "high" ? 1 : 2;
       const nearPlayer = cells.filter(cell => hexDistance(cell, snake[0]) <= spread);
       const target = randomItem(nearPlayer.length ? nearPlayer : [snake[0]]);
@@ -1343,20 +1439,33 @@
       }
     }
 
+    function damageSnake(parts, target, radius, damageScale) {
+      const hitSegments = parts.filter(segment => hexDistance(segment, target) <= radius).length;
+      return Math.ceil(hitSegments * damageScale);
+    }
+
+    function applyBlastDamage(owner, damage) {
+      if (damage <= 0) return;
+      if (owner === "player") {
+        playerHp = Math.max(0, playerHp - damage);
+      } else {
+        computerHp = Math.max(0, computerHp - damage);
+      }
+    }
+
     function resolveProjectiles(now) {
       const landed = projectiles.filter(projectile => now >= projectile.impactAt);
       if (!landed.length) return;
       projectiles = projectiles.filter(projectile => now < projectile.impactAt);
 
-      let playerHit = false;
-      let computerHit = false;
       landed.forEach(projectile => {
-        blasts.push({ target: projectile.target, owner: projectile.owner, startedAt: now, endAt: now + blastDurationMs });
-        if (snake.some(segment => hexDistance(segment, projectile.target) <= blastHexRadius)) playerHit = true;
-        if (computerSnake.some(segment => hexDistance(segment, projectile.target) <= blastHexRadius)) computerHit = true;
+        const radius = projectile.radius || baseBlastHexRadius;
+        blasts.push({ target: projectile.target, owner: projectile.owner, radius, startedAt: now, endAt: now + blastDurationMs });
+        applyBlastDamage("player", damageSnake(snake, projectile.target, radius, projectile.damage || 1));
+        applyBlastDamage("computer", damageSnake(computerSnake, projectile.target, radius, projectile.damage || 1));
       });
       blasts = blasts.filter(blast => now <= blast.endAt);
-      if (playerHit || computerHit) endGame(playerHit, computerHit);
+      if (playerHp <= 0 || computerHp <= 0) endGame(playerHp <= 0, computerHp <= 0);
     }
 
     function step() {
@@ -1397,19 +1506,19 @@
 
       if (eating) {
         score += 1;
-        addStock(playerStock, eatenFood.type);
+        collectFood("player", eatenFood.type);
         best = Math.max(best, score);
         localStorage.setItem("hexSnakeBest", String(best));
         lastFeedElapsedMs = 0;
-        stepMs = Math.max(156, stepMs - 10);
+        playerHp = Math.min(snake.length, playerHp + 1);
       } else {
         snake.pop();
       }
 
       if (computerEating) {
         computerScore += 1;
-        addStock(computerStock, computerEatenFood.type);
-        stepMs = Math.max(156, stepMs - 10);
+        collectFood("computer", computerEatenFood.type);
+        computerHp = Math.min(computerSnake.length, computerHp + 1);
       } else {
         computerSnake.pop();
       }
@@ -1423,6 +1532,65 @@
         placeFoods();
       }
 
+      updateHud();
+    }
+
+    function stepPlayerOnly() {
+      dir = nextDir;
+      const next = nextWrappedCell(snake[0], dir);
+      const nextKey = keyOf(next);
+      const eatenFood = foods.find(food => next.q === food.q && next.r === food.r);
+      const eating = Boolean(eatenFood);
+      const body = eating ? snake : snake.slice(0, -1);
+      const playerLost = body.some(segment => keyOf(segment) === nextKey)
+        || computerSnake.some(segment => keyOf(segment) === nextKey);
+
+      if (playerLost) {
+        endGame(true, false);
+        return;
+      }
+
+      snake.unshift(next);
+      if (eating) {
+        score += 1;
+        collectFood("player", eatenFood.type);
+        best = Math.max(best, score);
+        localStorage.setItem("hexSnakeBest", String(best));
+        lastFeedElapsedMs = 0;
+        playerHp = Math.min(snake.length, playerHp + 1);
+        foods = foods.filter(food => keyOf(food) !== nextKey);
+        placeFoods();
+      } else {
+        snake.pop();
+      }
+      updateHud();
+    }
+
+    function stepComputerOnly() {
+      computerDir = chooseComputerDirection();
+      const computerNext = nextWrappedCell(computerSnake[0], computerDir);
+      const computerNextKey = keyOf(computerNext);
+      const computerEatenFood = foods.find(food => computerNext.q === food.q && computerNext.r === food.r);
+      const computerEating = Boolean(computerEatenFood);
+      const computerBody = computerEating ? computerSnake : computerSnake.slice(0, -1);
+      const computerLost = computerBody.some(segment => keyOf(segment) === computerNextKey)
+        || snake.some(segment => keyOf(segment) === computerNextKey);
+
+      if (computerLost) {
+        endGame(false, true);
+        return;
+      }
+
+      computerSnake.unshift(computerNext);
+      if (computerEating) {
+        computerScore += 1;
+        collectFood("computer", computerEatenFood.type);
+        computerHp = Math.min(computerSnake.length, computerHp + 1);
+        foods = foods.filter(food => keyOf(food) !== computerNextKey);
+        placeFoods();
+      } else {
+        computerSnake.pop();
+      }
       updateHud();
     }
 
@@ -1467,9 +1635,20 @@
         resolveProjectiles(now);
         maybeComputerAttack(now);
       }
-      if (running && !paused && now - lastStep >= stepMs) {
-        step();
-        lastStep = now;
+      if (running && !paused) {
+        const playerDue = now - lastPlayerStep >= moveInterval(playerStock);
+        const computerDue = now - lastComputerStep >= moveInterval(computerStock);
+        if (playerDue && computerDue) {
+          step();
+          lastPlayerStep = now;
+          lastComputerStep = now;
+        } else if (playerDue) {
+          stepPlayerOnly();
+          lastPlayerStep = now;
+        } else if (computerDue) {
+          stepComputerOnly();
+          lastComputerStep = now;
+        }
       }
       blasts = blasts.filter(blast => now <= blast.endAt);
       updateHud();
@@ -1532,7 +1711,7 @@
       const now = performance.now();
       projectiles.forEach(projectile => {
         const { x, y } = axialToPixel(projectile.target);
-        const progress = Math.min(1, Math.max(0, (now - projectile.createdAt) / attackDelayMs));
+        const progress = Math.min(1, Math.max(0, (now - projectile.createdAt) / (projectile.delay || baseAttackDelayMs)));
         const arcHeight = Math.sin(progress * Math.PI) * cellSize * 1.5;
         ctx.beginPath();
         ctx.arc(x, y - arcHeight, Math.max(5, cellSize * 0.16), 0, Math.PI * 2);
@@ -1551,13 +1730,13 @@
 
     function drawTarget() {
       if (!targetCell || !snake) return;
-      if (!targetActive && !canAttack(playerStock)) return;
+      if (!targetActive && !canAttack("player")) return;
       const { x, y } = axialToPixel(targetCell);
       ctx.beginPath();
-      ctx.arc(x, y, cellSize * blastHexRadius * 1.52, 0, Math.PI * 2);
-      ctx.fillStyle = canAttack(playerStock) ? "rgba(245,158,11,0.1)" : "rgba(168,179,194,0.08)";
+      ctx.arc(x, y, cellSize * blastRadius(playerStock) * 1.52, 0, Math.PI * 2);
+      ctx.fillStyle = canAttack("player") ? "rgba(245,158,11,0.1)" : "rgba(168,179,194,0.08)";
       ctx.fill();
-      ctx.strokeStyle = canAttack(playerStock) ? "rgba(253,230,138,0.78)" : "rgba(168,179,194,0.36)";
+      ctx.strokeStyle = canAttack("player") ? "rgba(253,230,138,0.78)" : "rgba(168,179,194,0.36)";
       ctx.lineWidth = 2;
       ctx.setLineDash([6, 6]);
       ctx.stroke();
@@ -1575,7 +1754,7 @@
         const progress = Math.min(1, (now - blast.startedAt) / blastDurationMs);
         const alpha = 1 - progress;
         ctx.beginPath();
-        ctx.arc(x, y, cellSize * blastHexRadius * 1.52 * (0.65 + progress * 0.35), 0, Math.PI * 2);
+        ctx.arc(x, y, cellSize * (blast.radius || baseBlastHexRadius) * 1.52 * (0.65 + progress * 0.35), 0, Math.PI * 2);
         ctx.fillStyle = `rgba(251,146,60,${0.22 * alpha})`;
         ctx.fill();
         ctx.strokeStyle = `rgba(253,230,138,${0.8 * alpha})`;
@@ -1693,7 +1872,7 @@
         if (launchAttack("player", targetCell || snake[0], performance.now())) {
           setStatus("玩家發射砲彈，2 秒後落地。");
         } else {
-          setStatus("攻擊需要總食物 6，且紅黃綠藍四種庫存各至少 1。");
+          setStatus("攻擊需要 1 枚砲彈，且紅黃綠藍四種庫存各至少 1。");
         }
       }
       targetActive = false;
@@ -1712,7 +1891,7 @@
         setStatus("Player attack launched.");
         return true;
       }
-      setStatus("Need 6 total food stock before attacking.");
+      setStatus("攻擊需要 1 枚砲彈，且紅黃綠藍四種庫存各至少 1。");
       return false;
     }
 
@@ -1766,12 +1945,13 @@
         paused = false;
         setStatus("對戰中：吃四種食物累積砲彈資源。");
         overlay.classList.remove("show");
-        lastStep = performance.now();
-        lastTimerFrame = lastStep;
+        lastPlayerStep = performance.now();
+        lastComputerStep = lastPlayerStep;
+        lastTimerFrame = lastPlayerStep;
         return;
       }
       overlayTitle.textContent = "準備開局";
-      overlayText.textContent = "吃紅黃綠藍四種食物累積營養。總量 6 且四種各至少 1 時，左搖桿放開可投擲砲彈。";
+      overlayText.textContent = "每吃 6 個食物獲得 1 枚砲彈，最多 3 枚；發射時會消耗紅黃綠藍各 1 點。";
       startButton.textContent = "開始";
       startGame();
     });
@@ -1832,8 +2012,9 @@
         startButton.textContent = "繼續";
         overlay.classList.toggle("show", paused);
         if (!paused) {
-          lastStep = performance.now();
-          lastTimerFrame = lastStep;
+          lastPlayerStep = performance.now();
+          lastComputerStep = lastPlayerStep;
+          lastTimerFrame = lastPlayerStep;
         }
         return;
       }
@@ -1843,7 +2024,7 @@
         if (launchAttack("player", targetCell || snake[0], performance.now())) {
           setStatus("玩家發射砲彈，2 秒後落地。");
         } else {
-          setStatus("攻擊需要總食物 6，且紅黃綠藍四種庫存各至少 1。");
+          setStatus("攻擊需要 1 枚砲彈，且紅黃綠藍四種庫存各至少 1。");
         }
         return;
       }
