@@ -3,18 +3,19 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-  <title>六角形貪食蛇</title>
+  <link rel="icon" href="data:,">
+  <title>六角貪食蛇對戰</title>
   <style>
     :root {
       color-scheme: dark;
-      --bg: #151922;
+      --bg: #111720;
       --panel: #202633;
       --panel-2: #273140;
       --ink: #f3f5f7;
       --muted: #a8b3c2;
       --line: #374253;
-      --accent: #7dd56f;
-      --accent-2: #f5c542;
+      --accent: #f59e0b;
+      --accent-2: #8b5cf6;
       --danger: #f06464;
       --cell: #2a3445;
       --cell-alt: #303c4d;
@@ -30,7 +31,8 @@
       min-height: 100%;
       margin: 0;
       background:
-        radial-gradient(circle at top left, rgba(125, 213, 111, 0.16), transparent 34rem),
+        radial-gradient(circle at top left, rgba(245, 158, 11, 0.14), transparent 34rem),
+        radial-gradient(circle at bottom right, rgba(139, 92, 246, 0.14), transparent 30rem),
         linear-gradient(135deg, #151922 0%, #1c2230 48%, #18212a 100%);
       color: var(--ink);
       font-family: "Segoe UI", "Noto Sans TC", system-ui, sans-serif;
@@ -46,9 +48,9 @@
     }
 
     .app {
-      width: min(1180px, 100%);
+      width: min(1200px, 100%);
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 292px;
+      grid-template-columns: minmax(0, 1fr) 312px;
       gap: 18px;
       align-items: stretch;
     }
@@ -114,7 +116,7 @@
     }
 
     .metric strong {
-      font-size: 1.28rem;
+      font-size: 1.22rem;
       line-height: 1.2;
     }
 
@@ -127,16 +129,6 @@
       background: #111720;
       box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02), 0 20px 80px rgba(0, 0, 0, 0.38);
       touch-action: none;
-    }
-
-    .canvas-wrap::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      opacity: 0;
-      background: linear-gradient(to top, rgba(17, 23, 32, 0.62), transparent 38%);
-      transition: opacity 160ms ease;
     }
 
     canvas {
@@ -165,7 +157,7 @@
     }
 
     .dialog {
-      width: min(430px, 100%);
+      width: min(460px, 100%);
       padding: 22px;
       border-radius: 8px;
       border: 1px solid rgba(255, 255, 255, 0.12);
@@ -188,7 +180,7 @@
       border: 0;
       border-radius: 8px;
       background: var(--accent);
-      color: #0f1710;
+      color: #171006;
       font: inherit;
       font-weight: 800;
       cursor: pointer;
@@ -212,8 +204,8 @@
       border-radius: 8px;
       padding: 14px;
       display: grid;
-      grid-template-rows: auto auto 1fr;
       gap: 14px;
+      align-content: start;
     }
 
     .section {
@@ -259,7 +251,7 @@
     .field input:focus,
     .field select:focus {
       border-color: var(--accent);
-      outline: 2px solid rgba(125, 213, 111, 0.22);
+      outline: 2px solid rgba(245, 158, 11, 0.22);
       outline-offset: 2px;
     }
 
@@ -267,6 +259,56 @@
     .field select:disabled {
       cursor: not-allowed;
       opacity: 0.58;
+    }
+
+    .resource-board {
+      display: grid;
+      gap: 12px;
+    }
+
+    .resource-panel {
+      display: grid;
+      gap: 8px;
+    }
+
+    .resource-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 10px;
+      font-weight: 800;
+      color: var(--ink);
+    }
+
+    .resource-title span {
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+
+    .resource-row {
+      display: grid;
+      grid-template-columns: 48px minmax(0, 1fr) 28px;
+      gap: 8px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 800;
+    }
+
+    .resource-track {
+      height: 9px;
+      border-radius: 999px;
+      background: #151b25;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .resource-fill {
+      width: 0%;
+      height: 100%;
+      border-radius: inherit;
+      transition: width 140ms ease;
     }
 
     .keys {
@@ -289,25 +331,41 @@
     .key.active {
       border-color: var(--accent);
       color: var(--ink);
-      box-shadow: inset 0 0 0 1px rgba(125, 213, 111, 0.55);
+      box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.48);
+    }
+
+    .control-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .control-card {
+      display: grid;
+      gap: 8px;
+      place-items: center;
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 800;
+      min-width: 0;
     }
 
     .joystick-zone {
-      min-height: 220px;
       display: grid;
       place-items: center;
       touch-action: none;
       user-select: none;
       -webkit-user-select: none;
+      width: 100%;
     }
 
     .joystick {
       position: relative;
-      width: 174px;
+      width: min(118px, 100%);
       aspect-ratio: 1;
       border-radius: 50%;
       background:
-        conic-gradient(from 30deg, rgba(125, 213, 111, 0.16), rgba(245, 197, 66, 0.12), rgba(110, 186, 255, 0.13), rgba(125, 213, 111, 0.16)),
+        conic-gradient(from 30deg, rgba(245, 158, 11, 0.18), rgba(239, 68, 68, 0.12), rgba(139, 92, 246, 0.16), rgba(245, 158, 11, 0.18)),
         #151b25;
       border: 1px solid var(--line);
       box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.35);
@@ -317,18 +375,18 @@
       position: absolute;
       left: 50%;
       top: 50%;
-      width: 62px;
+      width: 46px;
       aspect-ratio: 1;
       border-radius: 50%;
       translate: -50% -50%;
-      background: var(--accent);
-      border: 6px solid rgba(255, 255, 255, 0.22);
+      background: var(--accent-2);
+      border: 5px solid rgba(255, 255, 255, 0.22);
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.38);
       transition: transform 80ms ease;
     }
 
-    .mobile-tip {
-      display: none;
+    .target-stick {
+      background: var(--accent);
     }
 
     .legend {
@@ -346,7 +404,7 @@
       color: var(--ink);
     }
 
-    @media (max-width: 860px) {
+    @media (max-width: 900px) {
       html,
       body {
         height: 100%;
@@ -391,8 +449,8 @@
         margin-top: 10px;
       }
 
-      .side .section:nth-of-type(2),
-      .side .section:nth-of-type(4) {
+      .side .section:nth-of-type(3),
+      .side .section:nth-of-type(5) {
         display: none;
       }
 
@@ -400,92 +458,78 @@
         min-height: clamp(440px, 74dvh, 760px);
       }
 
-      .canvas-wrap::after {
-        opacity: 1;
-      }
-
       canvas {
         min-height: clamp(440px, 74dvh, 760px);
       }
 
-      .joystick-zone {
+      .side .section:nth-of-type(4) {
         position: fixed;
-        left: 50%;
-        bottom: calc(18px + env(safe-area-inset-bottom));
+        left: 0;
+        right: 0;
+        bottom: calc(14px + env(safe-area-inset-bottom));
         z-index: 12;
-        width: min(46vw, 196px);
-        min-height: 0;
-        padding: 0;
         margin: 0;
-        translate: -50% 0;
+        padding: 0 14px;
         background: transparent;
         border: 0;
+        pointer-events: none;
+      }
+
+      .side .section:nth-of-type(4) h2 {
+        display: none;
+      }
+
+      .control-row {
+        display: flex;
+        justify-content: space-between;
+        pointer-events: none;
+      }
+
+      .control-card {
+        width: min(42vw, 164px);
         pointer-events: auto;
       }
 
       .joystick {
-        width: min(46vw, 176px);
-        min-width: 132px;
-        background:
-          radial-gradient(circle at center, rgba(125, 213, 111, 0.16) 0 34%, transparent 35%),
-          conic-gradient(from 30deg, rgba(125, 213, 111, 0.28), rgba(245, 197, 66, 0.2), rgba(110, 186, 255, 0.24), rgba(125, 213, 111, 0.28));
-        border: 2px solid rgba(243, 245, 247, 0.44);
-        box-shadow:
-          inset 0 0 0 1px rgba(255, 255, 255, 0.14),
-          inset 0 0 32px rgba(0, 0, 0, 0.14),
-          0 10px 34px rgba(0, 0, 0, 0.18);
-        opacity: 0.78;
+        width: min(42vw, 164px);
+        min-width: 126px;
+        border: 2px solid rgba(243, 245, 247, 0.42);
+        opacity: 0.8;
       }
 
       .stick {
-        width: min(18vw, 68px);
-        min-width: 48px;
-        background: rgba(125, 213, 111, 0.38);
+        width: min(17vw, 62px);
+        min-width: 46px;
         border: 2px solid rgba(255, 255, 255, 0.58);
-        box-shadow: 0 6px 22px rgba(0, 0, 0, 0.26);
-      }
-
-      .mobile-tip {
-        display: block;
-        position: fixed;
-        left: 50%;
-        bottom: calc(min(46vw, 176px) + 26px + env(safe-area-inset-bottom));
-        z-index: 11;
-        translate: -50% 0;
-        color: rgba(243, 245, 247, 0.72);
-        font-size: 0.78rem;
-        font-weight: 700;
-        pointer-events: none;
-        white-space: nowrap;
       }
     }
   </style>
 </head>
 <body>
-  <main class="app" aria-label="六角形版貪食蛇遊戲">
+  <main class="app" aria-label="六角貪食蛇對戰">
     <section class="stage">
       <header class="topbar">
         <div>
-          <h1>六角形貪食蛇</h1>
-          <div class="status" id="status">拖曳搖桿或按 A W E F X Z 開始移動</div>
+          <h1>六角貪食蛇對戰</h1>
+          <div class="status" id="status">右搖桿控制前進，左搖桿瞄準後放開攻擊。</div>
         </div>
-        <div class="metrics" aria-label="遊戲分數">
-          <div class="metric"><span>你</span><strong id="score">0</strong></div>
+        <div class="metrics" aria-label="分數">
+          <div class="metric"><span>玩家</span><strong id="score">0</strong></div>
           <div class="metric"><span>電腦</span><strong id="computerScore">0</strong></div>
           <div class="metric"><span>最佳</span><strong id="best">0</strong></div>
           <div class="metric"><span>速度</span><strong id="speed">1x</strong></div>
-          <div class="metric"><span>總時間</span><strong id="totalTime">0:00</strong></div>
-          <div class="metric"><span>上次餵食</span><strong id="lastFeedTime">0:00</strong></div>
-          <div class="metric"><span>最佳總時間</span><strong id="bestTime">0:00</strong></div>
+          <div class="metric"><span>時間</span><strong id="totalTime">0:00</strong></div>
+          <div class="metric"><span>未進食</span><strong id="lastFeedTime">0:00</strong></div>
+          <div class="metric"><span>最久存活</span><strong id="bestTime">0:00</strong></div>
         </div>
       </header>
 
       <div class="canvas-wrap" id="playArea">
-        <canvas id="game" aria-label="六角形貪食蛇遊戲畫面"></canvas>
+        <canvas id="game" aria-label="六角貪食蛇棋盤"></canvas>
         <div class="overlay show" id="overlay">
           <div class="dialog">
-            <h2 id="overlayTitle">準備好了</h2>
-            <p id="overlayText">搶下金色食物，別撞到自己、牆或對手。</p>
+            <h2 id="overlayTitle">準備開局</h2>
+            <p id="overlayText">吃紅黃綠藍四種食物累積營養。總量 6 且四種各至少 1 時，左搖桿放開可投擲砲彈。</p>
             <button id="startButton" type="button">開始</button>
           </div>
         </div>
@@ -494,28 +538,33 @@
 
     <aside class="side" aria-label="控制面板">
       <section class="section">
-        <h2>棋盤設定</h2>
+        <h2>開局設定</h2>
         <div class="field">
-          <label for="gridSize">格子數</label>
+          <label for="gridSize">棋盤半徑</label>
           <input id="gridSize" type="number" min="6" max="12" step="1" value="10" inputmode="numeric">
         </div>
         <div class="field">
-          <label for="foodCount">食物數量</label>
-          <input id="foodCount" type="number" min="1" max="4" step="1" value="1" inputmode="numeric">
+          <label for="foodCount">場上食物數量</label>
+          <input id="foodCount" type="number" min="1" max="4" step="1" value="4" inputmode="numeric">
         </div>
         <div class="field">
           <label for="computerDifficulty">電腦難度</label>
           <select id="computerDifficulty">
-            <option value="low">初級</option>
-            <option value="medium" selected>中級</option>
-            <option value="high">高級</option>
+            <option value="low">低</option>
+            <option value="medium" selected>中</option>
+            <option value="high">高</option>
           </select>
         </div>
-        <button id="resetBestTimeButton" class="secondary" type="button">刷新最佳總時間</button>
+        <button id="resetBestTimeButton" class="secondary" type="button">重設最久存活</button>
       </section>
 
       <section class="section">
-        <h2>六方向鍵</h2>
+        <h2>營養庫存</h2>
+        <div class="resource-board" id="resourceBoard"></div>
+      </section>
+
+      <section class="section">
+        <h2>鍵盤方向</h2>
         <div class="keys" id="keys">
           <div class="key" data-dir="5">A</div>
           <div class="key" data-dir="0">W</div>
@@ -526,21 +575,35 @@
         </div>
       </section>
 
-      <section class="section joystick-zone" id="joyZone" aria-label="虛擬搖桿">
-        <div class="mobile-tip">滑動搖桿控制方向</div>
-        <div class="joystick">
-          <div class="stick" id="stick"></div>
+      <section class="section">
+        <h2>雙搖桿</h2>
+        <div class="control-row">
+          <div class="control-card">
+            <span>攻擊</span>
+            <div class="joystick-zone" id="targetZone" aria-label="攻擊瞄準">
+              <div class="joystick">
+                <div class="stick target-stick" id="targetStick"></div>
+              </div>
+            </div>
+          </div>
+          <div class="control-card">
+            <span>移動</span>
+            <div class="joystick-zone" id="joyZone" aria-label="移動方向">
+              <div class="joystick">
+                <div class="stick" id="stick"></div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
       <section class="section">
-        <h2>操作</h2>
+        <h2>規則</h2>
         <ul class="legend">
-          <li><b>滑鼠 / 觸控</b>：拖曳圓形搖桿決定下一個方向。</li>
-          <li><b>A W E F X Z</b>：對應六個相鄰方向。</li>
-          <li><b>空白鍵</b>：暫停或繼續。</li>
-          <li><b>勝負</b>：任一方撞牆、撞自己或撞對手即落敗；同時出局比分高者勝，同分平手。</li>
-          <li><b>開局設定</b>：食物數量與電腦難度開始後鎖定，下一局才能更動。</li>
+          <li><b>食物</b>：紅是蛋白質、黃是油脂、綠是纖維素、藍是碳水。</li>
+          <li><b>攻擊</b>：總食物至少 6，且四種庫存各有 1 才能發動；每次四種各消耗 1。</li>
+          <li><b>砲彈</b>：發射後 2 秒落地，殺傷範圍約為六角距離 2 的圓。</li>
+          <li><b>控制</b>：右搖桿改變前進方向；左搖桿長按拖曳目標，放開投擲。</li>
         </ul>
       </section>
     </aside>
@@ -563,21 +626,29 @@
     const lastFeedTimeEl = document.querySelector("#lastFeedTime");
     const bestTimeEl = document.querySelector("#bestTime");
     const stick = document.querySelector("#stick");
+    const targetStick = document.querySelector("#targetStick");
     const joyZone = document.querySelector("#joyZone");
+    const targetZone = document.querySelector("#targetZone");
     const gridSizeInput = document.querySelector("#gridSize");
     const foodCountInput = document.querySelector("#foodCount");
     const computerDifficultyInput = document.querySelector("#computerDifficulty");
     const resetBestTimeButton = document.querySelector("#resetBestTimeButton");
+    const resourceBoard = document.querySelector("#resourceBoard");
     const keyEls = [...document.querySelectorAll(".key")];
-    const mobileInputQuery = window.matchMedia("(hover: none), (pointer: coarse), (max-width: 860px)");
+    const mobileInputQuery = window.matchMedia("(hover: none), (pointer: coarse), (max-width: 900px)");
 
     const minGridSize = 6;
     const maxGridSize = 12;
     const minFoodCount = 1;
     const maxFoodCount = 4;
+    const attackNeedTotal = 6;
+    const attackDelayMs = 2000;
+    const blastDurationMs = 520;
+    const blastHexRadius = 2;
+    const targetMaxHex = 6;
     let gridSize = 10;
     let radius = gridSize - 1;
-    let foodCount = 1;
+    let foodCount = 4;
     let computerDifficulty = "medium";
     const directions = [
       { q: 0, r: -1, angle: -90, key: "w" },
@@ -587,35 +658,47 @@
       { q: -1, r: 1, angle: 150, key: "z" },
       { q: -1, r: 0, angle: -150, key: "a" }
     ];
+    const foodTypes = [
+      { id: "protein", label: "蛋白", name: "蛋白質", color: "#ef4444", line: "#fecaca" },
+      { id: "fat", label: "油脂", name: "油脂", color: "#facc15", line: "#fef08a" },
+      { id: "fiber", label: "纖維", name: "纖維素", color: "#22c55e", line: "#bbf7d0" },
+      { id: "carb", label: "碳水", name: "碳水", color: "#3b82f6", line: "#bfdbfe" }
+    ];
+    const foodTypeById = new Map(foodTypes.map(type => [type.id, type]));
     const colors = {
       cell: "#2a3445",
       cellAlt: "#303c4d",
       cellLine: "#3a4658",
-      food: "#f5c542",
-      foodLine: "#fff3a7",
-      head: "#9af084",
-      body: "#62c95f",
-      headLine: "#e9ffd7",
-      bodyLine: "#245c34",
-      computerHead: "#7db7ff",
-      computerBody: "#4b82dd",
-      computerHeadLine: "#e5f1ff",
-      computerBodyLine: "#1d457c",
-      eye: "#10160f"
+      head: "#f59e0b",
+      body: "#d97706",
+      headLine: "#ffedd5",
+      bodyLine: "#7c2d12",
+      computerHead: "#a78bfa",
+      computerBody: "#7c3aed",
+      computerHeadLine: "#ede9fe",
+      computerBodyLine: "#4c1d95",
+      eye: "#10160f",
+      target: "#fde68a",
+      blast: "#fb923c"
     };
     const keyToDir = new Map(directions.map((dir, index) => [dir.key, index]));
     let cells = [];
+    let resourceEls = new Map();
 
     let cellSize = 28;
     let center = { x: 0, y: 0 };
     let snake;
     let computerSnake;
     let foods = [];
+    let projectiles = [];
+    let blasts = [];
     let dir;
     let nextDir;
     let computerDir;
     let computerScore;
     let score;
+    let playerStock;
+    let computerStock;
     let best = Number(localStorage.getItem("hexSnakeBest") || 0);
     let bestTotalMs = Number(localStorage.getItem("hexSnakeBestTotalMs") || 0);
     let totalElapsedMs = 0;
@@ -626,10 +709,64 @@
     let stepMs = 190;
     let lastStep = 0;
     let lastTimerFrame = 0;
+    let lastComputerAttackMs = 0;
     let rafId = 0;
-    let pointerId = null;
+    let movePointerId = null;
+    let targetPointerId = null;
+    let targetCell = null;
+    let targetActive = false;
 
     bestEl.textContent = best;
+    buildResourceHud();
+
+    function buildResourceHud() {
+      resourceBoard.innerHTML = "";
+      resourceEls = new Map();
+      [
+        { owner: "player", title: "玩家", color: colors.head },
+        { owner: "computer", title: "電腦", color: colors.computerHead }
+      ].forEach(group => {
+        const panel = document.createElement("div");
+        panel.className = "resource-panel";
+        panel.innerHTML = `<div class="resource-title">${group.title}<span data-total="${group.owner}">0 / 6</span></div>`;
+        foodTypes.forEach(type => {
+          const row = document.createElement("div");
+          row.className = "resource-row";
+          row.innerHTML = `
+            <span>${type.label}</span>
+            <span class="resource-track"><span class="resource-fill" style="background:${type.color}" data-fill="${group.owner}-${type.id}"></span></span>
+            <span data-count="${group.owner}-${type.id}">0</span>
+          `;
+          panel.append(row);
+        });
+        resourceBoard.append(panel);
+      });
+      resourceBoard.querySelectorAll("[data-count], [data-fill], [data-total]").forEach(el => {
+        resourceEls.set(el.dataset.count || el.dataset.fill || el.dataset.total, el);
+      });
+    }
+
+    function emptyStock() {
+      return Object.fromEntries(foodTypes.map(type => [type.id, 0]));
+    }
+
+    function stockTotal(stock) {
+      return foodTypes.reduce((total, type) => total + stock[type.id], 0);
+    }
+
+    function canAttack(stock) {
+      return stockTotal(stock) >= attackNeedTotal && foodTypes.every(type => stock[type.id] > 0);
+    }
+
+    function consumeAttackStock(stock) {
+      foodTypes.forEach(type => {
+        stock[type.id] -= 1;
+      });
+    }
+
+    function addStock(stock, typeId) {
+      stock[typeId] += 1;
+    }
 
     function formatTime(ms) {
       const totalSeconds = Math.floor(ms / 1000);
@@ -700,6 +837,37 @@
       };
     }
 
+    function pixelToAxial(x, y) {
+      const px = x - center.x;
+      const py = y - center.y;
+      const q = (Math.sqrt(3) / 3 * px - 1 / 3 * py) / cellSize;
+      const r = (2 / 3 * py) / cellSize;
+      return roundAxial(q, r);
+    }
+
+    function roundAxial(q, r) {
+      let x = q;
+      let z = r;
+      let y = -x - z;
+      let rx = Math.round(x);
+      let ry = Math.round(y);
+      let rz = Math.round(z);
+      const xDiff = Math.abs(rx - x);
+      const yDiff = Math.abs(ry - y);
+      const zDiff = Math.abs(rz - z);
+      if (xDiff > yDiff && xDiff > zDiff) rx = -ry - rz;
+      else if (yDiff > zDiff) ry = -rx - rz;
+      else rz = -rx - ry;
+      return { q: rx, r: rz };
+    }
+
+    function nearestInsideCell(cell) {
+      if (isInside(cell)) return cell;
+      return cells.reduce((bestCell, candidate) => {
+        return hexDistance(candidate, cell) < hexDistance(bestCell, cell) ? candidate : bestCell;
+      }, cells[0]);
+    }
+
     function hexPath(x, y, size) {
       ctx.beginPath();
       for (let i = 0; i < 6; i += 1) {
@@ -742,16 +910,23 @@
       computerDir = 3;
       score = 0;
       computerScore = 0;
+      playerStock = emptyStock();
+      computerStock = emptyStock();
       foods = [];
+      projectiles = [];
+      blasts = [];
+      targetCell = { ...snake[0] };
+      targetActive = false;
       stepMs = 190;
       totalElapsedMs = 0;
       lastFeedElapsedMs = 0;
       lastTimerFrame = 0;
+      lastComputerAttackMs = 0;
       gameOver = false;
       paused = false;
       placeFoods();
       updateHud();
-      setStatus("準備競賽");
+      setStatus("準備就緒。右搖桿移動，左搖桿瞄準攻擊。");
     }
 
     function startGame() {
@@ -760,12 +935,16 @@
       resetGame();
       running = true;
       setSettingsLocked(true);
-      setStatus("移動中");
+      setStatus("對戰中：吃四種食物累積砲彈資源。");
       overlay.classList.remove("show");
       lastStep = performance.now();
       lastTimerFrame = lastStep;
       cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(loop);
+    }
+
+    function randomFoodType() {
+      return foodTypes[Math.floor(Math.random() * foodTypes.length)];
     }
 
     function placeFoods() {
@@ -777,10 +956,23 @@
       while (foods.length < foodCount) {
         const openCells = cells.filter(cell => !occupied.has(keyOf(cell)));
         if (!openCells.length) return;
-        const food = openCells[Math.floor(Math.random() * openCells.length)];
-        foods.push(food);
-        occupied.add(keyOf(food));
+        const cell = openCells[Math.floor(Math.random() * openCells.length)];
+        foods.push({ q: cell.q, r: cell.r, type: randomFoodType().id });
+        occupied.add(keyOf(cell));
       }
+    }
+
+    function updateStockHud(owner, stock) {
+      const total = stockTotal(stock);
+      const totalEl = resourceEls.get(owner);
+      if (totalEl) totalEl.textContent = `${total} / ${attackNeedTotal}`;
+      foodTypes.forEach(type => {
+        const count = stock[type.id];
+        const countEl = resourceBoard.querySelector(`[data-count="${owner}-${type.id}"]`);
+        const fill = resourceBoard.querySelector(`[data-fill="${owner}-${type.id}"]`);
+        if (countEl) countEl.textContent = count;
+        if (fill) fill.style.width = `${Math.min(100, count / attackNeedTotal * 100)}%`;
+      });
     }
 
     function updateHud() {
@@ -793,6 +985,8 @@
       const speed = Math.max(1, Math.round((190 / stepMs) * 10) / 10);
       speedEl.textContent = `${speed}x`;
       keyEls.forEach(el => el.classList.toggle("active", Number(el.dataset.dir) === nextDir));
+      updateStockHud("player", playerStock);
+      updateStockHud("computer", computerStock);
     }
 
     function setStatus(text) {
@@ -819,6 +1013,7 @@
     }
 
     function nearestFoodDistance(cell) {
+      if (!foods.length) return Number.POSITIVE_INFINITY;
       return Math.min(...foods.map(food => hexDistance(cell, food)));
     }
 
@@ -882,11 +1077,7 @@
         const bValue = Number.isFinite(b.tacticalValue) ? b.tacticalValue : b.fallbackValue;
         return aValue - bValue;
       });
-      const randomChance = {
-        high: 0,
-        medium: 0.22,
-        low: 0.42
-      }[computerDifficulty];
+      const randomChance = { high: 0, medium: 0.22, low: 0.42 }[computerDifficulty];
 
       if (Math.random() < randomChance) return randomItem(options).direction;
       return options[0].direction;
@@ -901,6 +1092,48 @@
       if (!running || gameOver) startGame();
     }
 
+    function launchAttack(owner, target, now) {
+      const stock = owner === "player" ? playerStock : computerStock;
+      if (!canAttack(stock)) return false;
+      consumeAttackStock(stock);
+      projectiles.push({
+        owner,
+        target: { q: target.q, r: target.r },
+        createdAt: now,
+        impactAt: now + attackDelayMs
+      });
+      updateHud();
+      return true;
+    }
+
+    function maybeComputerAttack(now) {
+      const cooldown = { low: 6200, medium: 4700, high: 3400 }[computerDifficulty];
+      if (now - lastComputerAttackMs < cooldown || !canAttack(computerStock)) return;
+      const spread = computerDifficulty === "high" ? 1 : 2;
+      const nearPlayer = cells.filter(cell => hexDistance(cell, snake[0]) <= spread);
+      const target = randomItem(nearPlayer.length ? nearPlayer : [snake[0]]);
+      if (launchAttack("computer", target, now)) {
+        lastComputerAttackMs = now;
+        setStatus("電腦發射砲彈，2 秒後落地。");
+      }
+    }
+
+    function resolveProjectiles(now) {
+      const landed = projectiles.filter(projectile => now >= projectile.impactAt);
+      if (!landed.length) return;
+      projectiles = projectiles.filter(projectile => now < projectile.impactAt);
+
+      let playerHit = false;
+      let computerHit = false;
+      landed.forEach(projectile => {
+        blasts.push({ target: projectile.target, owner: projectile.owner, startedAt: now, endAt: now + blastDurationMs });
+        if (snake.some(segment => hexDistance(segment, projectile.target) <= blastHexRadius)) playerHit = true;
+        if (computerSnake.some(segment => hexDistance(segment, projectile.target) <= blastHexRadius)) computerHit = true;
+      });
+      blasts = blasts.filter(blast => now <= blast.endAt);
+      if (playerHit || computerHit) endGame(playerHit, computerHit);
+    }
+
     function step() {
       dir = nextDir;
       computerDir = chooseComputerDirection();
@@ -909,10 +1142,10 @@
       const computerNext = nextCell(computerSnake[0], computerDir);
       const nextKey = keyOf(next);
       const computerNextKey = keyOf(computerNext);
-      const eatenKey = foods.find(food => next.q === food.q && next.r === food.r);
-      const computerEatenKey = foods.find(food => computerNext.q === food.q && computerNext.r === food.r);
-      const eating = Boolean(eatenKey);
-      const computerEating = Boolean(computerEatenKey);
+      const eatenFood = foods.find(food => next.q === food.q && next.r === food.r);
+      const computerEatenFood = foods.find(food => computerNext.q === food.q && computerNext.r === food.r);
+      const eating = Boolean(eatenFood);
+      const computerEating = Boolean(computerEatenFood);
       const body = eating ? snake : snake.slice(0, -1);
       const computerBody = computerEating ? computerSnake : computerSnake.slice(0, -1);
       let playerLost = !isInside(next) || body.some(segment => keyOf(segment) === nextKey);
@@ -939,6 +1172,7 @@
 
       if (eating) {
         score += 1;
+        addStock(playerStock, eatenFood.type);
         best = Math.max(best, score);
         localStorage.setItem("hexSnakeBest", String(best));
         lastFeedElapsedMs = 0;
@@ -949,6 +1183,7 @@
 
       if (computerEating) {
         computerScore += 1;
+        addStock(computerStock, computerEatenFood.type);
         stepMs = Math.max(78, stepMs - 5);
       } else {
         computerSnake.pop();
@@ -967,6 +1202,7 @@
     }
 
     function endGame(playerLost = true, computerLost = false) {
+      if (gameOver) return;
       running = false;
       gameOver = true;
       setSettingsLocked(false);
@@ -975,16 +1211,16 @@
         localStorage.setItem("hexSnakeBestTotalMs", String(Math.floor(bestTotalMs)));
       }
       updateHud();
-      let title = "你贏了";
-      if (playerLost && !computerLost) title = "電腦贏了";
+      let title = "玩家獲勝";
+      if (playerLost && !computerLost) title = "電腦獲勝";
       if (playerLost && computerLost) {
-        if (score > computerScore) title = "你贏了";
-        else if (computerScore > score) title = "電腦贏了";
+        if (score > computerScore) title = "玩家獲勝";
+        else if (computerScore > score) title = "電腦獲勝";
         else title = "平手";
       }
-      setStatus(`遊戲結束：${title}`);
+      setStatus(`對戰結束：${title}`);
       overlayTitle.textContent = title;
-      overlayText.textContent = `你 ${score}：電腦 ${computerScore}。先撞牆、撞自己或撞對手的一方落敗。`;
+      overlayText.textContent = `玩家 ${score} 分，電腦 ${computerScore} 分。按開始再來一局。`;
       startButton.textContent = "重新開始";
       overlay.classList.add("show");
     }
@@ -1002,10 +1238,15 @@
       } else {
         lastTimerFrame = now;
       }
-      if (!paused && now - lastStep >= stepMs) {
+      if (!paused) {
+        resolveProjectiles(now);
+        maybeComputerAttack(now);
+      }
+      if (running && !paused && now - lastStep >= stepMs) {
         step();
         lastStep = now;
       }
+      blasts = blasts.filter(blast => now <= blast.endAt);
       updateHud();
       draw();
       rafId = requestAnimationFrame(loop);
@@ -1029,14 +1270,19 @@
       });
 
       foods.forEach(food => {
+        const type = foodTypeById.get(food.type);
         const { x, y } = axialToPixel(food);
         hexPath(x, y, cellSize * 0.72);
-        ctx.fillStyle = colors.food;
+        ctx.fillStyle = type.color;
         ctx.fill();
-        ctx.strokeStyle = colors.foodLine;
+        ctx.strokeStyle = type.line;
         ctx.lineWidth = 2;
         ctx.stroke();
       });
+
+      drawProjectiles();
+      drawTarget();
+      drawBlasts();
 
       if (computerSnake) {
         drawSnake(computerSnake, {
@@ -1057,25 +1303,81 @@
       }
     }
 
+    function drawProjectiles() {
+      const now = performance.now();
+      projectiles.forEach(projectile => {
+        const { x, y } = axialToPixel(projectile.target);
+        const progress = Math.min(1, Math.max(0, (now - projectile.createdAt) / attackDelayMs));
+        const arcHeight = Math.sin(progress * Math.PI) * cellSize * 1.5;
+        ctx.beginPath();
+        ctx.arc(x, y - arcHeight, Math.max(5, cellSize * 0.16), 0, Math.PI * 2);
+        ctx.fillStyle = projectile.owner === "player" ? colors.head : colors.computerHead;
+        ctx.fill();
+        ctx.strokeStyle = "rgba(255,255,255,0.72)";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(x, y, cellSize * 0.28, 0, Math.PI * 2);
+        ctx.strokeStyle = "rgba(255,255,255,0.24)";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      });
+    }
+
+    function drawTarget() {
+      if (!targetCell || !snake) return;
+      if (!targetActive && !canAttack(playerStock)) return;
+      const { x, y } = axialToPixel(targetCell);
+      ctx.beginPath();
+      ctx.arc(x, y, cellSize * blastHexRadius * 1.52, 0, Math.PI * 2);
+      ctx.fillStyle = canAttack(playerStock) ? "rgba(245,158,11,0.1)" : "rgba(168,179,194,0.08)";
+      ctx.fill();
+      ctx.strokeStyle = canAttack(playerStock) ? "rgba(253,230,138,0.78)" : "rgba(168,179,194,0.36)";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 6]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      hexPath(x, y, cellSize * 0.55);
+      ctx.strokeStyle = colors.target;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    function drawBlasts() {
+      const now = performance.now();
+      blasts.forEach(blast => {
+        const { x, y } = axialToPixel(blast.target);
+        const progress = Math.min(1, (now - blast.startedAt) / blastDurationMs);
+        const alpha = 1 - progress;
+        ctx.beginPath();
+        ctx.arc(x, y, cellSize * blastHexRadius * 1.52 * (0.65 + progress * 0.35), 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(251,146,60,${0.22 * alpha})`;
+        ctx.fill();
+        ctx.strokeStyle = `rgba(253,230,138,${0.8 * alpha})`;
+        ctx.lineWidth = 3;
+        ctx.stroke();
+      });
+    }
+
     function drawSnake(parts, palette) {
       parts.forEach((segment, index) => {
-          const { x, y } = axialToPixel(segment);
-          hexPath(x, y, cellSize * (index === 0 ? 0.82 : 0.76));
-          ctx.fillStyle = index === 0 ? palette.head : palette.body;
-          ctx.fill();
-          ctx.strokeStyle = index === 0 ? palette.headLine : palette.bodyLine;
-          ctx.lineWidth = index === 0 ? 3 : 1.5;
-          ctx.stroke();
+        const { x, y } = axialToPixel(segment);
+        hexPath(x, y, cellSize * (index === 0 ? 0.82 : 0.76));
+        ctx.fillStyle = index === 0 ? palette.head : palette.body;
+        ctx.fill();
+        ctx.strokeStyle = index === 0 ? palette.headLine : palette.bodyLine;
+        ctx.lineWidth = index === 0 ? 3 : 1.5;
+        ctx.stroke();
 
-          if (index === 0) {
-            const eyeDistance = cellSize * 0.22;
-            ctx.fillStyle = colors.eye;
-            ctx.beginPath();
-            ctx.arc(x - eyeDistance, y - cellSize * 0.08, Math.max(2.5, cellSize * 0.07), 0, Math.PI * 2);
-            ctx.arc(x + eyeDistance, y - cellSize * 0.08, Math.max(2.5, cellSize * 0.07), 0, Math.PI * 2);
-            ctx.fill();
-          }
-        });
+        if (index === 0) {
+          const eyeDistance = cellSize * 0.22;
+          ctx.fillStyle = colors.eye;
+          ctx.beginPath();
+          ctx.arc(x - eyeDistance, y - cellSize * 0.08, Math.max(2.5, cellSize * 0.07), 0, Math.PI * 2);
+          ctx.arc(x + eyeDistance, y - cellSize * 0.08, Math.max(2.5, cellSize * 0.07), 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
     }
 
     function pointerToDirection(event, rect) {
@@ -1096,27 +1398,60 @@
       const dy = event.clientY - cy;
       const distance = Math.min(54, Math.hypot(dx, dy));
       const angle = Math.atan2(dy, dx);
-      const x = Math.cos(angle) * distance;
-      const y = Math.sin(angle) * distance;
-      stick.style.transform = `translate(${x}px, ${y}px)`;
+      stick.style.transform = `translate(${Math.cos(angle) * distance}px, ${Math.sin(angle) * distance}px)`;
       const newDir = pointerToDirection(event, rect);
       if (newDir !== null) setDirection(newDir);
     }
 
-    function releaseStick() {
-      pointerId = null;
+    function releaseMoveStick() {
+      movePointerId = null;
       stick.style.transform = "translate(0, 0)";
+    }
+
+    function moveTargetStick(event) {
+      if (!running || gameOver) startGame();
+      const rect = targetZone.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const dx = event.clientX - cx;
+      const dy = event.clientY - cy;
+      const rawDistance = Math.hypot(dx, dy);
+      const distance = Math.min(54, rawDistance);
+      const angle = Math.atan2(dy, dx);
+      targetStick.style.transform = `translate(${Math.cos(angle) * distance}px, ${Math.sin(angle) * distance}px)`;
+      const playerPixel = axialToPixel(snake[0]);
+      const maxPixelRange = targetMaxHex * cellSize;
+      const ratio = Math.min(1, rawDistance / Math.max(1, rect.width * 0.44));
+      const targetPixel = {
+        x: playerPixel.x + Math.cos(angle) * maxPixelRange * ratio,
+        y: playerPixel.y + Math.sin(angle) * maxPixelRange * ratio
+      };
+      targetCell = nearestInsideCell(pixelToAxial(targetPixel.x, targetPixel.y));
+      targetActive = true;
+      draw();
+    }
+
+    function releaseTargetStick() {
+      targetPointerId = null;
+      targetStick.style.transform = "translate(0, 0)";
+      if (targetActive && running && !paused && !gameOver) {
+        if (launchAttack("player", targetCell || snake[0], performance.now())) {
+          setStatus("玩家發射砲彈，2 秒後落地。");
+        } else {
+          setStatus("攻擊需要總食物 6，且紅黃綠藍四種庫存各至少 1。");
+        }
+      }
+      targetActive = false;
     }
 
     gridSizeInput.addEventListener("change", () => {
       if (running) return;
       setGridSize(gridSizeInput.value);
-      running = false;
       cancelAnimationFrame(rafId);
       resetGame();
       resize();
       overlayTitle.textContent = "棋盤已更新";
-      overlayText.textContent = `格子數已設定為 ${gridSize}，按開始重新遊玩。`;
+      overlayText.textContent = `棋盤半徑已設為 ${gridSize}。開始後設定會鎖定到下一局。`;
       startButton.textContent = "開始";
       overlay.classList.add("show");
     });
@@ -1127,7 +1462,7 @@
       resetGame();
       resize();
       overlayTitle.textContent = "食物數量已更新";
-      overlayText.textContent = `這局會隨機出現 ${foodCount} 個食物，開始後不可更動。`;
+      overlayText.textContent = `場上會維持 ${foodCount} 個紅黃綠藍隨機食物。`;
       startButton.textContent = "開始";
       overlay.classList.add("show");
     });
@@ -1138,7 +1473,7 @@
       resetGame();
       resize();
       overlayTitle.textContent = "難度已更新";
-      overlayText.textContent = `電腦難度已設定為 ${computerDifficultyInput.selectedOptions[0].textContent}，開始後不可更動。`;
+      overlayText.textContent = `電腦難度設為 ${computerDifficultyInput.selectedOptions[0].textContent}。`;
       startButton.textContent = "開始";
       overlay.classList.add("show");
     });
@@ -1152,30 +1487,43 @@
     startButton.addEventListener("click", () => {
       if (paused && running && !gameOver) {
         paused = false;
-        setStatus("移動中");
+        setStatus("對戰中：吃四種食物累積砲彈資源。");
         overlay.classList.remove("show");
         lastStep = performance.now();
         lastTimerFrame = lastStep;
         return;
       }
-      overlayTitle.textContent = "準備好了";
-      overlayText.textContent = "搶下金色食物，別撞到自己、牆或對手。";
+      overlayTitle.textContent = "準備開局";
+      overlayText.textContent = "吃紅黃綠藍四種食物累積營養。總量 6 且四種各至少 1 時，左搖桿放開可投擲砲彈。";
       startButton.textContent = "開始";
       startGame();
     });
 
     joyZone.addEventListener("pointerdown", event => {
-      pointerId = event.pointerId;
-      joyZone.setPointerCapture(pointerId);
+      movePointerId = event.pointerId;
+      joyZone.setPointerCapture(movePointerId);
       moveStick(event);
     });
 
     joyZone.addEventListener("pointermove", event => {
-      if (event.pointerId === pointerId) moveStick(event);
+      if (event.pointerId === movePointerId) moveStick(event);
     });
 
-    joyZone.addEventListener("pointerup", releaseStick);
-    joyZone.addEventListener("pointercancel", releaseStick);
+    joyZone.addEventListener("pointerup", releaseMoveStick);
+    joyZone.addEventListener("pointercancel", releaseMoveStick);
+
+    targetZone.addEventListener("pointerdown", event => {
+      targetPointerId = event.pointerId;
+      targetZone.setPointerCapture(targetPointerId);
+      moveTargetStick(event);
+    });
+
+    targetZone.addEventListener("pointermove", event => {
+      if (event.pointerId === targetPointerId) moveTargetStick(event);
+    });
+
+    targetZone.addEventListener("pointerup", releaseTargetStick);
+    targetZone.addEventListener("pointercancel", releaseTargetStick);
 
     playArea.addEventListener("pointerdown", event => {
       if (event.target.closest(".overlay")) return;
@@ -1193,14 +1541,24 @@
           return;
         }
         paused = !paused;
-        setStatus(paused ? "已暫停" : "移動中");
+        setStatus(paused ? "已暫停" : "對戰中：吃四種食物累積砲彈資源。");
         overlayTitle.textContent = "暫停";
-        overlayText.textContent = "按空白鍵或開始鍵繼續。";
+        overlayText.textContent = "按繼續回到對戰。";
         startButton.textContent = "繼續";
         overlay.classList.toggle("show", paused);
         if (!paused) {
           lastStep = performance.now();
           lastTimerFrame = lastStep;
+        }
+        return;
+      }
+
+      if (key === "q") {
+        if (!running || gameOver) startGame();
+        if (launchAttack("player", targetCell || snake[0], performance.now())) {
+          setStatus("玩家發射砲彈，2 秒後落地。");
+        } else {
+          setStatus("攻擊需要總食物 6，且紅黃綠藍四種庫存各至少 1。");
         }
         return;
       }
