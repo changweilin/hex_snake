@@ -1332,6 +1332,41 @@
       return items[Math.floor(Math.random() * items.length)];
     }
 
+    function cellsWithinDistance(origin, minDistance, maxDistance) {
+      return cells.filter(cell => {
+        const distance = hexDistance(cell, origin);
+        return distance >= minDistance && distance <= maxDistance;
+      });
+    }
+
+    function attackTargetDamage(target, radius, damageScale) {
+      return damageSnake(snake, target, radius, damageScale);
+    }
+
+    function chooseComputerAttackTarget() {
+      const playerHead = snake[0];
+      const radius = blastRadius(computerStock);
+      const damageScale = damageMultiplier(computerStock);
+
+      if (computerDifficulty === "high") {
+        const candidates = cellsWithinDistance(playerHead, 0, Math.max(1, Math.ceil(radius)));
+        candidates.sort((a, b) => {
+          const damageDiff = attackTargetDamage(b, radius, damageScale) - attackTargetDamage(a, radius, damageScale);
+          if (damageDiff) return damageDiff;
+          return hexDistance(a, playerHead) - hexDistance(b, playerHead);
+        });
+        return candidates[0] || { ...playerHead };
+      }
+
+      if (computerDifficulty === "medium") {
+        const nearPlayer = cellsWithinDistance(playerHead, 0, 1);
+        return { ...randomItem(nearPlayer.length ? nearPlayer : [playerHead]) };
+      }
+
+      const looseAim = cellsWithinDistance(playerHead, 2, 4);
+      return { ...randomItem(looseAim.length ? looseAim : cellsWithinDistance(playerHead, 0, 2)) };
+    }
+
     function shortestFoodDistance(start, occupied) {
       const foodKeys = new Set(foods.map(keyOf));
       const visited = new Set([keyOf(start)]);
@@ -1388,7 +1423,7 @@
         const bValue = Number.isFinite(b.tacticalValue) ? b.tacticalValue : b.fallbackValue;
         return aValue - bValue;
       });
-      const randomChance = { high: 0, medium: 0.22, low: 0.42 }[computerDifficulty];
+      const randomChance = { high: 0, medium: 0.3, low: 0.52 }[computerDifficulty];
 
       if (Math.random() < randomChance) return randomItem(options).direction;
       return options[0].direction;
@@ -1406,6 +1441,7 @@
     function launchAttack(owner, target, now) {
       const stock = owner === "player" ? playerStock : computerStock;
       const lastAttack = owner === "player" ? lastPlayerAttackMs : lastComputerAttackMs;
+      const source = owner === "player" ? snake[0] : computerSnake[0];
       if (!canAttack(owner)) return false;
       if (now - lastAttack < attackCooldown(stock)) return false;
       const delay = attackDelay(stock);
@@ -1416,6 +1452,7 @@
       else lastComputerAttackMs = now;
       projectiles.push({
         owner,
+        source: { q: source.q, r: source.r },
         target: { q: target.q, r: target.r },
         createdAt: now,
         impactAt: now + delay,
@@ -1430,9 +1467,7 @@
     function maybeComputerAttack(now) {
       const cooldown = { low: 6200, medium: 4700, high: 3400 }[computerDifficulty] / attackSpeedMultiplier(computerStock);
       if (now - lastComputerAttackMs < cooldown || !canAttack("computer")) return;
-      const spread = computerDifficulty === "high" ? 1 : 2;
-      const nearPlayer = cells.filter(cell => hexDistance(cell, snake[0]) <= spread);
-      const target = randomItem(nearPlayer.length ? nearPlayer : [snake[0]]);
+      const target = chooseComputerAttackTarget();
       if (launchAttack("computer", target, now)) {
         lastComputerAttackMs = now;
         setStatus("電腦發射砲彈，2 秒後落地。");
@@ -1710,8 +1745,11 @@
     function drawProjectiles() {
       const now = performance.now();
       projectiles.forEach(projectile => {
-        const { x, y } = axialToPixel(projectile.target);
+        const start = axialToPixel(projectile.source || projectile.target);
+        const end = axialToPixel(projectile.target);
         const progress = Math.min(1, Math.max(0, (now - projectile.createdAt) / (projectile.delay || baseAttackDelayMs)));
+        const x = start.x + (end.x - start.x) * progress;
+        const y = start.y + (end.y - start.y) * progress;
         const arcHeight = Math.sin(progress * Math.PI) * cellSize * 1.5;
         ctx.beginPath();
         ctx.arc(x, y - arcHeight, Math.max(5, cellSize * 0.16), 0, Math.PI * 2);
@@ -1721,7 +1759,7 @@
         ctx.lineWidth = 2;
         ctx.stroke();
         ctx.beginPath();
-        ctx.arc(x, y, cellSize * 0.28, 0, Math.PI * 2);
+        ctx.arc(end.x, end.y, cellSize * 0.28, 0, Math.PI * 2);
         ctx.strokeStyle = "rgba(255,255,255,0.24)";
         ctx.lineWidth = 2;
         ctx.stroke();
