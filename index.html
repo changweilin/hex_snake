@@ -239,7 +239,12 @@
       font-weight: 700;
     }
 
-    .field input {
+    .field + .field {
+      margin-top: 10px;
+    }
+
+    .field input,
+    .field select {
       width: 100%;
       min-height: 42px;
       border-radius: 8px;
@@ -251,10 +256,17 @@
       padding: 8px 10px;
     }
 
-    .field input:focus {
+    .field input:focus,
+    .field select:focus {
       border-color: var(--accent);
       outline: 2px solid rgba(125, 213, 111, 0.22);
       outline-offset: 2px;
+    }
+
+    .field input:disabled,
+    .field select:disabled {
+      cursor: not-allowed;
+      opacity: 0.58;
     }
 
     .keys {
@@ -487,6 +499,18 @@
           <label for="gridSize">格子數</label>
           <input id="gridSize" type="number" min="6" max="12" step="1" value="10" inputmode="numeric">
         </div>
+        <div class="field">
+          <label for="foodCount">食物數量</label>
+          <input id="foodCount" type="number" min="1" max="4" step="1" value="1" inputmode="numeric">
+        </div>
+        <div class="field">
+          <label for="computerDifficulty">電腦難度</label>
+          <select id="computerDifficulty">
+            <option value="low">初級</option>
+            <option value="medium" selected>中級</option>
+            <option value="high">高級</option>
+          </select>
+        </div>
         <button id="resetBestTimeButton" class="secondary" type="button">刷新最佳總時間</button>
       </section>
 
@@ -516,6 +540,7 @@
           <li><b>A W E F X Z</b>：對應六個相鄰方向。</li>
           <li><b>空白鍵</b>：暫停或繼續。</li>
           <li><b>勝負</b>：任一方撞牆、撞自己或撞對手即落敗；同時出局比分高者勝，同分平手。</li>
+          <li><b>開局設定</b>：食物數量與電腦難度開始後鎖定，下一局才能更動。</li>
         </ul>
       </section>
     </aside>
@@ -540,14 +565,20 @@
     const stick = document.querySelector("#stick");
     const joyZone = document.querySelector("#joyZone");
     const gridSizeInput = document.querySelector("#gridSize");
+    const foodCountInput = document.querySelector("#foodCount");
+    const computerDifficultyInput = document.querySelector("#computerDifficulty");
     const resetBestTimeButton = document.querySelector("#resetBestTimeButton");
     const keyEls = [...document.querySelectorAll(".key")];
     const mobileInputQuery = window.matchMedia("(hover: none), (pointer: coarse), (max-width: 860px)");
 
     const minGridSize = 6;
     const maxGridSize = 12;
+    const minFoodCount = 1;
+    const maxFoodCount = 4;
     let gridSize = 10;
     let radius = gridSize - 1;
+    let foodCount = 1;
+    let computerDifficulty = "medium";
     const directions = [
       { q: 0, r: -1, angle: -90, key: "w" },
       { q: 1, r: -1, angle: -30, key: "e" },
@@ -579,7 +610,7 @@
     let center = { x: 0, y: 0 };
     let snake;
     let computerSnake;
-    let food;
+    let foods = [];
     let dir;
     let nextDir;
     let computerDir;
@@ -613,6 +644,12 @@
       return Math.min(maxGridSize, Math.max(minGridSize, parsed));
     }
 
+    function clampFoodCount(value) {
+      const parsed = Number.parseInt(value, 10);
+      if (!Number.isFinite(parsed)) return foodCount;
+      return Math.min(maxFoodCount, Math.max(minFoodCount, parsed));
+    }
+
     function buildCells() {
       cells = [];
       for (let q = -radius; q <= radius; q += 1) {
@@ -629,6 +666,22 @@
       radius = gridSize - 1;
       gridSizeInput.value = gridSize;
       buildCells();
+    }
+
+    function setFoodCount(value) {
+      foodCount = clampFoodCount(value);
+      foodCountInput.value = foodCount;
+    }
+
+    function setComputerDifficulty(value) {
+      computerDifficulty = ["low", "medium", "high"].includes(value) ? value : "medium";
+      computerDifficultyInput.value = computerDifficulty;
+    }
+
+    function setSettingsLocked(locked) {
+      gridSizeInput.disabled = locked;
+      foodCountInput.disabled = locked;
+      computerDifficultyInput.disabled = locked;
     }
 
     function keyOf(cell) {
@@ -689,20 +742,24 @@
       computerDir = 3;
       score = 0;
       computerScore = 0;
+      foods = [];
       stepMs = 190;
       totalElapsedMs = 0;
       lastFeedElapsedMs = 0;
       lastTimerFrame = 0;
       gameOver = false;
       paused = false;
-      placeFood();
+      placeFoods();
       updateHud();
       setStatus("準備競賽");
     }
 
     function startGame() {
+      setFoodCount(foodCountInput.value);
+      setComputerDifficulty(computerDifficultyInput.value);
       resetGame();
       running = true;
+      setSettingsLocked(true);
       setStatus("移動中");
       overlay.classList.remove("show");
       lastStep = performance.now();
@@ -711,13 +768,19 @@
       rafId = requestAnimationFrame(loop);
     }
 
-    function placeFood() {
+    function placeFoods() {
       const occupied = new Set([
         ...snake.map(keyOf),
-        ...computerSnake.map(keyOf)
+        ...computerSnake.map(keyOf),
+        ...foods.map(keyOf)
       ]);
-      const openCells = cells.filter(cell => !occupied.has(keyOf(cell)));
-      food = openCells[Math.floor(Math.random() * openCells.length)];
+      while (foods.length < foodCount) {
+        const openCells = cells.filter(cell => !occupied.has(keyOf(cell)));
+        if (!openCells.length) return;
+        const food = openCells[Math.floor(Math.random() * openCells.length)];
+        foods.push(food);
+        occupied.add(keyOf(food));
+      }
     }
 
     function updateHud() {
@@ -755,6 +818,36 @@
       return { q: head.q + delta.q, r: head.r + delta.r };
     }
 
+    function nearestFoodDistance(cell) {
+      return Math.min(...foods.map(food => hexDistance(cell, food)));
+    }
+
+    function randomItem(items) {
+      return items[Math.floor(Math.random() * items.length)];
+    }
+
+    function shortestFoodDistance(start, occupied) {
+      const foodKeys = new Set(foods.map(keyOf));
+      const visited = new Set([keyOf(start)]);
+      const queue = [{ cell: start, distance: 0 }];
+
+      for (let index = 0; index < queue.length; index += 1) {
+        const current = queue[index];
+        if (foodKeys.has(keyOf(current.cell))) return current.distance;
+
+        directions.forEach((_, direction) => {
+          const next = nextCell(current.cell, direction);
+          const nextKey = keyOf(next);
+          if (!isInside(next) || visited.has(nextKey)) return;
+          if (occupied.has(nextKey) && !foodKeys.has(nextKey)) return;
+          visited.add(nextKey);
+          queue.push({ cell: next, distance: current.distance + 1 });
+        });
+      }
+
+      return Number.POSITIVE_INFINITY;
+    }
+
     function chooseComputerDirection() {
       const playerHead = snake[0];
       const playerThreat = nextCell(playerHead, nextDir);
@@ -762,8 +855,7 @@
         ...snake.map(keyOf),
         ...computerSnake.slice(0, -1).map(keyOf)
       ]);
-      let bestChoice = computerDir;
-      let bestValue = Number.POSITIVE_INFINITY;
+      const options = [];
 
       directions.forEach((_, candidate) => {
         if (!canComputerTurn(candidate)) return;
@@ -773,14 +865,31 @@
 
         const danger = keyOf(playerThreat) === nextKey ? 20 : 0;
         const wallPressure = cells.filter(cell => hexDistance(cell, next) <= 1 && !occupied.has(keyOf(cell))).length;
-        const value = hexDistance(next, food) + danger - wallPressure * 0.08;
-        if (value < bestValue) {
-          bestValue = value;
-          bestChoice = candidate;
-        }
+        const pathDistance = shortestFoodDistance(next, occupied);
+        options.push({
+          direction: candidate,
+          pathValue: Number.isFinite(pathDistance) ? pathDistance : nearestFoodDistance(next),
+          tacticalValue: pathDistance + danger - wallPressure * 0.08,
+          fallbackValue: nearestFoodDistance(next) + danger - wallPressure * 0.08
+        });
       });
 
-      return bestChoice;
+      if (!options.length) return computerDir;
+
+      options.sort((a, b) => {
+        if (computerDifficulty === "high") return a.pathValue - b.pathValue;
+        const aValue = Number.isFinite(a.tacticalValue) ? a.tacticalValue : a.fallbackValue;
+        const bValue = Number.isFinite(b.tacticalValue) ? b.tacticalValue : b.fallbackValue;
+        return aValue - bValue;
+      });
+      const randomChance = {
+        high: 0,
+        medium: 0.22,
+        low: 0.42
+      }[computerDifficulty];
+
+      if (Math.random() < randomChance) return randomItem(options).direction;
+      return options[0].direction;
     }
 
     function setDirection(newDir) {
@@ -800,8 +909,10 @@
       const computerNext = nextCell(computerSnake[0], computerDir);
       const nextKey = keyOf(next);
       const computerNextKey = keyOf(computerNext);
-      const eating = next.q === food.q && next.r === food.r;
-      const computerEating = computerNext.q === food.q && computerNext.r === food.r;
+      const eatenKey = foods.find(food => next.q === food.q && next.r === food.r);
+      const computerEatenKey = foods.find(food => computerNext.q === food.q && computerNext.r === food.r);
+      const eating = Boolean(eatenKey);
+      const computerEating = Boolean(computerEatenKey);
       const body = eating ? snake : snake.slice(0, -1);
       const computerBody = computerEating ? computerSnake : computerSnake.slice(0, -1);
       let playerLost = !isInside(next) || body.some(segment => keyOf(segment) === nextKey);
@@ -843,7 +954,14 @@
         computerSnake.pop();
       }
 
-      if (eating || computerEating) placeFood();
+      if (eating || computerEating) {
+        const eatenKeys = new Set([
+          eating ? nextKey : null,
+          computerEating ? computerNextKey : null
+        ].filter(Boolean));
+        foods = foods.filter(food => !eatenKeys.has(keyOf(food)));
+        placeFoods();
+      }
 
       updateHud();
     }
@@ -851,6 +969,7 @@
     function endGame(playerLost = true, computerLost = false) {
       running = false;
       gameOver = true;
+      setSettingsLocked(false);
       if (totalElapsedMs > bestTotalMs) {
         bestTotalMs = totalElapsedMs;
         localStorage.setItem("hexSnakeBestTotalMs", String(Math.floor(bestTotalMs)));
@@ -909,7 +1028,7 @@
         ctx.stroke();
       });
 
-      if (food) {
+      foods.forEach(food => {
         const { x, y } = axialToPixel(food);
         hexPath(x, y, cellSize * 0.72);
         ctx.fillStyle = colors.food;
@@ -917,7 +1036,7 @@
         ctx.strokeStyle = colors.foodLine;
         ctx.lineWidth = 2;
         ctx.stroke();
-      }
+      });
 
       if (computerSnake) {
         drawSnake(computerSnake, {
@@ -990,6 +1109,7 @@
     }
 
     gridSizeInput.addEventListener("change", () => {
+      if (running) return;
       setGridSize(gridSizeInput.value);
       running = false;
       cancelAnimationFrame(rafId);
@@ -997,6 +1117,28 @@
       resize();
       overlayTitle.textContent = "棋盤已更新";
       overlayText.textContent = `格子數已設定為 ${gridSize}，按開始重新遊玩。`;
+      startButton.textContent = "開始";
+      overlay.classList.add("show");
+    });
+
+    foodCountInput.addEventListener("change", () => {
+      if (running) return;
+      setFoodCount(foodCountInput.value);
+      resetGame();
+      resize();
+      overlayTitle.textContent = "食物數量已更新";
+      overlayText.textContent = `這局會隨機出現 ${foodCount} 個食物，開始後不可更動。`;
+      startButton.textContent = "開始";
+      overlay.classList.add("show");
+    });
+
+    computerDifficultyInput.addEventListener("change", () => {
+      if (running) return;
+      setComputerDifficulty(computerDifficultyInput.value);
+      resetGame();
+      resize();
+      overlayTitle.textContent = "難度已更新";
+      overlayText.textContent = `電腦難度已設定為 ${computerDifficultyInput.selectedOptions[0].textContent}，開始後不可更動。`;
       startButton.textContent = "開始";
       overlay.classList.add("show");
     });
@@ -1077,6 +1219,9 @@
     window.addEventListener("resize", resize);
 
     setGridSize(gridSizeInput.value);
+    setFoodCount(foodCountInput.value);
+    setComputerDifficulty(computerDifficultyInput.value);
+    setSettingsLocked(false);
     resetGame();
     resize();
   </script>
