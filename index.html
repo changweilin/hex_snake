@@ -415,31 +415,77 @@
       html,
       body {
         height: 100%;
+        overflow: hidden;
       }
 
       body {
+        height: 100dvh;
         min-height: 100dvh;
-        padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+        padding: max(6px, env(safe-area-inset-top)) max(6px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left));
         place-items: stretch;
+        overflow: hidden;
       }
 
       .app {
         grid-template-columns: 1fr;
+        grid-template-rows: minmax(0, 1fr) auto;
+        gap: 6px;
         width: 100%;
-        min-height: calc(100dvh - max(8px, env(safe-area-inset-top)) - max(8px, env(safe-area-inset-bottom)));
+        height: calc(100dvh - max(6px, env(safe-area-inset-top)) - max(6px, env(safe-area-inset-bottom)));
+        min-height: 0;
+        overflow: hidden;
       }
 
       .stage {
-        min-height: 100%;
+        min-height: 0;
         grid-template-rows: auto minmax(0, 1fr);
+        gap: 6px;
+        overflow: hidden;
       }
 
       .topbar {
         grid-template-columns: 1fr;
+        min-height: 0;
+        gap: 6px;
+        padding: 8px;
+      }
+
+      h1 {
+        font-size: clamp(1rem, 4.2vw, 1.28rem);
+        line-height: 1;
+      }
+
+      .status {
+        margin-top: 3px;
+        font-size: 0.72rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
 
       .metrics {
         justify-content: start;
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 4px;
+      }
+
+      .metric {
+        min-width: 0;
+        padding: 4px 3px;
+      }
+
+      .metric span {
+        font-size: 0.56rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .metric strong {
+        display: block;
+        font-size: clamp(0.72rem, 3.1vw, 0.95rem);
+        line-height: 1.05;
       }
 
       .side {
@@ -449,11 +495,15 @@
         border: 0;
         box-shadow: none;
         backdrop-filter: none;
-        display: block;
+        display: grid;
+        grid-template-rows: auto auto auto;
+        gap: 6px;
+        overflow: hidden;
       }
 
       .side .section {
-        margin-top: 10px;
+        margin-top: 0;
+        padding: 6px;
       }
 
       .side .section:nth-of-type(3),
@@ -462,15 +512,116 @@
       }
 
       .canvas-wrap {
-        min-height: clamp(360px, 58dvh, 620px);
+        min-height: 0;
+        height: 100%;
       }
 
       canvas {
-        min-height: clamp(360px, 58dvh, 620px);
+        min-height: 0;
+        height: 100%;
+      }
+
+      .side .section:nth-of-type(1) {
+        order: 1;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(42px, 0.62fr);
+        gap: 5px;
+        align-items: end;
+      }
+
+      .side .section:nth-of-type(1) h2,
+      .side .section:nth-of-type(2) h2 {
+        display: none;
+      }
+
+      .side .section:nth-of-type(1) .field {
+        gap: 2px;
+      }
+
+      .side .section:nth-of-type(1) .field + .field {
+        margin-top: 0;
+      }
+
+      .side .section:nth-of-type(1) label {
+        font-size: 0.58rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .side .section:nth-of-type(1) input,
+      .side .section:nth-of-type(1) select,
+      .side .section:nth-of-type(1) button {
+        min-height: 32px;
+        padding: 4px 5px;
+        font-size: 0.78rem;
+      }
+
+      #resetBestTimeButton {
+        font-size: 0;
+        padding: 0;
+      }
+
+      #resetBestTimeButton::before {
+        content: "Reset";
+        font-size: 0.66rem;
+      }
+
+      .side .section:nth-of-type(2) {
+        order: 2;
+      }
+
+      .resource-board {
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+      }
+
+      .resource-panel {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 4px;
+        min-width: 0;
+      }
+
+      .resource-title {
+        grid-column: 1 / -1;
+        font-size: 0.68rem;
+        gap: 4px;
+      }
+
+      .resource-title span {
+        font-size: 0.62rem;
+      }
+
+      .resource-row {
+        display: grid;
+        grid-template-columns: 1fr;
+        place-items: center;
+        min-height: 22px;
+        border-radius: 6px;
+        border: 1px solid var(--food-line);
+        background: var(--food-color);
+        color: #111720;
+        font-size: 0.76rem;
+        font-weight: 900;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+      }
+
+      .resource-row > span:first-child {
+        display: none;
+      }
+
+      .resource-track {
+        display: none;
+      }
+
+      .resource-row [data-count] {
+        display: block;
+        line-height: 1;
       }
 
       .side .section:nth-of-type(4) {
-        padding: 10px 12px max(10px, env(safe-area-inset-bottom));
+        order: 3;
+        padding: 6px 8px;
       }
 
       .side .section:nth-of-type(4) h2 {
@@ -480,24 +631,75 @@
       .control-row {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 12px;
+        gap: 8px;
       }
 
       .control-card {
         width: 100%;
+        gap: 4px;
+        font-size: 0.68rem;
       }
 
       .joystick {
-        width: min(42vw, 164px);
-        min-width: 126px;
+        width: clamp(92px, 24dvh, 132px);
+        min-width: 0;
         border: 2px solid rgba(243, 245, 247, 0.42);
         opacity: 0.8;
       }
 
       .stick {
-        width: min(17vw, 62px);
-        min-width: 46px;
+        width: clamp(34px, 9dvh, 50px);
+        min-width: 0;
         border: 2px solid rgba(255, 255, 255, 0.58);
+      }
+
+      .overlay {
+        padding: 10px;
+      }
+
+      .dialog {
+        padding: 14px;
+      }
+
+      .dialog h2 {
+        font-size: 1.18rem;
+      }
+
+      .dialog p {
+        margin-bottom: 10px;
+        font-size: 0.82rem;
+        line-height: 1.25;
+      }
+
+      button {
+        min-height: 36px;
+        padding: 7px 12px;
+      }
+    }
+
+    @media (max-width: 900px) and (max-height: 720px) {
+      .topbar {
+        padding: 6px;
+      }
+
+      .status {
+        display: none;
+      }
+
+      .metrics {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .metric:nth-child(n + 5) {
+        display: none;
+      }
+
+      .joystick {
+        width: clamp(84px, 22dvh, 118px);
+      }
+
+      .stick {
+        width: clamp(32px, 8dvh, 46px);
       }
     }
   </style>
@@ -732,6 +934,8 @@
         foodTypes.forEach(type => {
           const row = document.createElement("div");
           row.className = "resource-row";
+          row.style.setProperty("--food-color", type.color);
+          row.style.setProperty("--food-line", type.line);
           row.innerHTML = `
             <span>${type.label}</span>
             <span class="resource-track"><span class="resource-fill" style="background:${type.color}" data-fill="${group.owner}-${type.id}"></span></span>
