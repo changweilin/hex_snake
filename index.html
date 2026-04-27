@@ -905,7 +905,7 @@
     let running = false;
     let paused = false;
     let gameOver = false;
-    let stepMs = 190;
+    let stepMs = 380;
     let lastStep = 0;
     let lastTimerFrame = 0;
     let lastComputerAttackMs = 0;
@@ -1121,7 +1121,7 @@
       blasts = [];
       targetCell = { ...snake[0] };
       targetActive = false;
-      stepMs = 190;
+      stepMs = 380;
       totalElapsedMs = 0;
       lastFeedElapsedMs = 0;
       lastTimerFrame = 0;
@@ -1186,7 +1186,7 @@
       totalTimeEl.textContent = formatTime(totalElapsedMs);
       lastFeedTimeEl.textContent = formatTime(lastFeedElapsedMs);
       bestTimeEl.textContent = formatTime(bestTotalMs);
-      const speed = Math.max(1, Math.round((190 / stepMs) * 10) / 10);
+      const speed = Math.max(0.5, Math.round((190 / stepMs) * 10) / 10);
       speedEl.textContent = `${speed}x`;
       keyEls.forEach(el => el.classList.toggle("active", Number(el.dataset.dir) === nextDir));
       updateStockHud("player", playerStock);
@@ -1216,11 +1216,22 @@
       return { q: head.q + delta.q, r: head.r + delta.r };
     }
 
+    function nextWrappedCell(head, direction) {
+      const next = nextCell(head, direction);
+      if (isInside(next)) return next;
+
+      const oppositeDirection = (direction + 3) % 6;
+      let wrapped = head;
+      while (isInside(nextCell(wrapped, oppositeDirection))) {
+        wrapped = nextCell(wrapped, oppositeDirection);
+      }
+      return wrapped;
+    }
+
     function directionalAttackTarget(direction) {
       let target = { ...snake[0] };
       for (let step = 0; step < targetMaxHex; step += 1) {
-        const next = nextCell(target, direction);
-        if (!isInside(next)) break;
+        const next = nextWrappedCell(target, direction);
         target = next;
       }
       return target;
@@ -1245,9 +1256,9 @@
         if (foodKeys.has(keyOf(current.cell))) return current.distance;
 
         directions.forEach((_, direction) => {
-          const next = nextCell(current.cell, direction);
+          const next = nextWrappedCell(current.cell, direction);
           const nextKey = keyOf(next);
-          if (!isInside(next) || visited.has(nextKey)) return;
+          if (visited.has(nextKey)) return;
           if (occupied.has(nextKey) && !foodKeys.has(nextKey)) return;
           visited.add(nextKey);
           queue.push({ cell: next, distance: current.distance + 1 });
@@ -1259,7 +1270,7 @@
 
     function chooseComputerDirection() {
       const playerHead = snake[0];
-      const playerThreat = nextCell(playerHead, nextDir);
+      const playerThreat = nextWrappedCell(playerHead, nextDir);
       const occupied = new Set([
         ...snake.map(keyOf),
         ...computerSnake.slice(0, -1).map(keyOf)
@@ -1268,9 +1279,9 @@
 
       directions.forEach((_, candidate) => {
         if (!canComputerTurn(candidate)) return;
-        const next = nextCell(computerSnake[0], candidate);
+        const next = nextWrappedCell(computerSnake[0], candidate);
         const nextKey = keyOf(next);
-        if (!isInside(next) || occupied.has(nextKey)) return;
+        if (occupied.has(nextKey)) return;
 
         const danger = keyOf(playerThreat) === nextKey ? 20 : 0;
         const wallPressure = cells.filter(cell => hexDistance(cell, next) <= 1 && !occupied.has(keyOf(cell))).length;
@@ -1352,8 +1363,8 @@
       dir = nextDir;
       computerDir = chooseComputerDirection();
 
-      const next = nextCell(snake[0], dir);
-      const computerNext = nextCell(computerSnake[0], computerDir);
+      const next = nextWrappedCell(snake[0], dir);
+      const computerNext = nextWrappedCell(computerSnake[0], computerDir);
       const nextKey = keyOf(next);
       const computerNextKey = keyOf(computerNext);
       const eatenFood = foods.find(food => next.q === food.q && next.r === food.r);
@@ -1362,8 +1373,8 @@
       const computerEating = Boolean(computerEatenFood);
       const body = eating ? snake : snake.slice(0, -1);
       const computerBody = computerEating ? computerSnake : computerSnake.slice(0, -1);
-      let playerLost = !isInside(next) || body.some(segment => keyOf(segment) === nextKey);
-      let computerLost = !isInside(computerNext) || computerBody.some(segment => keyOf(segment) === computerNextKey);
+      let playerLost = body.some(segment => keyOf(segment) === nextKey);
+      let computerLost = computerBody.some(segment => keyOf(segment) === computerNextKey);
 
       if (computerBody.some(segment => keyOf(segment) === nextKey)) playerLost = true;
       if (body.some(segment => keyOf(segment) === computerNextKey)) computerLost = true;
@@ -1390,7 +1401,7 @@
         best = Math.max(best, score);
         localStorage.setItem("hexSnakeBest", String(best));
         lastFeedElapsedMs = 0;
-        stepMs = Math.max(78, stepMs - 5);
+        stepMs = Math.max(156, stepMs - 10);
       } else {
         snake.pop();
       }
@@ -1398,7 +1409,7 @@
       if (computerEating) {
         computerScore += 1;
         addStock(computerStock, computerEatenFood.type);
-        stepMs = Math.max(78, stepMs - 5);
+        stepMs = Math.max(156, stepMs - 10);
       } else {
         computerSnake.pop();
       }
