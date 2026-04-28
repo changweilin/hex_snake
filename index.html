@@ -274,16 +274,101 @@
     .resource-title {
       display: flex;
       justify-content: space-between;
-      align-items: baseline;
+      align-items: center;
       gap: 10px;
       font-weight: 800;
       color: var(--ink);
     }
 
-    .resource-title span {
+    .resource-owner {
+      min-width: 0;
+    }
+
+    .resource-counters {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .resource-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      min-height: 20px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: #151b25;
+      border: 1px solid rgba(255, 255, 255, 0.08);
       color: var(--muted);
       font-size: 0.78rem;
       font-weight: 700;
+    }
+
+    .resource-icon {
+      position: relative;
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      flex: 0 0 auto;
+    }
+
+    .powder-icon {
+      border-radius: 4px 4px 5px 5px;
+      background: linear-gradient(180deg, #6b7280 0%, #27272a 42%, #111827 100%);
+      border: 1px solid #94a3b8;
+      box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.28);
+    }
+
+    .powder-icon::before {
+      content: "";
+      position: absolute;
+      left: 4px;
+      top: -4px;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #facc15;
+      box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.22);
+    }
+
+    .powder-icon::after {
+      content: "";
+      position: absolute;
+      left: 3px;
+      top: 5px;
+      width: 6px;
+      height: 2px;
+      border-radius: 999px;
+      background: #f59e0b;
+    }
+
+    .missile-icon {
+      transform: rotate(-35deg);
+    }
+
+    .missile-icon::before {
+      content: "";
+      position: absolute;
+      left: 3px;
+      top: 2px;
+      width: 8px;
+      height: 10px;
+      border-radius: 7px 7px 3px 3px;
+      background: linear-gradient(180deg, #e5e7eb 0%, #9ca3af 100%);
+      border: 1px solid #f8fafc;
+    }
+
+    .missile-icon::after {
+      content: "";
+      position: absolute;
+      left: 2px;
+      top: 10px;
+      width: 10px;
+      height: 5px;
+      background: linear-gradient(90deg, #ef4444 0 30%, #f97316 30% 70%, #facc15 70%);
+      clip-path: polygon(50% 100%, 0 0, 100% 0);
     }
 
     .resource-row {
@@ -588,8 +673,15 @@
         gap: 4px;
       }
 
-      .resource-title span {
+      .resource-chip {
+        min-height: 18px;
+        padding: 1px 4px;
         font-size: 0.62rem;
+      }
+
+      .resource-icon {
+        width: 12px;
+        height: 12px;
       }
 
       .resource-row {
@@ -943,7 +1035,7 @@
       ].forEach(group => {
         const panel = document.createElement("div");
         panel.className = "resource-panel";
-        panel.innerHTML = `<div class="resource-title">${group.title}<span data-total="${group.owner}">0 / ${attackNeedTotal}</span></div>`;
+        panel.innerHTML = `<div class="resource-title"><span class="resource-owner">${group.title}</span><span class="resource-counters" data-total="${group.owner}"></span></div>`;
         foodTypes.forEach(type => {
           const row = document.createElement("div");
           row.className = "resource-row";
@@ -1254,7 +1346,18 @@
 
     function updateStockHud(owner, stock, ammo, ammoCharge) {
       const totalEl = resourceEls.get(owner);
-      if (totalEl) totalEl.textContent = `${ammo}/${maxAmmo} · ${ammoCharge}/${attackNeedTotal}`;
+      if (totalEl) {
+        totalEl.innerHTML = `
+          <span class="resource-chip" title="Gunpowder">
+            <span class="resource-icon powder-icon" aria-hidden="true"></span>
+            <span>${ammoCharge}/${attackNeedTotal}</span>
+          </span>
+          <span class="resource-chip" title="Missile">
+            <span class="resource-icon missile-icon" aria-hidden="true"></span>
+            <span>${ammo}/${maxAmmo}</span>
+          </span>
+        `;
+      }
       foodTypes.forEach(type => {
         const count = stock[type.id];
         const countEl = resourceBoard.querySelector(`[data-count="${owner}-${type.id}"]`);
