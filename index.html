@@ -593,6 +593,19 @@
       font-weight: 800;
     }
 
+    .portrait-story {
+      margin-top: 6px;
+      display: grid;
+      gap: 6px;
+      color: color-mix(in srgb, var(--muted), var(--fighter-line) 18%);
+      font-size: 0.86rem;
+      line-height: 1.55;
+    }
+
+    .portrait-story p {
+      margin: 0;
+    }
+
     @keyframes module-swim {
       0%, 100% { transform: translateY(1px) rotate(-2deg); }
       50% { transform: translateY(-3px) rotate(3deg); }
@@ -1433,6 +1446,31 @@
       { id: "moray", name: "海鰻", food: "carb", foodLabel: "藍色食物", move: "深潮電咬", detail: "偏好藍色碳水；吃到藍色食物額外取得 1 點，擴大爆炸範圍咬住戰場。", color: "#3b82f6", body: "#1d4ed8", line: "#bfdbfe", accent: "#93c5fd" },
       { id: "lobster", name: "龍蝦", food: "protein", foodLabel: "紅色食物", move: "赤螯破浪", detail: "偏好紅色蛋白質；吃到紅色食物額外取得 1 點，攻擊以高傷害爆發壓制對手。", color: "#ef4444", body: "#b91c1c", line: "#fecaca", accent: "#f97316" }
     ];
+    const characterStories = {
+      dragon: [
+        "昔日雲海之上的白龍，曾以一息定潮、一爪開天。直到龍鱗失色，墜入低谷，連逐浪的犬影都敢在牠身後吠叫。",
+        "牠吞下屈辱，也吞下每一口能重築筋骨的食糧。今日再入六角戰場，不求憐憫，只求一躍越門，讓失去的王座重新記起牠的名字。"
+      ],
+      moray: [
+        "海鰻生於被網線割裂的暗潮。牠看見族群被燈火引誘、被冰艙沉默，於是把恐懼磨成電流，把逆流當作宣戰。",
+        "牠不是守護者口中的純善英雄，而是人類船影下的惡名。只要貪婪的鉤索還垂進海裡，牠就會咬穿浪峰，讓捕獵者也學會窒息。"
+      ],
+      lobster: [
+        "龍蝦的魂魄曾只是一團渾沌，在深海裂縫裡隨時間漂流。潮汐沖刷牠，壓力鍛造牠，孤獨反覆敲打牠的甲殼。",
+        "萬次揮螯之後，混亂開始有了節奏；萬年沉默之後，節奏終於長出智慧。牠踏上戰場時，每一步都像古老意志醒來。"
+      ],
+      sandworm: [
+        "沙蟲沒有豐饒的故鄉，只有乾裂的土、稀薄的獵物，和比牠龐大得多的陰影。牠學會把身形藏進貧瘠，把心跳壓到沙粒之下。",
+        "每一次伏擊都是賭局，每一次吞食都是翻身的籌碼。牠相信階層不是天命，只要咬得夠準，最底層的沙也能埋葬巨獸。"
+      ],
+      quetzal: [
+        "羽蛇神在強權的夾縫間展翼：一邊是鐵與旗幟，一邊是被迫噤聲的祖語。祂帶著少數族裔的記憶飛行，不讓祭歌被風沙磨滅。",
+        "祂追尋的勝利不只是疆界，而是心靈仍能命名自身。當翠羽劃開戰場，古老信仰便在新世界裡重新發光。"
+      ]
+    };
+    characters.forEach(character => {
+      character.story = characterStories[character.id] || [];
+    });
     const portraitSlugs = {
       dragon: "white_dragon",
       sandworm: "sandworm",
@@ -1573,6 +1611,10 @@
       return `--fighter-color:${character.color};--fighter-line:${character.line};--fighter-accent:${character.accent};`;
     }
 
+    function characterStoryMarkup(character) {
+      return (character.story || []).map(paragraph => `<p>${paragraph}</p>`).join("");
+    }
+
     function buildCharacterStage() {
       characterStage.innerHTML = ["player", "computer"].map(owner => {
         const character = characterFor(owner);
@@ -1637,6 +1679,9 @@
               <small>${selectedPortraitOwner === "player" ? "玩家角色" : "對手角色"} · ${selectedCharacter.foodLabel}</small>
               <strong>${selectedCharacter.name} / ${selectedCharacter.move}</strong>
               <span>${selectedCharacter.detail}</span>
+              <div class="portrait-story" aria-label="${selectedCharacter.name}故事">
+                ${characterStoryMarkup(selectedCharacter)}
+              </div>
             </div>
             <button class="secondary portrait-arrow" type="button" data-portrait-shift="1" aria-label="下一位" onclick="applySelectedPortraitCharacter(1)">›</button>
           </div>
