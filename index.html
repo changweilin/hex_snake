@@ -148,6 +148,7 @@
       background: rgba(13, 17, 23, 0.54);
       opacity: 0;
       pointer-events: none;
+      overflow-y: auto;
       transition: opacity 160ms ease;
     }
 
@@ -158,6 +159,8 @@
 
     .dialog {
       width: min(460px, 100%);
+      max-height: calc(100% - 20px);
+      overflow-y: auto;
       padding: 22px;
       border-radius: 8px;
       border: 1px solid rgba(255, 255, 255, 0.12);
@@ -818,7 +821,9 @@
         display: grid;
         grid-template-rows: auto auto auto;
         gap: 6px;
-        overflow: hidden;
+        overflow: visible;
+        position: relative;
+        z-index: 18;
       }
 
       .side .section {
@@ -893,6 +898,12 @@
         justify-items: end;
         align-items: start;
         overflow: visible;
+        position: relative;
+        z-index: 20;
+      }
+
+      .side .settings-section.open {
+        z-index: 30;
       }
 
       .side .settings-section .settings-toggle {
@@ -905,8 +916,10 @@
         position: absolute;
         right: 0;
         bottom: calc(100% + 6px);
-        z-index: 12;
+        z-index: 31;
         width: min(360px, calc(100vw - 12px));
+        max-height: min(70dvh, 420px);
+        overflow-y: auto;
         padding: 10px;
         border-radius: 8px;
         background: rgba(32, 38, 51, 0.98);
@@ -968,6 +981,16 @@
 
       .fighter-module {
         width: 42px;
+      }
+
+      .dialog {
+        max-height: min(88dvh, calc(100% - 12px));
+        padding: 14px;
+      }
+
+      .fighter-portrait {
+        width: min(150px, 46vw);
+        margin-bottom: 8px;
       }
 
       .fighter-name {
@@ -1287,6 +1310,7 @@
     const foodBonusPerPoint = 0.1;
     const maxFoodStock = 31;
     const targetMaxHex = 6;
+    const gameOverRestartDelayMs = 700;
     let gridSize = 10;
     let radius = gridSize - 1;
     let foodCount = 4;
@@ -1377,6 +1401,7 @@
     let targetCell = null;
     let targetActive = false;
     let moduleHoldTimer = null;
+    let restartUnlockAt = 0;
 
     bestEl.textContent = best;
     buildCharacterOptions();
@@ -1754,7 +1779,12 @@
       setStatus("準備就緒。右搖桿移動，左搖桿瞄準攻擊。");
     }
 
+    function canRestartAfterGameOver() {
+      return performance.now() >= restartUnlockAt;
+    }
+
     function startGame() {
+      if (gameOver && !canRestartAfterGameOver()) return false;
       setFoodCount(foodCountInput.value);
       setComputerDifficulty(computerDifficultyInput.value);
       playerCharacterId = characterById.has(playerCharacterInput.value) ? playerCharacterInput.value : "dragon";
@@ -1769,6 +1799,13 @@
       lastTimerFrame = lastPlayerStep;
       cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(loop);
+      return true;
+    }
+
+    function autoStartGame() {
+      if (running && !gameOver) return true;
+      if (gameOver) return false;
+      return startGame();
     }
 
     function randomFoodType() {
@@ -1984,7 +2021,7 @@
         nextDir = newDir;
         updateHud();
       }
-      if (!running || gameOver) startGame();
+      if (!running || gameOver) autoStartGame();
     }
 
     function launchAttack(owner, target, now) {
@@ -2182,6 +2219,7 @@
       if (gameOver) return;
       running = false;
       gameOver = true;
+      restartUnlockAt = performance.now() + gameOverRestartDelayMs;
       setSettingsLocked(false);
       if (totalElapsedMs > bestTotalMs) {
         bestTotalMs = totalElapsedMs;
@@ -2605,7 +2643,9 @@
     }
 
     function moveTargetStick(event) {
-      if (!running || gameOver) startGame();
+      if (!running || gameOver) {
+        if (!autoStartGame()) return;
+      }
       const rect = targetZone.getBoundingClientRect();
       const cx = rect.left + rect.width / 2;
       const cy = rect.top + rect.height / 2;
@@ -2641,7 +2681,9 @@
     }
 
     function launchPlayerAttack(target) {
-      if (!running || gameOver) startGame();
+      if (!running || gameOver) {
+        if (!autoStartGame()) return false;
+      }
       if (launchAttack("player", target, performance.now())) {
         targetCell = { ...target };
         targetActive = true;
@@ -2658,7 +2700,9 @@
     }
 
     function launchPlayerAttackDirection(direction) {
-      if (!running || gameOver) startGame();
+      if (!running || gameOver) {
+        if (!autoStartGame()) return false;
+      }
       return launchPlayerAttack(directionalAttackTarget(direction));
     }
 
@@ -2680,6 +2724,14 @@
       settingsToggle.setAttribute("aria-expanded", String(!expanded));
       settingsContent.hidden = expanded;
       settingsToggle.closest(".settings-section").classList.toggle("open", !expanded);
+    });
+
+    settingsToggle.addEventListener("pointerdown", event => {
+      event.stopPropagation();
+    });
+
+    settingsContent.addEventListener("pointerdown", event => {
+      event.stopPropagation();
     });
 
     characterStage.addEventListener("pointerdown", event => {
@@ -2763,6 +2815,7 @@
         lastTimerFrame = lastPlayerStep;
         return;
       }
+      if (gameOver && !canRestartAfterGameOver()) return;
       overlayTitle.textContent = "準備開局";
       overlayText.textContent = "每吃 6 個食物獲得 1 枚砲彈，最多 3 枚；發射時會消耗紅黃綠藍各 1 點。";
       startButton.textContent = "開始";
@@ -2806,7 +2859,7 @@
 
     playArea.addEventListener("pointerdown", event => {
       if (event.target.closest(".overlay")) return;
-      if (!running || gameOver) startGame();
+      if (!running || gameOver) autoStartGame();
     });
 
     window.addEventListener("keydown", event => {
@@ -2833,7 +2886,9 @@
       }
 
       if (key === "q") {
-        if (!running || gameOver) startGame();
+        if (!running || gameOver) {
+          if (!autoStartGame()) return;
+        }
         if (launchAttack("player", targetCell || snake[0], performance.now())) {
           setStatus("玩家發射砲彈，2 秒後落地。");
         } else {
