@@ -428,6 +428,22 @@
       animation: module-swim 1500ms ease-in-out infinite;
     }
 
+    .fighter-avatar-image {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.38));
+      animation: module-swim 1500ms ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    .fighter-avatar-image[data-pose="attack"] {
+      opacity: 0.58;
+      animation-duration: 520ms;
+    }
+
     .fighter-avatar .body {
       fill: var(--fighter-color);
       stroke: var(--fighter-line);
@@ -475,6 +491,13 @@
       animation: portrait-float 1800ms ease-in-out infinite;
     }
 
+    .fighter-portrait .fighter-avatar-image {
+      width: 96%;
+      height: 96%;
+      object-fit: contain;
+      animation: portrait-float 1800ms ease-in-out infinite;
+    }
+
     .winner-move {
       display: grid;
       gap: 5px;
@@ -487,6 +510,18 @@
     .winner-move strong {
       color: var(--ink);
       font-size: 1.02rem;
+    }
+
+    .portrait-pair {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .portrait-pair .fighter-portrait {
+      width: 100%;
+      margin-bottom: 0;
     }
 
     @keyframes module-swim {
@@ -1333,12 +1368,20 @@
     ];
     const foodTypeById = new Map(foodTypes.map(type => [type.id, type]));
     const characters = [
-      { id: "dragon", name: "東方龍", food: "protein", foodLabel: "紅色食物", move: "赤雷龍息", detail: "偏好紅色蛋白質；吃到紅色食物額外取得 1 點，攻擊以高傷害爆發壓制對手。", color: "#ef4444", body: "#b91c1c", line: "#fecaca", accent: "#fde68a" },
+      { id: "dragon", name: "白龍", food: "balanced", foodLabel: "均衡", move: "白衡龍息", detail: "均衡型角色；每次進食會補給目前最低的庫存，穩定湊齊四種攻擊成本。", color: "#f8fafc", body: "#cbd5e1", line: "#bae6fd", accent: "#fbbf24" },
       { id: "sandworm", name: "沙蟲", food: "fat", foodLabel: "黃色食物", move: "流沙震爆", detail: "偏好黃色脂肪；吃到黃色食物額外取得 1 點，靠速度與沙暴節奏搶食。", color: "#facc15", body: "#ca8a04", line: "#fef08a", accent: "#92400e" },
       { id: "quetzal", name: "羽蛇神", food: "fiber", foodLabel: "綠色食物", move: "翠羽風刃", detail: "偏好綠色纖維；吃到綠色食物額外取得 1 點，縮短攻擊蓄勢與冷卻。", color: "#22c55e", body: "#15803d", line: "#bbf7d0", accent: "#67e8f9" },
       { id: "moray", name: "海鰻", food: "carb", foodLabel: "藍色食物", move: "深潮電咬", detail: "偏好藍色碳水；吃到藍色食物額外取得 1 點，擴大爆炸範圍咬住戰場。", color: "#3b82f6", body: "#1d4ed8", line: "#bfdbfe", accent: "#93c5fd" },
-      { id: "lobster", name: "龍蝦", food: "balanced", foodLabel: "均衡", move: "雙螯破浪", detail: "均衡型角色；每次進食會補給目前最低的庫存，穩定湊齊四種攻擊成本。", color: "#fb7185", body: "#e11d48", line: "#ffe4e6", accent: "#f97316" }
+      { id: "lobster", name: "龍蝦", food: "protein", foodLabel: "紅色食物", move: "赤螯破浪", detail: "偏好紅色蛋白質；吃到紅色食物額外取得 1 點，攻擊以高傷害爆發壓制對手。", color: "#ef4444", body: "#b91c1c", line: "#fecaca", accent: "#f97316" }
     ];
+    const portraitSlugs = {
+      dragon: "white_dragon",
+      sandworm: "sandworm",
+      quetzal: "quetzalcoatl",
+      moray: "moray_eel",
+      lobster: "ghost_lobster"
+    };
+    const portraitPoses = new Set(["intro", "idle", "attack", "victory", "defeat"]);
     const characterById = new Map(characters.map(character => [character.id, character]));
     const colors = {
       cell: "#2a3445",
@@ -1401,6 +1444,7 @@
     let targetCell = null;
     let targetActive = false;
     let moduleHoldTimer = null;
+    let portraitPoseTimers = {};
     let restartUnlockAt = 0;
 
     bestEl.textContent = best;
@@ -1440,6 +1484,30 @@
       return `<svg ${common}><path class="body" d="M27 52 C27 34 73 34 73 52 C73 78 27 78 27 52Z"/><path class="accent" d="M30 43 L9 27 C3 36 9 49 24 50Z"/><path class="accent" d="M70 43 L91 27 C97 36 91 49 76 50Z"/><path class="line" d="M37 34 L27 13 M50 31 L50 9 M63 34 L73 13"/><circle class="eye" cx="42" cy="49" r="3"/><circle class="eye" cx="58" cy="49" r="3"/></svg>`;
     }
 
+    function portraitUrl(character, pose) {
+      const slug = portraitSlugs[character.id] || character.id;
+      const safePose = portraitPoses.has(pose) ? pose : "idle";
+      return `assets/portraits/${slug}_${safePose}.png`;
+    }
+
+    function fighterArt(character, pose = "idle", portrait = false) {
+      const imageClass = `fighter-avatar-image${portrait ? " portrait" : ""}`;
+      const fallbackSvg = fighterSvg(character, portrait).replace("<svg ", "<svg hidden ");
+      const loadMode = portrait || pose === "attack" ? "eager" : "lazy";
+      return `
+        <img
+          class="${imageClass}"
+          src="${portraitUrl(character, pose)}"
+          alt="${character.name}"
+          decoding="async"
+          loading="${loadMode}"
+          data-pose="${pose}"
+          onerror="this.hidden=true;this.nextElementSibling.hidden=false"
+        >
+        ${fallbackSvg}
+      `;
+    }
+
     function characterStyle(character) {
       return `--fighter-color:${character.color};--fighter-line:${character.line};--fighter-accent:${character.accent};`;
     }
@@ -1452,7 +1520,7 @@
         return `
           <div class="fighter-card" data-owner="${owner}" style="${characterStyle(character)}">
             <div class="fighter-module ${owner === "player" ? "is-actionable" : ""}" data-module="${owner}"${holdHint}>
-              ${fighterSvg(character)}
+              ${fighterArt(character, "idle")}
             </div>
             <div class="fighter-info">
               <div class="fighter-name">${ownerLabel} · ${character.name}</div>
@@ -1471,14 +1539,44 @@
         return;
       }
       const character = characterFor(owner);
+      const loserOwner = owner === "player" ? "computer" : "player";
+      const loserCharacter = characterFor(loserOwner);
       winnerPortrait.hidden = false;
       winnerPortrait.innerHTML = `
-        <div class="fighter-portrait" style="${characterStyle(character)}">${fighterSvg(character, true)}</div>
+        <div class="portrait-pair">
+          <div class="fighter-portrait" style="${characterStyle(character)}">${fighterArt(character, "victory", true)}</div>
+          <div class="fighter-portrait" style="${characterStyle(loserCharacter)}">${fighterArt(loserCharacter, "defeat", true)}</div>
+        </div>
         <div class="winner-move">
           <strong>${character.move}</strong>
           <span>${character.detail}</span>
         </div>
       `;
+    }
+
+    function renderIntroPortraits() {
+      winnerPortrait.hidden = false;
+      winnerPortrait.innerHTML = `
+        <div class="portrait-pair">
+          ${["player", "computer"].map(owner => {
+            const character = characterFor(owner);
+            return `<div class="fighter-portrait" style="${characterStyle(character)}">${fighterArt(character, "intro", true)}</div>`;
+          }).join("")}
+        </div>
+      `;
+    }
+
+    function setFighterPose(owner, pose, duration = 0) {
+      const module = characterStage.querySelector(`[data-module="${owner}"]`);
+      if (!module) return;
+      const character = characterFor(owner);
+      module.innerHTML = fighterArt(character, pose);
+      clearTimeout(portraitPoseTimers[owner]);
+      if (duration > 0) {
+        portraitPoseTimers[owner] = setTimeout(() => {
+          if (!gameOver) setFighterPose(owner, "idle");
+        }, duration);
+      }
     }
 
     function buildResourceHud() {
@@ -1735,6 +1833,8 @@
 
     function resetGame() {
       renderWinnerPortrait(null);
+      Object.values(portraitPoseTimers).forEach(clearTimeout);
+      portraitPoseTimers = {};
       buildCharacterStage();
       const offset = Math.min(2, Math.max(1, radius - 3));
       snake = [
@@ -1808,22 +1908,35 @@
       return startGame();
     }
 
-    function randomFoodType() {
-      return foodTypes[Math.floor(Math.random() * foodTypes.length)];
+    function randomFoodType(preferredFoodId = null) {
+      if (!preferredFoodId || preferredFoodId === "balanced") {
+        return foodTypes[Math.floor(Math.random() * foodTypes.length)];
+      }
+      let roll = Math.random();
+      for (const type of foodTypes) {
+        const weight = type.id === preferredFoodId ? 0.4 : 0.2;
+        if (roll < weight) return type;
+        roll -= weight;
+      }
+      return foodTypes[foodTypes.length - 1];
     }
 
-    function placeFoods() {
+    function placeFoods(preferredOwners = []) {
       const occupied = new Set([
         ...snake.map(keyOf),
         ...computerSnake.map(keyOf),
         ...foods.map(keyOf)
       ]);
+      let generated = 0;
       while (foods.length < foodCount) {
         const openCells = cells.filter(cell => !occupied.has(keyOf(cell)));
         if (!openCells.length) return;
         const cell = openCells[Math.floor(Math.random() * openCells.length)];
-        foods.push({ q: cell.q, r: cell.r, type: randomFoodType().id });
+        const owner = preferredOwners[generated];
+        const preferredFoodId = owner ? characterFor(owner).food : null;
+        foods.push({ q: cell.q, r: cell.r, type: randomFoodType(preferredFoodId).id });
         occupied.add(keyOf(cell));
+        generated += 1;
       }
     }
 
@@ -2036,6 +2149,7 @@
       consumeAttackCost(owner, stock);
       if (owner === "player") lastPlayerAttackMs = now;
       else lastComputerAttackMs = now;
+      setFighterPose(owner, "attack", Math.max(180, Math.min(delay, 320)));
       projectiles.push({
         owner,
         source: { q: source.q, r: source.r },
@@ -2150,7 +2264,10 @@
           computerEating ? computerNextKey : null
         ].filter(Boolean));
         foods = foods.filter(food => !eatenKeys.has(keyOf(food)));
-        placeFoods();
+        placeFoods([
+          eating ? "player" : null,
+          computerEating ? "computer" : null
+        ].filter(Boolean));
       }
 
       updateHud();
@@ -2180,7 +2297,7 @@
         lastFeedElapsedMs = 0;
         playerHp = Math.min(snake.length, playerHp + 1);
         foods = foods.filter(food => keyOf(food) !== nextKey);
-        placeFoods();
+        placeFoods(["player"]);
       } else {
         snake.pop();
       }
@@ -2208,7 +2325,7 @@
         collectFood("computer", computerEatenFood.type);
         computerHp = Math.min(computerSnake.length, computerHp + 1);
         foods = foods.filter(food => keyOf(food) !== computerNextKey);
-        placeFoods();
+        placeFoods(["computer"]);
       } else {
         computerSnake.pop();
       }
@@ -2759,6 +2876,7 @@
       overlayTitle.textContent = "棋盤已更新";
       overlayText.textContent = `棋盤半徑已設為 ${gridSize}。開始後設定會鎖定到下一局。`;
       startButton.textContent = "開始";
+      renderIntroPortraits();
       overlay.classList.add("show");
     });
 
@@ -2770,6 +2888,7 @@
       overlayTitle.textContent = "食物數量已更新";
       overlayText.textContent = `場上會維持 ${foodCount} 個紅黃綠藍隨機食物。`;
       startButton.textContent = "開始";
+      renderIntroPortraits();
       overlay.classList.add("show");
     });
 
@@ -2781,6 +2900,7 @@
       overlayTitle.textContent = "難度已更新";
       overlayText.textContent = `電腦難度設為 ${computerDifficultyInput.selectedOptions[0].textContent}。`;
       startButton.textContent = "開始";
+      renderIntroPortraits();
       overlay.classList.add("show");
     });
 
@@ -2795,6 +2915,7 @@
         overlayTitle.textContent = "角色已更新";
         overlayText.textContent = `玩家選擇 ${characterFor("player").name}，對手選擇 ${characterFor("computer").name}。`;
         startButton.textContent = "開始";
+        renderIntroPortraits();
         overlay.classList.add("show");
       });
     });
@@ -2912,6 +3033,7 @@
     setSettingsLocked(false);
     resetGame();
     resize();
+    renderIntroPortraits();
   </script>
 </body>
 </html>
