@@ -319,6 +319,164 @@
       gap: 12px;
     }
 
+    .character-picks {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .character-stage {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .fighter-card {
+      min-width: 0;
+      display: grid;
+      grid-template-columns: 72px minmax(0, 1fr);
+      gap: 10px;
+      align-items: center;
+      padding: 9px;
+      border-radius: 8px;
+      background: #151b25;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .fighter-card[data-owner="player"] {
+      border-color: rgba(245, 158, 11, 0.38);
+    }
+
+    .fighter-card[data-owner="computer"] {
+      border-color: rgba(167, 139, 250, 0.34);
+    }
+
+    .fighter-info {
+      min-width: 0;
+      display: grid;
+      gap: 3px;
+    }
+
+    .fighter-name {
+      font-weight: 900;
+      color: var(--ink);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .fighter-move,
+    .fighter-food {
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 800;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .fighter-module {
+      position: relative;
+      width: 64px;
+      aspect-ratio: 1;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      border: 1px solid color-mix(in srgb, var(--fighter-color), white 26%);
+      background:
+        radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.24), transparent 28px),
+        color-mix(in srgb, var(--fighter-color), #101720 70%);
+      box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.28);
+      overflow: hidden;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .fighter-module.is-actionable {
+      cursor: pointer;
+    }
+
+    .fighter-module.is-charging::after {
+      content: "";
+      position: absolute;
+      inset: 5px;
+      border-radius: 8px;
+      border: 2px solid rgba(255, 255, 255, 0.76);
+      animation: charge-ring 560ms linear infinite;
+    }
+
+    .fighter-avatar {
+      width: 92%;
+      height: 92%;
+      overflow: visible;
+      filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.38));
+      animation: module-swim 1500ms ease-in-out infinite;
+    }
+
+    .fighter-avatar .body {
+      fill: var(--fighter-color);
+      stroke: var(--fighter-line);
+      stroke-width: 4;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .fighter-avatar .accent {
+      fill: var(--fighter-accent);
+      stroke: var(--fighter-line);
+      stroke-width: 2;
+      stroke-linejoin: round;
+    }
+
+    .fighter-avatar .line {
+      fill: none;
+      stroke: var(--fighter-line);
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .fighter-avatar .eye {
+      fill: #111720;
+    }
+
+    .fighter-portrait {
+      width: min(220px, 70vw);
+      margin: 0 auto 12px;
+      aspect-ratio: 1.05;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      border: 1px solid color-mix(in srgb, var(--fighter-color), white 28%);
+      background:
+        radial-gradient(circle at 50% 28%, color-mix(in srgb, var(--fighter-color), transparent 48%), transparent 64%),
+        #101720;
+      box-shadow: inset 0 0 40px rgba(255, 255, 255, 0.05), 0 16px 50px rgba(0, 0, 0, 0.38);
+    }
+
+    .fighter-portrait .fighter-avatar {
+      width: 88%;
+      height: 88%;
+      animation: portrait-float 1800ms ease-in-out infinite;
+    }
+
+    @keyframes module-swim {
+      0%, 100% { transform: translateY(1px) rotate(-2deg); }
+      50% { transform: translateY(-3px) rotate(3deg); }
+    }
+
+    @keyframes portrait-float {
+      0%, 100% { transform: translateY(2px) scale(1); }
+      50% { transform: translateY(-5px) scale(1.03); }
+    }
+
+    @keyframes charge-ring {
+      from { transform: scale(0.84); opacity: 0.92; }
+      to { transform: scale(1.08); opacity: 0.12; }
+    }
+
     .resource-panel {
       display: grid;
       gap: 8px;
@@ -770,6 +928,31 @@
         gap: 6px;
       }
 
+      .character-stage {
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+        margin-bottom: 6px;
+      }
+
+      .fighter-card {
+        grid-template-columns: 44px minmax(0, 1fr);
+        gap: 6px;
+        padding: 5px;
+      }
+
+      .fighter-module {
+        width: 42px;
+      }
+
+      .fighter-name {
+        font-size: 0.7rem;
+      }
+
+      .fighter-move,
+      .fighter-food {
+        font-size: 0.58rem;
+      }
+
       .resource-panel {
         grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 4px;
@@ -928,6 +1111,7 @@
         <canvas id="game" aria-label="六角貪食蛇棋盤"></canvas>
         <div class="overlay show" id="overlay">
           <div class="dialog">
+            <div id="winnerPortrait" hidden></div>
             <h2 id="overlayTitle">準備開局</h2>
             <p id="overlayText">每吃 6 個食物獲得 1 枚砲彈，最多 3 枚；發射時會消耗紅黃綠藍各 1 點。</p>
             <button id="startButton" type="button">開始</button>
@@ -962,12 +1146,23 @@
             <option value="high">高</option>
           </select>
         </div>
+        <div class="character-picks">
+          <div class="field">
+            <label for="playerCharacter">我的角色</label>
+            <select id="playerCharacter"></select>
+          </div>
+          <div class="field">
+            <label for="computerCharacter">對手角色</label>
+            <select id="computerCharacter"></select>
+          </div>
+        </div>
         <button id="resetBestTimeButton" class="secondary" type="button">重設最久存活</button>
         </div>
       </section>
 
       <section class="section">
         <h2>營養庫存</h2>
+        <div class="character-stage" id="characterStage"></div>
         <div class="resource-board" id="resourceBoard"></div>
       </section>
 
@@ -1025,6 +1220,7 @@
     const overlayTitle = document.querySelector("#overlayTitle");
     const overlayText = document.querySelector("#overlayText");
     const startButton = document.querySelector("#startButton");
+    const winnerPortrait = document.querySelector("#winnerPortrait");
     const statusEl = document.querySelector("#status");
     const scoreEl = document.querySelector("#score");
     const computerScoreEl = document.querySelector("#computerScore");
@@ -1040,9 +1236,12 @@
     const gridSizeInput = document.querySelector("#gridSize");
     const foodCountInput = document.querySelector("#foodCount");
     const computerDifficultyInput = document.querySelector("#computerDifficulty");
+    const playerCharacterInput = document.querySelector("#playerCharacter");
+    const computerCharacterInput = document.querySelector("#computerCharacter");
     const resetBestTimeButton = document.querySelector("#resetBestTimeButton");
     const settingsToggle = document.querySelector("#settingsToggle");
     const settingsContent = document.querySelector("#settingsContent");
+    const characterStage = document.querySelector("#characterStage");
     const resourceBoard = document.querySelector("#resourceBoard");
     const keyEls = [...document.querySelectorAll(".key")];
     const mobileInputQuery = window.matchMedia("(hover: none), (pointer: coarse), (max-width: 900px)");
@@ -1066,6 +1265,8 @@
     let radius = gridSize - 1;
     let foodCount = 4;
     let computerDifficulty = "medium";
+    let playerCharacterId = "dragon";
+    let computerCharacterId = "moray";
     const directions = [
       { q: 0, r: -1, angle: -90, key: "w" },
       { q: 1, r: -1, angle: -30, key: "e" },
@@ -1081,6 +1282,14 @@
       { id: "carb", label: "碳水", name: "碳水", color: "#3b82f6", line: "#bfdbfe" }
     ];
     const foodTypeById = new Map(foodTypes.map(type => [type.id, type]));
+    const characters = [
+      { id: "dragon", name: "東方龍", food: "protein", foodLabel: "紅色食物", move: "赤雷龍息", color: "#ef4444", body: "#b91c1c", line: "#fecaca", accent: "#fde68a" },
+      { id: "sandworm", name: "沙蟲", food: "fat", foodLabel: "黃色食物", move: "流沙震爆", color: "#facc15", body: "#ca8a04", line: "#fef08a", accent: "#92400e" },
+      { id: "quetzal", name: "羽蛇神", food: "fiber", foodLabel: "綠色食物", move: "翠羽風刃", color: "#22c55e", body: "#15803d", line: "#bbf7d0", accent: "#67e8f9" },
+      { id: "moray", name: "海鰻", food: "carb", foodLabel: "藍色食物", move: "深潮電咬", color: "#3b82f6", body: "#1d4ed8", line: "#bfdbfe", accent: "#93c5fd" },
+      { id: "lobster", name: "龍蝦", food: "balanced", foodLabel: "均衡", move: "雙螯破浪", color: "#fb7185", body: "#e11d48", line: "#ffe4e6", accent: "#f97316" }
+    ];
+    const characterById = new Map(characters.map(character => [character.id, character]));
     const colors = {
       cell: "#2a3445",
       cellAlt: "#303c4d",
@@ -1141,9 +1350,79 @@
     let movePointerMoved = false;
     let targetCell = null;
     let targetActive = false;
+    let moduleHoldTimer = null;
 
     bestEl.textContent = best;
+    buildCharacterOptions();
+    buildCharacterStage();
     buildResourceHud();
+
+    function characterFor(owner) {
+      return characterById.get(owner === "player" ? playerCharacterId : computerCharacterId) || characters[0];
+    }
+
+    function buildCharacterOptions() {
+      [playerCharacterInput, computerCharacterInput].forEach(select => {
+        select.innerHTML = characters.map(character => (
+          `<option value="${character.id}">${character.name} / ${character.foodLabel}</option>`
+        )).join("");
+      });
+      playerCharacterInput.value = playerCharacterId;
+      computerCharacterInput.value = computerCharacterId;
+    }
+
+    function fighterSvg(character, portrait = false) {
+      const extra = portrait ? " portrait" : "";
+      const common = `class="fighter-avatar${extra}" viewBox="0 0 100 100" aria-hidden="true"`;
+      if (character.id === "dragon") {
+        return `<svg ${common}><path class="body" d="M14 60 C24 24 51 75 68 35 C74 20 89 27 84 43 C78 62 54 50 49 72 C45 90 22 82 14 60Z"/><path class="accent" d="M73 23 L80 10 L83 28Z"/><path class="accent" d="M88 33 L98 26 L92 44Z"/><path class="line" d="M29 55 C40 43 51 57 63 42"/><circle class="eye" cx="78" cy="36" r="3"/></svg>`;
+      }
+      if (character.id === "sandworm") {
+        return `<svg ${common}><path class="body" d="M11 56 C24 28 51 24 78 37 C92 44 93 64 78 72 C52 86 22 78 11 56Z"/><path class="line" d="M30 37 L24 75 M46 31 L42 82 M62 34 L62 80 M77 43 L76 70"/><circle class="eye" cx="82" cy="51" r="3"/><circle class="eye" cx="82" cy="62" r="3"/></svg>`;
+      }
+      if (character.id === "quetzal") {
+        return `<svg ${common}><path class="body" d="M14 64 C24 34 51 72 66 38 C73 22 91 30 84 49 C77 69 50 56 45 78 C42 91 22 86 14 64Z"/><path class="accent" d="M45 26 L54 5 L61 30Z"/><path class="accent" d="M56 29 L74 12 L71 38Z"/><path class="accent" d="M34 32 L30 8 L47 29Z"/><circle class="eye" cx="77" cy="42" r="3"/></svg>`;
+      }
+      if (character.id === "moray") {
+        return `<svg ${common}><path class="body" d="M12 61 C29 24 50 79 72 36 C80 21 94 36 82 52 C65 75 40 54 31 82 C26 93 10 82 12 61Z"/><path class="accent" d="M24 65 C34 58 41 61 49 69 C37 70 29 75 20 83Z"/><path class="line" d="M71 46 L91 49"/><circle class="eye" cx="78" cy="39" r="3"/></svg>`;
+      }
+      return `<svg ${common}><path class="body" d="M27 52 C27 34 73 34 73 52 C73 78 27 78 27 52Z"/><path class="accent" d="M30 43 L9 27 C3 36 9 49 24 50Z"/><path class="accent" d="M70 43 L91 27 C97 36 91 49 76 50Z"/><path class="line" d="M37 34 L27 13 M50 31 L50 9 M63 34 L73 13"/><circle class="eye" cx="42" cy="49" r="3"/><circle class="eye" cx="58" cy="49" r="3"/></svg>`;
+    }
+
+    function characterStyle(character) {
+      return `--fighter-color:${character.color};--fighter-line:${character.line};--fighter-accent:${character.accent};`;
+    }
+
+    function buildCharacterStage() {
+      characterStage.innerHTML = ["player", "computer"].map(owner => {
+        const character = characterFor(owner);
+        const ownerLabel = owner === "player" ? "玩家" : "對手";
+        const holdHint = owner === "player" ? " title=\"長按施放攻擊\"" : "";
+        return `
+          <div class="fighter-card" data-owner="${owner}" style="${characterStyle(character)}">
+            <div class="fighter-module ${owner === "player" ? "is-actionable" : ""}" data-module="${owner}"${holdHint}>
+              ${fighterSvg(character)}
+            </div>
+            <div class="fighter-info">
+              <div class="fighter-name">${ownerLabel} · ${character.name}</div>
+              <div class="fighter-move">招式：${character.move}</div>
+              <div class="fighter-food">${character.foodLabel}</div>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function renderWinnerPortrait(owner) {
+      if (!owner) {
+        winnerPortrait.hidden = true;
+        winnerPortrait.innerHTML = "";
+        return;
+      }
+      const character = characterFor(owner);
+      winnerPortrait.hidden = false;
+      winnerPortrait.innerHTML = `<div class="fighter-portrait" style="${characterStyle(character)}">${fighterSvg(character, true)}</div>`;
+    }
 
     function buildResourceHud() {
       resourceBoard.innerHTML = "";
@@ -1256,7 +1535,17 @@
     }
 
     function collectFood(owner, typeId) {
-      addStock(owner === "player" ? playerStock : computerStock, typeId);
+      const stock = owner === "player" ? playerStock : computerStock;
+      const character = characterFor(owner);
+      addStock(stock, typeId);
+      if (character.food === typeId) {
+        addStock(stock, typeId);
+      } else if (character.food === "balanced") {
+        const lowest = foodTypes.reduce((bestType, type) => {
+          return stock[type.id] < stock[bestType.id] ? type : bestType;
+        }, foodTypes[0]);
+        addStock(stock, lowest.id);
+      }
       addAmmoCharge(owner);
     }
 
@@ -1311,6 +1600,8 @@
       gridSizeInput.disabled = locked;
       foodCountInput.disabled = locked;
       computerDifficultyInput.disabled = locked;
+      playerCharacterInput.disabled = locked;
+      computerCharacterInput.disabled = locked;
     }
 
     function keyOf(cell) {
@@ -1386,6 +1677,8 @@
     }
 
     function resetGame() {
+      renderWinnerPortrait(null);
+      buildCharacterStage();
       const offset = Math.min(2, Math.max(1, radius - 3));
       snake = [
         { q: -offset, r: offset },
@@ -1432,6 +1725,8 @@
     function startGame() {
       setFoodCount(foodCountInput.value);
       setComputerDifficulty(computerDifficultyInput.value);
+      playerCharacterId = characterById.has(playerCharacterInput.value) ? playerCharacterInput.value : "dragon";
+      computerCharacterId = characterById.has(computerCharacterInput.value) ? computerCharacterInput.value : "moray";
       resetGame();
       running = true;
       setSettingsLocked(true);
@@ -1870,6 +2165,12 @@
       }
       setStatus(`對戰結束：${title}`);
       overlayTitle.textContent = title;
+      const winnerOwner = (!playerLost && computerLost) || (playerLost && computerLost && score > computerScore)
+        ? "player"
+        : (playerLost && !computerLost) || (playerLost && computerLost && computerScore > score)
+          ? "computer"
+          : null;
+      renderWinnerPortrait(winnerOwner);
       overlayText.textContent = `玩家 ${score} 分，電腦 ${computerScore} 分。按開始再來一局。`;
       startButton.textContent = "重新開始";
       overlay.classList.add("show");
@@ -1946,20 +2247,24 @@
       drawBlasts();
 
       if (computerSnake) {
+        const computerCharacter = characterFor("computer");
         drawSnake(computerSnake, {
-          head: colors.computerHead,
-          body: colors.computerBody,
-          headLine: colors.computerHeadLine,
-          bodyLine: colors.computerBodyLine
+          head: computerCharacter.color,
+          body: computerCharacter.body,
+          headLine: computerCharacter.line,
+          bodyLine: colors.computerBodyLine,
+          character: computerCharacter
         });
       }
 
       if (snake) {
+        const playerCharacter = characterFor("player");
         drawSnake(snake, {
-          head: colors.head,
-          body: colors.body,
-          headLine: colors.headLine,
-          bodyLine: colors.bodyLine
+          head: playerCharacter.color,
+          body: playerCharacter.body,
+          headLine: playerCharacter.line,
+          bodyLine: colors.bodyLine,
+          character: playerCharacter
         });
       }
     }
@@ -1975,7 +2280,7 @@
         const arcHeight = Math.sin(progress * Math.PI) * cellSize * 1.5;
         ctx.beginPath();
         ctx.arc(x, y - arcHeight, Math.max(5, cellSize * 0.16), 0, Math.PI * 2);
-        ctx.fillStyle = projectile.owner === "player" ? colors.head : colors.computerHead;
+        ctx.fillStyle = characterFor(projectile.owner).color;
         ctx.fill();
         ctx.strokeStyle = "rgba(255,255,255,0.72)";
         ctx.lineWidth = 2;
@@ -2015,12 +2320,22 @@
         const alpha = 1 - progress;
         ctx.beginPath();
         ctx.arc(x, y, cellSize * (blast.radius || baseBlastHexRadius) * 1.52 * (0.65 + progress * 0.35), 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(251,146,60,${0.22 * alpha})`;
+        const blastCharacter = characterFor(blast.owner);
+        ctx.fillStyle = hexToRgba(blastCharacter.color, 0.22 * alpha);
         ctx.fill();
-        ctx.strokeStyle = `rgba(253,230,138,${0.8 * alpha})`;
+        ctx.strokeStyle = hexToRgba(blastCharacter.line, 0.8 * alpha);
         ctx.lineWidth = 3;
         ctx.stroke();
       });
+    }
+
+    function hexToRgba(hex, alpha) {
+      const value = hex.replace("#", "");
+      const bigint = Number.parseInt(value, 16);
+      const r = (bigint >> 16) & 255;
+      const g = (bigint >> 8) & 255;
+      const b = bigint & 255;
+      return `rgba(${r},${g},${b},${alpha})`;
     }
 
     function drawSnake(parts, palette) {
@@ -2040,8 +2355,51 @@
           ctx.arc(x - eyeDistance, y - cellSize * 0.08, Math.max(2.5, cellSize * 0.07), 0, Math.PI * 2);
           ctx.arc(x + eyeDistance, y - cellSize * 0.08, Math.max(2.5, cellSize * 0.07), 0, Math.PI * 2);
           ctx.fill();
+          drawSnakeHeadAccent(x, y, palette.character);
         }
       });
+    }
+
+    function drawSnakeHeadAccent(x, y, character) {
+      if (!character) return;
+      ctx.save();
+      ctx.strokeStyle = character.line;
+      ctx.fillStyle = character.accent;
+      ctx.lineWidth = Math.max(1.5, cellSize * 0.08);
+      if (character.id === "dragon") {
+        ctx.beginPath();
+        ctx.moveTo(x - cellSize * 0.24, y - cellSize * 0.38);
+        ctx.lineTo(x - cellSize * 0.08, y - cellSize * 0.72);
+        ctx.lineTo(x + cellSize * 0.04, y - cellSize * 0.36);
+        ctx.moveTo(x + cellSize * 0.24, y - cellSize * 0.38);
+        ctx.lineTo(x + cellSize * 0.08, y - cellSize * 0.72);
+        ctx.lineTo(x - cellSize * 0.04, y - cellSize * 0.36);
+        ctx.stroke();
+      } else if (character.id === "sandworm") {
+        ctx.beginPath();
+        ctx.arc(x, y, cellSize * 0.42, Math.PI * 0.08, Math.PI * 0.92);
+        ctx.stroke();
+      } else if (character.id === "quetzal") {
+        [-0.28, 0, 0.28].forEach(offset => {
+          ctx.beginPath();
+          ctx.ellipse(x + cellSize * offset, y - cellSize * 0.52, cellSize * 0.12, cellSize * 0.32, offset, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        });
+      } else if (character.id === "moray") {
+        ctx.beginPath();
+        ctx.moveTo(x - cellSize * 0.48, y + cellSize * 0.08);
+        ctx.quadraticCurveTo(x, y + cellSize * 0.34, x + cellSize * 0.48, y + cellSize * 0.08);
+        ctx.stroke();
+      } else if (character.id === "lobster") {
+        [-1, 1].forEach(side => {
+          ctx.beginPath();
+          ctx.ellipse(x + side * cellSize * 0.44, y - cellSize * 0.2, cellSize * 0.14, cellSize * 0.24, side * 0.7, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        });
+      }
+      ctx.restore();
     }
 
     function pointerToDirection(event, rect) {
@@ -2148,7 +2506,7 @@
           targetActive = false;
           draw();
         }, 180);
-        setStatus("Player attack launched.");
+        setStatus(`${characterFor("player").move} 已發射。`);
         return true;
       }
       setStatus("攻擊需要 1 枚砲彈，且紅黃綠藍四種庫存各至少 1。");
@@ -2160,12 +2518,41 @@
       return launchPlayerAttack(directionalAttackTarget(direction));
     }
 
+    function performModuleAttack() {
+      const module = characterStage.querySelector('[data-module="player"]');
+      if (module) module.classList.remove("is-charging");
+      launchPlayerAttack(targetCell || snake[0]);
+    }
+
+    function clearModuleHold() {
+      clearTimeout(moduleHoldTimer);
+      moduleHoldTimer = null;
+      const module = characterStage.querySelector('[data-module="player"]');
+      if (module) module.classList.remove("is-charging");
+    }
+
     settingsToggle.addEventListener("click", () => {
       const expanded = settingsToggle.getAttribute("aria-expanded") === "true";
       settingsToggle.setAttribute("aria-expanded", String(!expanded));
       settingsContent.hidden = expanded;
       settingsToggle.closest(".settings-section").classList.toggle("open", !expanded);
     });
+
+    characterStage.addEventListener("pointerdown", event => {
+      const module = event.target.closest('[data-module="player"]');
+      if (!module) return;
+      module.setPointerCapture(event.pointerId);
+      module.classList.add("is-charging");
+      clearTimeout(moduleHoldTimer);
+      moduleHoldTimer = setTimeout(() => {
+        moduleHoldTimer = null;
+        performModuleAttack();
+      }, 520);
+    });
+
+    characterStage.addEventListener("pointerup", clearModuleHold);
+    characterStage.addEventListener("pointercancel", clearModuleHold);
+    characterStage.addEventListener("pointerleave", clearModuleHold);
 
     gridSizeInput.addEventListener("change", () => {
       if (running) return;
@@ -2199,6 +2586,21 @@
       overlayText.textContent = `電腦難度設為 ${computerDifficultyInput.selectedOptions[0].textContent}。`;
       startButton.textContent = "開始";
       overlay.classList.add("show");
+    });
+
+    [playerCharacterInput, computerCharacterInput].forEach(input => {
+      input.addEventListener("change", () => {
+        if (running) return;
+        playerCharacterId = characterById.has(playerCharacterInput.value) ? playerCharacterInput.value : "dragon";
+        computerCharacterId = characterById.has(computerCharacterInput.value) ? computerCharacterInput.value : "moray";
+        buildCharacterStage();
+        resetGame();
+        resize();
+        overlayTitle.textContent = "角色已更新";
+        overlayText.textContent = `玩家選擇 ${characterFor("player").name}，對手選擇 ${characterFor("computer").name}。`;
+        startButton.textContent = "開始";
+        overlay.classList.add("show");
+      });
     });
 
     resetBestTimeButton.addEventListener("click", () => {
