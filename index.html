@@ -515,6 +515,15 @@
       width: 64px;
       aspect-ratio: 1;
       border-radius: 50%;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .fighter-module-clip {
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
       display: grid;
       place-items: center;
       border: 1px solid color-mix(in srgb, var(--fighter-color), white 26%);
@@ -523,12 +532,9 @@
         color-mix(in srgb, var(--fighter-color), #101720 70%);
       box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.28);
       overflow: hidden;
-      touch-action: none;
-      user-select: none;
-      -webkit-user-select: none;
     }
 
-    .fighter-module .fighter-avatar-image.portrait {
+    .fighter-module-clip .fighter-avatar-image.portrait {
       display: block;
       width: 100%;
       height: 100%;
@@ -548,6 +554,10 @@
       opacity: 0.82;
       pointer-events: none;
       z-index: 2;
+    }
+
+    .fighter-module::before {
+      z-index: 3;
     }
 
     .fighter-module::after,
@@ -2381,7 +2391,9 @@
         return `
           <div class="fighter-card" data-owner="${owner}" style="${characterStyle(character, owner)}">
             <div class="fighter-module ${owner === "player" ? "is-actionable" : ""}" data-module="${owner}" data-owner-mark="${ownerMeta(owner).mark}"${holdHint}>
-              ${fighterPortraitImage(character, "idle")}
+              <div class="fighter-module-clip">
+                ${fighterPortraitImage(character, "idle")}
+              </div>
             </div>
           </div>
         `;
