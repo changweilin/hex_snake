@@ -382,6 +382,39 @@
       opacity: 0.58;
     }
 
+    .toggle-field {
+      grid-template-columns: auto 1fr;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .toggle-field input {
+      width: 20px;
+      min-height: 20px;
+      accent-color: var(--accent);
+    }
+
+    .keybind-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .keybind-grid .field {
+      gap: 5px;
+    }
+
+    .keybind-grid .field + .field {
+      margin-top: 0;
+    }
+
+    .keybind-grid input {
+      text-align: center;
+      text-transform: uppercase;
+    }
+
     .resource-board {
       display: grid;
       gap: 12px;
@@ -929,6 +962,14 @@
       gap: 10px;
     }
 
+    .control-row.left-handed {
+      direction: rtl;
+    }
+
+    .control-row.left-handed > * {
+      direction: ltr;
+    }
+
     .control-card {
       display: grid;
       gap: 8px;
@@ -983,6 +1024,43 @@
 
     .target-stick {
       background: var(--accent);
+    }
+
+    .action-panel {
+      display: grid;
+      gap: 8px;
+      width: 100%;
+    }
+
+    .attack-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .attack-button {
+      min-width: 0;
+      padding: 8px 10px;
+      border: 1px solid transparent;
+      line-height: 1.1;
+    }
+
+    .attack-button.is-selected {
+      border-color: rgba(255, 255, 255, 0.65);
+      box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.22);
+    }
+
+    .surrender-button {
+      background: #7f1d1d;
+      color: #fee2e2;
+      border: 1px solid rgba(254, 202, 202, 0.24);
+    }
+
+    .quick-help {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.76rem;
+      line-height: 1.35;
     }
 
     .legend {
@@ -1566,6 +1644,52 @@
             <select id="computerCharacter"></select>
           </div>
         </div>
+        <label class="field toggle-field">
+          <input id="leftHandMode" type="checkbox">
+          <span>左手模式</span>
+        </label>
+        <div class="keybind-grid" aria-label="鍵盤快捷鍵設定">
+          <div class="field">
+            <label for="smallAttackKey">小招鍵</label>
+            <input id="smallAttackKey" type="text" value="Q" maxlength="1" inputmode="text">
+          </div>
+          <div class="field">
+            <label for="bigAttackKey">大招鍵</label>
+            <input id="bigAttackKey" type="text" value="R" maxlength="1" inputmode="text">
+          </div>
+          <div class="field">
+            <label for="pauseKey">暫停鍵</label>
+            <input id="pauseKey" type="text" value=" " maxlength="1" inputmode="text">
+          </div>
+          <div class="field">
+            <label for="surrenderKey">投降鍵</label>
+            <input id="surrenderKey" type="text" value="T" maxlength="1" inputmode="text">
+          </div>
+          <div class="field">
+            <label for="dirKey0">上方攻擊</label>
+            <input id="dirKey0" data-keybind-dir="0" type="text" value="W" maxlength="1" inputmode="text">
+          </div>
+          <div class="field">
+            <label for="dirKey1">右上攻擊</label>
+            <input id="dirKey1" data-keybind-dir="1" type="text" value="E" maxlength="1" inputmode="text">
+          </div>
+          <div class="field">
+            <label for="dirKey2">右下攻擊</label>
+            <input id="dirKey2" data-keybind-dir="2" type="text" value="D" maxlength="1" inputmode="text">
+          </div>
+          <div class="field">
+            <label for="dirKey3">下方攻擊</label>
+            <input id="dirKey3" data-keybind-dir="3" type="text" value="X" maxlength="1" inputmode="text">
+          </div>
+          <div class="field">
+            <label for="dirKey4">左下攻擊</label>
+            <input id="dirKey4" data-keybind-dir="4" type="text" value="Z" maxlength="1" inputmode="text">
+          </div>
+          <div class="field">
+            <label for="dirKey5">左上攻擊</label>
+            <input id="dirKey5" data-keybind-dir="5" type="text" value="A" maxlength="1" inputmode="text">
+          </div>
+        </div>
         <button id="resetBestTimeButton" class="secondary" type="button">重設最久存活</button>
         </div>
       </section>
@@ -1589,14 +1713,16 @@
 
       <section class="section">
         <h2>雙搖桿</h2>
-        <div class="control-row">
-          <div class="control-card">
-            <span>攻擊</span>
-            <div class="joystick-zone" id="targetZone" aria-label="攻擊瞄準">
-              <div class="joystick">
-                <div class="stick target-stick" id="targetStick"></div>
-              </div>
+        <div class="control-row" id="controlRow">
+          <div class="control-card action-panel">
+            <span>招式</span>
+            <div class="attack-actions" aria-label="攻擊招式">
+              <button class="attack-button is-selected" id="smallAttackButton" type="button" data-attack-profile="small">小招</button>
+              <button class="attack-button secondary" id="bigAttackButton" type="button" data-attack-profile="big">大招</button>
             </div>
+            <button class="secondary" id="leftHandToggle" type="button">左手模式</button>
+            <button class="surrender-button" id="surrenderButton" type="button">投降</button>
+            <p class="quick-help">點棋盤直接攻擊指定格；小招不耗砲彈，大招使用砲彈並有較大範圍。</p>
           </div>
           <div class="control-card">
             <span>移動</span>
@@ -1651,14 +1777,19 @@
     const lastFeedTimeEl = document.querySelector("#lastFeedTime");
     const bestTimeEl = document.querySelector("#bestTime");
     const stick = document.querySelector("#stick");
-    const targetStick = document.querySelector("#targetStick");
+    const controlRow = document.querySelector("#controlRow");
+    const smallAttackButton = document.querySelector("#smallAttackButton");
+    const bigAttackButton = document.querySelector("#bigAttackButton");
+    const leftHandToggle = document.querySelector("#leftHandToggle");
+    const leftHandModeInput = document.querySelector("#leftHandMode");
+    const surrenderButton = document.querySelector("#surrenderButton");
     const joyZone = document.querySelector("#joyZone");
-    const targetZone = document.querySelector("#targetZone");
     const gridSizeInput = document.querySelector("#gridSize");
     const foodCountInput = document.querySelector("#foodCount");
     const computerDifficultyInput = document.querySelector("#computerDifficulty");
     const playerCharacterInput = document.querySelector("#playerCharacter");
     const computerCharacterInput = document.querySelector("#computerCharacter");
+    const keybindInputs = [...document.querySelectorAll("[id$='AttackKey'], #pauseKey, #surrenderKey, [data-keybind-dir]")];
     const resetBestTimeButton = document.querySelector("#resetBestTimeButton");
     const settingsToggle = document.querySelector("#settingsToggle");
     const settingsContent = document.querySelector("#settingsContent");
@@ -1761,7 +1892,16 @@
       target: "#fde68a",
       blast: "#fb923c"
     };
-    const keyToDir = new Map(directions.map((dir, index) => [dir.key, index]));
+    let keyToDir = new Map(directions.map((dir, index) => [dir.key, index]));
+    const defaultKeybinds = {
+      smallAttack: "q",
+      bigAttack: "r",
+      pause: " ",
+      surrender: "t",
+      directions: directions.map(direction => direction.key)
+    };
+    let keybinds = loadKeybinds();
+    let selectedAttackProfile = "small";
     let cells = [];
     let resourceEls = new Map();
 
@@ -2131,17 +2271,19 @@
       return owner === "player" ? playerAmmo : computerAmmo;
     }
 
-    function canAttack(owner) {
+    function canAttack(owner, profile = "big") {
       const stock = owner === "player" ? playerStock : computerStock;
-      return ammoFor(owner) > 0 && hasAttackFoodCost(stock);
+      return (profile === "small" || ammoFor(owner) > 0) && hasAttackFoodCost(stock);
     }
 
-    function consumeAttackCost(owner, stock) {
+    function consumeAttackCost(owner, stock, profile = "big") {
       foodTypes.forEach(type => {
         stock[type.id] = Math.max(0, stock[type.id] - 1);
       });
-      if (owner === "player") playerAmmo = Math.max(0, playerAmmo - 1);
-      else computerAmmo = Math.max(0, computerAmmo - 1);
+      if (profile !== "small") {
+        if (owner === "player") playerAmmo = Math.max(0, playerAmmo - 1);
+        else computerAmmo = Math.max(0, computerAmmo - 1);
+      }
     }
 
     function addStock(stock, typeId) {
@@ -2184,6 +2326,77 @@
       const minutes = Math.floor(totalSeconds / 60);
       const seconds = totalSeconds % 60;
       return `${minutes}:${String(seconds).padStart(2, "0")}`;
+    }
+
+    function normalizeKey(value, fallback) {
+      if (value === " " || value === "Space") return " ";
+      const trimmed = String(value || "").trim();
+      if (!trimmed) return fallback;
+      return trimmed.slice(0, 1).toLowerCase();
+    }
+
+    function keyLabel(key) {
+      return key === " " ? "Space" : key.toUpperCase();
+    }
+
+    function loadKeybinds() {
+      try {
+        const saved = JSON.parse(localStorage.getItem("hexSnakeKeybinds") || "null");
+        if (!saved || !Array.isArray(saved.directions)) return structuredClone(defaultKeybinds);
+        return {
+          smallAttack: normalizeKey(saved.smallAttack, defaultKeybinds.smallAttack),
+          bigAttack: normalizeKey(saved.bigAttack, defaultKeybinds.bigAttack),
+          pause: normalizeKey(saved.pause, defaultKeybinds.pause),
+          surrender: normalizeKey(saved.surrender, defaultKeybinds.surrender),
+          directions: defaultKeybinds.directions.map((fallback, index) => normalizeKey(saved.directions[index], fallback))
+        };
+      } catch {
+        return structuredClone(defaultKeybinds);
+      }
+    }
+
+    function saveKeybinds() {
+      localStorage.setItem("hexSnakeKeybinds", JSON.stringify(keybinds));
+    }
+
+    function applyKeybinds() {
+      directions.forEach((direction, index) => {
+        direction.key = keybinds.directions[index];
+      });
+      keyToDir = new Map(directions.map((direction, index) => [direction.key, index]));
+      keyEls.forEach(el => {
+        const direction = directions[Number(el.dataset.dir)];
+        if (direction) el.textContent = keyLabel(direction.key);
+      });
+      document.querySelector("#smallAttackKey").value = keyLabel(keybinds.smallAttack);
+      document.querySelector("#bigAttackKey").value = keyLabel(keybinds.bigAttack);
+      document.querySelector("#pauseKey").value = keyLabel(keybinds.pause);
+      document.querySelector("#surrenderKey").value = keyLabel(keybinds.surrender);
+      document.querySelectorAll("[data-keybind-dir]").forEach(input => {
+        input.value = keyLabel(keybinds.directions[Number(input.dataset.keybindDir)]);
+      });
+    }
+
+    function updateAttackButtons() {
+      smallAttackButton.classList.toggle("is-selected", selectedAttackProfile === "small");
+      bigAttackButton.classList.toggle("is-selected", selectedAttackProfile === "big");
+      smallAttackButton.classList.toggle("secondary", selectedAttackProfile !== "small");
+      bigAttackButton.classList.toggle("secondary", selectedAttackProfile !== "big");
+    }
+
+    function selectAttackProfile(profile) {
+      selectedAttackProfile = profile === "big" ? "big" : "small";
+      updateAttackButtons();
+      const moveName = selectedAttackProfile === "big" ? characterFor("player").bigMove : characterFor("player").smallMove;
+      setStatus(`已選擇 ${moveName}。點棋盤即可攻擊。`);
+    }
+
+    function setLeftHandMode(enabled) {
+      const active = Boolean(enabled);
+      controlRow.classList.toggle("left-handed", active);
+      leftHandModeInput.checked = active;
+      leftHandToggle.textContent = active ? "右手模式" : "左手模式";
+      localStorage.setItem("hexSnakeLeftHandMode", active ? "1" : "0");
     }
 
     function clampGridSize(value) {
@@ -2613,21 +2826,23 @@
       if (!running || gameOver) autoStartGame();
     }
 
-    function launchAttack(owner, target, now) {
+    function launchAttack(owner, target, now, profile = "big") {
       const stock = owner === "player" ? playerStock : computerStock;
       const lastAttack = owner === "player" ? lastPlayerAttackMs : lastComputerAttackMs;
       const source = owner === "player" ? snake[0] : computerSnake[0];
-      if (!canAttack(owner)) return false;
-      if (now - lastAttack < attackCooldown(stock)) return false;
-      const delay = attackDelay(stock);
-      const radius = blastRadius(stock);
-      const damage = damageMultiplier(stock);
-      consumeAttackCost(owner, stock);
+      const isSmall = profile === "small";
+      if (!canAttack(owner, profile)) return false;
+      if (now - lastAttack < attackCooldown(stock) * (isSmall ? 0.58 : 1)) return false;
+      const delay = attackDelay(stock) * (isSmall ? 0.62 : 1);
+      const radius = Math.max(1, blastRadius(stock) + (isSmall ? -1 : 0));
+      const damage = damageMultiplier(stock) * (isSmall ? 0.55 : 1);
+      consumeAttackCost(owner, stock, profile);
       if (owner === "player") lastPlayerAttackMs = now;
       else lastComputerAttackMs = now;
       setFighterPose(owner, "attack", Math.max(180, Math.min(delay, 320)));
       projectiles.push({
         owner,
+        profile,
         source: { q: source.q, r: source.r },
         target: { q: target.q, r: target.r },
         createdAt: now,
@@ -2955,13 +3170,14 @@
 
     function drawTarget() {
       if (!targetCell || !snake) return;
-      if (!targetActive && !canAttack("player")) return;
+      if (!targetActive && !canAttack("player", selectedAttackProfile)) return;
       const { x, y } = axialToPixel(targetCell);
       ctx.beginPath();
-      ctx.arc(x, y, cellSize * blastRadius(playerStock) * 1.52, 0, Math.PI * 2);
-      ctx.fillStyle = canAttack("player") ? "rgba(245,158,11,0.1)" : "rgba(168,179,194,0.08)";
+      const previewRadius = Math.max(1, blastRadius(playerStock) + (selectedAttackProfile === "small" ? -1 : 0));
+      ctx.arc(x, y, cellSize * previewRadius * 1.52, 0, Math.PI * 2);
+      ctx.fillStyle = canAttack("player", selectedAttackProfile) ? "rgba(245,158,11,0.1)" : "rgba(168,179,194,0.08)";
       ctx.fill();
-      ctx.strokeStyle = canAttack("player") ? "rgba(253,230,138,0.78)" : "rgba(168,179,194,0.36)";
+      ctx.strokeStyle = canAttack("player", selectedAttackProfile) ? "rgba(253,230,138,0.78)" : "rgba(168,179,194,0.36)";
       ctx.lineWidth = 2;
       ctx.setLineDash([6, 6]);
       ctx.stroke();
@@ -3273,11 +3489,12 @@
       targetActive = false;
     }
 
-    function launchPlayerAttack(target) {
+    function launchPlayerAttack(target, profile = selectedAttackProfile) {
       if (!running || gameOver) {
         if (!autoStartGame()) return false;
       }
-      if (launchAttack("player", target, performance.now())) {
+      if (paused) return false;
+      if (launchAttack("player", target, performance.now(), profile)) {
         targetCell = { ...target };
         targetActive = true;
         draw();
@@ -3285,18 +3502,19 @@
           targetActive = false;
           draw();
         }, 180);
-        setStatus(`${characterFor("player").move} 已發射。`);
+        const moveName = profile === "small" ? characterFor("player").smallMove : characterFor("player").bigMove;
+        setStatus(`${moveName} 發動。`);
         return true;
       }
-      setStatus("攻擊需要 1 枚砲彈，且紅黃綠藍四種庫存各至少 1。");
+      setStatus(profile === "small" ? "小招需要紅黃綠藍四種庫存各至少 1。" : "大招需要 1 枚砲彈，且四種庫存各至少 1。");
       return false;
     }
 
-    function launchPlayerAttackDirection(direction) {
+    function launchPlayerAttackDirection(direction, profile = selectedAttackProfile) {
       if (!running || gameOver) {
         if (!autoStartGame()) return false;
       }
-      return launchPlayerAttack(directionalAttackTarget(direction));
+      return launchPlayerAttack(directionalAttackTarget(direction), profile);
     }
 
     function performModuleAttack() {
@@ -3310,6 +3528,38 @@
       moduleHoldTimer = null;
       const module = characterStage.querySelector('[data-module="player"]');
       if (module) module.classList.remove("is-charging");
+    }
+
+    function togglePause() {
+      if (!running || gameOver) {
+        startGame();
+        return;
+      }
+      paused = !paused;
+      setStatus(paused ? "已暫停" : "對戰中：吃四種食物累積砲彈資源。");
+      overlayTitle.textContent = "暫停";
+      overlayText.textContent = "按開始或快捷鍵繼續。";
+      startButton.textContent = "繼續";
+      setOverlayChromeVisible(true);
+      overlay.classList.toggle("show", paused);
+      if (!paused) {
+        lastPlayerStep = performance.now();
+        lastComputerStep = lastPlayerStep;
+        lastTimerFrame = lastPlayerStep;
+      }
+    }
+
+    function surrenderGame() {
+      if (!running || gameOver) return;
+      setStatus("你已投降。");
+      endGame(true, false);
+    }
+
+    function attackBoardCellFromPointer(event) {
+      if (event.target !== canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      const target = nearestInsideCell(pixelToAxial(event.clientX - rect.left, event.clientY - rect.top));
+      launchPlayerAttack(target, selectedAttackProfile);
     }
 
     settingsToggle.addEventListener("click", () => {
@@ -3440,6 +3690,31 @@
       updateHud();
     });
 
+    smallAttackButton.addEventListener("click", () => selectAttackProfile("small"));
+    bigAttackButton.addEventListener("click", () => selectAttackProfile("big"));
+    leftHandToggle.addEventListener("click", () => setLeftHandMode(!leftHandModeInput.checked));
+    leftHandModeInput.addEventListener("change", () => setLeftHandMode(leftHandModeInput.checked));
+    surrenderButton.addEventListener("click", surrenderGame);
+
+    keybindInputs.forEach(input => {
+      input.addEventListener("keydown", event => {
+        event.preventDefault();
+        const value = event.key === " " ? " " : event.key;
+        input.value = keyLabel(normalizeKey(value, input.value));
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+      input.addEventListener("change", () => {
+        const normalized = normalizeKey(input.value, " ");
+        if (input.id === "smallAttackKey") keybinds.smallAttack = normalized;
+        else if (input.id === "bigAttackKey") keybinds.bigAttack = normalized;
+        else if (input.id === "pauseKey") keybinds.pause = normalized;
+        else if (input.id === "surrenderKey") keybinds.surrender = normalized;
+        else if (input.dataset.keybindDir !== undefined) keybinds.directions[Number(input.dataset.keybindDir)] = normalized;
+        saveKeybinds();
+        applyKeybinds();
+      });
+    });
+
     introCloseButton.addEventListener("click", () => {
       renderIntroPortraits(false);
       overlay.classList.add("show");
@@ -3486,22 +3761,9 @@
       }
     });
 
-    targetZone.addEventListener("pointerdown", event => {
-      targetPointerId = event.pointerId;
-      targetZone.setPointerCapture(targetPointerId);
-      moveTargetStick(event);
-    });
-
-    targetZone.addEventListener("pointermove", event => {
-      if (event.pointerId === targetPointerId) moveTargetStick(event);
-    });
-
-    targetZone.addEventListener("pointerup", releaseTargetStick);
-    targetZone.addEventListener("pointercancel", releaseTargetStick);
-
     playArea.addEventListener("pointerdown", event => {
       if (event.target.closest(".overlay")) return;
-      if (!running || gameOver) autoStartGame();
+      attackBoardCellFromPointer(event);
     });
 
     window.addEventListener("keydown", event => {
@@ -3510,6 +3772,38 @@
         return;
       }
       if (mobileInputQuery.matches) return;
+      if (event.target && ["INPUT", "SELECT", "TEXTAREA"].includes(event.target.tagName)) return;
+
+      const pressedKey = event.key === " " ? " " : event.key.toLowerCase();
+      if (pressedKey === keybinds.pause) {
+        event.preventDefault();
+        togglePause();
+        return;
+      }
+      if (pressedKey === keybinds.surrender) {
+        event.preventDefault();
+        surrenderGame();
+        return;
+      }
+      if (pressedKey === keybinds.smallAttack || pressedKey === keybinds.bigAttack) {
+        event.preventDefault();
+        if (!running || gameOver) {
+          if (!autoStartGame()) return;
+        }
+        const profile = pressedKey === keybinds.smallAttack ? "small" : "big";
+        selectAttackProfile(profile);
+        launchPlayerAttack(targetCell || computerSnake[0] || snake[0], profile);
+        return;
+      }
+      if (keyToDir.has(pressedKey)) {
+        event.preventDefault();
+        launchPlayerAttackDirection(keyToDir.get(pressedKey));
+        return;
+      }
+      if ((pressedKey === " " && keybinds.pause !== " ") || (pressedKey === "q" && keybinds.smallAttack !== "q" && keybinds.bigAttack !== "q")) {
+        event.preventDefault();
+        return;
+      }
 
       const key = event.key.toLowerCase();
       if (key === " ") {
@@ -3557,6 +3851,9 @@
     setFoodCount(foodCountInput.value);
     setComputerDifficulty(computerDifficultyInput.value);
     setSettingsLocked(false);
+    applyKeybinds();
+    setLeftHandMode(localStorage.getItem("hexSnakeLeftHandMode") === "1");
+    updateAttackButtons();
     resetGame();
     resize();
     renderIntroPortraits(false);
