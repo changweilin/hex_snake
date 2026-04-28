@@ -295,6 +295,14 @@
       gap: 10px;
     }
 
+    .settings-actions {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+    }
+
     .settings-toggle {
       width: 44px;
       min-height: 44px;
@@ -1001,6 +1009,39 @@
       box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.35);
     }
 
+    .hex-dir-button {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 34%;
+      aspect-ratio: 1;
+      translate: -50% -50%;
+      padding: 0;
+      min-height: 0;
+      display: grid;
+      place-items: center;
+      clip-path: polygon(25% 6%, 75% 6%, 100% 50%, 75% 94%, 25% 94%, 0 50%);
+      background: rgba(15, 23, 42, 0.84);
+      color: var(--ink);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      font-size: 0.72rem;
+      line-height: 1;
+      z-index: 2;
+    }
+
+    .hex-dir-button.active {
+      background: rgba(245, 158, 11, 0.88);
+      color: #171006;
+      border-color: rgba(255, 255, 255, 0.6);
+    }
+
+    .hex-dir-button[data-dir="0"] { transform: translate(0, -72%); }
+    .hex-dir-button[data-dir="1"] { transform: translate(62%, -36%); }
+    .hex-dir-button[data-dir="2"] { transform: translate(62%, 36%); }
+    .hex-dir-button[data-dir="3"] { transform: translate(0, 72%); }
+    .hex-dir-button[data-dir="4"] { transform: translate(-62%, 36%); }
+    .hex-dir-button[data-dir="5"] { transform: translate(-62%, -36%); }
+
     .joystick.locked {
       border-color: var(--accent);
       box-shadow:
@@ -1020,6 +1061,7 @@
       border: 5px solid rgba(255, 255, 255, 0.22);
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.38);
       transition: transform 80ms ease;
+      z-index: 3;
     }
 
     .target-stick {
@@ -1034,15 +1076,24 @@
 
     .attack-actions {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 8px;
+      width: min(142px, 100%);
+      justify-self: center;
     }
 
     .attack-button {
       min-width: 0;
-      padding: 8px 10px;
+      aspect-ratio: 1;
+      min-height: 0;
+      padding: 6px;
       border: 1px solid transparent;
       line-height: 1.1;
+    }
+
+    .attack-button.is-placeholder {
+      opacity: 0.42;
+      pointer-events: none;
     }
 
     .attack-button.is-selected {
@@ -1610,6 +1661,8 @@
 
     <aside class="side" aria-label="控制面板">
       <section class="section settings-section">
+        <div class="settings-actions">
+        <button class="surrender-button" id="surrenderButton" type="button">投降</button>
         <button class="settings-toggle" id="settingsToggle" type="button" aria-expanded="false" aria-controls="settingsContent" title="開局設定">
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -1617,6 +1670,7 @@
           </svg>
           <span class="settings-title">開局設定</span>
         </button>
+        </div>
         <div class="settings-content" id="settingsContent" hidden>
         <div class="field">
           <label for="gridSize">棋盤半徑</label>
@@ -1714,23 +1768,30 @@
       <section class="section">
         <h2>雙搖桿</h2>
         <div class="control-row" id="controlRow">
+          <div class="control-card">
+            <span>方向</span>
+            <div class="joystick-zone" id="joyZone" aria-label="移動方向">
+              <div class="joystick">
+                <button class="hex-dir-button" type="button" data-dir-button="0" data-dir="0">W</button>
+                <button class="hex-dir-button" type="button" data-dir-button="1" data-dir="1">E</button>
+                <button class="hex-dir-button" type="button" data-dir-button="2" data-dir="2">D</button>
+                <button class="hex-dir-button" type="button" data-dir-button="3" data-dir="3">X</button>
+                <button class="hex-dir-button" type="button" data-dir-button="4" data-dir="4">Z</button>
+                <button class="hex-dir-button" type="button" data-dir-button="5" data-dir="5">A</button>
+                <div class="stick" id="stick"></div>
+              </div>
+            </div>
+          </div>
           <div class="control-card action-panel">
             <span>招式</span>
             <div class="attack-actions" aria-label="攻擊招式">
+              <button class="attack-button secondary is-placeholder" type="button" disabled>Y</button>
+              <button class="attack-button secondary is-placeholder" type="button" disabled>X</button>
               <button class="attack-button is-selected" id="smallAttackButton" type="button" data-attack-profile="small">小招</button>
               <button class="attack-button secondary" id="bigAttackButton" type="button" data-attack-profile="big">大招</button>
             </div>
             <button class="secondary" id="leftHandToggle" type="button">左手模式</button>
-            <button class="surrender-button" id="surrenderButton" type="button">投降</button>
-            <p class="quick-help">點棋盤直接攻擊指定格；小招不耗砲彈，大招使用砲彈並有較大範圍。</p>
-          </div>
-          <div class="control-card">
-            <span>移動</span>
-            <div class="joystick-zone" id="joyZone" aria-label="移動方向">
-              <div class="joystick">
-                <div class="stick" id="stick"></div>
-              </div>
-            </div>
+            <p class="quick-help">長按方向中心後拖曳控制方向；也可直接點六邊方向鍵。招式會使用目前瞄準點，點棋盤可改瞄準位置。</p>
           </div>
         </div>
       </section>
@@ -1784,6 +1845,7 @@
     const leftHandModeInput = document.querySelector("#leftHandMode");
     const surrenderButton = document.querySelector("#surrenderButton");
     const joyZone = document.querySelector("#joyZone");
+    const hexDirButtons = [...document.querySelectorAll("[data-dir-button]")];
     const gridSizeInput = document.querySelector("#gridSize");
     const foodCountInput = document.querySelector("#foodCount");
     const computerDifficultyInput = document.querySelector("#computerDifficulty");
@@ -1941,6 +2003,8 @@
     let movePointerId = null;
     let targetPointerId = null;
     let moveStickLocked = false;
+    let moveStickEngaged = false;
+    let moveStickHoldTimer = null;
     let movePointerStartedAt = 0;
     let movePointerMoved = false;
     let targetCell = null;
@@ -2367,6 +2431,10 @@
       keyEls.forEach(el => {
         const direction = directions[Number(el.dataset.dir)];
         if (direction) el.textContent = keyLabel(direction.key);
+      });
+      hexDirButtons.forEach(button => {
+        const direction = directions[Number(button.dataset.dir)];
+        if (direction) button.textContent = keyLabel(direction.key);
       });
       document.querySelector("#smallAttackKey").value = keyLabel(keybinds.smallAttack);
       document.querySelector("#bigAttackKey").value = keyLabel(keybinds.bigAttack);
@@ -2821,6 +2889,7 @@
       if (!Number.isInteger(newDir) || newDir < 0 || newDir > 5) return;
       if (canTurn(newDir)) {
         nextDir = newDir;
+        hexDirButtons.forEach(button => button.classList.toggle("active", Number(button.dataset.dir) === newDir));
         updateHud();
       }
       if (!running || gameOver) autoStartGame();
@@ -3421,11 +3490,19 @@
 
     function setMoveStickLocked(locked) {
       moveStickLocked = locked;
+      moveStickEngaged = locked;
       joyZone.querySelector(".joystick").classList.toggle("locked", locked);
       if (!locked) {
         movePointerId = null;
+        moveStickEngaged = false;
         stick.style.transform = "translate(0, 0)";
       }
+    }
+
+    function clearMoveStickHoldTimer() {
+      if (!moveStickHoldTimer) return;
+      clearTimeout(moveStickHoldTimer);
+      moveStickHoldTimer = null;
     }
 
     function pointerNearMoveCenter(event) {
@@ -3436,18 +3513,11 @@
     }
 
     function releaseMoveStick(event) {
-      const wasQuickCenterTap = event
-        && event.pointerId === movePointerId
-        && pointerNearMoveCenter(event)
-        && !movePointerMoved
-        && performance.now() - movePointerStartedAt < 260;
-
-      if (wasQuickCenterTap) {
-        setMoveStickLocked(!moveStickLocked);
-        return;
-      }
+      clearMoveStickHoldTimer();
       if (moveStickLocked) return;
       movePointerId = null;
+      moveStickEngaged = false;
+      joyZone.querySelector(".joystick").classList.remove("locked");
       stick.style.transform = "translate(0, 0)";
     }
 
@@ -3740,22 +3810,36 @@
     });
 
     joyZone.addEventListener("pointerdown", event => {
+      const dirButton = event.target.closest("[data-dir-button]");
+      if (dirButton) {
+        event.preventDefault();
+        setDirection(Number(dirButton.dataset.dir));
+        return;
+      }
+      if (!pointerNearMoveCenter(event)) return;
       movePointerId = event.pointerId;
       movePointerStartedAt = performance.now();
       movePointerMoved = false;
+      moveStickEngaged = false;
       joyZone.setPointerCapture(movePointerId);
-      moveStick(event);
+      clearMoveStickHoldTimer();
+      moveStickHoldTimer = setTimeout(() => {
+        if (movePointerId !== event.pointerId) return;
+        moveStickEngaged = true;
+        joyZone.querySelector(".joystick").classList.add("locked");
+        moveStick(event);
+      }, 220);
     });
 
     joyZone.addEventListener("pointermove", event => {
-      if (event.pointerId === movePointerId) moveStick(event);
+      if (event.pointerId === movePointerId && moveStickEngaged) moveStick(event);
     });
 
     joyZone.addEventListener("pointerup", releaseMoveStick);
     joyZone.addEventListener("pointercancel", releaseMoveStick);
 
     window.addEventListener("pointermove", event => {
-      if (!moveStickLocked) return;
+      if (!moveStickLocked && !moveStickEngaged) return;
       if (event.pointerId === movePointerId || event.pointerType === "mouse") {
         moveStick(event);
       }
