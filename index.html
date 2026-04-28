@@ -200,6 +200,50 @@
       min-width: 120px;
     }
 
+    .portrait-lightbox {
+      position: fixed;
+      inset: 0;
+      z-index: 120;
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) auto;
+      gap: 12px;
+      padding: max(14px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+      background: rgba(7, 10, 16, 0.92);
+      place-items: center;
+    }
+
+    .portrait-lightbox[hidden] {
+      display: none;
+    }
+
+    .portrait-lightbox-figure {
+      min-width: 0;
+      min-height: 0;
+      width: min(92vw, 680px);
+      height: 100%;
+      display: grid;
+      place-items: center;
+      margin: 0;
+    }
+
+    .portrait-lightbox-image {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      filter: drop-shadow(0 24px 54px rgba(0, 0, 0, 0.58));
+    }
+
+    .portrait-lightbox-caption {
+      margin-top: 8px;
+      color: var(--ink);
+      font-weight: 900;
+      text-align: center;
+    }
+
+    .portrait-lightbox-close {
+      min-width: 120px;
+    }
+
     button {
       border: 0;
       border-radius: 8px;
@@ -620,6 +664,17 @@
 
     .portrait-option.is-selected .portrait-option-label {
       color: var(--ink);
+    }
+
+    .overlay.intro-details .fighter-portrait {
+      cursor: zoom-in;
+    }
+
+    .overlay.intro-details .fighter-portrait .fighter-avatar-image,
+    .overlay.intro-details .fighter-portrait .fighter-avatar {
+      width: 90%;
+      height: 90%;
+      animation: none;
     }
 
     .portrait-controls {
@@ -1337,6 +1392,7 @@
 
       .overlay.intro-details .fighter-portrait {
         width: min(158px, 43vw);
+        aspect-ratio: 0.78;
         margin-bottom: 5px;
       }
 
@@ -1386,6 +1442,19 @@
         min-width: 96px;
         padding: 6px 10px;
       }
+
+      .portrait-lightbox {
+        gap: 8px;
+        padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+      }
+
+      .portrait-lightbox-figure {
+        width: 100%;
+      }
+
+      .portrait-lightbox-caption {
+        font-size: 0.92rem;
+      }
     }
 
     @media (max-width: 900px) and (max-height: 720px) {
@@ -1415,6 +1484,7 @@
 
       .overlay.intro-details .fighter-portrait {
         width: min(132px, 39vw);
+        aspect-ratio: 0.78;
       }
 
       .overlay.intro-details .portrait-copy span,
@@ -1550,6 +1620,13 @@
       </section>
     </aside>
   </main>
+  <div class="portrait-lightbox" id="portraitLightbox" hidden aria-modal="true" role="dialog" aria-label="角色立繪">
+    <figure class="portrait-lightbox-figure">
+      <img class="portrait-lightbox-image" id="portraitLightboxImage" alt="">
+      <figcaption class="portrait-lightbox-caption" id="portraitLightboxCaption"></figcaption>
+    </figure>
+    <button id="portraitLightboxClose" class="secondary portrait-lightbox-close" type="button">關閉</button>
+  </div>
 
   <script>
     const canvas = document.querySelector("#game");
@@ -1561,6 +1638,10 @@
     const startButton = document.querySelector("#startButton");
     const introCloseButton = document.querySelector("#introCloseButton");
     const winnerPortrait = document.querySelector("#winnerPortrait");
+    const portraitLightbox = document.querySelector("#portraitLightbox");
+    const portraitLightboxImage = document.querySelector("#portraitLightboxImage");
+    const portraitLightboxCaption = document.querySelector("#portraitLightboxCaption");
+    const portraitLightboxClose = document.querySelector("#portraitLightboxClose");
     const statusEl = document.querySelector("#status");
     const scoreEl = document.querySelector("#score");
     const computerScoreEl = document.querySelector("#computerScore");
@@ -1899,11 +1980,11 @@
         <div class="portrait-select" data-portrait-select>
           <div class="portrait-pair">
           ${["player", "computer"].map(owner => {
-            const character = characterFor(owner);
-            const label = owner === "player" ? "玩家" : "對手";
-            return `
-              <button class="portrait-option ${owner === selectedPortraitOwner ? "is-selected" : ""}" type="button" data-portrait-owner="${owner}" style="${characterStyle(character)}" onclick="selectPortraitOwner('${owner}')">
-                <div class="fighter-portrait">${fighterArt(character, "intro", true)}</div>
+              const character = characterFor(owner);
+              const label = owner === "player" ? "玩家" : "對手";
+              return `
+                <button class="portrait-option ${owner === selectedPortraitOwner ? "is-selected" : ""}" type="button" data-portrait-owner="${owner}" style="${characterStyle(character)}" onclick="selectPortraitOwner('${owner}')">
+                <div class="fighter-portrait" data-full-portrait="${owner}">${fighterArt(character, "intro", true)}</div>
                 <span class="portrait-option-label">${label} · ${character.name}</span>
               </button>
             `;
@@ -1943,6 +2024,21 @@
       }
       renderIntroPortraits(true);
       resize();
+    }
+
+    function openPortraitLightbox(owner) {
+      const character = characterFor(owner);
+      portraitLightboxImage.src = portraitUrl(character, "intro");
+      portraitLightboxImage.alt = character.name;
+      portraitLightboxCaption.textContent = character.name;
+      portraitLightbox.hidden = false;
+    }
+
+    function closePortraitLightbox() {
+      portraitLightbox.hidden = true;
+      portraitLightboxImage.removeAttribute("src");
+      portraitLightboxImage.alt = "";
+      portraitLightboxCaption.textContent = "";
     }
 
     function setFighterPose(owner, pose, duration = 0) {
@@ -3253,6 +3349,11 @@
     });
 
     winnerPortrait.addEventListener("click", event => {
+      const fullPortrait = event.target.closest("[data-full-portrait]");
+      if (fullPortrait) {
+        openPortraitLightbox(fullPortrait.dataset.fullPortrait === "computer" ? "computer" : "player");
+        return;
+      }
       const introButton = event.target.closest("[data-open-intro]");
       if (!introButton) return;
       selectedPortraitOwner = introButton.dataset.openIntro === "computer" ? "computer" : "player";
@@ -3272,6 +3373,12 @@
 
     winnerPortrait.addEventListener("pointercancel", () => {
       portraitSwipeStartX = null;
+    });
+
+    portraitLightboxClose.addEventListener("click", closePortraitLightbox);
+
+    portraitLightbox.addEventListener("click", event => {
+      if (event.target === portraitLightbox) closePortraitLightbox();
     });
 
     gridSizeInput.addEventListener("change", () => {
@@ -3398,6 +3505,10 @@
     });
 
     window.addEventListener("keydown", event => {
+      if (!portraitLightbox.hidden) {
+        if (event.key === "Escape" || event.key === "Esc") closePortraitLightbox();
+        return;
+      }
       if (mobileInputQuery.matches) return;
 
       const key = event.key.toLowerCase();
