@@ -435,15 +435,16 @@
       display: none;
     }
 
-    .gm-settings > .food-stock-grid,
-    .gm-settings > button {
-      grid-column: 1 / -1;
+    .gm-settings > .food-stock-grid {
+      display: contents;
     }
 
-    .food-stock-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 10px;
+    .gm-settings .field + .field {
+      margin-top: 0;
+    }
+
+    .gm-settings > button {
+      grid-column: 1 / -1;
     }
 
     .field {
