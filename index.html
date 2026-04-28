@@ -141,14 +141,14 @@
     .overlay {
       position: absolute;
       inset: 0;
-      z-index: 6;
+      z-index: 24;
       display: grid;
       place-items: center;
-      padding: 22px;
+      padding: 12px;
       background: rgba(13, 17, 23, 0.54);
       opacity: 0;
       pointer-events: none;
-      overflow-y: auto;
+      overflow: hidden;
       transition: opacity 160ms ease;
     }
 
@@ -157,11 +157,17 @@
       pointer-events: auto;
     }
 
+    .overlay.intro-details {
+      position: fixed;
+      z-index: 80;
+      padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+    }
+
     .dialog {
-      width: min(460px, 100%);
-      max-height: calc(100% - 20px);
-      overflow: auto;
-      padding: 22px;
+      width: min(420px, 100%);
+      max-height: 100%;
+      overflow: hidden;
+      padding: 16px;
       border-radius: 8px;
       border: 1px solid rgba(255, 255, 255, 0.12);
       background: rgba(32, 38, 51, 0.94);
@@ -177,6 +183,20 @@
     .dialog p {
       margin: 0 0 16px;
       color: var(--muted);
+    }
+
+    .overlay.intro-details .dialog {
+      width: min(760px, 100%);
+      height: min(100%, 720px);
+      max-height: 100%;
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) auto;
+      gap: 10px;
+    }
+
+    .intro-close-button {
+      justify-self: center;
+      min-width: 120px;
     }
 
     button {
@@ -508,7 +528,9 @@
 
     .portrait-select {
       display: grid;
-      gap: 12px;
+      gap: 10px;
+      align-content: start;
+      height: 100%;
       touch-action: pan-y;
       user-select: none;
       -webkit-user-select: none;
@@ -517,12 +539,13 @@
 
     .intro-avatar-gate {
       display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
       place-items: center;
-      min-height: min(52vh, 420px);
     }
 
     .intro-avatar-button {
-      width: min(260px, 72vw);
+      width: min(180px, 38vw);
       aspect-ratio: 1;
       padding: 0;
       border-radius: 50%;
@@ -552,6 +575,13 @@
       height: 120%;
       object-fit: cover;
       object-position: 50% 22%;
+    }
+
+    .intro-avatar-label {
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 850;
+      margin-top: 8px;
     }
 
     .portrait-select .portrait-pair {
@@ -597,6 +627,7 @@
       grid-template-columns: 42px minmax(0, 1fr) 42px;
       align-items: center;
       gap: 8px;
+      min-height: 0;
     }
 
     .portrait-arrow {
@@ -614,6 +645,7 @@
       display: grid;
       gap: 4px;
       text-align: left;
+      min-height: 0;
     }
 
     .portrait-copy strong {
@@ -639,6 +671,7 @@
       color: color-mix(in srgb, var(--muted), var(--fighter-line) 18%);
       font-size: 0.86rem;
       line-height: 1.55;
+      overflow: auto;
     }
 
     .portrait-story p {
@@ -1263,6 +1296,18 @@
         padding: 14px;
       }
 
+      .overlay.intro-details {
+        padding: max(6px, env(safe-area-inset-top)) max(6px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left));
+      }
+
+      .overlay.intro-details .dialog {
+        width: 100%;
+        height: 100%;
+        max-height: 100%;
+        padding: 8px;
+        gap: 6px;
+      }
+
       .dialog h2 {
         font-size: 1.18rem;
       }
@@ -1276,6 +1321,72 @@
       button {
         min-height: 36px;
         padding: 7px 12px;
+      }
+
+      .intro-avatar-button {
+        width: min(132px, 36vw);
+      }
+
+      .intro-avatar-label,
+      .portrait-option-label {
+        font-size: 0.68rem;
+      }
+
+      .overlay.intro-details .portrait-pair {
+        gap: 6px;
+      }
+
+      .overlay.intro-details .fighter-portrait {
+        width: min(112px, 31vw);
+        margin-bottom: 4px;
+      }
+
+      .overlay.intro-details .portrait-controls {
+        grid-template-columns: 34px minmax(0, 1fr) 34px;
+        gap: 5px;
+      }
+
+      .overlay.intro-details .portrait-arrow {
+        width: 34px;
+        height: 34px;
+        min-height: 34px;
+        font-size: 1.1rem;
+      }
+
+      .overlay.intro-details .portrait-copy {
+        gap: 3px;
+      }
+
+      .overlay.intro-details .portrait-copy strong {
+        font-size: 0.92rem;
+      }
+
+      .overlay.intro-details .portrait-copy span,
+      .overlay.intro-details .portrait-copy small,
+      .overlay.intro-details .portrait-story {
+        font-size: 0.72rem;
+        line-height: 1.32;
+      }
+
+      .overlay.intro-details .portrait-story {
+        gap: 4px;
+        margin-top: 3px;
+        max-height: 20dvh;
+      }
+
+      .overlay.intro-details .portrait-moves {
+        gap: 4px;
+      }
+
+      .overlay.intro-details .portrait-moves span {
+        padding: 2px 5px;
+        font-size: 0.66rem;
+      }
+
+      .intro-close-button {
+        min-height: 34px;
+        min-width: 96px;
+        padding: 6px 10px;
       }
     }
 
@@ -1334,6 +1445,7 @@
             <h2 id="overlayTitle">準備開局</h2>
             <p id="overlayText">每吃 6 個食物獲得 1 枚砲彈，最多 3 枚；發射時會消耗紅黃綠藍各 1 點。</p>
             <button id="startButton" type="button">開始</button>
+            <button id="introCloseButton" class="secondary intro-close-button" type="button" hidden>關閉</button>
           </div>
         </div>
       </div>
@@ -1438,6 +1550,7 @@
     const overlayTitle = document.querySelector("#overlayTitle");
     const overlayText = document.querySelector("#overlayText");
     const startButton = document.querySelector("#startButton");
+    const introCloseButton = document.querySelector("#introCloseButton");
     const winnerPortrait = document.querySelector("#winnerPortrait");
     const statusEl = document.querySelector("#status");
     const scoreEl = document.querySelector("#score");
@@ -1684,9 +1797,28 @@
     }
 
     function setOverlayChromeVisible(visible) {
+      overlay.classList.remove("intro-details");
       overlayTitle.hidden = !visible;
       overlayText.hidden = !visible;
       startButton.hidden = !visible;
+      introCloseButton.hidden = true;
+    }
+
+    function setIntroLobbyChrome() {
+      overlay.classList.remove("intro-details");
+      overlayTitle.hidden = true;
+      overlayText.hidden = true;
+      startButton.hidden = false;
+      introCloseButton.hidden = true;
+      startButton.textContent = "開始";
+    }
+
+    function setIntroDetailsChrome() {
+      overlay.classList.add("intro-details");
+      overlayTitle.hidden = true;
+      overlayText.hidden = true;
+      startButton.hidden = true;
+      introCloseButton.hidden = false;
     }
 
     function buildCharacterStage() {
@@ -1731,7 +1863,8 @@
 
     function renderIntroPortraits(showDetails = introDetailsOpen) {
       introDetailsOpen = showDetails;
-      setOverlayChromeVisible(showDetails);
+      if (showDetails) setIntroDetailsChrome();
+      else setIntroLobbyChrome();
       const selectedCharacter = characterFor(selectedPortraitOwner);
       winnerPortrait.hidden = false;
       characterStage.hidden = true;
@@ -1739,9 +1872,16 @@
       if (!showDetails) {
         winnerPortrait.innerHTML = `
           <div class="intro-avatar-gate">
-            <button class="intro-avatar-button" type="button" data-open-intro style="${characterStyle(selectedCharacter)}" aria-label="開啟角色說明">
-              <div class="fighter-portrait">${fighterArt(selectedCharacter, "intro", true)}</div>
-            </button>
+            ${["player", "computer"].map(owner => {
+              const character = characterFor(owner);
+              const label = owner === "player" ? "玩家" : "對手";
+              return `
+                <button class="intro-avatar-button" type="button" data-open-intro="${owner}" style="${characterStyle(character)}" aria-label="開啟${label}角色說明">
+                  <div class="fighter-portrait">${fighterArt(character, "intro", true)}</div>
+                  <span class="intro-avatar-label">${label} · ${character.name}</span>
+                </button>
+              `;
+            }).join("")}
           </div>
         `;
         return;
@@ -3104,7 +3244,9 @@
     });
 
     winnerPortrait.addEventListener("click", event => {
-      if (!event.target.closest("[data-open-intro]")) return;
+      const introButton = event.target.closest("[data-open-intro]");
+      if (!introButton) return;
+      selectedPortraitOwner = introButton.dataset.openIntro === "computer" ? "computer" : "player";
       overlayTitle.textContent = "角色說明";
       overlayText.textContent = "點擊玩家或對手立繪選擇要調整的角色，使用左右箭頭切換。";
       startButton.textContent = "開始";
@@ -3180,6 +3322,11 @@
       bestTotalMs = 0;
       localStorage.setItem("hexSnakeBestTotalMs", "0");
       updateHud();
+    });
+
+    introCloseButton.addEventListener("click", () => {
+      renderIntroPortraits(false);
+      overlay.classList.add("show");
     });
 
     startButton.addEventListener("click", () => {
