@@ -244,6 +244,27 @@
       min-width: 120px;
     }
 
+    .portrait-lightbox-arrow {
+      position: absolute;
+      top: 50%;
+      width: 48px;
+      height: 56px;
+      min-height: 56px;
+      padding: 0;
+      transform: translateY(-50%);
+      font-size: 2.2rem;
+      line-height: 1;
+      z-index: 1;
+    }
+
+    .portrait-lightbox-arrow[data-portrait-lightbox-shift="-1"] {
+      left: max(14px, env(safe-area-inset-left));
+    }
+
+    .portrait-lightbox-arrow[data-portrait-lightbox-shift="1"] {
+      right: max(14px, env(safe-area-inset-right));
+    }
+
     button {
       border: 0;
       border-radius: 8px;
@@ -265,6 +286,10 @@
       background: #151b25;
       color: var(--ink);
       border: 1px solid var(--line);
+    }
+
+    button.secondary.portrait-lightbox-arrow {
+      width: 48px;
     }
 
     .side {
@@ -648,18 +673,33 @@
       filter: grayscale(0.78) brightness(0.62) saturate(0.72);
     }
 
-    .winner-move {
-      display: grid;
-      gap: 5px;
-      margin: 0 0 14px;
-      color: var(--muted);
-      font-size: 0.92rem;
-      line-height: 1.35;
+    .result-portrait {
+      overflow: hidden;
     }
 
-    .winner-move strong {
-      color: var(--ink);
-      font-size: 1.02rem;
+    .result-portrait.is-defeated {
+      opacity: 0.72;
+      filter: grayscale(0.68) brightness(0.78) saturate(0.78);
+    }
+
+    .result-badge {
+      position: absolute;
+      left: 8px;
+      top: 8px;
+      z-index: 4;
+      padding: 5px 9px;
+      border-radius: 999px;
+      background: rgba(15, 23, 36, 0.82);
+      border: 1px solid var(--owner-line);
+      color: #ffffff;
+      font-size: 0.78rem;
+      font-weight: 950;
+      line-height: 1;
+      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
+    }
+
+    .result-portrait.is-winner .result-badge {
+      background: color-mix(in srgb, var(--owner-color), #101720 28%);
     }
 
     .portrait-pair {
@@ -1954,10 +1994,12 @@
     </aside>
   </main>
   <div class="portrait-lightbox" id="portraitLightbox" hidden aria-modal="true" role="dialog" aria-label="角色立繪">
+    <button class="secondary portrait-lightbox-arrow" type="button" data-portrait-lightbox-shift="-1" aria-label="Previous">&lsaquo;</button>
     <figure class="portrait-lightbox-figure">
       <img class="portrait-lightbox-image" id="portraitLightboxImage" alt="">
       <figcaption class="portrait-lightbox-caption" id="portraitLightboxCaption"></figcaption>
     </figure>
+    <button class="secondary portrait-lightbox-arrow" type="button" data-portrait-lightbox-shift="1" aria-label="Next">&rsaquo;</button>
     <button id="portraitLightboxClose" class="secondary portrait-lightbox-close" type="button">關閉</button>
   </div>
 
@@ -1975,6 +2017,7 @@
     const portraitLightboxImage = document.querySelector("#portraitLightboxImage");
     const portraitLightboxCaption = document.querySelector("#portraitLightboxCaption");
     const portraitLightboxClose = document.querySelector("#portraitLightboxClose");
+    const portraitLightboxShiftButtons = document.querySelectorAll("[data-portrait-lightbox-shift]");
     const statusEl = document.querySelector("#status");
     const scoreEl = document.querySelector("#score");
     const computerScoreEl = document.querySelector("#computerScore");
@@ -2162,7 +2205,9 @@
     let portraitPoseTimers = {};
     let selectedPortraitOwner = "player";
     let introDetailsOpen = false;
+    let portraitLightboxOwner = "player";
     let portraitSwipeStartX = null;
+    let portraitLightboxDidSwipe = false;
     let restartUnlockAt = 0;
 
     bestEl.textContent = best;
@@ -2212,6 +2257,28 @@
       const slug = portraitSlugs[character.id] || character.id;
       const safePose = portraitPoses.has(pose) ? pose : "idle";
       return `assets/portraits/${slug}_${safePose}.png`;
+    }
+
+    const preloadedPortraits = new Set();
+
+    function preloadPortrait(character, pose) {
+      const url = portraitUrl(character, pose);
+      if (preloadedPortraits.has(url)) return;
+      preloadedPortraits.add(url);
+      const image = new Image();
+      image.decoding = "async";
+      image.src = url;
+    }
+
+    function preloadPortraitsFor(owner) {
+      const character = characterFor(owner);
+      ["intro", "idle", "attack", "victory", "defeat"].forEach(pose => preloadPortrait(character, pose));
+    }
+
+    function preloadAllPortraits() {
+      characters.forEach(character => {
+        ["intro", "idle", "attack", "victory", "defeat"].forEach(pose => preloadPortrait(character, pose));
+      });
     }
 
     function fighterArt(character, pose = "idle", portrait = false) {
@@ -2287,28 +2354,31 @@
       }).join("");
     }
 
-    function renderWinnerPortrait(owner) {
+    function renderWinnerPortrait(owner, playerLost = false, computerLost = false) {
       setOverlayChromeVisible(true);
-      if (!owner) {
+      if (!owner && !playerLost && !computerLost) {
         winnerPortrait.hidden = true;
         winnerPortrait.innerHTML = "";
         characterStage.hidden = false;
         return;
       }
-      const character = characterFor(owner);
-      const loserOwner = owner === "player" ? "computer" : "player";
-      const loserCharacter = characterFor(loserOwner);
+      const playerPose = owner === "player" ? "victory" : "defeat";
+      const computerPose = owner === "computer" ? "victory" : "defeat";
+      const playerResult = owner ? (owner === "player" ? "勝利" : "失敗") : "平手";
+      const computerResult = owner ? (owner === "computer" ? "勝利" : "失敗") : "平手";
       winnerPortrait.hidden = false;
       characterStage.hidden = true;
       characterStage.innerHTML = "";
       winnerPortrait.innerHTML = `
         <div class="portrait-pair">
-          <div class="fighter-portrait" data-owner="${owner}" data-owner-mark="${ownerMeta(owner).mark}" style="${characterStyle(character, owner)}">${fighterArt(character, "victory", true)}</div>
-          <div class="fighter-portrait is-defeated" data-owner="${loserOwner}" data-owner-mark="${ownerMeta(loserOwner).mark}" style="${characterStyle(loserCharacter, loserOwner)}">${fighterArt(loserCharacter, "defeat", true)}</div>
-        </div>
-        <div class="winner-move">
-          <strong>${character.move}</strong>
-          <span>${character.detail}</span>
+          <div class="fighter-portrait result-portrait ${owner === "player" ? "is-winner" : ""} ${playerPose === "defeat" ? "is-defeated" : ""}" data-owner="player" data-owner-mark="${ownerMeta("player").mark}" style="${characterStyle(characterFor("player"), "player")}">
+            <span class="result-badge">${playerResult}</span>
+            ${fighterArt(characterFor("player"), playerPose, true)}
+          </div>
+          <div class="fighter-portrait result-portrait ${owner === "computer" ? "is-winner" : ""} ${computerPose === "defeat" ? "is-defeated" : ""}" data-owner="computer" data-owner-mark="${ownerMeta("computer").mark}" style="${characterStyle(characterFor("computer"), "computer")}">
+            <span class="result-badge">${computerResult}</span>
+            ${fighterArt(characterFor("computer"), computerPose, true)}
+          </div>
         </div>
       `;
     }
@@ -2384,16 +2454,29 @@
         computerCharacterId = nextCharacter.id;
         computerCharacterInput.value = nextCharacter.id;
       }
+      preloadPortraitsFor(selectedPortraitOwner);
       renderIntroPortraits(true);
       resize();
     }
 
-    function openPortraitLightbox(owner) {
-      const character = characterFor(owner);
+    function renderPortraitLightbox() {
+      const character = characterFor(portraitLightboxOwner);
       portraitLightboxImage.src = portraitUrl(character, "intro");
       portraitLightboxImage.alt = character.name;
-      portraitLightboxCaption.textContent = `${ownerMeta(owner).label} / ${character.name}`;
+      portraitLightboxCaption.textContent = `${ownerMeta(portraitLightboxOwner).label} / ${character.name}`;
+    }
+
+    function openPortraitLightbox(owner) {
+      portraitLightboxOwner = owner === "computer" ? "computer" : "player";
+      selectedPortraitOwner = portraitLightboxOwner;
+      renderPortraitLightbox();
       portraitLightbox.hidden = false;
+    }
+
+    function shiftPortraitLightbox(delta) {
+      selectedPortraitOwner = portraitLightboxOwner;
+      applySelectedPortraitCharacter(delta);
+      renderPortraitLightbox();
     }
 
     function closePortraitLightbox() {
@@ -2748,6 +2831,8 @@
       renderWinnerPortrait(null);
       Object.values(portraitPoseTimers).forEach(clearTimeout);
       portraitPoseTimers = {};
+      preloadPortraitsFor("player");
+      preloadPortraitsFor("computer");
       buildCharacterStage();
       const offset = Math.min(2, Math.max(1, radius - 3));
       snake = [
@@ -2820,6 +2905,16 @@
       if (running && !gameOver) return true;
       if (gameOver) return false;
       return startGame();
+    }
+
+    function returnToStartScreen() {
+      resetGame();
+      selectedPortraitOwner = "player";
+      overlayTitle.textContent = "準備開局";
+      overlayText.textContent = "重新選擇角色後按開始。";
+      startButton.textContent = "開始";
+      renderIntroPortraits(false);
+      overlay.classList.add("show");
     }
 
     function randomFoodType(preferredFoodId = null) {
@@ -3274,7 +3369,7 @@
         : (playerLost && !computerLost) || (playerLost && computerLost && computerScore > score)
           ? "computer"
           : null;
-      renderWinnerPortrait(winnerOwner);
+      renderWinnerPortrait(winnerOwner, playerLost, computerLost);
       overlayText.textContent = `玩家 ${score} 分，電腦 ${computerScore} 分。按開始再來一局。`;
       startButton.textContent = "重新開始";
       overlay.classList.add("show");
@@ -3915,7 +4010,37 @@
 
     portraitLightboxClose.addEventListener("click", closePortraitLightbox);
 
+    portraitLightboxShiftButtons.forEach(button => {
+      button.addEventListener("click", event => {
+        event.stopPropagation();
+        shiftPortraitLightbox(Number(button.dataset.portraitLightboxShift));
+      });
+    });
+
+    portraitLightbox.addEventListener("pointerdown", event => {
+      if (event.target.closest("button")) return;
+      portraitSwipeStartX = event.clientX;
+      portraitLightboxDidSwipe = false;
+    });
+
+    portraitLightbox.addEventListener("pointerup", event => {
+      if (portraitSwipeStartX === null) return;
+      const deltaX = event.clientX - portraitSwipeStartX;
+      portraitSwipeStartX = null;
+      if (Math.abs(deltaX) < 42) return;
+      portraitLightboxDidSwipe = true;
+      shiftPortraitLightbox(deltaX < 0 ? 1 : -1);
+    });
+
+    portraitLightbox.addEventListener("pointercancel", () => {
+      portraitSwipeStartX = null;
+    });
+
     portraitLightbox.addEventListener("click", event => {
+      if (portraitLightboxDidSwipe) {
+        portraitLightboxDidSwipe = false;
+        return;
+      }
       if (event.target === portraitLightbox) closePortraitLightbox();
     });
 
@@ -3961,6 +4086,8 @@
         if (running) return;
         playerCharacterId = characterById.has(playerCharacterInput.value) ? playerCharacterInput.value : "dragon";
         computerCharacterId = characterById.has(computerCharacterInput.value) ? computerCharacterInput.value : "moray";
+        preloadPortraitsFor("player");
+        preloadPortraitsFor("computer");
         buildCharacterStage();
         resetGame();
         resize();
@@ -4025,7 +4152,11 @@
         lastTimerFrame = lastPlayerStep;
         return;
       }
-      if (gameOver && !canRestartAfterGameOver()) return;
+      if (gameOver) {
+        if (!canRestartAfterGameOver()) return;
+        returnToStartScreen();
+        return;
+      }
       overlayTitle.textContent = "準備開局";
       overlayText.textContent = "每吃 6 個食物獲得 1 枚砲彈，最多 3 枚；發射時會消耗紅黃綠藍各 1 點。";
       startButton.textContent = "開始";
@@ -4078,6 +4209,14 @@
     window.addEventListener("keydown", event => {
       if (!portraitLightbox.hidden) {
         if (event.key === "Escape" || event.key === "Esc") closePortraitLightbox();
+        if (event.key === "ArrowLeft") {
+          event.preventDefault();
+          shiftPortraitLightbox(-1);
+        }
+        if (event.key === "ArrowRight") {
+          event.preventDefault();
+          shiftPortraitLightbox(1);
+        }
         return;
       }
       if (mobileInputQuery.matches) return;
@@ -4166,6 +4305,13 @@
     resetGame();
     resize();
     renderIntroPortraits(false);
+    preloadPortraitsFor("player");
+    preloadPortraitsFor("computer");
+    if ("requestIdleCallback" in window) {
+      requestIdleCallback(preloadAllPortraits, { timeout: 1500 });
+    } else {
+      setTimeout(preloadAllPortraits, 250);
+    }
   </script>
 </body>
 </html>
