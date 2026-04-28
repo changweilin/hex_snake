@@ -160,7 +160,7 @@
     .dialog {
       width: min(460px, 100%);
       max-height: calc(100% - 20px);
-      overflow-y: auto;
+      overflow: auto;
       padding: 22px;
       border-radius: 8px;
       border: 1px solid rgba(255, 255, 255, 0.12);
@@ -483,6 +483,7 @@
         radial-gradient(circle at 50% 28%, color-mix(in srgb, var(--fighter-color), transparent 48%), transparent 64%),
         #101720;
       box-shadow: inset 0 0 40px rgba(255, 255, 255, 0.05), 0 16px 50px rgba(0, 0, 0, 0.38);
+      overflow: hidden;
     }
 
     .fighter-portrait .fighter-avatar {
@@ -522,6 +523,93 @@
     .portrait-pair .fighter-portrait {
       width: 100%;
       margin-bottom: 0;
+    }
+
+    .portrait-select {
+      display: grid;
+      gap: 12px;
+      touch-action: pan-y;
+      user-select: none;
+      -webkit-user-select: none;
+      overflow: hidden;
+    }
+
+    .portrait-select .portrait-pair {
+      margin-bottom: 0;
+    }
+
+    .portrait-option {
+      min-width: 0;
+      display: grid;
+      gap: 6px;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: inherit;
+      cursor: pointer;
+    }
+
+    .portrait-option .fighter-portrait {
+      max-width: 100%;
+      opacity: 0.66;
+      transform: scale(0.96);
+      transition: opacity 150ms ease, transform 150ms ease, border-color 150ms ease;
+    }
+
+    .portrait-option.is-selected .fighter-portrait {
+      opacity: 1;
+      transform: scale(1);
+      border-color: var(--fighter-accent);
+    }
+
+    .portrait-option-label {
+      color: var(--muted);
+      font-size: 0.76rem;
+      font-weight: 800;
+    }
+
+    .portrait-option.is-selected .portrait-option-label {
+      color: var(--ink);
+    }
+
+    .portrait-controls {
+      display: grid;
+      grid-template-columns: 42px minmax(0, 1fr) 42px;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .portrait-arrow {
+      min-width: 0;
+      width: 42px;
+      height: 42px;
+      padding: 0;
+      border-radius: 999px;
+      font-size: 1.5rem;
+      line-height: 1;
+    }
+
+    .portrait-copy {
+      min-width: 0;
+      display: grid;
+      gap: 4px;
+      text-align: left;
+    }
+
+    .portrait-copy strong {
+      color: var(--ink);
+      font-size: 1.08rem;
+      line-height: 1.2;
+    }
+
+    .portrait-copy span,
+    .portrait-copy small {
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    .portrait-copy small {
+      font-weight: 800;
     }
 
     @keyframes module-swim {
@@ -1445,6 +1533,8 @@
     let targetActive = false;
     let moduleHoldTimer = null;
     let portraitPoseTimers = {};
+    let selectedPortraitOwner = "player";
+    let portraitSwipeStartX = null;
     let restartUnlockAt = 0;
 
     bestEl.textContent = best;
@@ -1536,12 +1626,15 @@
       if (!owner) {
         winnerPortrait.hidden = true;
         winnerPortrait.innerHTML = "";
+        characterStage.hidden = false;
         return;
       }
       const character = characterFor(owner);
       const loserOwner = owner === "player" ? "computer" : "player";
       const loserCharacter = characterFor(loserOwner);
       winnerPortrait.hidden = false;
+      characterStage.hidden = true;
+      characterStage.innerHTML = "";
       winnerPortrait.innerHTML = `
         <div class="portrait-pair">
           <div class="fighter-portrait" style="${characterStyle(character)}">${fighterArt(character, "victory", true)}</div>
@@ -1555,15 +1648,55 @@
     }
 
     function renderIntroPortraits() {
+      const selectedCharacter = characterFor(selectedPortraitOwner);
       winnerPortrait.hidden = false;
+      characterStage.hidden = true;
+      characterStage.innerHTML = "";
       winnerPortrait.innerHTML = `
-        <div class="portrait-pair">
+        <div class="portrait-select" data-portrait-select>
+          <div class="portrait-pair">
           ${["player", "computer"].map(owner => {
             const character = characterFor(owner);
-            return `<div class="fighter-portrait" style="${characterStyle(character)}">${fighterArt(character, "intro", true)}</div>`;
+            const label = owner === "player" ? "玩家" : "對手";
+            return `
+              <button class="portrait-option ${owner === selectedPortraitOwner ? "is-selected" : ""}" type="button" data-portrait-owner="${owner}" style="${characterStyle(character)}" onclick="selectPortraitOwner('${owner}')">
+                <div class="fighter-portrait">${fighterArt(character, "intro", true)}</div>
+                <span class="portrait-option-label">${label} · ${character.name}</span>
+              </button>
+            `;
           }).join("")}
+          </div>
+          <div class="portrait-controls">
+            <button class="secondary portrait-arrow" type="button" data-portrait-shift="-1" aria-label="上一位" onclick="applySelectedPortraitCharacter(-1)">‹</button>
+            <div class="portrait-copy" style="${characterStyle(selectedCharacter)}">
+              <small>${selectedPortraitOwner === "player" ? "玩家角色" : "對手角色"} · ${selectedCharacter.foodLabel}</small>
+              <strong>${selectedCharacter.name} / ${selectedCharacter.move}</strong>
+              <span>${selectedCharacter.detail}</span>
+            </div>
+            <button class="secondary portrait-arrow" type="button" data-portrait-shift="1" aria-label="下一位" onclick="applySelectedPortraitCharacter(1)">›</button>
+          </div>
         </div>
       `;
+    }
+
+    function selectPortraitOwner(owner) {
+      selectedPortraitOwner = owner === "computer" ? "computer" : "player";
+      renderIntroPortraits();
+    }
+
+    function applySelectedPortraitCharacter(delta) {
+      const currentId = selectedPortraitOwner === "player" ? playerCharacterId : computerCharacterId;
+      const currentIndex = Math.max(0, characters.findIndex(character => character.id === currentId));
+      const nextCharacter = characters[(currentIndex + delta + characters.length) % characters.length];
+      if (selectedPortraitOwner === "player") {
+        playerCharacterId = nextCharacter.id;
+        playerCharacterInput.value = nextCharacter.id;
+      } else {
+        computerCharacterId = nextCharacter.id;
+        computerCharacterInput.value = nextCharacter.id;
+      }
+      renderIntroPortraits();
+      resize();
     }
 
     function setFighterPose(owner, pose, duration = 0) {
@@ -1894,6 +2027,7 @@
       setSettingsLocked(true);
       setStatus("對戰中：吃四種食物累積砲彈資源。");
       overlay.classList.remove("show");
+      characterStage.hidden = false;
       lastPlayerStep = performance.now();
       lastComputerStep = lastPlayerStep;
       lastTimerFrame = lastPlayerStep;
@@ -2867,6 +3001,23 @@
     characterStage.addEventListener("pointercancel", clearModuleHold);
     characterStage.addEventListener("pointerleave", clearModuleHold);
 
+    winnerPortrait.addEventListener("pointerdown", event => {
+      if (!event.target.closest("[data-portrait-select]")) return;
+      portraitSwipeStartX = event.clientX;
+    });
+
+    winnerPortrait.addEventListener("pointerup", event => {
+      if (portraitSwipeStartX === null) return;
+      const deltaX = event.clientX - portraitSwipeStartX;
+      portraitSwipeStartX = null;
+      if (Math.abs(deltaX) < 42) return;
+      applySelectedPortraitCharacter(deltaX < 0 ? 1 : -1);
+    });
+
+    winnerPortrait.addEventListener("pointercancel", () => {
+      portraitSwipeStartX = null;
+    });
+
     gridSizeInput.addEventListener("change", () => {
       if (running) return;
       setGridSize(gridSizeInput.value);
@@ -2931,6 +3082,7 @@
         paused = false;
         setStatus("對戰中：吃四種食物累積砲彈資源。");
         overlay.classList.remove("show");
+        characterStage.hidden = false;
         lastPlayerStep = performance.now();
         lastComputerStep = lastPlayerStep;
         lastTimerFrame = lastPlayerStep;
