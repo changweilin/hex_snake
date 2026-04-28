@@ -220,6 +220,59 @@
       font-size: 1rem;
     }
 
+    .settings-section {
+      position: relative;
+      display: grid;
+      justify-items: end;
+      gap: 10px;
+    }
+
+    .settings-toggle {
+      width: 44px;
+      min-height: 44px;
+      padding: 0;
+      display: inline-grid;
+      place-items: center;
+      background: #151b25;
+      color: var(--ink);
+      border: 1px solid var(--line);
+    }
+
+    .settings-toggle:hover,
+    .settings-toggle:focus-visible {
+      border-color: var(--accent);
+      outline: 2px solid rgba(245, 158, 11, 0.2);
+      outline-offset: 2px;
+    }
+
+    .settings-toggle svg {
+      width: 22px;
+      height: 22px;
+      stroke: currentColor;
+    }
+
+    .settings-title {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      padding: 0;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    .settings-content {
+      width: 100%;
+      display: grid;
+      gap: 10px;
+    }
+
+    .settings-content[hidden] {
+      display: none;
+    }
+
     .field {
       display: grid;
       gap: 8px;
@@ -652,6 +705,62 @@
         font-size: 0.66rem;
       }
 
+      .side .settings-section {
+        display: grid;
+        grid-template-columns: 1fr;
+        justify-items: end;
+        align-items: start;
+        overflow: visible;
+      }
+
+      .side .settings-section .settings-toggle {
+        width: 38px;
+        min-height: 38px;
+        padding: 0;
+      }
+
+      .side .settings-section .settings-content {
+        position: absolute;
+        right: 0;
+        bottom: calc(100% + 6px);
+        z-index: 12;
+        width: min(360px, calc(100vw - 12px));
+        padding: 10px;
+        border-radius: 8px;
+        background: rgba(32, 38, 51, 0.98);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        box-shadow: 0 18px 60px rgba(0, 0, 0, 0.44);
+      }
+
+      .side .settings-section .field {
+        gap: 5px;
+      }
+
+      .side .settings-section .field + .field {
+        margin-top: 0;
+      }
+
+      .side .settings-section label {
+        font-size: 0.72rem;
+      }
+
+      .side .settings-section input,
+      .side .settings-section select,
+      .side .settings-section button.secondary {
+        min-height: 36px;
+        padding: 6px 8px;
+        font-size: 0.82rem;
+      }
+
+      .side .settings-section #resetBestTimeButton {
+        font-size: 0.78rem;
+        padding: 6px 8px;
+      }
+
+      .side .settings-section #resetBestTimeButton::before {
+        content: none;
+      }
+
       .side .section:nth-of-type(2) {
         order: 2;
       }
@@ -828,8 +937,15 @@
     </section>
 
     <aside class="side" aria-label="控制面板">
-      <section class="section">
-        <h2>開局設定</h2>
+      <section class="section settings-section">
+        <button class="settings-toggle" id="settingsToggle" type="button" aria-expanded="false" aria-controls="settingsContent" title="開局設定">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M19.4 15a1.8 1.8 0 0 0 .36 1.98l.04.04a2.1 2.1 0 0 1-2.97 2.97l-.04-.04a1.8 1.8 0 0 0-1.98-.36 1.8 1.8 0 0 0-1.09 1.65V21.4a2.1 2.1 0 0 1-4.2 0v-.16a1.8 1.8 0 0 0-1.09-1.65 1.8 1.8 0 0 0-1.98.36l-.04.04a2.1 2.1 0 0 1-2.97-2.97l.04-.04A1.8 1.8 0 0 0 3.8 15a1.8 1.8 0 0 0-1.65-1.09H2a2.1 2.1 0 0 1 0-4.2h.16A1.8 1.8 0 0 0 3.8 8.62a1.8 1.8 0 0 0-.36-1.98l-.04-.04A2.1 2.1 0 0 1 6.37 3.63l.04.04a1.8 1.8 0 0 0 1.98.36A1.8 1.8 0 0 0 9.48 2.38V2.2a2.1 2.1 0 0 1 4.2 0v.18a1.8 1.8 0 0 0 1.09 1.65 1.8 1.8 0 0 0 1.98-.36l.04-.04A2.1 2.1 0 0 1 19.76 6.6l-.04.04a1.8 1.8 0 0 0-.36 1.98 1.8 1.8 0 0 0 1.65 1.09h.19a2.1 2.1 0 0 1 0 4.2h-.19A1.8 1.8 0 0 0 19.4 15Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span class="settings-title">開局設定</span>
+        </button>
+        <div class="settings-content" id="settingsContent" hidden>
         <div class="field">
           <label for="gridSize">棋盤半徑</label>
           <input id="gridSize" type="number" min="6" max="12" step="1" value="10" inputmode="numeric">
@@ -847,6 +963,7 @@
           </select>
         </div>
         <button id="resetBestTimeButton" class="secondary" type="button">重設最久存活</button>
+        </div>
       </section>
 
       <section class="section">
@@ -924,6 +1041,8 @@
     const foodCountInput = document.querySelector("#foodCount");
     const computerDifficultyInput = document.querySelector("#computerDifficulty");
     const resetBestTimeButton = document.querySelector("#resetBestTimeButton");
+    const settingsToggle = document.querySelector("#settingsToggle");
+    const settingsContent = document.querySelector("#settingsContent");
     const resourceBoard = document.querySelector("#resourceBoard");
     const keyEls = [...document.querySelectorAll(".key")];
     const mobileInputQuery = window.matchMedia("(hover: none), (pointer: coarse), (max-width: 900px)");
@@ -2040,6 +2159,13 @@
       if (!running || gameOver) startGame();
       return launchPlayerAttack(directionalAttackTarget(direction));
     }
+
+    settingsToggle.addEventListener("click", () => {
+      const expanded = settingsToggle.getAttribute("aria-expanded") === "true";
+      settingsToggle.setAttribute("aria-expanded", String(!expanded));
+      settingsContent.hidden = expanded;
+      settingsToggle.closest(".settings-section").classList.toggle("open", !expanded);
+    });
 
     gridSizeInput.addEventListener("change", () => {
       if (running) return;
