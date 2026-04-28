@@ -970,6 +970,15 @@
       gap: 10px;
     }
 
+    .control-section {
+      position: relative;
+      padding-bottom: 12px;
+    }
+
+    .control-section h2 {
+      display: none;
+    }
+
     .control-row.left-handed {
       direction: rtl;
     }
@@ -1069,26 +1078,64 @@
     }
 
     .action-panel {
+      position: relative;
       display: grid;
-      gap: 8px;
+      grid-template-rows: 1fr;
+      gap: 6px;
       width: 100%;
+      min-height: 118px;
     }
 
     .attack-actions {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 8px;
-      width: min(142px, 100%);
+      position: relative;
+      width: 104px;
+      height: 104px;
       justify-self: center;
     }
 
-    .attack-button {
+    .attack-actions .attack-button {
+      position: absolute;
+      box-sizing: border-box;
+      width: 38px;
+      height: 38px;
       min-width: 0;
-      aspect-ratio: 1;
       min-height: 0;
-      padding: 6px;
+      padding: 0;
       border: 1px solid transparent;
+      display: grid;
+      place-items: center;
       line-height: 1.1;
+      border-radius: 50%;
+      font-size: 0.66rem;
+      white-space: nowrap;
+    }
+
+    .attack-actions .attack-button.secondary {
+      width: 38px;
+    }
+
+    .attack-actions .attack-button[data-pad-pos="top"] {
+      left: 50%;
+      top: 0;
+      transform: translateX(-50%);
+    }
+
+    .attack-actions .attack-button[data-pad-pos="right"] {
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    .attack-actions .attack-button[data-pad-pos="bottom"] {
+      left: 50%;
+      bottom: 0;
+      transform: translateX(-50%);
+    }
+
+    .attack-actions .attack-button[data-pad-pos="left"] {
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
     }
 
     .attack-button.is-placeholder {
@@ -1107,11 +1154,48 @@
       border: 1px solid rgba(254, 202, 202, 0.24);
     }
 
-    .quick-help {
-      margin: 0;
+    .control-help-button {
+      position: absolute;
+      right: 8px;
+      bottom: 8px;
+      z-index: 8;
+      width: 32px;
+      height: 32px;
+      min-height: 0;
+      padding: 0;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: rgba(15, 23, 42, 0.74);
+      color: var(--ink);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      font-size: 0.92rem;
+      line-height: 1;
+    }
+
+    .control-help-panel {
+      position: absolute;
+      right: 8px;
+      bottom: 48px;
+      z-index: 7;
+      width: min(236px, calc(100% - 16px));
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: rgba(15, 23, 42, 0.76);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      backdrop-filter: blur(6px);
       color: var(--muted);
-      font-size: 0.76rem;
+      font-size: 0.74rem;
       line-height: 1.35;
+      box-shadow: 0 14px 36px rgba(0, 0, 0, 0.34);
+    }
+
+    .control-help-panel[hidden] {
+      display: none;
+    }
+
+    .control-help-panel p {
+      margin: 0;
     }
 
     .legend {
@@ -1765,11 +1849,10 @@
         </div>
       </section>
 
-      <section class="section">
+      <section class="section control-section">
         <h2>雙搖桿</h2>
         <div class="control-row" id="controlRow">
           <div class="control-card">
-            <span>方向</span>
             <div class="joystick-zone" id="joyZone" aria-label="移動方向">
               <div class="joystick">
                 <button class="hex-dir-button" type="button" data-dir-button="0" data-dir="0">W</button>
@@ -1783,16 +1866,17 @@
             </div>
           </div>
           <div class="control-card action-panel">
-            <span>招式</span>
             <div class="attack-actions" aria-label="攻擊招式">
-              <button class="attack-button secondary is-placeholder" type="button" disabled>Y</button>
-              <button class="attack-button secondary is-placeholder" type="button" disabled>X</button>
-              <button class="attack-button is-selected" id="smallAttackButton" type="button" data-attack-profile="small">小招</button>
-              <button class="attack-button secondary" id="bigAttackButton" type="button" data-attack-profile="big">大招</button>
+              <button class="attack-button secondary is-placeholder" type="button" data-pad-pos="top" disabled>Y</button>
+              <button class="attack-button secondary is-placeholder" type="button" data-pad-pos="right" disabled>X</button>
+              <button class="attack-button is-selected" id="smallAttackButton" type="button" data-attack-profile="small" data-pad-pos="bottom">小招</button>
+              <button class="attack-button secondary" id="bigAttackButton" type="button" data-attack-profile="big" data-pad-pos="left">大招</button>
             </div>
-            <button class="secondary" id="leftHandToggle" type="button">左手模式</button>
-            <p class="quick-help">長按方向中心後拖曳控制方向；也可直接點六邊方向鍵。招式會使用目前瞄準點，點棋盤可改瞄準位置。</p>
           </div>
+        </div>
+        <button class="control-help-button" id="controlHelpButton" type="button" aria-expanded="false" aria-controls="controlHelpPanel" title="操作說明">?</button>
+        <div class="control-help-panel" id="controlHelpPanel" hidden>
+          <p>點六邊方向鍵可直接轉向；長按中心後拖曳可用搖桿控制方向。點棋盤可改招式瞄準位置，小招/大招會攻擊目前目標。</p>
         </div>
       </section>
 
@@ -1841,10 +1925,11 @@
     const controlRow = document.querySelector("#controlRow");
     const smallAttackButton = document.querySelector("#smallAttackButton");
     const bigAttackButton = document.querySelector("#bigAttackButton");
-    const leftHandToggle = document.querySelector("#leftHandToggle");
     const leftHandModeInput = document.querySelector("#leftHandMode");
     const surrenderButton = document.querySelector("#surrenderButton");
     const joyZone = document.querySelector("#joyZone");
+    const controlHelpButton = document.querySelector("#controlHelpButton");
+    const controlHelpPanel = document.querySelector("#controlHelpPanel");
     const hexDirButtons = [...document.querySelectorAll("[data-dir-button]")];
     const gridSizeInput = document.querySelector("#gridSize");
     const foodCountInput = document.querySelector("#foodCount");
@@ -2006,6 +2091,8 @@
     let moveStickEngaged = false;
     let moveStickHoldTimer = null;
     let movePointerStartedAt = 0;
+    let movePointerStartX = 0;
+    let movePointerStartY = 0;
     let movePointerMoved = false;
     let targetCell = null;
     let targetActive = false;
@@ -2463,7 +2550,6 @@
       const active = Boolean(enabled);
       controlRow.classList.toggle("left-handed", active);
       leftHandModeInput.checked = active;
-      leftHandToggle.textContent = active ? "右手模式" : "左手模式";
       localStorage.setItem("hexSnakeLeftHandMode", active ? "1" : "0");
     }
 
@@ -3466,7 +3552,7 @@
       const x = event.clientX - (rect.left + rect.width / 2);
       const y = event.clientY - (rect.top + rect.height / 2);
       const distance = Math.hypot(x, y);
-      if (distance < 18) return null;
+      if (distance < Math.max(4, rect.width * 0.035)) return null;
       const angle = Math.atan2(y, x) * 180 / Math.PI;
       const adjusted = (angle + 450 + 30) % 360;
       return Math.floor(adjusted / 60) % 6;
@@ -3509,7 +3595,15 @@
       const rect = joyZone.getBoundingClientRect();
       const cx = rect.left + rect.width / 2;
       const cy = rect.top + rect.height / 2;
-      return Math.hypot(event.clientX - cx, event.clientY - cy) < Math.min(34, rect.width * 0.22);
+      return Math.hypot(event.clientX - cx, event.clientY - cy) < Math.min(46, rect.width * 0.36);
+    }
+
+    function engageMoveStick(event) {
+      clearMoveStickHoldTimer();
+      if (movePointerId !== event.pointerId || moveStickEngaged) return;
+      moveStickEngaged = true;
+      joyZone.querySelector(".joystick").classList.add("locked");
+      moveStick(event);
     }
 
     function releaseMoveStick(event) {
@@ -3762,9 +3856,15 @@
 
     smallAttackButton.addEventListener("click", () => selectAttackProfile("small"));
     bigAttackButton.addEventListener("click", () => selectAttackProfile("big"));
-    leftHandToggle.addEventListener("click", () => setLeftHandMode(!leftHandModeInput.checked));
     leftHandModeInput.addEventListener("change", () => setLeftHandMode(leftHandModeInput.checked));
     surrenderButton.addEventListener("click", surrenderGame);
+    controlHelpButton.addEventListener("click", event => {
+      event.stopPropagation();
+      const expanded = controlHelpButton.getAttribute("aria-expanded") === "true";
+      controlHelpButton.setAttribute("aria-expanded", String(!expanded));
+      controlHelpPanel.hidden = expanded;
+    });
+    controlHelpPanel.addEventListener("pointerdown", event => event.stopPropagation());
 
     keybindInputs.forEach(input => {
       input.addEventListener("keydown", event => {
@@ -3819,19 +3919,20 @@
       if (!pointerNearMoveCenter(event)) return;
       movePointerId = event.pointerId;
       movePointerStartedAt = performance.now();
+      movePointerStartX = event.clientX;
+      movePointerStartY = event.clientY;
       movePointerMoved = false;
       moveStickEngaged = false;
       joyZone.setPointerCapture(movePointerId);
       clearMoveStickHoldTimer();
-      moveStickHoldTimer = setTimeout(() => {
-        if (movePointerId !== event.pointerId) return;
-        moveStickEngaged = true;
-        joyZone.querySelector(".joystick").classList.add("locked");
-        moveStick(event);
-      }, 220);
+      moveStickHoldTimer = setTimeout(() => engageMoveStick(event), 80);
     });
 
     joyZone.addEventListener("pointermove", event => {
+      if (event.pointerId === movePointerId && !moveStickEngaged) {
+        const dragDistance = Math.hypot(event.clientX - movePointerStartX, event.clientY - movePointerStartY);
+        if (dragDistance > 5) engageMoveStick(event);
+      }
       if (event.pointerId === movePointerId && moveStickEngaged) moveStick(event);
     });
 
