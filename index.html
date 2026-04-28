@@ -2010,24 +2010,12 @@
         </div>
         <div class="settings-content" id="settingsContent" hidden>
         <div class="field">
-          <label for="gridSize">棋盤半徑</label>
-          <input id="gridSize" type="number" min="6" max="12" step="1" value="10" inputmode="numeric">
-        </div>
-        <div class="field">
-          <label for="foodCount">場上食物數量</label>
-          <input id="foodCount" type="number" min="1" max="4" step="1" value="4" inputmode="numeric">
-        </div>
-        <div class="field">
           <label for="computerDifficulty">電腦難度</label>
           <select id="computerDifficulty">
             <option value="low">低</option>
             <option value="medium" selected>中</option>
             <option value="high">高</option>
           </select>
-        </div>
-        <div class="field">
-          <label for="initialSpeed">初始速度</label>
-          <input id="initialSpeed" type="number" min="0.5" max="3" step="0.1" value="1" inputmode="decimal">
         </div>
         <div class="character-picks" hidden>
           <div class="field">
@@ -2091,6 +2079,18 @@
         <div class="settings-content" id="gmContent" hidden>
         <div class="gm-settings" id="gmSettings">
           <div class="field">
+            <label for="gridSize">棋盤半徑</label>
+            <input id="gridSize" type="number" min="6" max="12" step="1" value="10" inputmode="numeric">
+          </div>
+          <div class="field">
+            <label for="foodCount">場上食物數量</label>
+            <input id="foodCount" type="number" min="1" max="4" step="1" value="4" inputmode="numeric">
+          </div>
+          <div class="field">
+            <label for="initialSpeed">初始速度</label>
+            <input id="initialSpeed" type="number" min="0.5" max="3" step="0.1" value="1" inputmode="decimal">
+          </div>
+          <div class="field">
             <label for="initialLength">初始長度</label>
             <input id="initialLength" type="number" min="1" max="12" step="1" value="3" inputmode="numeric">
           </div>
@@ -2112,6 +2112,7 @@
               <input id="initialCarb" data-initial-stock="carb" type="number" min="0" max="20" step="1" value="0" inputmode="numeric">
             </div>
           </div>
+          <button id="resetGmSettingsButton" class="secondary" type="button">重設 GM 參數</button>
         </div>
         </div>
       </section>
@@ -2227,6 +2228,7 @@
     const keybindInputs = [...document.querySelectorAll("[id$='AttackKey'], #pauseKey, #surrenderKey, [data-keybind-dir]")];
     const resetBestTimeButton = document.querySelector("#resetBestTimeButton");
     const resetSettingsButton = document.querySelector("#resetSettingsButton");
+    const resetGmSettingsButton = document.querySelector("#resetGmSettingsButton");
     const gmToggle = document.querySelector("#gmToggle");
     const gmContent = document.querySelector("#gmContent");
     const settingsToggle = document.querySelector("#settingsToggle");
@@ -3109,12 +3111,21 @@
       });
     }
 
+    function resetGmParameters() {
+      setGridSize(defaultSettings.gridSize);
+      setFoodCount(defaultSettings.foodCount);
+      setInitialSpeed(defaultSettings.initialSpeed);
+      setInitialLength(defaultSettings.initialLength);
+      foodTypes.forEach(type => setInitialStock(type.id, defaultSettings.initialStock[type.id]));
+    }
+
     function setSettingsLocked(locked) {
       gridSizeInput.disabled = locked;
       foodCountInput.disabled = locked;
       computerDifficultyInput.disabled = locked;
       initialSpeedInput.disabled = locked;
       gmToggle.disabled = locked;
+      resetGmSettingsButton.disabled = locked;
       playerCharacterInput.disabled = locked;
       computerCharacterInput.disabled = locked;
       updateGmControlState();
@@ -4524,15 +4535,24 @@
       updateHud();
     });
 
+    resetGmSettingsButton.addEventListener("click", () => {
+      if (running) return;
+      setGmMode(true);
+      resetGmParameters();
+      resetGame();
+      resize();
+      overlayTitle.textContent = "GM 參數已重設";
+      overlayText.textContent = "棋盤大小、食物數量、初始速度、初始長度與四色食物初始值已恢復預設。";
+      startButton.textContent = "開始";
+      renderIntroPortraits(true);
+      overlay.classList.add("show");
+    });
+
     resetSettingsButton.addEventListener("click", () => {
       if (running) return;
-      setGridSize(defaultSettings.gridSize);
-      setFoodCount(defaultSettings.foodCount);
+      resetGmParameters();
       setComputerDifficulty(defaultSettings.computerDifficulty);
-      setInitialSpeed(defaultSettings.initialSpeed);
       setGmMode(defaultSettings.gmMode);
-      setInitialLength(defaultSettings.initialLength);
-      foodTypes.forEach(type => setInitialStock(type.id, defaultSettings.initialStock[type.id]));
       playerCharacterId = defaultSettings.playerCharacterId;
       computerCharacterId = defaultSettings.computerCharacterId;
       playerCharacterInput.value = playerCharacterId;
