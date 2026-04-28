@@ -326,22 +326,32 @@
     }
 
     .character-stage {
-      display: grid;
-      grid-template-columns: 1fr;
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      z-index: 4;
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
       gap: 10px;
-      margin-bottom: 12px;
+      pointer-events: none;
     }
 
     .fighter-card {
       min-width: 0;
       display: grid;
-      grid-template-columns: 72px minmax(0, 1fr);
+      grid-template-columns: 62px minmax(0, 1fr);
       gap: 10px;
       align-items: center;
-      padding: 9px;
+      width: min(260px, calc(50% - 6px));
+      padding: 8px;
       border-radius: 8px;
-      background: #151b25;
+      background: rgba(15, 23, 36, 0.84);
       border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.32);
+      backdrop-filter: blur(8px);
+      pointer-events: auto;
     }
 
     .fighter-card[data-owner="player"] {
@@ -460,6 +470,20 @@
       width: 88%;
       height: 88%;
       animation: portrait-float 1800ms ease-in-out infinite;
+    }
+
+    .winner-move {
+      display: grid;
+      gap: 5px;
+      margin: 0 0 14px;
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.35;
+    }
+
+    .winner-move strong {
+      color: var(--ink);
+      font-size: 1.02rem;
     }
 
     @keyframes module-swim {
@@ -929,13 +953,15 @@
       }
 
       .character-stage {
-        grid-template-columns: 1fr 1fr;
+        top: 6px;
+        left: 6px;
+        right: 6px;
         gap: 6px;
-        margin-bottom: 6px;
       }
 
       .fighter-card {
-        grid-template-columns: 44px minmax(0, 1fr);
+        grid-template-columns: 42px minmax(0, 1fr);
+        width: min(184px, calc(50% - 4px));
         gap: 6px;
         padding: 5px;
       }
@@ -1109,6 +1135,7 @@
 
       <div class="canvas-wrap" id="playArea">
         <canvas id="game" aria-label="六角貪食蛇棋盤"></canvas>
+        <div class="character-stage" id="characterStage"></div>
         <div class="overlay show" id="overlay">
           <div class="dialog">
             <div id="winnerPortrait" hidden></div>
@@ -1162,7 +1189,6 @@
 
       <section class="section">
         <h2>營養庫存</h2>
-        <div class="character-stage" id="characterStage"></div>
         <div class="resource-board" id="resourceBoard"></div>
       </section>
 
@@ -1283,11 +1309,11 @@
     ];
     const foodTypeById = new Map(foodTypes.map(type => [type.id, type]));
     const characters = [
-      { id: "dragon", name: "東方龍", food: "protein", foodLabel: "紅色食物", move: "赤雷龍息", color: "#ef4444", body: "#b91c1c", line: "#fecaca", accent: "#fde68a" },
-      { id: "sandworm", name: "沙蟲", food: "fat", foodLabel: "黃色食物", move: "流沙震爆", color: "#facc15", body: "#ca8a04", line: "#fef08a", accent: "#92400e" },
-      { id: "quetzal", name: "羽蛇神", food: "fiber", foodLabel: "綠色食物", move: "翠羽風刃", color: "#22c55e", body: "#15803d", line: "#bbf7d0", accent: "#67e8f9" },
-      { id: "moray", name: "海鰻", food: "carb", foodLabel: "藍色食物", move: "深潮電咬", color: "#3b82f6", body: "#1d4ed8", line: "#bfdbfe", accent: "#93c5fd" },
-      { id: "lobster", name: "龍蝦", food: "balanced", foodLabel: "均衡", move: "雙螯破浪", color: "#fb7185", body: "#e11d48", line: "#ffe4e6", accent: "#f97316" }
+      { id: "dragon", name: "東方龍", food: "protein", foodLabel: "紅色食物", move: "赤雷龍息", detail: "偏好紅色蛋白質；吃到紅色食物額外取得 1 點，攻擊以高傷害爆發壓制對手。", color: "#ef4444", body: "#b91c1c", line: "#fecaca", accent: "#fde68a" },
+      { id: "sandworm", name: "沙蟲", food: "fat", foodLabel: "黃色食物", move: "流沙震爆", detail: "偏好黃色脂肪；吃到黃色食物額外取得 1 點，靠速度與沙暴節奏搶食。", color: "#facc15", body: "#ca8a04", line: "#fef08a", accent: "#92400e" },
+      { id: "quetzal", name: "羽蛇神", food: "fiber", foodLabel: "綠色食物", move: "翠羽風刃", detail: "偏好綠色纖維；吃到綠色食物額外取得 1 點，縮短攻擊蓄勢與冷卻。", color: "#22c55e", body: "#15803d", line: "#bbf7d0", accent: "#67e8f9" },
+      { id: "moray", name: "海鰻", food: "carb", foodLabel: "藍色食物", move: "深潮電咬", detail: "偏好藍色碳水；吃到藍色食物額外取得 1 點，擴大爆炸範圍咬住戰場。", color: "#3b82f6", body: "#1d4ed8", line: "#bfdbfe", accent: "#93c5fd" },
+      { id: "lobster", name: "龍蝦", food: "balanced", foodLabel: "均衡", move: "雙螯破浪", detail: "均衡型角色；每次進食會補給目前最低的庫存，穩定湊齊四種攻擊成本。", color: "#fb7185", body: "#e11d48", line: "#ffe4e6", accent: "#f97316" }
     ];
     const characterById = new Map(characters.map(character => [character.id, character]));
     const colors = {
@@ -1421,7 +1447,13 @@
       }
       const character = characterFor(owner);
       winnerPortrait.hidden = false;
-      winnerPortrait.innerHTML = `<div class="fighter-portrait" style="${characterStyle(character)}">${fighterSvg(character, true)}</div>`;
+      winnerPortrait.innerHTML = `
+        <div class="fighter-portrait" style="${characterStyle(character)}">${fighterSvg(character, true)}</div>
+        <div class="winner-move">
+          <strong>${character.move}</strong>
+          <span>${character.detail}</span>
+        </div>
+      `;
     }
 
     function buildResourceHud() {
@@ -2234,12 +2266,7 @@
       foods.forEach(food => {
         const type = foodTypeById.get(food.type);
         const { x, y } = axialToPixel(food);
-        hexPath(x, y, cellSize * 0.72);
-        ctx.fillStyle = type.color;
-        ctx.fill();
-        ctx.strokeStyle = type.line;
-        ctx.lineWidth = 2;
-        ctx.stroke();
+        drawFoodToken(x, y, type);
       });
 
       drawProjectiles();
@@ -2253,7 +2280,8 @@
           body: computerCharacter.body,
           headLine: computerCharacter.line,
           bodyLine: colors.computerBodyLine,
-          character: computerCharacter
+          character: computerCharacter,
+          owner: "computer"
         });
       }
 
@@ -2264,7 +2292,8 @@
           body: playerCharacter.body,
           headLine: playerCharacter.line,
           bodyLine: colors.bodyLine,
-          character: playerCharacter
+          character: playerCharacter,
+          owner: "player"
         });
       }
     }
@@ -2329,6 +2358,82 @@
       });
     }
 
+    function drawFoodToken(x, y, type) {
+      const size = cellSize * 0.62;
+      ctx.save();
+      ctx.shadowColor = "rgba(0,0,0,0.42)";
+      ctx.shadowBlur = 10;
+      ctx.shadowOffsetY = 4;
+      ctx.fillStyle = type.color;
+      ctx.strokeStyle = "#f8fafc";
+      ctx.lineWidth = Math.max(2, cellSize * 0.09);
+
+      if (type.id === "protein") {
+        ctx.beginPath();
+        ctx.arc(x, y, size * 0.74, 0, Math.PI * 2);
+      } else if (type.id === "fat") {
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.82);
+        ctx.lineTo(x + size * 0.82, y);
+        ctx.lineTo(x, y + size * 0.82);
+        ctx.lineTo(x - size * 0.82, y);
+        ctx.closePath();
+      } else if (type.id === "fiber") {
+        ctx.beginPath();
+        for (let i = 0; i < 5; i += 1) {
+          const angle = -Math.PI / 2 + i * Math.PI * 2 / 5;
+          const px = x + Math.cos(angle) * size * 0.82;
+          const py = y + Math.sin(angle) * size * 0.82;
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+      } else {
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.9);
+        ctx.lineTo(x + size * 0.82, y + size * 0.58);
+        ctx.lineTo(x - size * 0.82, y + size * 0.58);
+        ctx.closePath();
+      }
+
+      ctx.fill();
+      ctx.stroke();
+      ctx.shadowColor = "transparent";
+
+      ctx.strokeStyle = "#111720";
+      ctx.fillStyle = "#111720";
+      ctx.lineWidth = Math.max(2, cellSize * 0.08);
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      if (type.id === "protein") {
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.32, y - size * 0.08);
+        ctx.bezierCurveTo(x - size * 0.18, y - size * 0.36, x + size * 0.22, y - size * 0.36, x + size * 0.34, y - size * 0.04);
+        ctx.bezierCurveTo(x + size * 0.14, y + size * 0.1, x - size * 0.12, y + size * 0.24, x - size * 0.3, y + size * 0.36);
+        ctx.stroke();
+      } else if (type.id === "fat") {
+        ctx.beginPath();
+        ctx.arc(x, y, size * 0.2, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (type.id === "fiber") {
+        ctx.beginPath();
+        ctx.moveTo(x, y + size * 0.44);
+        ctx.quadraticCurveTo(x - size * 0.18, y - size * 0.06, x + size * 0.34, y - size * 0.42);
+        ctx.moveTo(x - size * 0.02, y + size * 0.1);
+        ctx.lineTo(x - size * 0.34, y - size * 0.16);
+        ctx.moveTo(x + size * 0.08, y - size * 0.1);
+        ctx.lineTo(x + size * 0.38, y + size * 0.02);
+        ctx.stroke();
+      } else {
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.3, y - size * 0.08);
+        ctx.lineTo(x, y + size * 0.24);
+        ctx.lineTo(x + size * 0.3, y - size * 0.08);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
     function hexToRgba(hex, alpha) {
       const value = hex.replace("#", "");
       const bigint = Number.parseInt(value, 16);
@@ -2347,6 +2452,7 @@
         ctx.strokeStyle = index === 0 ? palette.headLine : palette.bodyLine;
         ctx.lineWidth = index === 0 ? 3 : 1.5;
         ctx.stroke();
+        drawSnakeSegmentDetail(x, y, index, palette);
 
         if (index === 0) {
           const eyeDistance = cellSize * 0.22;
@@ -2358,6 +2464,44 @@
           drawSnakeHeadAccent(x, y, palette.character);
         }
       });
+    }
+
+    function drawSnakeSegmentDetail(x, y, index, palette) {
+      const character = palette.character;
+      if (!character) return;
+      ctx.save();
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.strokeStyle = index === 0 ? character.accent : hexToRgba(character.line, 0.88);
+      ctx.fillStyle = hexToRgba(character.accent, index === 0 ? 0.95 : 0.72);
+      ctx.lineWidth = Math.max(1.4, cellSize * 0.055);
+
+      if (palette.owner === "computer") {
+        ctx.beginPath();
+        ctx.arc(x, y, cellSize * (index === 0 ? 0.58 : 0.5), Math.PI * 0.18, Math.PI * 0.82);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(x, y, cellSize * (index === 0 ? 0.58 : 0.5), Math.PI * 1.18, Math.PI * 1.82);
+        ctx.stroke();
+      } else {
+        ctx.beginPath();
+        ctx.moveTo(x - cellSize * 0.42, y);
+        ctx.lineTo(x + cellSize * 0.42, y);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(x, y, Math.max(2, cellSize * 0.09), 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      if (index > 0 && index % 2 === 0) {
+        ctx.strokeStyle = hexToRgba("#ffffff", 0.48);
+        ctx.lineWidth = Math.max(1, cellSize * 0.035);
+        ctx.beginPath();
+        ctx.moveTo(x - cellSize * 0.22, y - cellSize * 0.26);
+        ctx.lineTo(x + cellSize * 0.22, y + cellSize * 0.26);
+        ctx.stroke();
+      }
+      ctx.restore();
     }
 
     function drawSnakeHeadAccent(x, y, character) {
