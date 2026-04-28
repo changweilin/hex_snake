@@ -515,6 +515,45 @@
       overflow: hidden;
     }
 
+    .intro-avatar-gate {
+      display: grid;
+      place-items: center;
+      min-height: min(52vh, 420px);
+    }
+
+    .intro-avatar-button {
+      width: min(260px, 72vw);
+      aspect-ratio: 1;
+      padding: 0;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: transparent;
+      color: inherit;
+    }
+
+    .intro-avatar-button .fighter-portrait {
+      width: 100%;
+      margin: 0;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+    }
+
+    .intro-avatar-button:hover .fighter-portrait,
+    .intro-avatar-button:focus-visible .fighter-portrait {
+      transform: scale(1.04);
+      border-color: var(--fighter-accent);
+      box-shadow: inset 0 0 40px rgba(255, 255, 255, 0.08), 0 18px 58px rgba(0, 0, 0, 0.46);
+    }
+
+    .intro-avatar-button .fighter-avatar-image {
+      width: 120%;
+      height: 120%;
+      object-fit: cover;
+      object-position: 50% 22%;
+    }
+
     .portrait-select .portrait-pair {
       margin-bottom: 0;
     }
@@ -604,6 +643,29 @@
 
     .portrait-story p {
       margin: 0;
+    }
+
+    .portrait-motto {
+      margin: 0;
+      color: var(--ink);
+      font-weight: 850;
+      line-height: 1.4;
+    }
+
+    .portrait-moves {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .portrait-moves span {
+      padding: 4px 8px;
+      border: 1px solid color-mix(in srgb, var(--fighter-line), transparent 34%);
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--fighter-color), transparent 88%);
+      color: color-mix(in srgb, var(--ink), var(--fighter-accent) 18%);
+      font-size: 0.78rem;
+      font-weight: 800;
     }
 
     @keyframes module-swim {
@@ -1440,11 +1502,11 @@
     ];
     const foodTypeById = new Map(foodTypes.map(type => [type.id, type]));
     const characters = [
-      { id: "dragon", name: "白龍", food: "balanced", foodLabel: "均衡", move: "白衡龍息", detail: "均衡型角色；每次進食會補給目前最低的庫存，穩定湊齊四種攻擊成本。", color: "#f8fafc", body: "#cbd5e1", line: "#bae6fd", accent: "#fbbf24" },
-      { id: "sandworm", name: "沙蟲", food: "fat", foodLabel: "黃色食物", move: "流沙震爆", detail: "偏好黃色脂肪；吃到黃色食物額外取得 1 點，靠速度與沙暴節奏搶食。", color: "#facc15", body: "#ca8a04", line: "#fef08a", accent: "#92400e" },
-      { id: "quetzal", name: "羽蛇神", food: "fiber", foodLabel: "綠色食物", move: "翠羽風刃", detail: "偏好綠色纖維；吃到綠色食物額外取得 1 點，縮短攻擊蓄勢與冷卻。", color: "#22c55e", body: "#15803d", line: "#bbf7d0", accent: "#67e8f9" },
-      { id: "moray", name: "海鰻", food: "carb", foodLabel: "藍色食物", move: "深潮電咬", detail: "偏好藍色碳水；吃到藍色食物額外取得 1 點，擴大爆炸範圍咬住戰場。", color: "#3b82f6", body: "#1d4ed8", line: "#bfdbfe", accent: "#93c5fd" },
-      { id: "lobster", name: "龍蝦", food: "protein", foodLabel: "紅色食物", move: "赤螯破浪", detail: "偏好紅色蛋白質；吃到紅色食物額外取得 1 點，攻擊以高傷害爆發壓制對手。", color: "#ef4444", body: "#b91c1c", line: "#fecaca", accent: "#f97316" }
+      { id: "dragon", name: "白龍", food: "balanced", foodLabel: "均衡", motto: "墜落不是終點，躍門才是回聲。", smallMove: "雲鱗回旋", bigMove: "越門白衡龍息", move: "越門白衡龍息", detail: "均衡型角色；每次進食會補給目前最低的庫存，穩定湊齊四種攻擊成本。", color: "#f8fafc", body: "#cbd5e1", line: "#bae6fd", accent: "#fbbf24" },
+      { id: "sandworm", name: "沙蟲", food: "fat", foodLabel: "黃色食物", motto: "在最低的沙裡，也藏著翻天的牙。", smallMove: "潛沙突咬", bigMove: "流沙葬獸震爆", move: "流沙葬獸震爆", detail: "偏好黃色脂肪；吃到黃色食物額外取得 1 點，靠速度與沙暴節奏搶食。", color: "#facc15", body: "#ca8a04", line: "#fef08a", accent: "#92400e" },
+      { id: "quetzal", name: "羽蛇神", food: "fiber", foodLabel: "綠色食物", motto: "名字不滅，羽翼就不會折。", smallMove: "祖語翠羽", bigMove: "祭風裂界", move: "祭風裂界", detail: "偏好綠色纖維；吃到綠色食物額外取得 1 點，縮短攻擊蓄勢與冷卻。", color: "#22c55e", body: "#15803d", line: "#bbf7d0", accent: "#67e8f9" },
+      { id: "moray", name: "海鰻", food: "carb", foodLabel: "藍色食物", motto: "讓垂鉤者，先學會窒息。", smallMove: "暗潮電咬", bigMove: "逆浪噬船雷", move: "逆浪噬船雷", detail: "偏好藍色碳水；吃到藍色食物額外取得 1 點，擴大爆炸範圍咬住戰場。", color: "#3b82f6", body: "#1d4ed8", line: "#bfdbfe", accent: "#93c5fd" },
+      { id: "lobster", name: "龍蝦", food: "protein", foodLabel: "紅色食物", motto: "混沌若有節奏，沉默也會成王。", smallMove: "古螯斷浪", bigMove: "萬年赤螯破浪", move: "萬年赤螯破浪", detail: "偏好紅色蛋白質；吃到紅色食物額外取得 1 點，攻擊以高傷害爆發壓制對手。", color: "#ef4444", body: "#b91c1c", line: "#fecaca", accent: "#f97316" }
     ];
     const characterStories = {
       dragon: [
@@ -1543,6 +1605,7 @@
     let moduleHoldTimer = null;
     let portraitPoseTimers = {};
     let selectedPortraitOwner = "player";
+    let introDetailsOpen = false;
     let portraitSwipeStartX = null;
     let restartUnlockAt = 0;
 
@@ -1612,7 +1675,18 @@
     }
 
     function characterStoryMarkup(character) {
-      return (character.story || []).map(paragraph => `<p>${paragraph}</p>`).join("");
+      const motto = character.motto ? `<p class="portrait-motto">「${character.motto}」</p>` : "";
+      const moves = character.smallMove && character.bigMove
+        ? `<div class="portrait-moves" aria-label="${character.name}招式"><span>小招：${character.smallMove}</span><span>大招：${character.bigMove}</span></div>`
+        : "";
+      const story = (character.story || []).map(paragraph => `<p>${paragraph}</p>`).join("");
+      return `${motto}${moves}${story}`;
+    }
+
+    function setOverlayChromeVisible(visible) {
+      overlayTitle.hidden = !visible;
+      overlayText.hidden = !visible;
+      startButton.hidden = !visible;
     }
 
     function buildCharacterStage() {
@@ -1630,6 +1704,7 @@
     }
 
     function renderWinnerPortrait(owner) {
+      setOverlayChromeVisible(true);
       if (!owner) {
         winnerPortrait.hidden = true;
         winnerPortrait.innerHTML = "";
@@ -1654,11 +1729,23 @@
       `;
     }
 
-    function renderIntroPortraits() {
+    function renderIntroPortraits(showDetails = introDetailsOpen) {
+      introDetailsOpen = showDetails;
+      setOverlayChromeVisible(showDetails);
       const selectedCharacter = characterFor(selectedPortraitOwner);
       winnerPortrait.hidden = false;
       characterStage.hidden = true;
       characterStage.innerHTML = "";
+      if (!showDetails) {
+        winnerPortrait.innerHTML = `
+          <div class="intro-avatar-gate">
+            <button class="intro-avatar-button" type="button" data-open-intro style="${characterStyle(selectedCharacter)}" aria-label="開啟角色說明">
+              <div class="fighter-portrait">${fighterArt(selectedCharacter, "intro", true)}</div>
+            </button>
+          </div>
+        `;
+        return;
+      }
       winnerPortrait.innerHTML = `
         <div class="portrait-select" data-portrait-select>
           <div class="portrait-pair">
@@ -1691,7 +1778,7 @@
 
     function selectPortraitOwner(owner) {
       selectedPortraitOwner = owner === "computer" ? "computer" : "player";
-      renderIntroPortraits();
+      renderIntroPortraits(true);
     }
 
     function applySelectedPortraitCharacter(delta) {
@@ -1705,7 +1792,7 @@
         computerCharacterId = nextCharacter.id;
         computerCharacterInput.value = nextCharacter.id;
       }
-      renderIntroPortraits();
+      renderIntroPortraits(true);
       resize();
     }
 
@@ -3016,6 +3103,14 @@
       portraitSwipeStartX = event.clientX;
     });
 
+    winnerPortrait.addEventListener("click", event => {
+      if (!event.target.closest("[data-open-intro]")) return;
+      overlayTitle.textContent = "角色說明";
+      overlayText.textContent = "點擊玩家或對手立繪選擇要調整的角色，使用左右箭頭切換。";
+      startButton.textContent = "開始";
+      renderIntroPortraits(true);
+    });
+
     winnerPortrait.addEventListener("pointerup", event => {
       if (portraitSwipeStartX === null) return;
       const deltaX = event.clientX - portraitSwipeStartX;
@@ -3037,7 +3132,7 @@
       overlayTitle.textContent = "棋盤已更新";
       overlayText.textContent = `棋盤半徑已設為 ${gridSize}。開始後設定會鎖定到下一局。`;
       startButton.textContent = "開始";
-      renderIntroPortraits();
+      renderIntroPortraits(true);
       overlay.classList.add("show");
     });
 
@@ -3049,7 +3144,7 @@
       overlayTitle.textContent = "食物數量已更新";
       overlayText.textContent = `場上會維持 ${foodCount} 個紅黃綠藍隨機食物。`;
       startButton.textContent = "開始";
-      renderIntroPortraits();
+      renderIntroPortraits(true);
       overlay.classList.add("show");
     });
 
@@ -3061,7 +3156,7 @@
       overlayTitle.textContent = "難度已更新";
       overlayText.textContent = `電腦難度設為 ${computerDifficultyInput.selectedOptions[0].textContent}。`;
       startButton.textContent = "開始";
-      renderIntroPortraits();
+      renderIntroPortraits(true);
       overlay.classList.add("show");
     });
 
@@ -3076,7 +3171,7 @@
         overlayTitle.textContent = "角色已更新";
         overlayText.textContent = `玩家選擇 ${characterFor("player").name}，對手選擇 ${characterFor("computer").name}。`;
         startButton.textContent = "開始";
-        renderIntroPortraits();
+        renderIntroPortraits(true);
         overlay.classList.add("show");
       });
     });
@@ -3102,6 +3197,7 @@
       overlayTitle.textContent = "準備開局";
       overlayText.textContent = "每吃 6 個食物獲得 1 枚砲彈，最多 3 枚；發射時會消耗紅黃綠藍各 1 點。";
       startButton.textContent = "開始";
+      setOverlayChromeVisible(true);
       startGame();
     });
 
@@ -3159,6 +3255,7 @@
         overlayTitle.textContent = "暫停";
         overlayText.textContent = "按繼續回到對戰。";
         startButton.textContent = "繼續";
+        setOverlayChromeVisible(true);
         overlay.classList.toggle("show", paused);
         if (!paused) {
           lastPlayerStep = performance.now();
@@ -3195,7 +3292,7 @@
     setSettingsLocked(false);
     resetGame();
     resize();
-    renderIntroPortraits();
+    renderIntroPortraits(false);
   </script>
 </body>
 </html>
