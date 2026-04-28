@@ -318,11 +318,11 @@
       display: grid;
       justify-items: end;
       gap: 10px;
-      z-index: 20;
+      z-index: 220;
     }
 
     .settings-section.open {
-      z-index: 50;
+      z-index: 260;
     }
 
     .settings-actions {
@@ -344,6 +344,23 @@
       border: 1px solid var(--line);
     }
 
+    .gm-toggle {
+      width: auto;
+      min-width: 54px;
+      min-height: 44px;
+      padding: 0 12px;
+      display: inline-grid;
+      place-items: center;
+      background: #151b25;
+      color: var(--ink);
+      border: 1px solid var(--line);
+    }
+
+    .gm-toggle.is-active {
+      border-color: rgba(245, 158, 11, 0.72);
+      color: #fde68a;
+    }
+
     .rules-toggle {
       width: auto;
       min-width: 72px;
@@ -356,6 +373,8 @@
 
     .settings-toggle:hover,
     .settings-toggle:focus-visible,
+    .gm-toggle:hover,
+    .gm-toggle:focus-visible,
     .rules-toggle:hover,
     .rules-toggle:focus-visible {
       border-color: var(--accent);
@@ -385,7 +404,7 @@
       position: absolute;
       top: calc(100% + 6px);
       right: 0;
-      z-index: 31;
+      z-index: 261;
       width: min(360px, calc(100vw - 36px));
       max-height: min(72dvh, 560px);
       overflow-y: auto;
@@ -400,6 +419,25 @@
 
     .settings-content[hidden] {
       display: none;
+    }
+
+    .gm-settings {
+      display: grid;
+      gap: 10px;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(21, 27, 37, 0.68);
+    }
+
+    .gm-settings[hidden] {
+      display: none;
+    }
+
+    .food-stock-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
     }
 
     .field {
@@ -485,6 +523,10 @@
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 10px;
+    }
+
+    .character-picks[hidden] {
+      display: none;
     }
 
     .character-stage {
@@ -1586,11 +1628,11 @@
         align-items: start;
         overflow: visible;
         position: relative;
-        z-index: 20;
+        z-index: 220;
       }
 
       .side .settings-section.open {
-        z-index: 50;
+        z-index: 260;
       }
 
       .side .settings-section .settings-toggle {
@@ -1604,7 +1646,7 @@
         top: auto;
         right: 0;
         bottom: calc(100% + 6px);
-        z-index: 31;
+        z-index: 261;
         width: min(360px, calc(100vw - 12px));
         max-height: min(70dvh, 420px);
         overflow-y: auto;
@@ -1957,6 +1999,7 @@
         <div class="settings-actions">
         <button class="surrender-button" id="surrenderButton" type="button">投降</button>
         <button class="rules-toggle" id="rulesButton" type="button" aria-haspopup="dialog" aria-controls="rulesModal" aria-expanded="false">規則</button>
+        <button class="gm-toggle" id="gmToggle" type="button" aria-expanded="false" aria-controls="gmContent" title="GM 設定">GM</button>
         <button class="settings-toggle" id="settingsToggle" type="button" aria-expanded="false" aria-controls="settingsContent" title="開局設定">
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -1982,7 +2025,11 @@
             <option value="high">高</option>
           </select>
         </div>
-        <div class="character-picks">
+        <div class="field">
+          <label for="initialSpeed">初始速度</label>
+          <input id="initialSpeed" type="number" min="0.5" max="3" step="0.1" value="1" inputmode="decimal">
+        </div>
+        <div class="character-picks" hidden>
           <div class="field">
             <label for="playerCharacter">我的角色</label>
             <select id="playerCharacter"></select>
@@ -2039,6 +2086,33 @@
           </div>
         </div>
         <button id="resetBestTimeButton" class="secondary" type="button">重設最久存活</button>
+        <button id="resetSettingsButton" class="secondary" type="button">回到預設值</button>
+        </div>
+        <div class="settings-content" id="gmContent" hidden>
+        <div class="gm-settings" id="gmSettings">
+          <div class="field">
+            <label for="initialLength">初始長度</label>
+            <input id="initialLength" type="number" min="1" max="12" step="1" value="3" inputmode="numeric">
+          </div>
+          <div class="food-stock-grid" aria-label="各色食物初始值">
+            <div class="field">
+              <label for="initialProtein">紅色食物</label>
+              <input id="initialProtein" data-initial-stock="protein" type="number" min="0" max="20" step="1" value="0" inputmode="numeric">
+            </div>
+            <div class="field">
+              <label for="initialFat">黃色食物</label>
+              <input id="initialFat" data-initial-stock="fat" type="number" min="0" max="20" step="1" value="0" inputmode="numeric">
+            </div>
+            <div class="field">
+              <label for="initialFiber">綠色食物</label>
+              <input id="initialFiber" data-initial-stock="fiber" type="number" min="0" max="20" step="1" value="0" inputmode="numeric">
+            </div>
+            <div class="field">
+              <label for="initialCarb">藍色食物</label>
+              <input id="initialCarb" data-initial-stock="carb" type="number" min="0" max="20" step="1" value="0" inputmode="numeric">
+            </div>
+          </div>
+        </div>
         </div>
       </section>
 
@@ -2144,10 +2218,17 @@
     const gridSizeInput = document.querySelector("#gridSize");
     const foodCountInput = document.querySelector("#foodCount");
     const computerDifficultyInput = document.querySelector("#computerDifficulty");
+    const initialSpeedInput = document.querySelector("#initialSpeed");
+    const gmSettings = document.querySelector("#gmSettings");
+    const initialLengthInput = document.querySelector("#initialLength");
+    const initialStockInputs = [...document.querySelectorAll("[data-initial-stock]")];
     const playerCharacterInput = document.querySelector("#playerCharacter");
     const computerCharacterInput = document.querySelector("#computerCharacter");
     const keybindInputs = [...document.querySelectorAll("[id$='AttackKey'], #pauseKey, #surrenderKey, [data-keybind-dir]")];
     const resetBestTimeButton = document.querySelector("#resetBestTimeButton");
+    const resetSettingsButton = document.querySelector("#resetSettingsButton");
+    const gmToggle = document.querySelector("#gmToggle");
+    const gmContent = document.querySelector("#gmContent");
     const settingsToggle = document.querySelector("#settingsToggle");
     const settingsContent = document.querySelector("#settingsContent");
     const characterStage = document.querySelector("#characterStage");
@@ -2159,6 +2240,10 @@
     const maxGridSize = 12;
     const minFoodCount = 1;
     const maxFoodCount = 4;
+    const minInitialSpeed = 0.5;
+    const maxInitialSpeed = 3;
+    const minInitialLength = 1;
+    const maxInitialLength = 12;
     const attackNeedTotal = 6;
     const maxAmmo = 3;
     const baseAttackDelayMs = 2000;
@@ -2178,10 +2263,30 @@
     const rangeDamageFalloffEnabled = false;
     const targetMaxHex = 6;
     const gameOverRestartDelayMs = 700;
+    const defaultSettings = {
+      gridSize: 10,
+      foodCount: 4,
+      computerDifficulty: "medium",
+      initialSpeed: 1,
+      gmMode: false,
+      initialLength: 3,
+      initialStock: {
+        protein: 0,
+        fat: 0,
+        fiber: 0,
+        carb: 0
+      },
+      playerCharacterId: "dragon",
+      computerCharacterId: "moray"
+    };
     let gridSize = 10;
     let radius = gridSize - 1;
     let foodCount = 4;
     let computerDifficulty = "medium";
+    let initialSpeed = 1;
+    let gmMode = false;
+    let initialLength = 3;
+    let initialStock = { protein: 0, fat: 0, fiber: 0, carb: 0 };
     let playerCharacterId = "dragon";
     let computerCharacterId = "moray";
     const directions = [
@@ -2725,6 +2830,11 @@
       return Object.fromEntries(foodTypes.map(type => [type.id, 0]));
     }
 
+    function startingStock() {
+      if (!gmMode) return emptyStock();
+      return Object.fromEntries(foodTypes.map(type => [type.id, clampInitialStock(initialStock[type.id])]));
+    }
+
     function foodBonus(stock, typeId, perPoint, maxBonus) {
       return Math.min(maxBonus, stock[typeId] * perPoint);
     }
@@ -2746,7 +2856,7 @@
     }
 
     function moveInterval(stock) {
-      return baseStepMs / moveMultiplier(stock);
+      return baseStepMs / (initialSpeed * moveMultiplier(stock));
     }
 
     function moveIntervalFor(owner, now) {
@@ -2922,6 +3032,24 @@
       return Math.min(maxFoodCount, Math.max(minFoodCount, parsed));
     }
 
+    function clampInitialSpeed(value) {
+      const parsed = Number.parseFloat(value);
+      if (!Number.isFinite(parsed)) return initialSpeed;
+      return Math.min(maxInitialSpeed, Math.max(minInitialSpeed, parsed));
+    }
+
+    function clampInitialLength(value) {
+      const parsed = Number.parseInt(value, 10);
+      if (!Number.isFinite(parsed)) return initialLength;
+      return Math.min(maxInitialLength, Math.max(minInitialLength, parsed));
+    }
+
+    function clampInitialStock(value) {
+      const parsed = Number.parseInt(value, 10);
+      if (!Number.isFinite(parsed)) return 0;
+      return Math.min(maxFoodStock, Math.max(0, parsed));
+    }
+
     function buildCells() {
       cells = [];
       for (let q = -radius; q <= radius; q += 1) {
@@ -2950,12 +3078,46 @@
       computerDifficultyInput.value = computerDifficulty;
     }
 
+    function setInitialSpeed(value) {
+      initialSpeed = clampInitialSpeed(value);
+      initialSpeedInput.value = initialSpeed;
+    }
+
+    function setInitialLength(value) {
+      initialLength = clampInitialLength(value);
+      initialLengthInput.value = initialLength;
+    }
+
+    function setInitialStock(typeId, value) {
+      if (!Object.prototype.hasOwnProperty.call(initialStock, typeId)) return;
+      initialStock[typeId] = clampInitialStock(value);
+      const input = initialStockInputs.find(stockInput => stockInput.dataset.initialStock === typeId);
+      if (input) input.value = initialStock[typeId];
+    }
+
+    function setGmMode(active) {
+      gmMode = Boolean(active);
+      gmToggle.classList.toggle("is-active", gmMode);
+      updateGmControlState();
+    }
+
+    function updateGmControlState() {
+      const disabled = running;
+      initialLengthInput.disabled = disabled;
+      initialStockInputs.forEach(input => {
+        input.disabled = disabled;
+      });
+    }
+
     function setSettingsLocked(locked) {
       gridSizeInput.disabled = locked;
       foodCountInput.disabled = locked;
       computerDifficultyInput.disabled = locked;
+      initialSpeedInput.disabled = locked;
+      gmToggle.disabled = locked;
       playerCharacterInput.disabled = locked;
       computerCharacterInput.disabled = locked;
+      updateGmControlState();
     }
 
     function keyOf(cell) {
@@ -3030,6 +3192,22 @@
       draw();
     }
 
+    function createStartingSnake(head, direction, length) {
+      const segments = [{ ...head }];
+      let cursor = { ...head };
+      const bodyDirection = (direction + 3) % 6;
+      const used = new Set([keyOf(cursor)]);
+      while (segments.length < length) {
+        const next = nextWrappedCell(cursor, bodyDirection);
+        const nextKey = keyOf(next);
+        if (used.has(nextKey)) break;
+        segments.push(next);
+        used.add(nextKey);
+        cursor = next;
+      }
+      return segments;
+    }
+
     function resetGame() {
       renderWinnerPortrait(null);
       Object.values(portraitPoseTimers).forEach(clearTimeout);
@@ -3038,25 +3216,18 @@
       preloadPortraitsFor("computer");
       buildCharacterStage();
       const offset = Math.min(2, Math.max(1, radius - 3));
-      snake = [
-        { q: -offset, r: offset },
-        { q: -offset, r: offset + 1 },
-        { q: -offset, r: offset + 2 }
-      ];
-      computerSnake = [
-        { q: offset, r: -offset },
-        { q: offset, r: -offset - 1 },
-        { q: offset, r: -offset - 2 }
-      ];
       dir = 0;
       nextDir = 0;
       computerDir = 3;
+      const startLength = gmMode ? initialLength : defaultSettings.initialLength;
+      snake = createStartingSnake({ q: -offset, r: offset }, dir, startLength);
+      computerSnake = createStartingSnake({ q: offset, r: -offset }, computerDir, startLength);
       score = 0;
       computerScore = 0;
       playerHp = snake.length;
       computerHp = computerSnake.length;
-      playerStock = emptyStock();
-      computerStock = emptyStock();
+      playerStock = startingStock();
+      computerStock = startingStock();
       playerAmmo = 0;
       computerAmmo = 0;
       playerAmmoCharge = 0;
@@ -3092,6 +3263,10 @@
       if (gameOver && !canRestartAfterGameOver()) return false;
       setFoodCount(foodCountInput.value);
       setComputerDifficulty(computerDifficultyInput.value);
+      setInitialSpeed(initialSpeedInput.value);
+      setGmMode(gmMode);
+      setInitialLength(initialLengthInput.value);
+      initialStockInputs.forEach(input => setInitialStock(input.dataset.initialStock, input.value));
       playerCharacterId = characterById.has(playerCharacterInput.value) ? playerCharacterInput.value : "dragon";
       computerCharacterId = characterById.has(computerCharacterInput.value) ? computerCharacterInput.value : "moray";
       resetGame();
@@ -3197,8 +3372,8 @@
       lastFeedTimeEl.textContent = formatTime(lastFeedElapsedMs);
       bestTimeEl.textContent = formatTime(bestTotalMs);
       const now = performance.now();
-      const playerSpeedValue = isMovementStunned("player", now) ? 0 : moveMultiplier(playerStock) / (now < playerSlowUntil ? 2 : 1);
-      const computerSpeedValue = isMovementStunned("computer", now) ? 0 : moveMultiplier(computerStock) / (now < computerSlowUntil ? 2 : 1);
+      const playerSpeedValue = isMovementStunned("player", now) ? 0 : initialSpeed * moveMultiplier(playerStock) / (now < playerSlowUntil ? 2 : 1);
+      const computerSpeedValue = isMovementStunned("computer", now) ? 0 : initialSpeed * moveMultiplier(computerStock) / (now < computerSlowUntil ? 2 : 1);
       const playerSpeed = Math.round(playerSpeedValue * 10) / 10;
       const computerSpeed = Math.round(computerSpeedValue * 10) / 10;
       speedEl.textContent = `${playerSpeed}x/${computerSpeed}x`;
@@ -4129,14 +4304,28 @@
     function setSettingsOpen(open) {
       settingsToggle.setAttribute("aria-expanded", String(open));
       settingsContent.hidden = !open;
-      settingsToggle.closest(".settings-section").classList.toggle("open", open);
+      if (open) setGmOpen(false);
+      settingsToggle.closest(".settings-section").classList.toggle("open", open || !gmContent.hidden);
     }
 
     function toggleSettings() {
       setSettingsOpen(settingsToggle.getAttribute("aria-expanded") !== "true");
     }
 
+    function setGmOpen(open) {
+      gmToggle.setAttribute("aria-expanded", String(open));
+      gmContent.hidden = !open;
+      if (open && !running) setGmMode(true);
+      if (open) setSettingsOpen(false);
+      gmToggle.closest(".settings-section").classList.toggle("open", open || !settingsContent.hidden);
+    }
+
+    function toggleGmSettings() {
+      setGmOpen(gmToggle.getAttribute("aria-expanded") !== "true");
+    }
+
     settingsToggle.addEventListener("click", toggleSettings);
+    gmToggle.addEventListener("click", toggleGmSettings);
 
     settingsToggle.addEventListener("pointerdown", event => {
       event.stopPropagation();
@@ -4146,7 +4335,19 @@
       }
     });
 
+    gmToggle.addEventListener("pointerdown", event => {
+      event.stopPropagation();
+      if (event.pointerType !== "mouse") {
+        event.preventDefault();
+        toggleGmSettings();
+      }
+    });
+
     settingsContent.addEventListener("pointerdown", event => {
+      event.stopPropagation();
+    });
+
+    gmContent.addEventListener("pointerdown", event => {
       event.stopPropagation();
     });
 
@@ -4271,6 +4472,34 @@
       overlay.classList.add("show");
     });
 
+    initialSpeedInput.addEventListener("change", () => {
+      if (running) return;
+      setInitialSpeed(initialSpeedInput.value);
+      resetGame();
+      resize();
+      overlayTitle.textContent = "初始速度已更新";
+      overlayText.textContent = `初始速度已設為 ${initialSpeed}x。`;
+      startButton.textContent = "開始";
+      renderIntroPortraits(true);
+      overlay.classList.add("show");
+    });
+
+    initialLengthInput.addEventListener("change", () => {
+      if (running) return;
+      setInitialLength(initialLengthInput.value);
+      resetGame();
+      resize();
+    });
+
+    initialStockInputs.forEach(input => {
+      input.addEventListener("change", () => {
+        if (running) return;
+        setInitialStock(input.dataset.initialStock, input.value);
+        resetGame();
+        resize();
+      });
+    });
+
     [playerCharacterInput, computerCharacterInput].forEach(input => {
       input.addEventListener("change", () => {
         if (running) return;
@@ -4293,6 +4522,32 @@
       bestTotalMs = 0;
       localStorage.setItem("hexSnakeBestTotalMs", "0");
       updateHud();
+    });
+
+    resetSettingsButton.addEventListener("click", () => {
+      if (running) return;
+      setGridSize(defaultSettings.gridSize);
+      setFoodCount(defaultSettings.foodCount);
+      setComputerDifficulty(defaultSettings.computerDifficulty);
+      setInitialSpeed(defaultSettings.initialSpeed);
+      setGmMode(defaultSettings.gmMode);
+      setInitialLength(defaultSettings.initialLength);
+      foodTypes.forEach(type => setInitialStock(type.id, defaultSettings.initialStock[type.id]));
+      playerCharacterId = defaultSettings.playerCharacterId;
+      computerCharacterId = defaultSettings.computerCharacterId;
+      playerCharacterInput.value = playerCharacterId;
+      computerCharacterInput.value = computerCharacterId;
+      keybinds = structuredClone(defaultKeybinds);
+      saveKeybinds();
+      applyKeybinds();
+      setLeftHandMode(false);
+      resetGame();
+      resize();
+      overlayTitle.textContent = "已回到預設值";
+      overlayText.textContent = "棋盤、食物、速度、GM 模式與鍵位都已恢復預設。";
+      startButton.textContent = "開始";
+      renderIntroPortraits(true);
+      overlay.classList.add("show");
     });
 
     smallAttackButton.addEventListener("click", () => selectAttackProfile("small"));
@@ -4491,6 +4746,10 @@
     setGridSize(gridSizeInput.value);
     setFoodCount(foodCountInput.value);
     setComputerDifficulty(computerDifficultyInput.value);
+    setInitialSpeed(initialSpeedInput.value);
+    setGmMode(defaultSettings.gmMode);
+    setInitialLength(initialLengthInput.value);
+    initialStockInputs.forEach(input => setInitialStock(input.dataset.initialStock, input.value));
     setSettingsLocked(false);
     applyKeybinds();
     setLeftHandMode(localStorage.getItem("hexSnakeLeftHandMode") === "1");
