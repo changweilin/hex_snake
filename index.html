@@ -514,7 +514,7 @@
       position: relative;
       width: 64px;
       aspect-ratio: 1;
-      border-radius: 8px;
+      border-radius: 50%;
       display: grid;
       place-items: center;
       border: 1px solid color-mix(in srgb, var(--fighter-color), white 26%);
@@ -522,10 +522,20 @@
         radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.24), transparent 28px),
         color-mix(in srgb, var(--fighter-color), #101720 70%);
       box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.28);
-      overflow: visible;
+      overflow: hidden;
       touch-action: none;
       user-select: none;
       -webkit-user-select: none;
+    }
+
+    .fighter-module .fighter-avatar-image.portrait {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      object-position: 50% 20%;
+      transform: none;
+      animation: module-swim 1500ms ease-in-out infinite;
     }
 
     .fighter-module::before,
@@ -586,7 +596,7 @@
     .fighter-module.is-charging::before {
       position: absolute;
       inset: 5px;
-      border-radius: 8px;
+      border-radius: 50%;
       border: 2px solid rgba(255, 255, 255, 0.76);
       animation: charge-ring 560ms linear infinite;
     }
@@ -742,11 +752,11 @@
     }
 
     .intro-avatar-button {
-      width: min(180px, 38vw);
-      aspect-ratio: 1;
+      width: 100%;
       padding: 0;
-      border-radius: 50%;
+      border-radius: 8px;
       display: grid;
+      gap: 8px;
       place-items: center;
       background: transparent;
       color: inherit;
@@ -755,8 +765,8 @@
     .intro-avatar-button .fighter-portrait {
       width: 100%;
       margin: 0;
-      aspect-ratio: 1;
-      border-radius: 50%;
+      aspect-ratio: 1.05;
+      border-radius: 8px;
       transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
     }
 
@@ -768,18 +778,11 @@
     }
 
     .intro-avatar-button .fighter-avatar-image {
-      width: 112%;
-      height: 112%;
+      width: 96%;
+      height: 96%;
       object-fit: contain;
-      object-position: 50% 16%;
-      transform: translateY(-4%);
-    }
-
-    .intro-avatar-button .fighter-portrait::after {
-      top: 8px;
-      right: 8px;
-      bottom: auto;
-      z-index: 5;
+      object-position: 50% 50%;
+      transform: none;
     }
 
     .intro-avatar-label {
@@ -1711,7 +1714,7 @@
       }
 
       .intro-avatar-button {
-        width: min(160px, 42vw);
+        width: 100%;
       }
 
       .intro-avatar-label,
@@ -2317,6 +2320,19 @@
       `;
     }
 
+    function fighterPortraitImage(character, pose = "idle") {
+      return `
+        <img
+          class="fighter-avatar-image portrait"
+          src="${portraitUrl(character, pose)}"
+          alt="${character.name}"
+          decoding="async"
+          loading="eager"
+          data-pose="${pose}"
+        >
+      `;
+    }
+
     function characterStyle(character, owner = null) {
       const ownerVars = owner
         ? `--owner-color:${ownerMeta(owner).color};--owner-line:${ownerMeta(owner).line};`
@@ -2365,7 +2381,7 @@
         return `
           <div class="fighter-card" data-owner="${owner}" style="${characterStyle(character, owner)}">
             <div class="fighter-module ${owner === "player" ? "is-actionable" : ""}" data-module="${owner}" data-owner-mark="${ownerMeta(owner).mark}"${holdHint}>
-              ${fighterArt(character, "idle")}
+              ${fighterPortraitImage(character, "idle")}
             </div>
           </div>
         `;
@@ -2508,7 +2524,7 @@
       const module = characterStage.querySelector(`[data-module="${owner}"]`);
       if (!module) return;
       const character = characterFor(owner);
-      module.innerHTML = fighterArt(character, pose);
+      module.innerHTML = fighterPortraitImage(character, pose);
       clearTimeout(portraitPoseTimers[owner]);
       if (duration > 0) {
         portraitPoseTimers[owner] = setTimeout(() => {
@@ -3645,16 +3661,6 @@
         drawSnakeOwnerMark(x, y, index, palette);
         drawSnakeSegmentDetail(x, y, index, palette);
 
-        if (index === 0) {
-          const eyeDistance = cellSize * 0.22;
-          ctx.fillStyle = colors.eye;
-          ctx.beginPath();
-          ctx.arc(x - eyeDistance, y - cellSize * 0.08, Math.max(2.5, cellSize * 0.07), 0, Math.PI * 2);
-          ctx.arc(x + eyeDistance, y - cellSize * 0.08, Math.max(2.5, cellSize * 0.07), 0, Math.PI * 2);
-          ctx.fill();
-          drawSnakeHeadAccent(x, y, palette.character);
-          drawSnakeHeadBadge(x, y, palette);
-        }
       });
     }
 
@@ -3669,45 +3675,9 @@
       ctx.restore();
     }
 
-    function drawSnakeHeadBadge(x, y, palette) {
-      const label = palette.owner === "computer" ? "P2" : "P1";
-      const badgeWidth = Math.max(18, cellSize * 0.5);
-      const badgeHeight = Math.max(11, cellSize * 0.28);
-      const bx = x + cellSize * 0.16;
-      const by = y - cellSize * 0.76;
-      ctx.save();
-      ctx.fillStyle = palette.ownerColor || palette.headLine;
-      ctx.strokeStyle = palette.ownerLine || "#ffffff";
-      ctx.lineWidth = Math.max(1, cellSize * 0.035);
-      roundedRectPath(bx, by, badgeWidth, badgeHeight, badgeHeight / 2);
-      ctx.fill();
-      ctx.stroke();
-      ctx.fillStyle = "#101720";
-      ctx.font = `900 ${Math.max(8, cellSize * 0.2)}px system-ui, sans-serif`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(label, bx + badgeWidth / 2, by + badgeHeight / 2 + 0.5);
-      ctx.restore();
-    }
-
-    function roundedRectPath(x, y, width, height, radiusValue) {
-      const r = Math.min(radiusValue, width / 2, height / 2);
-      ctx.beginPath();
-      ctx.moveTo(x + r, y);
-      ctx.lineTo(x + width - r, y);
-      ctx.quadraticCurveTo(x + width, y, x + width, y + r);
-      ctx.lineTo(x + width, y + height - r);
-      ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
-      ctx.lineTo(x + r, y + height);
-      ctx.quadraticCurveTo(x, y + height, x, y + height - r);
-      ctx.lineTo(x, y + r);
-      ctx.quadraticCurveTo(x, y, x + r, y);
-      ctx.closePath();
-    }
-
     function drawSnakeSegmentDetail(x, y, index, palette) {
       const character = palette.character;
-      if (!character) return;
+      if (!character || index === 0) return;
       ctx.save();
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
@@ -3739,48 +3709,6 @@
         ctx.moveTo(x - cellSize * 0.22, y - cellSize * 0.26);
         ctx.lineTo(x + cellSize * 0.22, y + cellSize * 0.26);
         ctx.stroke();
-      }
-      ctx.restore();
-    }
-
-    function drawSnakeHeadAccent(x, y, character) {
-      if (!character) return;
-      ctx.save();
-      ctx.strokeStyle = character.line;
-      ctx.fillStyle = character.accent;
-      ctx.lineWidth = Math.max(1.5, cellSize * 0.08);
-      if (character.id === "dragon") {
-        ctx.beginPath();
-        ctx.moveTo(x - cellSize * 0.24, y - cellSize * 0.38);
-        ctx.lineTo(x - cellSize * 0.08, y - cellSize * 0.72);
-        ctx.lineTo(x + cellSize * 0.04, y - cellSize * 0.36);
-        ctx.moveTo(x + cellSize * 0.24, y - cellSize * 0.38);
-        ctx.lineTo(x + cellSize * 0.08, y - cellSize * 0.72);
-        ctx.lineTo(x - cellSize * 0.04, y - cellSize * 0.36);
-        ctx.stroke();
-      } else if (character.id === "sandworm") {
-        ctx.beginPath();
-        ctx.arc(x, y, cellSize * 0.42, Math.PI * 0.08, Math.PI * 0.92);
-        ctx.stroke();
-      } else if (character.id === "quetzal") {
-        [-0.28, 0, 0.28].forEach(offset => {
-          ctx.beginPath();
-          ctx.ellipse(x + cellSize * offset, y - cellSize * 0.52, cellSize * 0.12, cellSize * 0.32, offset, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.stroke();
-        });
-      } else if (character.id === "moray") {
-        ctx.beginPath();
-        ctx.moveTo(x - cellSize * 0.48, y + cellSize * 0.08);
-        ctx.quadraticCurveTo(x, y + cellSize * 0.34, x + cellSize * 0.48, y + cellSize * 0.08);
-        ctx.stroke();
-      } else if (character.id === "lobster") {
-        [-1, 1].forEach(side => {
-          ctx.beginPath();
-          ctx.ellipse(x + side * cellSize * 0.44, y - cellSize * 0.2, cellSize * 0.14, cellSize * 0.24, side * 0.7, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.stroke();
-        });
       }
       ctx.restore();
     }
