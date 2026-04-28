@@ -344,10 +344,10 @@
     .fighter-card {
       min-width: 0;
       display: grid;
-      grid-template-columns: 62px minmax(0, 1fr);
-      gap: 10px;
+      grid-template-columns: 64px;
+      gap: 0;
       align-items: center;
-      width: min(260px, calc(50% - 6px));
+      width: auto;
       padding: 8px;
       border-radius: 8px;
       background: rgba(15, 23, 36, 0.84);
@@ -363,30 +363,6 @@
 
     .fighter-card[data-owner="computer"] {
       border-color: rgba(167, 139, 250, 0.34);
-    }
-
-    .fighter-info {
-      min-width: 0;
-      display: grid;
-      gap: 3px;
-    }
-
-    .fighter-name {
-      font-weight: 900;
-      color: var(--ink);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .fighter-move,
-    .fighter-food {
-      color: var(--muted);
-      font-size: 0.78rem;
-      font-weight: 800;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
     }
 
     .fighter-module {
@@ -497,6 +473,11 @@
       height: 96%;
       object-fit: contain;
       animation: portrait-float 1800ms ease-in-out infinite;
+    }
+
+    .fighter-portrait.is-defeated {
+      opacity: 0.38;
+      filter: grayscale(0.78) brightness(0.62) saturate(0.72);
     }
 
     .winner-move {
@@ -1096,9 +1077,8 @@
       }
 
       .fighter-card {
-        grid-template-columns: 42px minmax(0, 1fr);
-        width: min(184px, calc(50% - 4px));
-        gap: 6px;
+        grid-template-columns: 42px;
+        gap: 0;
         padding: 5px;
       }
 
@@ -1114,15 +1094,6 @@
       .fighter-portrait {
         width: min(150px, 46vw);
         margin-bottom: 8px;
-      }
-
-      .fighter-name {
-        font-size: 0.7rem;
-      }
-
-      .fighter-move,
-      .fighter-food {
-        font-size: 0.58rem;
       }
 
       .resource-panel {
@@ -1605,17 +1576,11 @@
     function buildCharacterStage() {
       characterStage.innerHTML = ["player", "computer"].map(owner => {
         const character = characterFor(owner);
-        const ownerLabel = owner === "player" ? "玩家" : "對手";
         const holdHint = owner === "player" ? " title=\"長按施放攻擊\"" : "";
         return `
           <div class="fighter-card" data-owner="${owner}" style="${characterStyle(character)}">
             <div class="fighter-module ${owner === "player" ? "is-actionable" : ""}" data-module="${owner}"${holdHint}>
               ${fighterArt(character, "idle")}
-            </div>
-            <div class="fighter-info">
-              <div class="fighter-name">${ownerLabel} · ${character.name}</div>
-              <div class="fighter-move">招式：${character.move}</div>
-              <div class="fighter-food">${character.foodLabel}</div>
             </div>
           </div>
         `;
@@ -1638,7 +1603,7 @@
       winnerPortrait.innerHTML = `
         <div class="portrait-pair">
           <div class="fighter-portrait" style="${characterStyle(character)}">${fighterArt(character, "victory", true)}</div>
-          <div class="fighter-portrait" style="${characterStyle(loserCharacter)}">${fighterArt(loserCharacter, "defeat", true)}</div>
+          <div class="fighter-portrait is-defeated" style="${characterStyle(loserCharacter)}">${fighterArt(loserCharacter, "defeat", true)}</div>
         </div>
         <div class="winner-move">
           <strong>${character.move}</strong>
