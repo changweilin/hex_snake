@@ -423,6 +423,7 @@
 
     .gm-settings {
       display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 10px;
       padding: 10px;
       border-radius: 8px;
@@ -432,6 +433,11 @@
 
     .gm-settings[hidden] {
       display: none;
+    }
+
+    .gm-settings > .food-stock-grid,
+    .gm-settings > button {
+      grid-column: 1 / -1;
     }
 
     .food-stock-grid {
@@ -3119,16 +3125,23 @@
       foodTypes.forEach(type => setInitialStock(type.id, defaultSettings.initialStock[type.id]));
     }
 
-    function setSettingsLocked(locked) {
+    function setGmSettingsLocked(locked) {
       gridSizeInput.disabled = locked;
       foodCountInput.disabled = locked;
-      computerDifficultyInput.disabled = locked;
       initialSpeedInput.disabled = locked;
+      initialLengthInput.disabled = locked;
+      initialStockInputs.forEach(input => {
+        input.disabled = locked;
+      });
       gmToggle.disabled = locked;
       resetGmSettingsButton.disabled = locked;
+    }
+
+    function setSettingsLocked(locked) {
+      computerDifficultyInput.disabled = locked;
       playerCharacterInput.disabled = locked;
       computerCharacterInput.disabled = locked;
-      updateGmControlState();
+      setGmSettingsLocked(locked);
     }
 
     function keyOf(cell) {
@@ -4550,9 +4563,7 @@
 
     resetSettingsButton.addEventListener("click", () => {
       if (running) return;
-      resetGmParameters();
       setComputerDifficulty(defaultSettings.computerDifficulty);
-      setGmMode(defaultSettings.gmMode);
       playerCharacterId = defaultSettings.playerCharacterId;
       computerCharacterId = defaultSettings.computerCharacterId;
       playerCharacterInput.value = playerCharacterId;
@@ -4564,7 +4575,7 @@
       resetGame();
       resize();
       overlayTitle.textContent = "已回到預設值";
-      overlayText.textContent = "棋盤、食物、速度、GM 模式與鍵位都已恢復預設。";
+      overlayText.textContent = "一般設定已恢復預設，GM 設定維持不變。";
       startButton.textContent = "開始";
       renderIntroPortraits(true);
       overlay.classList.add("show");
