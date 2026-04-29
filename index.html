@@ -3819,6 +3819,19 @@
       return !isNoviceComputer();
     }
 
+    function computerShouldSaveForBigAttack() {
+      const saveChance = { medium: 0.45, high: 0.3 }[computerDifficulty] ?? 0;
+      return Math.random() < saveChance;
+    }
+
+    function chooseComputerAttackProfile() {
+      if (!computerCanUseAttack()) return null;
+      if (computerDifficulty === "low") return canAttack("computer", "small") ? "small" : null;
+      if (canAttack("computer", "big")) return "big";
+      if (!canAttack("computer", "small")) return null;
+      return computerShouldSaveForBigAttack() ? null : "small";
+    }
+
     function cellsWithinDistance(origin, minDistance, maxDistance) {
       return cells.filter(cell => {
         const distance = hexDistance(cell, origin);
@@ -3965,12 +3978,15 @@
 
     function maybeComputerAttack(now) {
       if (!computerCanUseAttack()) return;
-      const cooldown = { novice: 6200, low: 6200, medium: 4700, high: 3400 }[computerDifficulty] / attackSpeedMultiplier(computerStock);
-      if (now - lastComputerAttackMs < cooldown || !canAttack("computer")) return;
+      const profile = chooseComputerAttackProfile();
+      if (!profile) return;
+      const profileCooldownScale = profile === "small" ? 0.7 : 1;
+      const cooldown = { novice: 6200, low: 6200, medium: 4700, high: 3400 }[computerDifficulty] * profileCooldownScale / attackSpeedMultiplier(computerStock);
+      if (now - lastComputerAttackMs < cooldown) return;
       const target = chooseComputerAttackTarget();
-      if (launchAttack("computer", target, now)) {
+      if (launchAttack("computer", target, now, profile)) {
         lastComputerAttackMs = now;
-        setStatus("電腦施放炸彈，2 秒後落地。");
+        setStatus(profile === "small" ? "電腦施放小招。" : "電腦施放大招，2 秒後落地。");
       }
     }
 
