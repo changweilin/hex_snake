@@ -4315,7 +4315,8 @@
           ownerColor: colors.computerHead,
           ownerLine: colors.computerHeadLine,
           character: computerCharacter,
-          owner: "computer"
+          owner: "computer",
+          direction: computerDir
         });
       }
 
@@ -4329,7 +4330,8 @@
           ownerColor: colors.head,
           ownerLine: colors.headLine,
           character: playerCharacter,
-          owner: "player"
+          owner: "player",
+          direction: dir
         });
       }
     }
@@ -4513,6 +4515,186 @@
       return `rgba(${r},${g},${b},${alpha})`;
     }
 
+    function drawLocalHex(size) {
+      ctx.beginPath();
+      for (let i = 0; i < 6; i += 1) {
+        const angle = Math.PI / 180 * (60 * i - 30);
+        const px = size * Math.cos(angle);
+        const py = size * Math.sin(angle);
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+    }
+
+    function strokeHeadEye(x, y, radius, fill = "#111720") {
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fillStyle = fill;
+      ctx.fill();
+      ctx.strokeStyle = "rgba(255,255,255,0.56)";
+      ctx.lineWidth = Math.max(1, cellSize * 0.028);
+      ctx.stroke();
+    }
+
+    function drawMirroredPath(points, scaleY = 1) {
+      ctx.beginPath();
+      points.forEach(([px, py], index) => {
+        if (index === 0) ctx.moveTo(px, py * scaleY);
+        else ctx.lineTo(px, py * scaleY);
+      });
+      ctx.stroke();
+    }
+
+    function drawSnakeHeadDetail(x, y, palette) {
+      const character = palette.character;
+      if (!character) return;
+      const headSize = cellSize * 0.82;
+      const angle = directions[palette.direction ?? 0]?.angle ?? -90;
+      const accent = character.accent || palette.headLine;
+      const line = character.line || palette.headLine;
+
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angle * Math.PI / 180);
+      drawLocalHex(headSize * 0.94);
+      ctx.clip();
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+
+      ctx.fillStyle = hexToRgba("#ffffff", palette.owner === "computer" ? 0.1 : 0.16);
+      ctx.beginPath();
+      ctx.ellipse(headSize * 0.06, -headSize * 0.24, headSize * 0.42, headSize * 0.16, -0.25, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (character.id === "dragon") {
+        ctx.strokeStyle = line;
+        ctx.lineWidth = Math.max(1.6, cellSize * 0.055);
+        drawMirroredPath([[-headSize * 0.2, -headSize * 0.18], [headSize * 0.1, -headSize * 0.26], [headSize * 0.42, -headSize * 0.08]]);
+        drawMirroredPath([[-headSize * 0.2, -headSize * 0.18], [headSize * 0.1, -headSize * 0.26], [headSize * 0.42, -headSize * 0.08]], -1);
+        ctx.fillStyle = accent;
+        [[-0.18, -0.46], [0.02, -0.42], [-0.18, 0.46], [0.02, 0.42]].forEach(([hx, hy]) => {
+          ctx.beginPath();
+          ctx.moveTo(headSize * hx, headSize * hy);
+          ctx.lineTo(headSize * (hx + 0.2), headSize * (hy * 0.58));
+          ctx.lineTo(headSize * (hx - 0.05), headSize * (hy * 0.22));
+          ctx.closePath();
+          ctx.fill();
+        });
+        strokeHeadEye(headSize * 0.22, -headSize * 0.18, Math.max(2, cellSize * 0.07));
+      } else if (character.id === "sandworm") {
+        ctx.strokeStyle = line;
+        ctx.lineWidth = Math.max(1.8, cellSize * 0.065);
+        for (let i = -1; i <= 1; i += 1) {
+          ctx.beginPath();
+          ctx.ellipse(headSize * (0.08 - i * 0.16), 0, headSize * 0.18, headSize * 0.52, 0, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        ctx.fillStyle = "#111720";
+        ctx.beginPath();
+        ctx.ellipse(headSize * 0.42, 0, headSize * 0.18, headSize * 0.34, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = accent;
+        ctx.lineWidth = Math.max(1.2, cellSize * 0.04);
+        [-0.45, -0.15, 0.15, 0.45].forEach(offset => {
+          ctx.beginPath();
+          ctx.moveTo(headSize * 0.28, headSize * offset);
+          ctx.lineTo(headSize * 0.48, headSize * offset * 0.55);
+          ctx.stroke();
+        });
+      } else if (character.id === "quetzal") {
+        ctx.fillStyle = accent;
+        [-0.42, -0.2, 0.02, 0.24].forEach((fy, index) => {
+          ctx.beginPath();
+          ctx.moveTo(-headSize * 0.36 + index * headSize * 0.08, headSize * fy);
+          ctx.lineTo(-headSize * 0.04 + index * headSize * 0.08, headSize * (fy - 0.22));
+          ctx.lineTo(headSize * 0.06 + index * headSize * 0.05, headSize * (fy + 0.02));
+          ctx.closePath();
+          ctx.fill();
+        });
+        ctx.strokeStyle = line;
+        ctx.lineWidth = Math.max(1.4, cellSize * 0.052);
+        ctx.beginPath();
+        ctx.moveTo(-headSize * 0.28, headSize * 0.28);
+        ctx.quadraticCurveTo(headSize * 0.12, -headSize * 0.24, headSize * 0.42, -headSize * 0.02);
+        ctx.stroke();
+        strokeHeadEye(headSize * 0.18, -headSize * 0.16, Math.max(2, cellSize * 0.065));
+      } else if (character.id === "moray") {
+        ctx.strokeStyle = accent;
+        ctx.lineWidth = Math.max(2, cellSize * 0.075);
+        ctx.beginPath();
+        ctx.moveTo(-headSize * 0.44, headSize * 0.12);
+        ctx.quadraticCurveTo(-headSize * 0.02, -headSize * 0.2, headSize * 0.48, -headSize * 0.04);
+        ctx.stroke();
+        ctx.strokeStyle = line;
+        ctx.lineWidth = Math.max(1.4, cellSize * 0.046);
+        ctx.beginPath();
+        ctx.moveTo(headSize * 0.12, headSize * 0.16);
+        ctx.lineTo(headSize * 0.48, headSize * 0.16);
+        ctx.stroke();
+        ctx.fillStyle = "#f8fafc";
+        [-0.02, 0.12, 0.26].forEach(tx => {
+          ctx.beginPath();
+          ctx.moveTo(headSize * tx, headSize * 0.16);
+          ctx.lineTo(headSize * (tx + 0.07), headSize * 0.29);
+          ctx.lineTo(headSize * (tx + 0.13), headSize * 0.16);
+          ctx.closePath();
+          ctx.fill();
+        });
+        strokeHeadEye(headSize * 0.22, -headSize * 0.16, Math.max(2, cellSize * 0.065));
+      } else if (character.id === "gu_king") {
+        ctx.strokeStyle = accent;
+        ctx.lineWidth = Math.max(1.6, cellSize * 0.06);
+        [-0.36, -0.18, 0, 0.18, 0.36].forEach(offset => {
+          ctx.beginPath();
+          ctx.moveTo(-headSize * 0.36, headSize * offset);
+          ctx.lineTo(-headSize * 0.5, headSize * (offset + Math.sign(offset || 1) * 0.14));
+          ctx.stroke();
+        });
+        ctx.fillStyle = hexToRgba(accent, 0.84);
+        ctx.beginPath();
+        ctx.moveTo(headSize * 0.02, -headSize * 0.36);
+        ctx.lineTo(headSize * 0.18, -headSize * 0.16);
+        ctx.lineTo(headSize * 0.34, -headSize * 0.36);
+        ctx.lineTo(headSize * 0.42, -headSize * 0.1);
+        ctx.lineTo(headSize * 0.1, headSize * 0.02);
+        ctx.closePath();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(headSize * 0.02, headSize * 0.36);
+        ctx.lineTo(headSize * 0.18, headSize * 0.16);
+        ctx.lineTo(headSize * 0.34, headSize * 0.36);
+        ctx.lineTo(headSize * 0.42, headSize * 0.1);
+        ctx.lineTo(headSize * 0.1, -headSize * 0.02);
+        ctx.closePath();
+        ctx.fill();
+        strokeHeadEye(headSize * 0.2, -headSize * 0.12, Math.max(2, cellSize * 0.06), "#0f172a");
+        strokeHeadEye(headSize * 0.2, headSize * 0.12, Math.max(2, cellSize * 0.06), "#0f172a");
+      } else {
+        ctx.strokeStyle = line;
+        ctx.lineWidth = Math.max(1.7, cellSize * 0.062);
+        ctx.beginPath();
+        ctx.moveTo(-headSize * 0.16, -headSize * 0.36);
+        ctx.quadraticCurveTo(headSize * 0.18, -headSize * 0.34, headSize * 0.38, -headSize * 0.08);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(-headSize * 0.16, headSize * 0.36);
+        ctx.quadraticCurveTo(headSize * 0.18, headSize * 0.34, headSize * 0.38, headSize * 0.08);
+        ctx.stroke();
+        ctx.strokeStyle = accent;
+        ctx.lineWidth = Math.max(2, cellSize * 0.07);
+        ctx.beginPath();
+        ctx.moveTo(-headSize * 0.42, -headSize * 0.18);
+        ctx.lineTo(-headSize * 0.1, -headSize * 0.02);
+        ctx.lineTo(-headSize * 0.42, headSize * 0.18);
+        ctx.stroke();
+        strokeHeadEye(headSize * 0.18, -headSize * 0.12, Math.max(2, cellSize * 0.06));
+        strokeHeadEye(headSize * 0.18, headSize * 0.12, Math.max(2, cellSize * 0.06));
+      }
+
+      ctx.restore();
+    }
+
     function drawSnake(parts, palette) {
       parts.forEach((segment, index) => {
         const { x, y } = axialToPixel(segment);
@@ -4523,6 +4705,9 @@
         ctx.lineWidth = index === 0 ? 3 : 1.5;
         ctx.stroke();
         drawSnakeOwnerMark(x, y, index, palette);
+        if (index === 0) {
+          drawSnakeHeadDetail(x, y, palette);
+        }
         drawSnakeSegmentDetail(x, y, index, palette);
 
       });
