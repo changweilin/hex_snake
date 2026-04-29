@@ -3559,8 +3559,8 @@
 
     function applyUltimateModePreset() {
       setGmMode(true);
-      setInitialBombs(bigAttackBombCost);
-      setInitialEnergy(defaultSettings.initialEnergy);
+      setInitialBombs(maxAmmo);
+      setInitialEnergy(attackNeedTotal);
       foodTypes.forEach(type => setInitialStock(type.id, 4));
     }
 
