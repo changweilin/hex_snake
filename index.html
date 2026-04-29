@@ -1230,11 +1230,10 @@
 
     .hex-dir-button {
       position: absolute;
-      left: 50%;
-      top: 50%;
-      width: 37.2%;
+      left: var(--joy-x);
+      top: var(--joy-y);
+      width: 28.5%;
       aspect-ratio: 1;
-      translate: -50% -50%;
       padding: 0;
       min-height: 0;
       display: grid;
@@ -1245,7 +1244,12 @@
       border: 1px solid rgba(255, 255, 255, 0.2);
       font-size: 0.72rem;
       line-height: 1;
+      transform: translate(-50%, -50%) rotate(-30deg);
       z-index: 2;
+    }
+
+    .hex-dir-button > span {
+      transform: rotate(30deg);
     }
 
     .hex-dir-button.active {
@@ -1254,12 +1258,12 @@
       border-color: rgba(255, 255, 255, 0.6);
     }
 
-    .hex-dir-button[data-dir="0"] { transform: translate(0, -88%); }
-    .hex-dir-button[data-dir="1"] { transform: translate(75%, -44%); }
-    .hex-dir-button[data-dir="2"] { transform: translate(75%, 44%); }
-    .hex-dir-button[data-dir="3"] { transform: translate(0, 88%); }
-    .hex-dir-button[data-dir="4"] { transform: translate(-75%, 44%); }
-    .hex-dir-button[data-dir="5"] { transform: translate(-75%, -44%); }
+    .hex-dir-button[data-dir="0"] { --joy-x: 32.5%; --joy-y: 19.7%; }
+    .hex-dir-button[data-dir="1"] { --joy-x: 67.5%; --joy-y: 19.7%; }
+    .hex-dir-button[data-dir="2"] { --joy-x: 85%; --joy-y: 50%; }
+    .hex-dir-button[data-dir="3"] { --joy-x: 67.5%; --joy-y: 80.3%; }
+    .hex-dir-button[data-dir="4"] { --joy-x: 32.5%; --joy-y: 80.3%; }
+    .hex-dir-button[data-dir="5"] { --joy-x: 15%; --joy-y: 50%; }
 
     .joystick.locked {
       border-color: var(--accent);
@@ -2056,7 +2060,7 @@
             <input id="surrenderKey" type="text" value="T" maxlength="1" inputmode="text">
           </div>
           <div class="field">
-            <label for="dirKey0">上方攻擊</label>
+            <label for="dirKey0">左上攻擊</label>
             <input id="dirKey0" data-keybind-dir="0" type="text" value="W" maxlength="1" inputmode="text">
           </div>
           <div class="field">
@@ -2064,11 +2068,11 @@
             <input id="dirKey1" data-keybind-dir="1" type="text" value="E" maxlength="1" inputmode="text">
           </div>
           <div class="field">
-            <label for="dirKey2">右下攻擊</label>
+            <label for="dirKey2">右方攻擊</label>
             <input id="dirKey2" data-keybind-dir="2" type="text" value="D" maxlength="1" inputmode="text">
           </div>
           <div class="field">
-            <label for="dirKey3">下方攻擊</label>
+            <label for="dirKey3">右下攻擊</label>
             <input id="dirKey3" data-keybind-dir="3" type="text" value="X" maxlength="1" inputmode="text">
           </div>
           <div class="field">
@@ -2076,7 +2080,7 @@
             <input id="dirKey4" data-keybind-dir="4" type="text" value="Z" maxlength="1" inputmode="text">
           </div>
           <div class="field">
-            <label for="dirKey5">左上攻擊</label>
+            <label for="dirKey5">左方攻擊</label>
             <input id="dirKey5" data-keybind-dir="5" type="text" value="A" maxlength="1" inputmode="text">
           </div>
         </div>
@@ -2147,12 +2151,12 @@
           <div class="control-card">
             <div class="joystick-zone" id="joyZone" aria-label="移動方向">
               <div class="joystick">
-                <button class="hex-dir-button" type="button" data-dir-button="0" data-dir="0">W</button>
-                <button class="hex-dir-button" type="button" data-dir-button="1" data-dir="1">E</button>
-                <button class="hex-dir-button" type="button" data-dir-button="2" data-dir="2">D</button>
-                <button class="hex-dir-button" type="button" data-dir-button="3" data-dir="3">X</button>
-                <button class="hex-dir-button" type="button" data-dir-button="4" data-dir="4">Z</button>
-                <button class="hex-dir-button" type="button" data-dir-button="5" data-dir="5">A</button>
+                <button class="hex-dir-button" type="button" data-dir-button="0" data-dir="0"><span>W</span></button>
+                <button class="hex-dir-button" type="button" data-dir-button="1" data-dir="1"><span>E</span></button>
+                <button class="hex-dir-button" type="button" data-dir-button="2" data-dir="2"><span>D</span></button>
+                <button class="hex-dir-button" type="button" data-dir-button="3" data-dir="3"><span>X</span></button>
+                <button class="hex-dir-button" type="button" data-dir-button="4" data-dir="4"><span>Z</span></button>
+                <button class="hex-dir-button" type="button" data-dir-button="5" data-dir="5"><span>A</span></button>
                 <div class="stick" id="stick"></div>
               </div>
             </div>
@@ -2997,7 +3001,8 @@
       });
       hexDirButtons.forEach(button => {
         const direction = directions[Number(button.dataset.dir)];
-        if (direction) button.textContent = keyLabel(direction.key);
+        const label = button.querySelector("span") || button;
+        if (direction) label.textContent = keyLabel(direction.key);
       });
       document.querySelector("#smallAttackKey").value = keyLabel(keybinds.smallAttack);
       document.querySelector("#bigAttackKey").value = keyLabel(keybinds.bigAttack);
@@ -4154,7 +4159,7 @@
       const distance = Math.hypot(x, y);
       if (distance < Math.max(4, rect.width * 0.035)) return null;
       const angle = Math.atan2(y, x) * 180 / Math.PI;
-      const adjusted = (angle + 450 + 30) % 360;
+      const adjusted = (angle + 510) % 360;
       return Math.floor(adjusted / 60) % 6;
     }
 
