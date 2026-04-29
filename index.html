@@ -1642,6 +1642,23 @@
         z-index: 220;
       }
 
+      .side .settings-section .settings-actions {
+        display: grid;
+        grid-template-columns: minmax(58px, 1fr) minmax(58px, 1fr) minmax(46px, 0.7fr) 38px;
+        gap: 5px;
+        width: 100%;
+        align-items: stretch;
+      }
+
+      .side .settings-section .surrender-button,
+      .side .settings-section .rules-toggle,
+      .side .settings-section .gm-toggle,
+      .side .settings-section .settings-toggle {
+        width: 100%;
+        min-width: 0;
+        min-height: 38px;
+      }
+
       .side .settings-section.open {
         z-index: 260;
       }
