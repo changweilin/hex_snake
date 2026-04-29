@@ -1503,6 +1503,115 @@
       color: var(--ink);
     }
 
+    .rule-food-line,
+    .rule-food-effect {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .rule-food-effect {
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+
+    .food-icon-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      flex: 0 0 auto;
+      vertical-align: middle;
+    }
+
+    .food-icon {
+      --food-color: #94a3b8;
+      --food-line: #f8fafc;
+      position: relative;
+      display: inline-block;
+      width: 18px;
+      height: 18px;
+      flex: 0 0 18px;
+      background: var(--food-color);
+      border: 2px solid var(--food-line);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22);
+    }
+
+    .food-icon.is-protein {
+      border-radius: 999px;
+    }
+
+    .food-icon.is-fat {
+      transform: rotate(45deg) scale(0.86);
+    }
+
+    .food-icon.is-fat::after {
+      transform: translate(-50%, -50%) rotate(-45deg);
+    }
+
+    .food-icon.is-fiber {
+      clip-path: polygon(50% 0%, 98% 35%, 79% 92%, 21% 92%, 2% 35%);
+    }
+
+    .food-icon.is-carb {
+      clip-path: polygon(50% 4%, 96% 88%, 4% 88%);
+    }
+
+    .food-icon.is-black {
+      border-radius: 999px;
+    }
+
+    .food-icon::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 8px;
+      height: 8px;
+      transform: translate(-50%, -50%);
+      border-color: #111720;
+      color: #111720;
+      pointer-events: none;
+    }
+
+    .food-icon.is-protein::after {
+      width: 10px;
+      height: 7px;
+      border-bottom: 2px solid currentColor;
+      border-radius: 50%;
+      transform: translate(-50%, -48%) rotate(-16deg);
+    }
+
+    .food-icon.is-fat::after {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: currentColor;
+    }
+
+    .food-icon.is-fiber::after {
+      width: 10px;
+      height: 12px;
+      border-left: 2px solid currentColor;
+      border-top: 2px solid currentColor;
+      border-radius: 70% 0 0 0;
+      transform: translate(-34%, -42%) rotate(24deg);
+    }
+
+    .food-icon.is-carb::after {
+      width: 9px;
+      height: 7px;
+      border-left: 2px solid currentColor;
+      border-bottom: 2px solid currentColor;
+      transform: translate(-50%, -44%) rotate(-45deg);
+    }
+
+    .food-icon.is-black::after {
+      width: 11px;
+      height: 6px;
+      border-top: 2px solid #e5e7eb;
+      transform: translate(-50%, -30%) skewX(-18deg);
+    }
+
     .rules-character-list li {
       padding: 10px;
       border-radius: 8px;
@@ -2707,9 +2816,41 @@
       return `${motto}${moves}${story}`;
     }
 
+    function foodIconMarkup(typeOrId, extraClass = "") {
+      const type = typeof typeOrId === "string" ? foodTypeById.get(typeOrId) : typeOrId;
+      if (!type) return "";
+      return `<span class="food-icon is-${type.id} ${extraClass}" style="--food-color:${type.color};--food-line:${type.line};" aria-hidden="true"></span>`;
+    }
+
+    function foodIconGroupMarkup(typeIds, label) {
+      const ids = Array.isArray(typeIds) ? typeIds : [typeIds];
+      const icons = ids.map(id => foodIconMarkup(id)).join("");
+      return `<span class="food-icon-group" aria-label="${label}">${icons}</span>`;
+    }
+
+    function weightedFoodIconMarkup(character) {
+      if (character?.specialFood === "black") {
+        return foodIconGroupMarkup("black", "加權產出黑色食物");
+      }
+      if (character?.food === "balanced") {
+        return foodIconGroupMarkup(foodTypes.map(type => type.id), "均衡產出紅黃綠藍食物");
+      }
+      return foodIconGroupMarkup(character?.food, `加權產出${character.foodLabel}`);
+    }
+
     function buildRulesContent() {
-      const foodLegend = foodTypes.map(type => `<li><b>${type.foodName}</b>: ${type.name}，${type.effect}</li>`).join("");
-      const specialFoodLegend = `<li><b>${blackFoodType.foodName}</b>: ${blackFoodType.name}，${blackFoodType.effect}；不會自然產出。</li>`;
+      const foodLegend = foodTypes.map(type => `
+        <li class="rule-food-line">
+          ${foodIconGroupMarkup(type.id, `自然產出${type.foodName}`)}
+          <span><b>${type.foodName}</b>: ${type.name}，${type.effect}</span>
+        </li>
+      `).join("");
+      const specialFoodLegend = `
+        <li class="rule-food-line">
+          ${foodIconGroupMarkup("black", blackFoodType.foodName)}
+          <span><b>${blackFoodType.foodName}</b>: ${blackFoodType.name}，${blackFoodType.effect}；不會自然產出。</span>
+        </li>
+      `;
       const characterLegend = characters.map(character => {
         const story = (character.story || []).map(paragraph => `<p>${paragraph}</p>`).join("");
         return `
@@ -2717,7 +2858,7 @@
             <b>${character.name}</b> / ${character.foodLabel}<br>
             小招：${character.smallMove}<br>
             大招：${character.bigMove}<br>
-            食補效果：${character.detail}<br>
+            <span class="rule-food-effect">食補效果：${weightedFoodIconMarkup(character)}<span>${character.detail}</span></span><br>
             「${character.motto}」
             <div class="rules-character-story">${story}</div>
           </li>
