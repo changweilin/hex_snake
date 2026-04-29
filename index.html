@@ -455,6 +455,13 @@
       display: contents;
     }
 
+    .gm-preset-row {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
     .gm-settings .field + .field {
       margin-top: 0;
     }
@@ -2284,6 +2291,14 @@
             <label for="initialLength">初始長度</label>
             <input id="initialLength" type="number" min="1" max="12" step="1" value="3" inputmode="numeric">
           </div>
+          <div class="field">
+            <label for="initialEnergy">初始能量</label>
+            <input id="initialEnergy" type="number" min="0" max="6" step="1" value="0" inputmode="numeric">
+          </div>
+          <div class="field">
+            <label for="initialBombs">初始炸彈</label>
+            <input id="initialBombs" type="number" min="0" max="3" step="1" value="0" inputmode="numeric">
+          </div>
           <div class="food-stock-grid" aria-label="各色食物初始值">
             <div class="field">
               <label for="initialProtein">紅色食物</label>
@@ -2302,7 +2317,12 @@
               <input id="initialCarb" data-initial-stock="carb" type="number" min="0" max="20" step="1" value="0" inputmode="numeric">
             </div>
           </div>
-          <button id="resetGmSettingsButton" class="secondary" type="button">重設 GM 參數</button>
+          <div class="gm-preset-row">
+            <button id="realModeButton" class="secondary" type="button">真實模式</button>
+            <button id="ultimateModeButton" class="secondary" type="button">戰鬥模式</button>
+            <button id="midGameModeButton" class="secondary" type="button">中期模式</button>
+            <button id="lateGameModeButton" class="secondary" type="button">後期模式</button>
+          </div>
         </div>
         </div>
       </section>
@@ -2412,13 +2432,18 @@
     const initialSpeedInput = document.querySelector("#initialSpeed");
     const gmSettings = document.querySelector("#gmSettings");
     const initialLengthInput = document.querySelector("#initialLength");
+    const initialEnergyInput = document.querySelector("#initialEnergy");
+    const initialBombsInput = document.querySelector("#initialBombs");
     const initialStockInputs = [...document.querySelectorAll("[data-initial-stock]")];
     const playerCharacterInput = document.querySelector("#playerCharacter");
     const computerCharacterInput = document.querySelector("#computerCharacter");
     const keybindInputs = [...document.querySelectorAll("[id$='AttackKey'], #pauseKey, #surrenderKey, [data-keybind-dir]")];
     const resetBestTimeButton = document.querySelector("#resetBestTimeButton");
     const resetSettingsButton = document.querySelector("#resetSettingsButton");
-    const resetGmSettingsButton = document.querySelector("#resetGmSettingsButton");
+    const realModeButton = document.querySelector("#realModeButton");
+    const midGameModeButton = document.querySelector("#midGameModeButton");
+    const ultimateModeButton = document.querySelector("#ultimateModeButton");
+    const lateGameModeButton = document.querySelector("#lateGameModeButton");
     const gmToggle = document.querySelector("#gmToggle");
     const gmContent = document.querySelector("#gmContent");
     const settingsToggle = document.querySelector("#settingsToggle");
@@ -2469,6 +2494,8 @@
       initialSpeed: 1,
       gmMode: false,
       initialLength: 3,
+      initialEnergy: 0,
+      initialBombs: 0,
       initialStock: {
         protein: 0,
         fat: 0,
@@ -2485,6 +2512,8 @@
     let initialSpeed = 1;
     let gmMode = false;
     let initialLength = 3;
+    let initialEnergy = 0;
+    let initialBombs = 0;
     let initialStock = { protein: 0, fat: 0, fiber: 0, carb: 0 };
     let playerCharacterId = "dragon";
     let computerCharacterId = "moray";
@@ -3146,6 +3175,14 @@
       return Object.fromEntries(foodTypes.map(type => [type.id, clampInitialStock(initialStock[type.id])]));
     }
 
+    function startingEnergy() {
+      return gmMode ? clampInitialEnergy(initialEnergy) : defaultSettings.initialEnergy;
+    }
+
+    function startingBombs() {
+      return gmMode ? clampInitialBombs(initialBombs) : defaultSettings.initialBombs;
+    }
+
     function foodBonus(stock, typeId, perPoint, maxBonus) {
       return Math.min(maxBonus, stock[typeId] * perPoint);
     }
@@ -3385,6 +3422,18 @@
       return Math.min(maxFoodStock, Math.max(0, parsed));
     }
 
+    function clampInitialEnergy(value) {
+      const parsed = Number.parseInt(value, 10);
+      if (!Number.isFinite(parsed)) return 0;
+      return Math.min(attackNeedTotal, Math.max(0, parsed));
+    }
+
+    function clampInitialBombs(value) {
+      const parsed = Number.parseInt(value, 10);
+      if (!Number.isFinite(parsed)) return 0;
+      return Math.min(maxAmmo, Math.max(0, parsed));
+    }
+
     function buildCells() {
       cells = [];
       for (let q = -radius; q <= radius; q += 1) {
@@ -3423,6 +3472,16 @@
       initialLengthInput.value = initialLength;
     }
 
+    function setInitialEnergy(value) {
+      initialEnergy = clampInitialEnergy(value);
+      initialEnergyInput.value = initialEnergy;
+    }
+
+    function setInitialBombs(value) {
+      initialBombs = clampInitialBombs(value);
+      initialBombsInput.value = initialBombs;
+    }
+
     function setInitialStock(typeId, value) {
       if (!Object.prototype.hasOwnProperty.call(initialStock, typeId)) return;
       initialStock[typeId] = clampInitialStock(value);
@@ -3439,6 +3498,8 @@
     function updateGmControlState() {
       const disabled = running;
       initialLengthInput.disabled = disabled;
+      initialEnergyInput.disabled = disabled;
+      initialBombsInput.disabled = disabled;
       initialStockInputs.forEach(input => {
         input.disabled = disabled;
       });
@@ -3449,7 +3510,30 @@
       setFoodCount(defaultSettings.foodCount);
       setInitialSpeed(defaultSettings.initialSpeed);
       setInitialLength(defaultSettings.initialLength);
+      setInitialEnergy(defaultSettings.initialEnergy);
+      setInitialBombs(defaultSettings.initialBombs);
       foodTypes.forEach(type => setInitialStock(type.id, defaultSettings.initialStock[type.id]));
+    }
+
+    function applyUltimateModePreset() {
+      setGmMode(true);
+      setInitialBombs(bigAttackBombCost);
+      setInitialEnergy(defaultSettings.initialEnergy);
+      foodTypes.forEach(type => setInitialStock(type.id, 2));
+    }
+
+    function applyMidGameModePreset() {
+      setGmMode(true);
+      setInitialBombs(maxAmmo);
+      setInitialEnergy(attackNeedTotal);
+      foodTypes.forEach(type => setInitialStock(type.id, Math.floor(maxFoodStock / 2)));
+    }
+
+    function applyLateGameModePreset() {
+      setGmMode(true);
+      setInitialBombs(maxAmmo);
+      setInitialEnergy(attackNeedTotal);
+      foodTypes.forEach(type => setInitialStock(type.id, maxFoodStock));
     }
 
     function setGmSettingsLocked(locked) {
@@ -3457,11 +3541,16 @@
       foodCountInput.disabled = locked;
       initialSpeedInput.disabled = locked;
       initialLengthInput.disabled = locked;
+      initialEnergyInput.disabled = locked;
+      initialBombsInput.disabled = locked;
       initialStockInputs.forEach(input => {
         input.disabled = locked;
       });
       gmToggle.disabled = locked;
-      resetGmSettingsButton.disabled = locked;
+      realModeButton.disabled = locked;
+      midGameModeButton.disabled = locked;
+      ultimateModeButton.disabled = locked;
+      lateGameModeButton.disabled = locked;
     }
 
     function setSettingsLocked(locked) {
@@ -3584,10 +3673,10 @@
       computerHp = computerSnake.length;
       playerStock = startingStock();
       computerStock = startingStock();
-      playerAmmo = 0;
-      computerAmmo = 0;
-      playerAmmoCharge = 0;
-      computerAmmoCharge = 0;
+      playerAmmo = startingBombs();
+      computerAmmo = startingBombs();
+      playerAmmoCharge = startingEnergy();
+      computerAmmoCharge = startingEnergy();
       playerEnergyFlashUntil = 0;
       computerEnergyFlashUntil = 0;
       playerBombFlashUntil = 0;
@@ -3633,6 +3722,8 @@
       setInitialSpeed(initialSpeedInput.value);
       setGmMode(gmMode);
       setInitialLength(initialLengthInput.value);
+      setInitialEnergy(initialEnergyInput.value);
+      setInitialBombs(initialBombsInput.value);
       initialStockInputs.forEach(input => setInitialStock(input.dataset.initialStock, input.value));
       playerCharacterId = characterById.has(playerCharacterInput.value) ? playerCharacterInput.value : "dragon";
       computerCharacterId = characterById.has(computerCharacterInput.value) ? computerCharacterInput.value : "moray";
@@ -5462,6 +5553,20 @@
       resize();
     });
 
+    initialEnergyInput.addEventListener("change", () => {
+      if (running) return;
+      setInitialEnergy(initialEnergyInput.value);
+      resetGame();
+      resize();
+    });
+
+    initialBombsInput.addEventListener("change", () => {
+      if (running) return;
+      setInitialBombs(initialBombsInput.value);
+      resetGame();
+      resize();
+    });
+
     initialStockInputs.forEach(input => {
       input.addEventListener("change", () => {
         if (running) return;
@@ -5495,14 +5600,50 @@
       updateHud();
     });
 
-    resetGmSettingsButton.addEventListener("click", () => {
+    realModeButton.addEventListener("click", () => {
       if (running) return;
       setGmMode(true);
       resetGmParameters();
       resetGame();
       resize();
-      overlayTitle.textContent = "GM 參數已重設";
-      overlayText.textContent = "棋盤大小、食物數量、初始速度、初始長度與四色食物初始值已恢復預設。";
+      overlayTitle.textContent = "真實模式已套用";
+      overlayText.textContent = "開場使用預設資源與數值，從零累積食物、能量與炸彈。";
+      startButton.textContent = "開始";
+      renderIntroPortraits(true);
+      overlay.classList.add("show");
+    });
+
+    midGameModeButton.addEventListener("click", () => {
+      if (running) return;
+      applyMidGameModePreset();
+      resetGame();
+      resize();
+      overlayTitle.textContent = "中期模式已套用";
+      overlayText.textContent = `開場能量 ${attackNeedTotal}/${attackNeedTotal}、炸彈 ${maxAmmo}/${maxAmmo}，四色庫存各 ${Math.floor(maxFoodStock / 2)} 點。`;
+      startButton.textContent = "開始";
+      renderIntroPortraits(true);
+      overlay.classList.add("show");
+    });
+
+    ultimateModeButton.addEventListener("click", () => {
+      if (running) return;
+      applyUltimateModePreset();
+      resetGame();
+      resize();
+      overlayTitle.textContent = "戰鬥模式已套用";
+      overlayText.textContent = `開場持有 ${bigAttackBombCost} 枚炸彈，且四種庫存各 2 點，可立即施放大招。`;
+      startButton.textContent = "開始";
+      renderIntroPortraits(true);
+      overlay.classList.add("show");
+    });
+
+    lateGameModeButton.addEventListener("click", () => {
+      if (running) return;
+      applyLateGameModePreset();
+      resetGame();
+      resize();
+      overlayTitle.textContent = "後期模式已套用";
+      overlayText.textContent = `開場即滿資源：能量 ${attackNeedTotal}/${attackNeedTotal}、炸彈 ${maxAmmo}/${maxAmmo}、四種庫存各 ${maxFoodStock} 點。`;
       startButton.textContent = "開始";
       renderIntroPortraits(true);
       overlay.classList.add("show");
@@ -5742,6 +5883,8 @@
       setInitialSpeed(initialSpeedInput.value);
       setGmMode(defaultSettings.gmMode);
       setInitialLength(initialLengthInput.value);
+      setInitialEnergy(initialEnergyInput.value);
+      setInitialBombs(initialBombsInput.value);
       initialStockInputs.forEach(input => setInitialStock(input.dataset.initialStock, input.value));
       setSettingsLocked(false);
       applyKeybinds();
