@@ -2325,8 +2325,14 @@
     const moveBonusPerPoint = 0.04;
     const damageBonusPerPoint = 0.07;
     const maxFoodStock = 20;
-    const collisionStunMs = 1000;
+    const collisionStunMs = 2000;
     const collisionSlowMs = 1000;
+    const attackStunMs = 500;
+    const attackSlowMs = 500;
+    const baseAttackStunChance = 0.3;
+    const attackStunChanceBonusPerPoint = 0.01;
+    const maxAttackStunChanceBonus = 0.2;
+    const maxCollisionParalysisMs = 8000;
     const rangeDamageFalloffEnabled = false;
     const targetMaxHex = 6;
     const gameOverRestartDelayMs = 700;
@@ -2365,10 +2371,10 @@
       { q: -1, r: 0, angle: -150, key: "a" }
     ];
     const foodTypes = [
-      { id: "protein", label: "蛋白", name: "蛋白質", foodName: "紅色食物", effect: "提升攻擊施展與冷卻速度，滿庫存約 2x", color: "#ef4444", line: "#fecaca" },
+      { id: "protein", label: "蛋白", name: "蛋白質", foodName: "紅色食物", effect: "爆炸半徑由 2 門檻式提升到 3，再到 4", color: "#ef4444", line: "#fecaca" },
       { id: "fat", label: "油脂", name: "油脂", foodName: "黃色食物", effect: "攻擊傷害係數基礎 2，滿庫存約 3.4", color: "#facc15", line: "#fef08a" },
       { id: "fiber", label: "纖維", name: "纖維素", foodName: "綠色食物", effect: "提升移動速度，滿庫存約 1.8x", color: "#22c55e", line: "#bbf7d0" },
-      { id: "carb", label: "碳水", name: "碳水", foodName: "藍色食物", effect: "爆炸半徑由 2 門檻式提升到 3，再到 4", color: "#3b82f6", line: "#bfdbfe" }
+      { id: "carb", label: "碳水", name: "碳水", foodName: "藍色食物", effect: "提升攻擊施展與冷卻速度，並提高命中暈眩機率", color: "#3b82f6", line: "#bfdbfe" }
     ];
     const foodTypeById = new Map(foodTypes.map(type => [type.id, type]));
     const characters = [
@@ -2476,8 +2482,10 @@
     let lastComputerStep = 0;
     let playerStunUntil = 0;
     let playerSlowUntil = 0;
+    let playerCollisionParalysisMs = 0;
     let computerStunUntil = 0;
     let computerSlowUntil = 0;
+    let computerCollisionParalysisMs = 0;
     let lastTimerFrame = 0;
     let lastPlayerAttackMs = -Infinity;
     let lastComputerAttackMs = 0;
@@ -2667,7 +2675,7 @@
           <ul class="rules-list">
             <li>開局前可在同列的齒輪中調整棋盤半徑、食物數、難度、角色和鍵位；開始後設定會鎖定到下一局。</li>
             <li>玩家與對手會在六角棋盤上持續前進，吃食物累積分數、食物庫存與能量。</li>
-            <li>被炸彈爆炸命中會扣除 HP；HP 歸零才會結束本局。撞擊不會直接死亡，而是造成麻痺與減速。</li>
+            <li>被炸彈爆炸命中會扣除 HP，並有 ${Math.round(baseAttackStunChance * 100)}% 基礎機率暈眩；HP 歸零才會結束本局。撞擊不會直接死亡，而是造成麻痺與減速。</li>
           </ul>
         </section>
         <section class="rules-block">
@@ -2687,7 +2695,7 @@
             <li><b>能量</b>：每吃 1 個食物獲得 2 點能量，集滿 ${attackNeedTotal} 點獲得 1 枚炸彈。</li>
             <li><b>施放成本</b>：大招需 1 枚炸彈，且紅黃綠藍四種庫存各至少 1 點；施放後四種庫存各消耗 1。</li>
             <li><b>庫存上限</b>：每種食物最多累積 ${maxFoodStock} 點；專精角色只影響補貨偏好，不會額外增加吃食收益。</li>
-            <li><b>撞擊懲罰</b>：撞到對手會停止 ${collisionStunMs / 1000} 秒，再減速 ${collisionSlowMs / 1000} 秒；撞到自己懲罰加倍。</li>
+            <li><b>撞擊懲罰</b>：撞到對手會停止 ${collisionStunMs / 1000} 秒，再減速 ${collisionSlowMs / 1000} 秒；撞到自己懲罰加倍，累積停止時間超過 ${maxCollisionParalysisMs / 1000} 秒會落敗。</li>
           </ul>
         </section>
         <section class="rules-block">
@@ -2952,11 +2960,15 @@
     }
 
     function areaMultiplier(stock) {
-      return 1 + stock.carb / maxFoodStock;
+      return 1 + stock.protein / maxFoodStock;
     }
 
     function attackSpeedMultiplier(stock) {
-      return 1 + foodBonus(stock, "protein", attackSpeedBonusPerPoint, maxAttackSpeedBonus);
+      return 1 + foodBonus(stock, "carb", attackSpeedBonusPerPoint, maxAttackSpeedBonus);
+    }
+
+    function attackStunChance(stock) {
+      return Math.min(1, baseAttackStunChance + foodBonus(stock, "carb", attackStunChanceBonusPerPoint, maxAttackStunChanceBonus));
     }
 
     function moveInterval(stock) {
@@ -2982,8 +2994,8 @@
     }
 
     function blastRadius(stock) {
-      if (stock.carb >= maxFoodStock * 0.8) return 4;
-      if (stock.carb >= maxFoodStock * 0.4) return 3;
+      if (stock.protein >= maxFoodStock * 0.8) return 4;
+      if (stock.protein >= maxFoodStock * 0.4) return 3;
       return baseBlastHexRadius;
     }
 
@@ -3376,8 +3388,10 @@
       lastComputerStep = 0;
       playerStunUntil = 0;
       playerSlowUntil = 0;
+      playerCollisionParalysisMs = 0;
       computerStunUntil = 0;
       computerSlowUntil = 0;
+      computerCollisionParalysisMs = 0;
       lastPlayerAttackMs = -Infinity;
       lastComputerAttackMs = 0;
       gameOver = false;
@@ -3705,6 +3719,7 @@
       const delay = attackDelay(stock) * (isSmall ? 0.62 : 1);
       const radius = Math.max(1, blastRadius(stock) + (isSmall ? -1 : 0));
       const damage = damageMultiplier(stock) * (isSmall ? 0.55 : 1);
+      const stunChance = attackStunChance(stock);
       consumeAttackCost(owner, stock, profile);
       if (owner === "player") {
         lastPlayerAttackMs = now;
@@ -3723,7 +3738,8 @@
         impactAt: now + delay,
         delay,
         radius,
-        damage
+        damage,
+        stunChance
       });
       updateHud();
       return true;
@@ -3759,15 +3775,38 @@
       }
     }
 
-    function applyCollisionPenalty(owner, severity = 1, now = performance.now()) {
-      const stunUntil = now + collisionStunMs * severity;
-      const slowUntil = stunUntil + collisionSlowMs * severity;
+    function interruptCasting(owner) {
+      projectiles = projectiles.filter(projectile => projectile.owner !== owner);
+    }
+
+    function applyAttackStun(owner, chance = baseAttackStunChance, now = performance.now()) {
+      if (Math.random() >= chance) return false;
+      const stunUntil = now + attackStunMs;
+      const slowUntil = stunUntil + attackSlowMs;
+      interruptCasting(owner);
       if (owner === "player") {
         playerStunUntil = Math.max(playerStunUntil, stunUntil);
         playerSlowUntil = Math.max(playerSlowUntil, slowUntil);
       } else {
         computerStunUntil = Math.max(computerStunUntil, stunUntil);
         computerSlowUntil = Math.max(computerSlowUntil, slowUntil);
+      }
+      return true;
+    }
+
+    function applyCollisionPenalty(owner, severity = 1, now = performance.now()) {
+      const stunUntil = now + collisionStunMs * severity;
+      const slowUntil = stunUntil + collisionSlowMs * severity;
+      if (owner === "player") {
+        playerStunUntil = Math.max(playerStunUntil, stunUntil);
+        playerSlowUntil = Math.max(playerSlowUntil, slowUntil);
+        playerCollisionParalysisMs += collisionStunMs * severity;
+        return playerCollisionParalysisMs > maxCollisionParalysisMs;
+      } else {
+        computerStunUntil = Math.max(computerStunUntil, stunUntil);
+        computerSlowUntil = Math.max(computerSlowUntil, slowUntil);
+        computerCollisionParalysisMs += collisionStunMs * severity;
+        return computerCollisionParalysisMs > maxCollisionParalysisMs;
       }
     }
 
@@ -3784,9 +3823,14 @@
 
       landed.forEach(projectile => {
         const radius = projectile.radius || baseBlastHexRadius;
+        const damage = projectile.damage || 1;
+        const playerDamage = damageSnake(snake, projectile.target, radius, damage);
+        const computerDamage = damageSnake(computerSnake, projectile.target, radius, damage);
         blasts.push({ target: projectile.target, owner: projectile.owner, radius, startedAt: now, endAt: now + blastDurationMs });
-        applyBlastDamage("player", damageSnake(snake, projectile.target, radius, projectile.damage || 1));
-        applyBlastDamage("computer", damageSnake(computerSnake, projectile.target, radius, projectile.damage || 1));
+        applyBlastDamage("player", playerDamage);
+        applyBlastDamage("computer", computerDamage);
+        if (projectile.owner !== "player" && playerDamage > 0) applyAttackStun("player", projectile.stunChance, now);
+        if (projectile.owner !== "computer" && computerDamage > 0) applyAttackStun("computer", projectile.stunChance, now);
       });
       blasts = blasts.filter(blast => now <= blast.endAt);
       if (playerHp <= 0 || computerHp <= 0) endGame(playerHp <= 0, computerHp <= 0);
@@ -3821,10 +3865,14 @@
 
       const playerCollision = collisionSeverity(playerSelfHit, playerOpponentHit);
       const computerCollision = collisionSeverity(computerSelfHit, computerOpponentHit);
-      if (playerCollision) applyCollisionPenalty("player", playerCollision);
-      if (computerCollision) applyCollisionPenalty("computer", computerCollision);
+      const playerParalysisLimitReached = playerCollision && applyCollisionPenalty("player", playerCollision);
+      const computerParalysisLimitReached = computerCollision && applyCollisionPenalty("computer", computerCollision);
       if (playerCollision || computerCollision) {
         setStatus("撞擊造成麻痺與減速，撞到自己懲罰加倍。");
+      }
+      if (playerParalysisLimitReached || computerParalysisLimitReached) {
+        endGame(playerParalysisLimitReached, computerParalysisLimitReached);
+        return;
       }
 
       if (!playerCollision) {
@@ -3884,9 +3932,10 @@
       const playerCollision = collisionSeverity(playerSelfHit, playerOpponentHit);
 
       if (playerCollision) {
-        applyCollisionPenalty("player", playerCollision);
+        const playerParalysisLimitReached = applyCollisionPenalty("player", playerCollision);
         setStatus("撞擊造成麻痺與減速，撞到自己懲罰加倍。");
         updateHud();
+        if (playerParalysisLimitReached) endGame(true, false);
         return;
       }
 
@@ -3918,9 +3967,10 @@
       const computerCollision = collisionSeverity(computerSelfHit, computerOpponentHit);
 
       if (computerCollision) {
-        applyCollisionPenalty("computer", computerCollision);
+        const computerParalysisLimitReached = applyCollisionPenalty("computer", computerCollision);
         setStatus("對手撞擊後麻痺並減速。");
         updateHud();
+        if (computerParalysisLimitReached) endGame(false, true);
         return;
       }
 
