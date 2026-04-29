@@ -2182,7 +2182,7 @@
           <div class="dialog">
             <div id="winnerPortrait" hidden></div>
             <h2 id="overlayTitle">準備開局</h2>
-            <p id="overlayText">每吃 1 個食物獲得 2 點能量，集滿 6 點獲得 1 枚炸彈，最多 3 枚；小招消耗紅黃綠藍各 1 點，大招消耗 2 枚炸彈與紅黃綠藍各 2 點。</p>
+            <p id="overlayText">每吃 1 個食物獲得 2 點能量，集滿 6 點獲得 1 枚炸彈，最多 3 枚；能量與炸彈都滿時，施放消耗炸彈的招式會立刻把滿能量轉為 1 枚炸彈；小招消耗紅黃綠藍各 1 點，大招消耗 2 枚炸彈與紅黃綠藍各 2 點。</p>
             <button id="startButton" type="button">開始</button>
             <button id="introCloseButton" class="secondary intro-close-button" type="button" hidden>關閉</button>
           </div>
@@ -2920,7 +2920,7 @@
             ${foodLegend}
             ${specialFoodLegend}
             <li><b>食物收益</b>：單色食物給同色庫存 2 點；雙色食物給兩色各 1 點；每次吃食仍只增加 1 分與 1 段蛇身。</li>
-            <li><b>能量</b>：每吃 1 個食物獲得 2 點能量，集滿 ${attackNeedTotal} 點獲得 1 枚炸彈；炸彈最多 ${maxAmmo} 枚，也是大招施放資源。</li>
+            <li><b>能量</b>：每吃 1 個食物獲得 2 點能量，集滿 ${attackNeedTotal} 點獲得 1 枚炸彈；炸彈最多 ${maxAmmo} 枚，也是大招施放資源。若炸彈已滿，滿格能量會保留，直到施放消耗炸彈的招式後立即轉為 1 枚炸彈。</li>
             <li><b>施放成本</b>：小招需紅黃綠藍四種庫存各至少 1 點，施放後各消耗 1；大招需 ${bigAttackBombCost} 枚炸彈，且四種庫存各至少 2 點，施放後消耗 ${bigAttackBombCost} 枚炸彈並使四種庫存各消耗 2。</li>
             <li><b>庫存上限</b>：每種食物最多累積 ${maxFoodStock} 點；一般專精角色只影響補貨偏好，特殊角色可能產出專屬食物。</li>
             <li><b>撞擊懲罰</b>：撞到對手會停止 ${collisionStunMs / 1000} 秒，再減速 ${collisionSlowMs / 1000} 秒；撞到自己懲罰加倍，累積停止時間超過 ${maxCollisionParalysisMs / 1000} 秒會落敗。</li>
@@ -3252,20 +3252,46 @@
       return owner === "player" ? playerAmmo : computerAmmo;
     }
 
+    function ammoChargeFor(owner) {
+      return owner === "player" ? playerAmmoCharge : computerAmmoCharge;
+    }
+
     function canAttack(owner, profile = "big") {
       const stock = owner === "player" ? playerStock : computerStock;
       return ammoFor(owner) >= attackBombCost(profile) && hasAttackFoodCost(stock, profile);
     }
 
+    function convertFullEnergyToAmmo(owner) {
+      if (ammoChargeFor(owner) < attackNeedTotal || ammoFor(owner) >= maxAmmo) return false;
+      const now = performance.now();
+      if (owner === "player") {
+        playerAmmo += 1;
+        playerAmmoCharge = 0;
+        playerEnergyFlashUntil = now + 1700;
+        playerBombFlashUntil = now + 1700;
+      } else {
+        computerAmmo += 1;
+        computerAmmoCharge = 0;
+        computerEnergyFlashUntil = now + 1700;
+        computerBombFlashUntil = now + 1700;
+      }
+      return true;
+    }
+
     function consumeAttackCost(owner, stock, profile = "big") {
       const cost = attackFoodCost(profile);
       const bombCost = attackBombCost(profile);
+      const hadFullEnergy = ammoChargeFor(owner) >= attackNeedTotal;
+      const hadFullBombs = ammoFor(owner) >= maxAmmo;
       foodTypes.forEach(type => {
         stock[type.id] = Math.max(0, stock[type.id] - cost);
       });
       if (bombCost > 0) {
         if (owner === "player") playerAmmo = Math.max(0, playerAmmo - bombCost);
         else computerAmmo = Math.max(0, computerAmmo - bombCost);
+        if (hadFullEnergy && hadFullBombs) {
+          convertFullEnergyToAmmo(owner);
+        }
       }
     }
 
@@ -3277,15 +3303,23 @@
       if (owner === "player") {
         playerAmmoCharge += amount;
         if (playerAmmoCharge >= attackNeedTotal) {
-          playerAmmo = Math.min(maxAmmo, playerAmmo + 1);
-          playerAmmoCharge = 0;
+          if (playerAmmo < maxAmmo) {
+            playerAmmo = Math.min(maxAmmo, playerAmmo + 1);
+            playerAmmoCharge = 0;
+          } else {
+            playerAmmoCharge = attackNeedTotal;
+          }
           playerEnergyFlashUntil = performance.now() + 1700;
         }
       } else {
         computerAmmoCharge += amount;
         if (computerAmmoCharge >= attackNeedTotal) {
-          computerAmmo = Math.min(maxAmmo, computerAmmo + 1);
-          computerAmmoCharge = 0;
+          if (computerAmmo < maxAmmo) {
+            computerAmmo = Math.min(maxAmmo, computerAmmo + 1);
+            computerAmmoCharge = 0;
+          } else {
+            computerAmmoCharge = attackNeedTotal;
+          }
           computerEnergyFlashUntil = performance.now() + 1700;
         }
       }
@@ -3513,6 +3547,14 @@
       setInitialEnergy(defaultSettings.initialEnergy);
       setInitialBombs(defaultSettings.initialBombs);
       foodTypes.forEach(type => setInitialStock(type.id, defaultSettings.initialStock[type.id]));
+    }
+
+    function refreshGmPreview() {
+      resetGame();
+      resize();
+      if (overlay.classList.contains("show")) {
+        renderIntroPortraits(false);
+      }
     }
 
     function applyUltimateModePreset() {
@@ -5604,49 +5646,25 @@
       if (running) return;
       setGmMode(true);
       resetGmParameters();
-      resetGame();
-      resize();
-      overlayTitle.textContent = "真實模式已套用";
-      overlayText.textContent = "開場使用預設資源與數值，從零累積食物、能量與炸彈。";
-      startButton.textContent = "開始";
-      renderIntroPortraits(true);
-      overlay.classList.add("show");
+      refreshGmPreview();
     });
 
     midGameModeButton.addEventListener("click", () => {
       if (running) return;
       applyMidGameModePreset();
-      resetGame();
-      resize();
-      overlayTitle.textContent = "中期模式已套用";
-      overlayText.textContent = `開場能量 ${attackNeedTotal}/${attackNeedTotal}、炸彈 ${maxAmmo}/${maxAmmo}，四色庫存各 ${Math.floor(maxFoodStock / 2)} 點。`;
-      startButton.textContent = "開始";
-      renderIntroPortraits(true);
-      overlay.classList.add("show");
+      refreshGmPreview();
     });
 
     ultimateModeButton.addEventListener("click", () => {
       if (running) return;
       applyUltimateModePreset();
-      resetGame();
-      resize();
-      overlayTitle.textContent = "戰鬥模式已套用";
-      overlayText.textContent = `開場持有 ${bigAttackBombCost} 枚炸彈，且四種庫存各 2 點，可立即施放大招。`;
-      startButton.textContent = "開始";
-      renderIntroPortraits(true);
-      overlay.classList.add("show");
+      refreshGmPreview();
     });
 
     lateGameModeButton.addEventListener("click", () => {
       if (running) return;
       applyLateGameModePreset();
-      resetGame();
-      resize();
-      overlayTitle.textContent = "後期模式已套用";
-      overlayText.textContent = `開場即滿資源：能量 ${attackNeedTotal}/${attackNeedTotal}、炸彈 ${maxAmmo}/${maxAmmo}、四種庫存各 ${maxFoodStock} 點。`;
-      startButton.textContent = "開始";
-      renderIntroPortraits(true);
-      overlay.classList.add("show");
+      refreshGmPreview();
     });
 
     resetSettingsButton.addEventListener("click", () => {
@@ -5725,7 +5743,7 @@
         return;
       }
       overlayTitle.textContent = "準備開局";
-      overlayText.textContent = `每吃 1 個食物獲得 2 點能量，集滿 ${attackNeedTotal} 點獲得 1 枚炸彈，最多 ${maxAmmo} 枚；小招消耗紅黃綠藍各 1 點，大招消耗 ${bigAttackBombCost} 枚炸彈與紅黃綠藍各 2 點。`;
+      overlayText.textContent = `每吃 1 個食物獲得 2 點能量，集滿 ${attackNeedTotal} 點獲得 1 枚炸彈，最多 ${maxAmmo} 枚；能量與炸彈都滿時，施放消耗炸彈的招式會立刻把滿能量轉為 1 枚炸彈；小招消耗紅黃綠藍各 1 點，大招消耗 ${bigAttackBombCost} 枚炸彈與紅黃綠藍各 2 點。`;
       startButton.textContent = "開始";
       setOverlayChromeVisible(true);
       startGame();
