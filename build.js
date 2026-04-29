@@ -12,5 +12,12 @@ if (!fs.existsSync(source)) {
 fs.mkdirSync(outDir, { recursive: true });
 fs.copyFileSync(source, target);
 
+const assetsSource = path.resolve(__dirname, "assets");
+const assetsTarget = path.join(outDir, "assets");
+
+if (fs.existsSync(assetsSource)) {
+  fs.cpSync(assetsSource, assetsTarget, { recursive: true });
+}
+
 const bytes = fs.statSync(target).size;
 console.log(`Built dist/index.html (${bytes} bytes)`);
