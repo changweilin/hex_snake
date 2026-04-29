@@ -1642,11 +1642,17 @@
         z-index: 220;
       }
 
+      .side .section.settings-section {
+        grid-template-columns: 1fr;
+      }
+
       .side .settings-section .settings-actions {
         display: grid;
-        grid-template-columns: minmax(58px, 1fr) minmax(58px, 1fr) minmax(46px, 0.7fr) 38px;
+        grid-template-columns: minmax(54px, 1fr) minmax(54px, 1fr) minmax(44px, 0.72fr) 38px;
         gap: 5px;
-        width: 100%;
+        justify-self: end;
+        width: min(100%, calc(100vw - max(6px, env(safe-area-inset-left)) - max(6px, env(safe-area-inset-right)) - 12px));
+        max-width: 100%;
         align-items: stretch;
       }
 
@@ -3161,6 +3167,11 @@
     }
 
     function setSettingsLocked(locked) {
+      if (locked) {
+        setSettingsOpen(false);
+        setGmOpen(false);
+      }
+      settingsToggle.disabled = locked;
       computerDifficultyInput.disabled = locked;
       playerCharacterInput.disabled = locked;
       computerCharacterInput.disabled = locked;
@@ -4356,6 +4367,7 @@
     }
 
     function toggleSettings() {
+      if (settingsToggle.disabled || running) return;
       setSettingsOpen(settingsToggle.getAttribute("aria-expanded") !== "true");
     }
 
@@ -4368,6 +4380,7 @@
     }
 
     function toggleGmSettings() {
+      if (gmToggle.disabled || running) return;
       setGmOpen(gmToggle.getAttribute("aria-expanded") !== "true");
     }
 
@@ -4376,18 +4389,10 @@
 
     settingsToggle.addEventListener("pointerdown", event => {
       event.stopPropagation();
-      if (event.pointerType !== "mouse") {
-        event.preventDefault();
-        toggleSettings();
-      }
     });
 
     gmToggle.addEventListener("pointerdown", event => {
       event.stopPropagation();
-      if (event.pointerType !== "mouse") {
-        event.preventDefault();
-        toggleGmSettings();
-      }
     });
 
     settingsContent.addEventListener("pointerdown", event => {
