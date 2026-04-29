@@ -8,6 +8,9 @@
     "build": "node build.js",
     "start": "node server.js --dist",
     "simulate": "node tools/simulate-balance.js",
+    "simulate:scheduled": "node tools/sim-scheduler.js start",
+    "simulate:run": "node tools/sim-scheduler.js run",
+    "simulate:jobs": "node tools/sim-scheduler.js list",
     "test": "node tools/run-tests.js"
   }
 }

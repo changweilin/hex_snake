@@ -308,6 +308,7 @@ function makeFighter(owner, character, start, direction, settings, balance, poli
       bigCasts: 0,
       damageDealt: 0,
       damageTaken: 0,
+      damageTakenByCause: { small: 0, big: 0 },
       stunApplied: 0,
       foodCollected: 0,
       totalStock: 0,
@@ -468,6 +469,7 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
       excludedCells: trail,
       width: bandDistanceFromTotalWidth(small.radius),
       damage: small.damage,
+      profile: "big",
       stunChance,
       startedAt: now + small.delay,
       nextTickAt: now + small.delay,
@@ -542,10 +544,27 @@ function launchAttack(state, attacker, defender, profile, now, balance) {
   return true;
 }
 
-function applyDamage(target, damage) {
+function controlledFatalCause(target, cause, now) {
+  if ((cause === "small" || cause === "big") && (now < target.stunUntil || now < target.slowUntil)) return "stunLocked";
+  return cause;
+}
+
+function recordFatalEvent(state, target, cause, now) {
+  state.fatalEvents.push({
+    owner: target.owner,
+    characterId: target.character.id,
+    cause,
+    atMs: now
+  });
+}
+
+function applyDamage(state, target, damage, cause, now) {
   if (damage <= 0) return;
+  const beforeHp = target.hp;
+  if (cause === "small" || cause === "big") target.stats.damageTakenByCause[cause] += damage;
   target.hp = Math.max(0, target.hp - damage);
   target.stats.damageTaken += damage;
+  if (beforeHp > 0 && target.hp <= 0) recordFatalEvent(state, target, controlledFatalCause(target, cause, now), now);
 }
 
 function applyAttackStun(state, target, chance, now, balance, options = {}) {
@@ -580,8 +599,8 @@ function resolveProjectiles(state, now, balance) {
         if (projectile.owner !== "computer" && keyOf(projectile.target) === keyOf(computer.snake[0])) computerDamage = Math.max(computerDamage, computer.hp);
       }
     }
-    applyDamage(player, playerDamage);
-    applyDamage(computer, computerDamage);
+    applyDamage(state, player, playerDamage, projectile.profile || "big", now);
+    applyDamage(state, computer, computerDamage, projectile.profile || "big", now);
     attacker.stats.damageDealt += projectile.owner === "player" ? computerDamage : playerDamage;
     if (projectile.owner !== "player" && playerDamage > 0 && applyAttackStun(state, player, projectile.stunChance, now, balance, { stack: projectile.stackStun })) attacker.stats.stunApplied += 1;
     if (projectile.owner !== "computer" && computerDamage > 0 && applyAttackStun(state, computer, projectile.stunChance, now, balance, { stack: projectile.stackStun })) attacker.stats.stunApplied += 1;
@@ -597,8 +616,8 @@ function resolveHazards(state, now, balance) {
     const attacker = state.fighters[hazard.owner];
     const playerDamage = damageSnakeCells(state.fighters.player.snake, hazard.cells, hazard.width, hazard.damage, hazard.excludedCells);
     const computerDamage = damageSnakeCells(state.fighters.computer.snake, hazard.cells, hazard.width, hazard.damage, hazard.excludedCells);
-    applyDamage(state.fighters.player, playerDamage);
-    applyDamage(state.fighters.computer, computerDamage);
+    applyDamage(state, state.fighters.player, playerDamage, hazard.profile || "big", now);
+    applyDamage(state, state.fighters.computer, computerDamage, hazard.profile || "big", now);
     attacker.stats.damageDealt += hazard.owner === "player" ? computerDamage : playerDamage;
     if (hazard.owner !== "player" && playerDamage > 0 && applyAttackStun(state, state.fighters.player, hazard.stunChance, now, balance, { interrupt: false })) attacker.stats.stunApplied += 1;
     if (hazard.owner !== "computer" && computerDamage > 0 && applyAttackStun(state, state.fighters.computer, hazard.stunChance, now, balance, { interrupt: false })) attacker.stats.stunApplied += 1;
@@ -635,6 +654,12 @@ function applyCollisionPenalty(fighter, severity, now, balance) {
   fighter.slowUntil = Math.max(fighter.slowUntil, fighter.stunUntil + balance.collision.collisionSlowMs * severity);
   fighter.collisionParalysisMs += balance.collision.collisionStunMs * severity;
   return fighter.collisionParalysisMs > balance.collision.maxCollisionParalysisMs;
+}
+
+function defeatByCollisionParalysis(state, fighter, now) {
+  if (fighter.hp <= 0) return;
+  fighter.hp = 0;
+  recordFatalEvent(state, fighter, "collisionParalysis", now);
 }
 
 function moveFighters(state, movers, now, balance) {
@@ -674,7 +699,7 @@ function moveFighters(state, movers, now, balance) {
     const fighter = state.fighters[owner];
     const plan = plans[owner];
     if (plan.collision) {
-      if (applyCollisionPenalty(fighter, plan.collision, now, balance)) fighter.hp = 0;
+      if (applyCollisionPenalty(fighter, plan.collision, now, balance)) defeatByCollisionParalysis(state, fighter, now);
       return;
     }
     fighter.snake.unshift(plan.next);
@@ -726,6 +751,7 @@ function createMatchState(options) {
     foods: [],
     projectiles: [],
     hazards: [],
+    fatalEvents: [],
     fighters: {}
   };
   state.fighters.player = makeFighter("player", options.playerCharacter, { q: -offset, r: offset }, 0, settings, balance, playerPolicy);
@@ -767,13 +793,25 @@ function simulateMatch(options) {
   if (player.hp > 0 && computer.hp <= 0) winner = "player";
   else if (computer.hp > 0 && player.hp <= 0) winner = "computer";
   else if (player.score !== computer.score) winner = player.score > computer.score ? "player" : "computer";
+  const loser = winner ? (winner === "player" ? "computer" : "player") : null;
+  const loserFatalEvent = loser ? [...state.fatalEvents].reverse().find(event => event.owner === loser) : null;
   return {
     seed: options.seed,
     winner,
+    loser,
+    fatalCause: winner ? (loserFatalEvent?.cause || "scoreDecision") : "draw",
+    topDamageCause: winner ? topDamageCause(state.fighters[loser]) : "none",
+    fatalEvents: state.fatalEvents,
     durationMs: state.now,
     player: summarizeFighter(player, computer),
     computer: summarizeFighter(computer, player)
   };
+}
+
+function topDamageCause(fighter) {
+  const byCause = fighter.stats.damageTakenByCause;
+  if ((byCause.small || 0) <= 0 && (byCause.big || 0) <= 0) return "none";
+  return (byCause.big || 0) >= (byCause.small || 0) ? "big" : "small";
 }
 
 function summarizeFighter(fighter, opponent) {
@@ -789,6 +827,10 @@ function summarizeFighter(fighter, opponent) {
     smallCastRate: casts ? fighter.stats.smallCasts / casts : 0,
     damageDealt: Number(fighter.stats.damageDealt.toFixed(3)),
     damageTaken: Number(fighter.stats.damageTaken.toFixed(3)),
+    damageTakenByCause: {
+      small: Number(fighter.stats.damageTakenByCause.small.toFixed(3)),
+      big: Number(fighter.stats.damageTakenByCause.big.toFixed(3))
+    },
     stunApplied: fighter.stats.stunApplied,
     foodCollected: fighter.stats.foodCollected,
     averageStock: fighter.stats.stockSamples ? Number((fighter.stats.totalStock / fighter.stats.stockSamples).toFixed(3)) : 0,

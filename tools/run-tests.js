@@ -1,6 +1,14 @@
 const assert = require("node:assert/strict");
 const path = require("path");
 const {
+  createSchedule,
+  createUnorderedPairs,
+  difficulties,
+  difficultyPresets,
+  summarizeMatches
+} = require("./sim-scheduler");
+
+const {
   FOOD_TYPES,
   attackStats,
   buildCharacterMap,
@@ -98,6 +106,68 @@ test("each character big attack can be simulated in a deterministic setup", () =
     });
     assert.ok(match.player.bigCasts >= 1, `${character.id} should cast a big attack`);
   });
+});
+
+test("scheduled simulator builds 15 unordered pairs and 45 matches per cycle", () => {
+  const pairs = createUnorderedPairs(characters);
+  const schedule = createSchedule(characters, 1);
+  assert.equal(pairs.length, 15);
+  assert.equal(schedule.length, 45);
+  assert.deepEqual(difficulties, ["low", "medium", "high"]);
+  assert.equal(Object.hasOwn(difficultyPresets, "novice"), false);
+  assert.ok(schedule.every(entry => entry.pair[0] !== entry.pair[1]));
+});
+
+test("scheduled match records include duration and loss causes", () => {
+  const match = simulateMatch({
+    balance,
+    playerCharacter: characterById.get("dragon"),
+    computerCharacter: characterById.get("moray"),
+    playerModel: difficultyPresets.high,
+    computerModel: difficultyPresets.high,
+    seed: "scheduled-fields"
+  });
+  assert.ok(Number.isFinite(match.durationMs));
+  assert.ok(["small", "big", "collisionParalysis", "stunLocked", "scoreDecision", "draw"].includes(match.fatalCause));
+  assert.ok(["small", "big", "none"].includes(match.topDamageCause));
+});
+
+test("scheduled summary aggregates wins, losses, draws, causes, and durations", () => {
+  const matches = [
+    { difficulty: "low", pair: ["dragon", "moray"], winnerCharacterId: "dragon", loserCharacterId: "moray", fatalCause: "small", topDamageCause: "small", durationMs: 1000 },
+    { difficulty: "low", pair: ["dragon", "moray"], winnerCharacterId: "moray", loserCharacterId: "dragon", fatalCause: "big", topDamageCause: "big", durationMs: 3000 },
+    { difficulty: "low", pair: ["dragon", "moray"], winnerCharacterId: null, loserCharacterId: null, fatalCause: "draw", topDamageCause: "none", durationMs: 2000 }
+  ];
+  const summary = summarizeMatches(matches, characters);
+  const dragon = summary.characterDifficulty.find(row => row.difficulty === "low" && row.characterId === "dragon");
+  const matchup = summary.matchupDifficulty.find(row => row.difficulty === "low" && row.characterA === "dragon" && row.characterB === "moray");
+  assert.equal(dragon.runs, 3);
+  assert.equal(dragon.wins, 1);
+  assert.equal(dragon.losses, 1);
+  assert.equal(dragon.draws, 1);
+  assert.equal(matchup.runs, 3);
+  assert.equal(matchup.characterAWins + matchup.characterBWins + matchup.draws, matchup.runs);
+  assert.equal(matchup.fatalSmallLosses, 1);
+  assert.equal(matchup.fatalBigLosses, 1);
+  assert.equal(matchup.topDamageSmallLosses + matchup.topDamageBigLosses, 2);
+  assert.equal(matchup.averageDurationMs, 2000);
+  assert.equal(matchup.medianDurationMs, 2000);
+  assert.equal(matchup.minDurationMs, 1000);
+  assert.equal(matchup.maxDurationMs, 3000);
+});
+
+test("scheduled summaries are deterministic for the same raw matches", () => {
+  const matches = createSchedule(characters, 1).slice(0, 6).map((entry, index) => ({
+    cycle: entry.cycle,
+    difficulty: entry.difficulty,
+    pair: entry.pair,
+    winnerCharacterId: index % 3 === 0 ? entry.pair[0] : index % 3 === 1 ? entry.pair[1] : null,
+    loserCharacterId: index % 3 === 0 ? entry.pair[1] : index % 3 === 1 ? entry.pair[0] : null,
+    fatalCause: index % 2 === 0 ? "collisionParalysis" : "stunLocked",
+    topDamageCause: index % 2 === 0 ? "small" : "big",
+    durationMs: 1000 + index
+  }));
+  assert.deepEqual(summarizeMatches(matches, characters), summarizeMatches(matches, characters));
 });
 
 let failed = 0;
