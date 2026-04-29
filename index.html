@@ -3597,7 +3597,6 @@
         hexDirButtons.forEach(button => button.classList.toggle("active", Number(button.dataset.dir) === newDir));
         updateHud();
       }
-      if (!running || gameOver) autoStartGame();
     }
 
     function launchAttack(owner, target, now, profile = "big") {
