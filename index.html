@@ -4014,6 +4014,7 @@
       if (gameOver && !canRestartAfterGameOver()) return false;
       clearRelayRestartTimer();
       computerBattleMode = Boolean(options.computerBattle);
+      if (computerBattleMode && options.resetRelayMode) setRelayMode(false, true);
       if (!computerBattleMode) setRelayMode(false);
       if (computerBattleMode) setComputerBattleSpeed(localStorage.getItem("hexSnakeAutoBattleSpeed"), false);
       setFoodCount(foodCountInput.value);
@@ -6205,7 +6206,7 @@
       overlayTitle.textContent = "電腦對弈";
       overlayText.textContent = "雙方都交給電腦操作，右下角可調整對弈速度或暫停。";
       setOverlayChromeVisible(true);
-      startGame({ computerBattle: true });
+      startGame({ computerBattle: true, resetRelayMode: true });
     });
 
     autoBattleSpeedSelect.addEventListener("change", event => {
