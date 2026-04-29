@@ -2046,6 +2046,7 @@
         <div class="field">
           <label for="computerDifficulty">電腦難度</label>
           <select id="computerDifficulty">
+            <option value="novice">新手</option>
             <option value="low">低</option>
             <option value="medium" selected>中</option>
             <option value="high">高</option>
@@ -3111,7 +3112,7 @@
     }
 
     function setComputerDifficulty(value) {
-      computerDifficulty = ["low", "medium", "high"].includes(value) ? value : "medium";
+      computerDifficulty = ["novice", "low", "medium", "high"].includes(value) ? value : "medium";
       computerDifficultyInput.value = computerDifficulty;
     }
 
@@ -3493,6 +3494,23 @@
       return items[Math.floor(Math.random() * items.length)];
     }
 
+    function isNoviceComputer() {
+      return computerDifficulty === "novice";
+    }
+
+    function computerAvoidsOpponentBody() {
+      const ignoreBodyChance = { novice: 0.55, low: 0.35, medium: 0, high: 0 }[computerDifficulty] ?? 0;
+      return Math.random() >= ignoreBodyChance;
+    }
+
+    function computerCanGrow() {
+      return !isNoviceComputer();
+    }
+
+    function computerCanUseAttack() {
+      return !isNoviceComputer();
+    }
+
     function cellsWithinDistance(origin, minDistance, maxDistance) {
       return cells.filter(cell => {
         const distance = hexDistance(cell, origin);
@@ -3554,9 +3572,11 @@
       const playerHead = snake[0];
       const playerThreat = nextWrappedCell(playerHead, nextDir);
       const occupied = new Set([
-        ...snake.map(keyOf),
         ...computerSnake.slice(0, -1).map(keyOf)
       ]);
+      if (computerAvoidsOpponentBody()) {
+        snake.forEach(segment => occupied.add(keyOf(segment)));
+      }
       const options = [];
 
       directions.forEach((_, candidate) => {
@@ -3584,7 +3604,7 @@
         const bValue = Number.isFinite(b.tacticalValue) ? b.tacticalValue : b.fallbackValue;
         return aValue - bValue;
       });
-      const randomChance = { high: 0, medium: 0.3, low: 0.52 }[computerDifficulty];
+      const randomChance = { high: 0, medium: 0.3, low: 0.52, novice: 0.52 }[computerDifficulty];
 
       if (Math.random() < randomChance) return randomItem(options).direction;
       return options[0].direction;
@@ -3629,7 +3649,8 @@
     }
 
     function maybeComputerAttack(now) {
-      const cooldown = { low: 6200, medium: 4700, high: 3400 }[computerDifficulty] / attackSpeedMultiplier(computerStock);
+      if (!computerCanUseAttack()) return;
+      const cooldown = { novice: 6200, low: 6200, medium: 4700, high: 3400 }[computerDifficulty] / attackSpeedMultiplier(computerStock);
       if (now - lastComputerAttackMs < cooldown || !canAttack("computer")) return;
       const target = chooseComputerAttackTarget();
       if (launchAttack("computer", target, now)) {
@@ -3745,8 +3766,12 @@
 
       if (!computerCollision && computerEating) {
         computerScore += 1;
-        collectFood("computer", computerEatenFood);
-        computerHp = Math.min(computerSnake.length, computerHp + 1);
+        if (computerCanGrow()) {
+          collectFood("computer", computerEatenFood);
+          computerHp = Math.min(computerSnake.length, computerHp + 1);
+        } else {
+          computerSnake.pop();
+        }
       } else if (!computerCollision) {
         computerSnake.pop();
       }
@@ -3821,8 +3846,12 @@
       computerSnake.unshift(computerNext);
       if (computerEating) {
         computerScore += 1;
-        collectFood("computer", computerEatenFood);
-        computerHp = Math.min(computerSnake.length, computerHp + 1);
+        if (computerCanGrow()) {
+          collectFood("computer", computerEatenFood);
+          computerHp = Math.min(computerSnake.length, computerHp + 1);
+        } else {
+          computerSnake.pop();
+        }
         foods = foods.filter(food => keyOf(food) !== computerNextKey);
         placeFoods(["computer"]);
       } else {
