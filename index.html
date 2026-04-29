@@ -2378,47 +2378,26 @@
       { id: "carb", label: "碳水", name: "碳水", foodName: "藍色食物", effect: "提升攻擊施展與冷卻速度，並提高命中暈眩機率", color: "#3b82f6", line: "#bfdbfe" }
     ];
     const foodTypeById = new Map(foodTypes.map(type => [type.id, type]));
-    const characters = [
-      { id: "dragon", name: "白龍", food: "balanced", foodLabel: "均衡", motto: "墜落不是終點，躍門才是回聲。", smallMove: "雲鱗回旋", bigMove: "越門白衡龍息", move: "越門白衡龍息", detail: "均衡型角色；白龍吃食後補出的新食物有 50% 機率為雙色，提供更彈性的資源路線。", color: "#f8fafc", body: "#cbd5e1", line: "#bae6fd", accent: "#fbbf24" },
-      { id: "sandworm", name: "沙蟲", food: "fat", foodLabel: "黃色食物", motto: "在最低的沙裡，也藏著翻天的牙。", smallMove: "潛沙突咬", bigMove: "流沙葬獸震爆", move: "流沙葬獸震爆", detail: "偏好黃色脂肪；食物生成較容易偏向黃色，但吃食收益與其他角色相同。", color: "#facc15", body: "#ca8a04", line: "#fef08a", accent: "#92400e" },
-      { id: "quetzal", name: "羽蛇神", food: "fiber", foodLabel: "綠色食物", motto: "名字不滅，羽翼就不會折。", smallMove: "祖語翠羽", bigMove: "祭風裂界", move: "祭風裂界", detail: "偏好綠色纖維；食物生成較容易偏向綠色，但吃食收益與其他角色相同。", color: "#22c55e", body: "#15803d", line: "#bbf7d0", accent: "#67e8f9" },
-      { id: "moray", name: "海鰻", food: "carb", foodLabel: "藍色食物", motto: "讓垂鉤者，先學會窒息。", smallMove: "暗潮電咬", bigMove: "逆浪噬船雷", move: "逆浪噬船雷", detail: "偏好藍色碳水；食物生成較容易偏向藍色，但吃食收益與其他角色相同。", color: "#3b82f6", body: "#1d4ed8", line: "#bfdbfe", accent: "#93c5fd" },
-      { id: "lobster", name: "龍蝦", food: "protein", foodLabel: "紅色食物", motto: "混沌若有節奏，沉默也會成王。", smallMove: "古螯斷浪", bigMove: "萬年赤螯破浪", move: "萬年赤螯破浪", detail: "偏好紅色蛋白質；食物生成較容易偏向紅色，但吃食收益與其他角色相同。", color: "#ef4444", body: "#b91c1c", line: "#fecaca", accent: "#f97316" }
-    ];
-    const characterStories = {
-      dragon: [
-        "昔日雲海之上的白龍，曾以一息定潮、一爪開天。直到龍鱗失色，墜入低谷，連逐浪的犬影都敢在牠身後吠叫。",
-        "牠吞下屈辱，也吞下每一口能重築筋骨的食糧。今日再入六角戰場，不求憐憫，只求一躍越門，讓失去的王座重新記起牠的名字。"
-      ],
-      moray: [
-        "海鰻生於被網線割裂的暗潮。牠看見族群被燈火引誘、被冰艙沉默，於是把恐懼磨成電流，把逆流當作宣戰。",
-        "牠不是守護者口中的純善英雄，而是人類船影下的惡名。只要貪婪的鉤索還垂進海裡，牠就會咬穿浪峰，讓捕獵者也學會窒息。"
-      ],
-      lobster: [
-        "龍蝦的魂魄曾只是一團渾沌，在深海裂縫裡隨時間漂流。潮汐沖刷牠，壓力鍛造牠，孤獨反覆敲打牠的甲殼。",
-        "萬次揮螯之後，混亂開始有了節奏；萬年沉默之後，節奏終於長出智慧。牠踏上戰場時，每一步都像古老意志醒來。"
-      ],
-      sandworm: [
-        "沙蟲沒有豐饒的故鄉，只有乾裂的土、稀薄的獵物，和比牠龐大得多的陰影。牠學會把身形藏進貧瘠，把心跳壓到沙粒之下。",
-        "每一次伏擊都是賭局，每一次吞食都是翻身的籌碼。牠相信階層不是天命，只要咬得夠準，最底層的沙也能埋葬巨獸。"
-      ],
-      quetzal: [
-        "羽蛇神在強權的夾縫間展翼：一邊是鐵與旗幟，一邊是被迫噤聲的祖語。祂帶著少數族裔的記憶飛行，不讓祭歌被風沙磨滅。",
-        "祂追尋的勝利不只是疆界，而是心靈仍能命名自身。當翠羽劃開戰場，古老信仰便在新世界裡重新發光。"
-      ]
+    const foodLabels = {
+      balanced: "均衡",
+      protein: "紅色食物",
+      fat: "黃色食物",
+      fiber: "綠色食物",
+      carb: "藍色食物"
     };
-    characters.forEach(character => {
-      character.story = characterStories[character.id] || [];
-    });
-    const portraitSlugs = {
-      dragon: "white_dragon",
-      sandworm: "sandworm",
-      quetzal: "quetzalcoatl",
-      moray: "moray_eel",
-      lobster: "ghost_lobster"
+    const poseAliases = {
+      opening: "opening",
+      intro: "opening",
+      idle: "intro",
+      attack: "small",
+      small: "small",
+      big: "big",
+      victory: "victory",
+      defeat: "defeat"
     };
-    const portraitPoses = new Set(["intro", "idle", "attack", "victory", "defeat"]);
-    const characterById = new Map(characters.map(character => [character.id, character]));
+    const portraitPoses = new Set(Object.keys(poseAliases));
+    let characters = [];
+    let characterById = new Map();
     const colors = {
       cell: "#2a3445",
       cellAlt: "#303c4d",
@@ -2518,10 +2497,49 @@
     };
 
     bestEl.textContent = best;
-    buildCharacterOptions();
-    buildCharacterStage();
-    buildResourceHud();
-    buildRulesContent();
+
+    function normalizeCharacter(entry) {
+      const foodPreference = foodLabels[entry.foodPreference] ? entry.foodPreference : "balanced";
+      const colors = entry.colors || {};
+      const representColor = entry.representColor || colors.body || "#f8fafc";
+      return {
+        ...entry,
+        food: foodPreference,
+        foodLabel: foodLabels[foodPreference] || foodLabels.balanced,
+        detail: entry.foodEffect || "",
+        color: representColor,
+        body: colors.body || representColor,
+        line: colors.line || "#f8fafc",
+        accent: colors.accent || representColor,
+        story: Array.isArray(entry.story) ? entry.story : [],
+        portraits: entry.portraits || {},
+        slug: entry.slug || entry.id,
+        move: entry.bigMove || entry.smallMove || entry.name
+      };
+    }
+
+    async function loadCharacterDatabase() {
+      const response = await fetch("data/characters.json", { cache: "no-store" });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      if (!Array.isArray(data) || data.length === 0) {
+        throw new Error("data/characters.json must contain at least one character.");
+      }
+      characters = data.map(normalizeCharacter);
+      characterById = new Map(characters.map(character => [character.id, character]));
+      playerCharacterId = characterById.has(playerCharacterId) ? playerCharacterId : characters[0].id;
+      computerCharacterId = characterById.has(computerCharacterId) ? computerCharacterId : characters[Math.min(1, characters.length - 1)].id;
+    }
+
+    function showCharacterDatabaseError(error) {
+      console.error(error);
+      overlayTitle.textContent = "角色資料載入失敗";
+      overlayText.textContent = `找不到或無法解析 data/characters.json：${error.message}`;
+      startButton.textContent = "重新載入";
+      startButton.onclick = () => window.location.reload();
+      setOverlayChromeVisible(true);
+      overlay.classList.add("show");
+    }
 
     function characterFor(owner) {
       return characterById.get(owner === "player" ? playerCharacterId : computerCharacterId) || characters[0];
@@ -2562,12 +2580,19 @@
     }
 
     function portraitUrl(character, pose, size = "full") {
-      const slug = portraitSlugs[character.id] || character.id;
       const safePose = portraitPoses.has(pose) ? pose : "idle";
-      if (size === "sm" || size === "md") {
-        return `assets/portraits/${size}/${slug}_${safePose}.png`;
+      const semanticPose = poseAliases[safePose] || "intro";
+      const portrait = character.portraits?.[semanticPose] || character.portraits?.intro || character.portraits?.opening;
+      if (portrait) {
+        if (typeof portrait === "string") return portrait;
+        return portrait[size] || portrait.full || portrait.md || portrait.sm || character.avatar || "";
       }
-      return `assets/portraits/${slug}_${safePose}.png`;
+      const slug = character.slug || character.id;
+      const legacyPose = safePose === "idle" ? "idle" : safePose === "attack" ? "attack" : semanticPose === "opening" ? "intro" : semanticPose;
+      if (size === "sm" || size === "md") {
+        return `assets/portraits/${size}/${slug}_${legacyPose}.png`;
+      }
+      return `assets/portraits/${slug}_${legacyPose}.png`;
     }
 
     const preloadedPortraits = new Set();
@@ -4815,6 +4840,10 @@
     });
 
     startButton.addEventListener("click", () => {
+      if (!characters.length) {
+        window.location.reload();
+        return;
+      }
       if (paused && running && !gameOver) {
         paused = false;
         setStatus("對戰中：吃食物累積能量，集滿可獲得炸彈。");
@@ -4972,27 +5001,41 @@
 
     window.addEventListener("resize", resize);
 
-    setGridSize(gridSizeInput.value);
-    setFoodCount(foodCountInput.value);
-    setComputerDifficulty(computerDifficultyInput.value);
-    setInitialSpeed(initialSpeedInput.value);
-    setGmMode(defaultSettings.gmMode);
-    setInitialLength(initialLengthInput.value);
-    initialStockInputs.forEach(input => setInitialStock(input.dataset.initialStock, input.value));
-    setSettingsLocked(false);
-    applyKeybinds();
-    setLeftHandMode(localStorage.getItem("hexSnakeLeftHandMode") === "1");
-    updateAttackButtons();
-    resetGame();
-    resize();
-    renderIntroPortraits(false);
-    preloadPortraitsFor("player");
-    preloadPortraitsFor("computer");
-    if ("requestIdleCallback" in window) {
-      requestIdleCallback(preloadAllPortraits, { timeout: 1500 });
-    } else {
-      setTimeout(preloadAllPortraits, 250);
+    async function bootstrap() {
+      try {
+        await loadCharacterDatabase();
+      } catch (error) {
+        showCharacterDatabaseError(error);
+        return;
+      }
+      buildCharacterOptions();
+      buildCharacterStage();
+      buildResourceHud();
+      buildRulesContent();
+      setGridSize(gridSizeInput.value);
+      setFoodCount(foodCountInput.value);
+      setComputerDifficulty(computerDifficultyInput.value);
+      setInitialSpeed(initialSpeedInput.value);
+      setGmMode(defaultSettings.gmMode);
+      setInitialLength(initialLengthInput.value);
+      initialStockInputs.forEach(input => setInitialStock(input.dataset.initialStock, input.value));
+      setSettingsLocked(false);
+      applyKeybinds();
+      setLeftHandMode(localStorage.getItem("hexSnakeLeftHandMode") === "1");
+      updateAttackButtons();
+      resetGame();
+      resize();
+      renderIntroPortraits(false);
+      preloadPortraitsFor("player");
+      preloadPortraitsFor("computer");
+      if ("requestIdleCallback" in window) {
+        requestIdleCallback(preloadAllPortraits, { timeout: 1500 });
+      } else {
+        setTimeout(preloadAllPortraits, 250);
+      }
     }
+
+    bootstrap();
   </script>
 </body>
 </html>
