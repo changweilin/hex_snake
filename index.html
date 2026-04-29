@@ -995,12 +995,12 @@
     }
 
     .portrait-moves {
-      display: flex;
-      flex-wrap: wrap;
+      display: grid;
       gap: 6px;
     }
 
     .portrait-moves span {
+      display: block;
       padding: 4px 8px;
       border: 1px solid color-mix(in srgb, var(--fighter-line), transparent 34%);
       border-radius: 999px;
@@ -2050,7 +2050,7 @@
           <div class="dialog">
             <div id="winnerPortrait" hidden></div>
             <h2 id="overlayTitle">準備開局</h2>
-            <p id="overlayText">每吃 1 個食物獲得 2 點能量，集滿 6 點獲得 1 枚炸彈，最多 3 枚；施放時會消耗紅黃綠藍各 1 點。</p>
+            <p id="overlayText">每吃 1 個食物獲得 2 點能量，集滿 6 點獲得 1 枚炸彈，最多 3 枚；小招消耗紅黃綠藍各 1 點，大招消耗 2 枚炸彈與紅黃綠藍各 2 點。</p>
             <button id="startButton" type="button">開始</button>
             <button id="introCloseButton" class="secondary intro-close-button" type="button" hidden>關閉</button>
           </div>
@@ -2313,6 +2313,7 @@
     const maxInitialLength = 12;
     const attackNeedTotal = 6;
     const maxAmmo = 3;
+    const bigAttackBombCost = 2;
     const baseAttackDelayMs = 2000;
     const baseAttackCooldownMs = 2400;
     const baseStepMs = 460;
@@ -2649,7 +2650,7 @@
     function characterStoryMarkup(character) {
       const motto = character.motto ? `<p class="portrait-motto">「${character.motto}」</p>` : "";
       const moves = character.smallMove && character.bigMove
-        ? `<div class="portrait-moves" aria-label="${character.name}招式"><span>小招：${character.smallMove}</span><span>大招：${character.bigMove}</span></div>`
+        ? `<div class="portrait-moves" aria-label="${character.name}招式與食補效果"><span>小招：${character.smallMove}</span><span>大招：${character.bigMove}</span><span>食補效果：${character.detail}</span></div>`
         : "";
       const story = (character.story || []).map(paragraph => `<p>${paragraph}</p>`).join("");
       return `${motto}${moves}${story}`;
@@ -2662,8 +2663,9 @@
         return `
           <li>
             <b>${character.name}</b> / ${character.foodLabel}<br>
-            小招：${character.smallMove}；大招：${character.bigMove}<br>
-            ${character.detail}<br>
+            小招：${character.smallMove}<br>
+            大招：${character.bigMove}<br>
+            食補效果：${character.detail}<br>
             「${character.motto}」
             <div class="rules-character-story">${story}</div>
           </li>
@@ -2691,9 +2693,8 @@
           <ul class="rules-list">
             ${foodLegend}
             <li><b>食物收益</b>：單色食物給同色庫存 2 點；雙色食物給兩色各 1 點；每次吃食仍只增加 1 分與 1 段蛇身。</li>
-            <li><b>白龍</b>：白龍吃食後補出的新食物有 50% 機率為雙色，雙色食物可被任一方拾取。</li>
-            <li><b>能量</b>：每吃 1 個食物獲得 2 點能量，集滿 ${attackNeedTotal} 點獲得 1 枚炸彈。</li>
-            <li><b>施放成本</b>：大招需 1 枚炸彈，且紅黃綠藍四種庫存各至少 1 點；施放後四種庫存各消耗 1。</li>
+            <li><b>能量</b>：每吃 1 個食物獲得 2 點能量，集滿 ${attackNeedTotal} 點獲得 1 枚炸彈；炸彈最多 ${maxAmmo} 枚，也是大招施放資源。</li>
+            <li><b>施放成本</b>：小招需紅黃綠藍四種庫存各至少 1 點，施放後各消耗 1；大招需 ${bigAttackBombCost} 枚炸彈，且四種庫存各至少 2 點，施放後消耗 ${bigAttackBombCost} 枚炸彈並使四種庫存各消耗 2。</li>
             <li><b>庫存上限</b>：每種食物最多累積 ${maxFoodStock} 點；專精角色只影響補貨偏好，不會額外增加吃食收益。</li>
             <li><b>撞擊懲罰</b>：撞到對手會停止 ${collisionStunMs / 1000} 秒，再減速 ${collisionSlowMs / 1000} 秒；撞到自己懲罰加倍，累積停止時間超過 ${maxCollisionParalysisMs / 1000} 秒會落敗。</li>
           </ul>
@@ -2833,7 +2834,7 @@
             <div class="portrait-copy" style="${characterStyle(selectedCharacter, selectedPortraitOwner)}">
               <small>${selectedPortraitOwner === "player" ? "玩家角色" : "對手角色"}</small>
               <strong>${selectedCharacter.name}</strong>
-              <span>${selectedCharacter.foodLabel}專精 · ${selectedCharacter.detail}</span>
+              <span>${selectedCharacter.foodLabel}專精</span>
               <div class="portrait-story">
                 ${characterStoryMarkup(selectedCharacter)}
               </div>
@@ -2999,8 +3000,17 @@
       return baseBlastHexRadius;
     }
 
-    function hasAttackFoodCost(stock) {
-      return foodTypes.every(type => stock[type.id] > 0);
+    function attackFoodCost(profile = "big") {
+      return profile === "small" ? 1 : 2;
+    }
+
+    function attackBombCost(profile = "big") {
+      return profile === "small" ? 0 : bigAttackBombCost;
+    }
+
+    function hasAttackFoodCost(stock, profile = "big") {
+      const cost = attackFoodCost(profile);
+      return foodTypes.every(type => stock[type.id] >= cost);
     }
 
     function ammoFor(owner) {
@@ -3009,16 +3019,18 @@
 
     function canAttack(owner, profile = "big") {
       const stock = owner === "player" ? playerStock : computerStock;
-      return (profile === "small" || ammoFor(owner) > 0) && hasAttackFoodCost(stock);
+      return ammoFor(owner) >= attackBombCost(profile) && hasAttackFoodCost(stock, profile);
     }
 
     function consumeAttackCost(owner, stock, profile = "big") {
+      const cost = attackFoodCost(profile);
+      const bombCost = attackBombCost(profile);
       foodTypes.forEach(type => {
-        stock[type.id] = Math.max(0, stock[type.id] - 1);
+        stock[type.id] = Math.max(0, stock[type.id] - cost);
       });
-      if (profile !== "small") {
-        if (owner === "player") playerAmmo = Math.max(0, playerAmmo - 1);
-        else computerAmmo = Math.max(0, computerAmmo - 1);
+      if (bombCost > 0) {
+        if (owner === "player") playerAmmo = Math.max(0, playerAmmo - bombCost);
+        else computerAmmo = Math.max(0, computerAmmo - bombCost);
       }
     }
 
@@ -4439,7 +4451,7 @@
         if (launchAttack("player", targetCell || snake[0], performance.now())) {
           setStatus("玩家施放炸彈，2 秒後落地。");
         } else {
-          setStatus("攻擊需要 1 枚炸彈，且紅黃綠藍四種庫存各至少 1。");
+          setStatus(`大招需要 ${bigAttackBombCost} 枚炸彈，且四種庫存各至少 2。`);
         }
       }
       targetActive = false;
@@ -4462,7 +4474,7 @@
         setStatus(`${moveName} 發動。`);
         return true;
       }
-      setStatus(profile === "small" ? "小招需要紅黃綠藍四種庫存各至少 1。" : "大招需要 1 枚炸彈，且四種庫存各至少 1。");
+      setStatus(profile === "small" ? "小招需要紅黃綠藍四種庫存各至少 1。" : `大招需要 ${bigAttackBombCost} 枚炸彈，且四種庫存各至少 2。`);
       return false;
     }
 
@@ -4820,7 +4832,7 @@
         return;
       }
       overlayTitle.textContent = "準備開局";
-      overlayText.textContent = "每吃 1 個食物獲得 2 點能量，集滿 6 點獲得 1 枚炸彈，最多 3 枚；施放時會消耗紅黃綠藍各 1 點。";
+      overlayText.textContent = `每吃 1 個食物獲得 2 點能量，集滿 ${attackNeedTotal} 點獲得 1 枚炸彈，最多 ${maxAmmo} 枚；小招消耗紅黃綠藍各 1 點，大招消耗 ${bigAttackBombCost} 枚炸彈與紅黃綠藍各 2 點。`;
       startButton.textContent = "開始";
       setOverlayChromeVisible(true);
       startGame();
@@ -4947,7 +4959,7 @@
         if (launchAttack("player", targetCell || snake[0], performance.now())) {
           setStatus("玩家施放炸彈，2 秒後落地。");
         } else {
-          setStatus("攻擊需要 1 枚炸彈，且紅黃綠藍四種庫存各至少 1。");
+          setStatus(`大招需要 ${bigAttackBombCost} 枚炸彈，且四種庫存各至少 2。`);
         }
         return;
       }
