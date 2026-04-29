@@ -180,6 +180,70 @@
       font-size: 1.55rem;
     }
 
+    .dialog-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      align-items: stretch;
+      flex-wrap: wrap;
+    }
+
+    .dialog-actions button {
+      flex: 1 1 150px;
+    }
+
+    .dialog-actions button.secondary {
+      width: auto;
+    }
+
+    .auto-battle-panel {
+      position: absolute;
+      right: max(10px, env(safe-area-inset-right));
+      bottom: max(10px, env(safe-area-inset-bottom));
+      z-index: 18;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 6px;
+      max-width: min(260px, calc(100% - 20px));
+      padding: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 8px;
+      background: rgba(21, 27, 37, 0.82);
+      box-shadow: 0 14px 42px rgba(0, 0, 0, 0.28);
+      backdrop-filter: blur(10px);
+      pointer-events: auto;
+    }
+
+    .auto-battle-panel[hidden] {
+      display: none;
+    }
+
+    .auto-battle-panel label {
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .auto-battle-panel select,
+    .auto-battle-panel button {
+      min-height: 30px;
+      padding: 6px 9px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(17, 23, 32, 0.92);
+      color: var(--ink);
+      border-radius: 8px;
+      font: inherit;
+      font-weight: 800;
+      font-size: 0.82rem;
+      line-height: 1;
+    }
+
+    .auto-battle-panel select {
+      width: 92px;
+    }
+
     .dialog p {
       margin: 0 0 16px;
       color: var(--muted);
@@ -2183,9 +2247,25 @@
             <div id="winnerPortrait" hidden></div>
             <h2 id="overlayTitle">準備開局</h2>
             <p id="overlayText">每吃 1 個食物獲得 2 點能量，集滿 6 點獲得 1 枚炸彈，最多 3 枚；能量與炸彈都滿時，施放消耗炸彈的招式會立刻把滿能量轉為 1 枚炸彈；小招消耗紅黃綠藍各 1 點，大招消耗 2 枚炸彈與紅黃綠藍各 2 點。</p>
-            <button id="startButton" type="button">開始</button>
+            <div class="dialog-actions">
+              <button id="startButton" type="button">開始</button>
+              <button id="computerBattleButton" class="secondary" type="button">電腦對弈</button>
+            </div>
             <button id="introCloseButton" class="secondary intro-close-button" type="button" hidden>關閉</button>
           </div>
+        </div>
+        <div class="auto-battle-panel" id="autoBattlePanel" hidden aria-label="電腦對弈速度">
+          <label for="autoBattleSpeedSelect">速度</label>
+          <select id="autoBattleSpeedSelect">
+            <option value="4">x4</option>
+            <option value="2">x2</option>
+            <option value="1.5">x1.5</option>
+            <option value="1">x1</option>
+            <option value="0.75">x0.75</option>
+            <option value="0.5">x0.5</option>
+            <option value="0.25">x0.25</option>
+          </select>
+          <button type="button" data-auto-pause>暫停</button>
         </div>
       </div>
     </section>
@@ -2399,6 +2479,10 @@
     const overlayTitle = document.querySelector("#overlayTitle");
     const overlayText = document.querySelector("#overlayText");
     const startButton = document.querySelector("#startButton");
+    const computerBattleButton = document.querySelector("#computerBattleButton");
+    const autoBattlePanel = document.querySelector("#autoBattlePanel");
+    const autoBattleSpeedSelect = document.querySelector("#autoBattleSpeedSelect");
+    const autoPauseButton = document.querySelector("[data-auto-pause]");
     const introCloseButton = document.querySelector("#introCloseButton");
     const winnerPortrait = document.querySelector("#winnerPortrait");
     const portraitLightbox = document.querySelector("#portraitLightbox");
@@ -2463,6 +2547,7 @@
     let maxInitialLength = 12;
     let attackNeedTotal = 6;
     let maxAmmo = 3;
+    const autoBattleSpeeds = [4, 2, 1.5, 1, 0.75, 0.5, 0.25];
     let bigAttackBombCost = 2;
     let baseAttackDelayMs = 2000;
     let baseAttackCooldownMs = 2400;
@@ -2711,6 +2796,8 @@
     let lastFeedElapsedMs = 0;
     let running = false;
     let paused = false;
+    let computerBattleMode = false;
+    let computerBattleSpeed = normalizeAutoBattleSpeed(localStorage.getItem("hexSnakeAutoBattleSpeed"));
     let gameOver = false;
     let lastPlayerStep = 0;
     let lastComputerStep = 0;
@@ -3049,6 +3136,7 @@
       overlayTitle.hidden = !visible;
       overlayText.hidden = !visible;
       startButton.hidden = !visible;
+      computerBattleButton.hidden = !visible || (running && !gameOver);
       introCloseButton.hidden = true;
     }
 
@@ -3057,6 +3145,7 @@
       overlayTitle.hidden = true;
       overlayText.hidden = true;
       startButton.hidden = false;
+      computerBattleButton.hidden = false;
       introCloseButton.hidden = true;
       startButton.textContent = "開始";
     }
@@ -3066,6 +3155,7 @@
       overlayTitle.hidden = true;
       overlayText.hidden = true;
       startButton.hidden = true;
+      computerBattleButton.hidden = true;
       introCloseButton.hidden = false;
     }
 
@@ -3311,7 +3401,8 @@
     function moveIntervalFor(owner, now) {
       const stock = owner === "player" ? playerStock : computerStock;
       const slowUntil = owner === "player" ? playerSlowUntil : computerSlowUntil;
-      return moveInterval(stock) * (now < slowUntil ? 2 : 1);
+      const speedScale = computerBattleMode ? computerBattleSpeed : 1;
+      return moveInterval(stock) * (now < slowUntil ? 2 : 1) / speedScale;
     }
 
     function isMovementStunned(owner, now) {
@@ -3854,8 +3945,10 @@
       return performance.now() >= restartUnlockAt;
     }
 
-    function startGame() {
+    function startGame(options = {}) {
       if (gameOver && !canRestartAfterGameOver()) return false;
+      computerBattleMode = Boolean(options.computerBattle);
+      if (computerBattleMode) setComputerBattleSpeed(localStorage.getItem("hexSnakeAutoBattleSpeed"), false);
       setFoodCount(foodCountInput.value);
       setComputerDifficulty(computerDifficultyInput.value);
       setInitialSpeed(initialSpeedInput.value);
@@ -3872,6 +3965,7 @@
       setStatus("對戰中：吃食物累積能量，集滿可獲得炸彈。");
       overlay.classList.remove("show");
       characterStage.hidden = false;
+      updateAutoBattleControls();
       lastPlayerStep = performance.now();
       lastComputerStep = lastPlayerStep;
       lastTimerFrame = lastPlayerStep;
@@ -3887,11 +3981,14 @@
     }
 
     function returnToStartScreen() {
+      computerBattleMode = false;
+      updateAutoBattleControls();
       resetGame();
       selectedPortraitOwner = "player";
       overlayTitle.textContent = "準備開局";
       overlayText.textContent = "重新選擇角色後按開始。";
       startButton.textContent = "開始";
+      computerBattleButton.hidden = false;
       renderIntroPortraits(false);
       overlay.classList.add("show");
     }
@@ -3993,12 +4090,43 @@
       statusEl.textContent = text;
     }
 
+    function normalizeAutoBattleSpeed(value) {
+      const parsed = Number(value);
+      return autoBattleSpeeds.includes(parsed) ? parsed : 1;
+    }
+
+    function setComputerBattleSpeed(value, persist = true) {
+      computerBattleSpeed = normalizeAutoBattleSpeed(value);
+      autoBattleSpeedSelect.value = String(computerBattleSpeed);
+      if (persist) {
+        localStorage.setItem("hexSnakeAutoBattleSpeed", String(computerBattleSpeed));
+      }
+    }
+
+    function resetAutoBattleStepTimers() {
+      lastPlayerStep = performance.now();
+      lastComputerStep = lastPlayerStep;
+      lastTimerFrame = lastPlayerStep;
+    }
+
+    function updateAutoBattleControls() {
+      const visible = computerBattleMode && running && !gameOver;
+      autoBattlePanel.hidden = !visible;
+      autoBattleSpeedSelect.value = String(computerBattleSpeed);
+      autoPauseButton.textContent = paused ? "繼續" : "暫停";
+    }
+
     function canTurn(newDir) {
       return snake.length < 2 || (newDir + 3) % 6 !== dir;
     }
 
     function canComputerTurn(newDir) {
       return computerSnake.length < 2 || (newDir + 3) % 6 !== computerDir;
+    }
+
+    function canOwnerTurn(owner, newDir) {
+      if (owner === "player") return snake.length < 2 || (newDir + 3) % 6 !== dir;
+      return canComputerTurn(newDir);
     }
 
     function hexDistance(a, b) {
@@ -4158,6 +4286,49 @@
       });
 
       if (!options.length) return computerDir;
+
+      options.sort((a, b) => {
+        if (computerDifficulty === "high") return a.pathValue - b.pathValue;
+        const aValue = Number.isFinite(a.tacticalValue) ? a.tacticalValue : a.fallbackValue;
+        const bValue = Number.isFinite(b.tacticalValue) ? b.tacticalValue : b.fallbackValue;
+        return aValue - bValue;
+      });
+      const randomChance = { high: 0, medium: 0.3, low: 0.52, novice: 0.52 }[computerDifficulty];
+
+      if (Math.random() < randomChance) return randomItem(options).direction;
+      return options[0].direction;
+    }
+
+    function chooseAutoDirection(owner) {
+      const ownSnake = owner === "player" ? snake : computerSnake;
+      const opponentSnake = owner === "player" ? computerSnake : snake;
+      const opponentDirection = owner === "player" ? computerDir : nextDir;
+      const currentDirection = owner === "player" ? dir : computerDir;
+      const opponentThreat = nextWrappedCell(opponentSnake[0], opponentDirection);
+      const occupied = new Set(ownSnake.slice(0, -1).map(keyOf));
+      if (computerAvoidsOpponentBody()) {
+        opponentSnake.forEach(segment => occupied.add(keyOf(segment)));
+      }
+      const options = [];
+
+      directions.forEach((_, candidate) => {
+        if (!canOwnerTurn(owner, candidate)) return;
+        const next = nextWrappedCell(ownSnake[0], candidate);
+        const nextKey = keyOf(next);
+        if (occupied.has(nextKey)) return;
+
+        const danger = keyOf(opponentThreat) === nextKey ? 20 : 0;
+        const wallPressure = cells.filter(cell => hexDistance(cell, next) <= 1 && !occupied.has(keyOf(cell))).length;
+        const pathDistance = shortestFoodDistance(next, occupied);
+        options.push({
+          direction: candidate,
+          pathValue: Number.isFinite(pathDistance) ? pathDistance : nearestFoodDistance(next),
+          tacticalValue: pathDistance + danger - wallPressure * 0.08,
+          fallbackValue: nearestFoodDistance(next) + danger - wallPressure * 0.08
+        });
+      });
+
+      if (!options.length) return currentDirection;
 
       options.sort((a, b) => {
         if (computerDifficulty === "high") return a.pathValue - b.pathValue;
@@ -4430,12 +4601,43 @@
       if (!profile) return;
       const profileCooldownScale = profile === "small" ? 0.7 : 1;
       const cooldown = { novice: 6200, low: 6200, medium: 4700, high: 3400 }[computerDifficulty] * profileCooldownScale / attackSpeedMultiplier(computerStock);
-      if (now - lastComputerAttackMs < cooldown) return;
+      if (now - lastComputerAttackMs < cooldown / (computerBattleMode ? computerBattleSpeed : 1)) return;
       const target = chooseComputerAttackTarget();
       if (launchAttack("computer", target, now, profile)) {
         lastComputerAttackMs = now;
         setStatus(profile === "small" ? "電腦施放小招。" : "電腦施放大招，2 秒後落地。");
       }
+    }
+
+    function autoBattleAttackProfile(owner) {
+      if (canAttack(owner, "big")) return "big";
+      if (canAttack(owner, "small")) return "small";
+      return null;
+    }
+
+    function autoBattleAttackTarget(owner, profile) {
+      const targetSnake = owner === "player" ? computerSnake : snake;
+      const stock = owner === "player" ? playerStock : computerStock;
+      const targetHead = targetSnake[0];
+      const radius = Math.max(1, blastRadius(stock) + (profile === "small" ? -1 : 0));
+      const damageScale = damageMultiplier(stock) * (profile === "small" ? 0.55 : 1);
+      const candidates = cellsWithinDistance(targetHead, 0, Math.max(1, Math.ceil(radius)));
+      candidates.sort((a, b) => {
+        const damageDiff = damageSnake(targetSnake, b, radius, damageScale) - damageSnake(targetSnake, a, radius, damageScale);
+        if (damageDiff) return damageDiff;
+        return hexDistance(a, targetHead) - hexDistance(b, targetHead);
+      });
+      return candidates[0] || { ...targetHead };
+    }
+
+    function maybeAutoBattlePlayerAttack(now) {
+      if (!computerBattleMode || isNoviceComputer()) return;
+      const profile = autoBattleAttackProfile("player");
+      if (!profile) return;
+      const profileCooldownScale = profile === "small" ? 0.7 : 1;
+      const cooldown = { novice: 6200, low: 6200, medium: 4700, high: 3400 }[computerDifficulty] * profileCooldownScale / attackSpeedMultiplier(playerStock);
+      if (now - lastPlayerAttackMs < cooldown / computerBattleSpeed) return;
+      launchAttack("player", autoBattleAttackTarget("player", profile), now, profile);
     }
 
     function damageSnake(parts, target, radius, damageScale) {
@@ -4571,6 +4773,10 @@
     }
 
     function step() {
+      if (computerBattleMode) {
+        nextDir = chooseAutoDirection("player");
+        hexDirButtons.forEach(button => button.classList.toggle("active", Number(button.dataset.dir) === nextDir));
+      }
       dir = nextDir;
       computerDir = chooseComputerDirection();
 
@@ -4655,6 +4861,10 @@
     }
 
     function stepPlayerOnly() {
+      if (computerBattleMode) {
+        nextDir = chooseAutoDirection("player");
+        hexDirButtons.forEach(button => button.classList.toggle("active", Number(button.dataset.dir) === nextDir));
+      }
       dir = nextDir;
       const next = nextWrappedCell(snake[0], dir);
       const nextKey = keyOf(next);
@@ -4729,6 +4939,7 @@
       if (gameOver) return;
       running = false;
       gameOver = true;
+      updateAutoBattleControls();
       restartUnlockAt = performance.now() + gameOverRestartDelayMs;
       setSettingsLocked(false);
       if (totalElapsedMs > bestTotalMs) {
@@ -4763,8 +4974,9 @@
       }
       if (!paused) {
         const delta = lastTimerFrame ? now - lastTimerFrame : 0;
-        totalElapsedMs += delta;
-        lastFeedElapsedMs += delta;
+        const timeScale = computerBattleMode ? computerBattleSpeed : 1;
+        totalElapsedMs += delta * timeScale;
+        lastFeedElapsedMs += delta * timeScale;
         lastTimerFrame = now;
       } else {
         lastTimerFrame = now;
@@ -4772,6 +4984,7 @@
       if (!paused) {
         resolveProjectiles(now);
         resolveHazards(now);
+        maybeAutoBattlePlayerAttack(now);
         maybeComputerAttack(now);
       }
       if (running && !paused) {
@@ -4792,6 +5005,7 @@
       blasts = blasts.filter(blast => now <= blast.endAt);
       hazards = hazards.filter(hazard => now <= hazard.endAt);
       updateHud();
+      updateAutoBattleControls();
       draw();
       rafId = requestAnimationFrame(loop);
     }
@@ -5493,6 +5707,7 @@
         lastComputerStep = lastPlayerStep;
         lastTimerFrame = lastPlayerStep;
       }
+      updateAutoBattleControls();
     }
 
     function surrenderGame() {
@@ -5832,6 +6047,7 @@
         lastPlayerStep = performance.now();
         lastComputerStep = lastPlayerStep;
         lastTimerFrame = lastPlayerStep;
+        updateAutoBattleControls();
         return;
       }
       if (gameOver) {
@@ -5844,6 +6060,51 @@
       startButton.textContent = "開始";
       setOverlayChromeVisible(true);
       startGame();
+    });
+
+    computerBattleButton.addEventListener("click", () => {
+      if (!characters.length) {
+        window.location.reload();
+        return;
+      }
+      if (gameOver && !canRestartAfterGameOver()) return;
+      overlayTitle.textContent = "電腦對弈";
+      overlayText.textContent = "雙方都交給電腦操作，右下角可調整對弈速度或暫停。";
+      setOverlayChromeVisible(true);
+      startGame({ computerBattle: true });
+    });
+
+    autoBattleSpeedSelect.addEventListener("change", event => {
+      event.stopPropagation();
+      if (!computerBattleMode) return;
+      setComputerBattleSpeed(autoBattleSpeedSelect.value);
+      resetAutoBattleStepTimers();
+      updateAutoBattleControls();
+    });
+
+    autoBattleSpeedSelect.addEventListener("wheel", event => {
+      if (!computerBattleMode) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const currentIndex = autoBattleSpeeds.indexOf(computerBattleSpeed);
+      const direction = event.deltaY > 0 ? 1 : -1;
+      const nextIndex = Math.max(0, Math.min(autoBattleSpeeds.length - 1, currentIndex + direction));
+      if (nextIndex === currentIndex) return;
+      setComputerBattleSpeed(autoBattleSpeeds[nextIndex]);
+      resetAutoBattleStepTimers();
+      updateAutoBattleControls();
+    }, { passive: false });
+
+    autoPauseButton.addEventListener("click", event => {
+      event.stopPropagation();
+      if (!computerBattleMode || !running || gameOver) return;
+      paused = !paused;
+      if (!paused) {
+        lastPlayerStep = performance.now();
+        lastComputerStep = lastPlayerStep;
+        lastTimerFrame = lastPlayerStep;
+      }
+      updateAutoBattleControls();
     });
 
     joyZone.addEventListener("pointerdown", event => {
@@ -5957,6 +6218,7 @@
           lastComputerStep = lastPlayerStep;
           lastTimerFrame = lastPlayerStep;
         }
+        updateAutoBattleControls();
         return;
       }
 
