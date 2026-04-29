@@ -203,13 +203,14 @@
     .portrait-lightbox {
       position: fixed;
       inset: 0;
-      z-index: 120;
+      z-index: 1000;
       display: grid;
       grid-template-rows: minmax(0, 1fr) auto;
       gap: 12px;
       padding: max(14px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
       background: rgba(7, 10, 16, 0.92);
       place-items: center;
+      isolation: isolate;
     }
 
     .portrait-lightbox[hidden] {
@@ -217,6 +218,8 @@
     }
 
     .portrait-lightbox-figure {
+      position: relative;
+      z-index: 0;
       min-width: 0;
       min-height: 0;
       width: min(92vw, 680px);
@@ -231,6 +234,7 @@
       height: 100%;
       object-fit: contain;
       filter: drop-shadow(0 24px 54px rgba(0, 0, 0, 0.58));
+      pointer-events: none;
     }
 
     .portrait-lightbox-caption {
@@ -241,7 +245,13 @@
     }
 
     .portrait-lightbox-close {
+      position: fixed;
+      top: max(14px, env(safe-area-inset-top));
+      right: max(14px, env(safe-area-inset-right));
+      z-index: 1002;
+      width: auto;
       min-width: 120px;
+      pointer-events: auto;
     }
 
     .portrait-lightbox-arrow {
@@ -254,7 +264,7 @@
       transform: translateY(-50%);
       font-size: 2.2rem;
       line-height: 1;
-      z-index: 1;
+      z-index: 1001;
     }
 
     .portrait-lightbox-arrow[data-portrait-lightbox-shift="-1"] {
@@ -290,6 +300,12 @@
 
     button.secondary.portrait-lightbox-arrow {
       width: 48px;
+    }
+
+    button.secondary.portrait-lightbox-close {
+      width: auto;
+      min-width: 120px;
+      z-index: 1002;
     }
 
     .side {
@@ -2377,13 +2393,15 @@
       { id: "fiber", label: "纖維", name: "纖維素", foodName: "綠色食物", effect: "提升移動速度，滿庫存約 1.8x", color: "#22c55e", line: "#bbf7d0" },
       { id: "carb", label: "碳水", name: "碳水", foodName: "藍色食物", effect: "提升攻擊施展與冷卻速度，並提高命中暈眩機率", color: "#3b82f6", line: "#bfdbfe" }
     ];
-    const foodTypeById = new Map(foodTypes.map(type => [type.id, type]));
+    const blackFoodType = { id: "black", label: "蠱食", name: "蠱食", foodName: "黑色食物", effect: "特殊食物；吃下後紅黃綠藍隨機一種庫存 +1，並獲得 3 點能量", color: "#050505", line: "#e5e7eb" };
+    const foodTypeById = new Map([...foodTypes, blackFoodType].map(type => [type.id, type]));
     const foodLabels = {
       balanced: "均衡",
       protein: "紅色食物",
       fat: "黃色食物",
       fiber: "綠色食物",
-      carb: "藍色食物"
+      carb: "藍色食物",
+      black: "黑色食物"
     };
     const poseAliases = {
       opening: "opening",
@@ -2500,12 +2518,14 @@
 
     function normalizeCharacter(entry) {
       const foodPreference = foodLabels[entry.foodPreference] ? entry.foodPreference : "balanced";
+      const food = foodTypes.some(type => type.id === foodPreference) ? foodPreference : "balanced";
       const colors = entry.colors || {};
       const representColor = entry.representColor || colors.body || "#f8fafc";
       return {
         ...entry,
-        food: foodPreference,
+        food,
         foodLabel: foodLabels[foodPreference] || foodLabels.balanced,
+        specialFood: entry.specialFood || (foodPreference === "black" ? "black" : null),
         detail: entry.foodEffect || "",
         color: representColor,
         body: colors.body || representColor,
@@ -2575,6 +2595,9 @@
       }
       if (character.id === "moray") {
         return `<svg ${common}><path class="body" d="M12 61 C29 24 50 79 72 36 C80 21 94 36 82 52 C65 75 40 54 31 82 C26 93 10 82 12 61Z"/><path class="accent" d="M24 65 C34 58 41 61 49 69 C37 70 29 75 20 83Z"/><path class="line" d="M71 46 L91 49"/><circle class="eye" cx="78" cy="39" r="3"/></svg>`;
+      }
+      if (character.id === "gu_king") {
+        return `<svg ${common}><path class="body" d="M12 58 C22 34 42 31 54 43 C66 55 82 42 89 61 C80 75 61 71 50 61 C38 51 24 69 12 58Z"/><path class="accent" d="M18 47 L8 34 M30 41 L24 25 M43 41 L42 22 M56 47 L64 27 M69 53 L83 39 M25 67 L17 82 M40 65 L37 84 M56 65 L61 83 M72 65 L85 78"/><path class="line" d="M22 54 C32 45 40 45 50 54 C61 64 72 63 83 56"/><circle class="eye" cx="83" cy="58" r="3"/></svg>`;
       }
       return `<svg ${common}><path class="body" d="M27 52 C27 34 73 34 73 52 C73 78 27 78 27 52Z"/><path class="accent" d="M30 43 L9 27 C3 36 9 49 24 50Z"/><path class="accent" d="M70 43 L91 27 C97 36 91 49 76 50Z"/><path class="line" d="M37 34 L27 13 M50 31 L50 9 M63 34 L73 13"/><circle class="eye" cx="42" cy="49" r="3"/><circle class="eye" cx="58" cy="49" r="3"/></svg>`;
     }
@@ -2651,6 +2674,7 @@
     }
 
     function fighterPortraitImage(character, pose = "idle") {
+      const fallbackSvg = fighterSvg(character, true).replace("<svg ", "<svg hidden ");
       return `
         <img
           class="fighter-avatar-image portrait"
@@ -2661,7 +2685,9 @@
           decoding="async"
           loading="eager"
           data-pose="${pose}"
+          onerror="this.hidden=true;this.nextElementSibling.hidden=false"
         >
+        ${fallbackSvg}
       `;
     }
 
@@ -2683,6 +2709,7 @@
 
     function buildRulesContent() {
       const foodLegend = foodTypes.map(type => `<li><b>${type.foodName}</b>: ${type.name}，${type.effect}</li>`).join("");
+      const specialFoodLegend = `<li><b>${blackFoodType.foodName}</b>: ${blackFoodType.name}，${blackFoodType.effect}；不會自然產出。</li>`;
       const characterLegend = characters.map(character => {
         const story = (character.story || []).map(paragraph => `<p>${paragraph}</p>`).join("");
         return `
@@ -2716,10 +2743,11 @@
           <h3>食物與資源</h3>
           <ul class="rules-list">
             ${foodLegend}
+            ${specialFoodLegend}
             <li><b>食物收益</b>：單色食物給同色庫存 2 點；雙色食物給兩色各 1 點；每次吃食仍只增加 1 分與 1 段蛇身。</li>
             <li><b>能量</b>：每吃 1 個食物獲得 2 點能量，集滿 ${attackNeedTotal} 點獲得 1 枚炸彈；炸彈最多 ${maxAmmo} 枚，也是大招施放資源。</li>
             <li><b>施放成本</b>：小招需紅黃綠藍四種庫存各至少 1 點，施放後各消耗 1；大招需 ${bigAttackBombCost} 枚炸彈，且四種庫存各至少 2 點，施放後消耗 ${bigAttackBombCost} 枚炸彈並使四種庫存各消耗 2。</li>
-            <li><b>庫存上限</b>：每種食物最多累積 ${maxFoodStock} 點；專精角色只影響補貨偏好，不會額外增加吃食收益。</li>
+            <li><b>庫存上限</b>：每種食物最多累積 ${maxFoodStock} 點；一般專精角色只影響補貨偏好，特殊角色可能產出專屬食物。</li>
             <li><b>撞擊懲罰</b>：撞到對手會停止 ${collisionStunMs / 1000} 秒，再減速 ${collisionSlowMs / 1000} 秒；撞到自己懲罰加倍，累積停止時間超過 ${maxCollisionParalysisMs / 1000} 秒會落敗。</li>
           </ul>
         </section>
@@ -3088,6 +3116,12 @@
     function collectFood(owner, food) {
       const stock = owner === "player" ? playerStock : computerStock;
       const types = foodTypeIds(food);
+      if (types.includes("black")) {
+        const randomType = foodTypes[Math.floor(Math.random() * foodTypes.length)];
+        addStock(stock, randomType.id, 1);
+        addAmmoCharge(owner, 3);
+        return;
+      }
       const stockGain = types.length > 1 ? 1 : 2;
       types.forEach(typeId => addStock(stock, typeId, stockGain));
       addAmmoCharge(owner, 2);
@@ -3502,6 +3536,15 @@
       return [firstType.id, secondType.id];
     }
 
+    function randomFoodTypeIdsForCharacter(character) {
+      if (character?.specialFood === "black" && Math.random() < 1 / 3) {
+        return ["black"];
+      }
+      const preferredFoodId = character ? character.food : null;
+      const dualColor = character?.food === "balanced" && Math.random() < 0.5;
+      return randomFoodTypeIds(preferredFoodId, dualColor);
+    }
+
     function placeFoods(preferredOwners = []) {
       const occupied = new Set([
         ...snake.map(keyOf),
@@ -3515,9 +3558,7 @@
         const cell = openCells[Math.floor(Math.random() * openCells.length)];
         const owner = preferredOwners[generated];
         const character = owner ? characterFor(owner) : null;
-        const preferredFoodId = character ? character.food : null;
-        const dualColor = character?.food === "balanced" && Math.random() < 0.5;
-        foods.push({ q: cell.q, r: cell.r, types: randomFoodTypeIds(preferredFoodId, dualColor) });
+        foods.push({ q: cell.q, r: cell.r, types: randomFoodTypeIdsForCharacter(character) });
         occupied.add(keyOf(cell));
         generated += 1;
       }
@@ -4227,7 +4268,10 @@
       ctx.strokeStyle = "#f8fafc";
       ctx.lineWidth = Math.max(2, cellSize * 0.09);
 
-      if (type.id === "protein") {
+      if (type.id === "black") {
+        ctx.beginPath();
+        ctx.arc(x, y, size * 0.78, 0, Math.PI * 2);
+      } else if (type.id === "protein") {
         ctx.beginPath();
         ctx.arc(x, y, size * 0.74, 0, Math.PI * 2);
       } else if (type.id === "fat") {
@@ -4274,7 +4318,23 @@
       ctx.lineWidth = Math.max(2, cellSize * 0.08);
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
-      if (type.id === "protein") {
+      if (type.id === "black") {
+        ctx.strokeStyle = "#e5e7eb";
+        ctx.lineWidth = Math.max(2, cellSize * 0.07);
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.38, y);
+        for (let i = 0; i < 6; i += 1) {
+          const px = x - size * 0.28 + i * size * 0.12;
+          const py = y + (i % 2 === 0 ? -size * 0.16 : size * 0.16);
+          ctx.lineTo(px, py);
+        }
+        ctx.lineTo(x + size * 0.38, y);
+        ctx.stroke();
+        ctx.fillStyle = "#e5e7eb";
+        ctx.beginPath();
+        ctx.arc(x - size * 0.38, y, size * 0.1, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (type.id === "protein") {
         ctx.beginPath();
         ctx.moveTo(x - size * 0.32, y - size * 0.08);
         ctx.bezierCurveTo(x - size * 0.18, y - size * 0.36, x + size * 0.22, y - size * 0.36, x + size * 0.34, y - size * 0.04);
