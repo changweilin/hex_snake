@@ -4457,6 +4457,10 @@
       };
     }
 
+    function bandDistanceFromTotalWidth(totalWidth) {
+      return Math.max(0, Math.floor((totalWidth - 1) / 2));
+    }
+
     function ownerDirection(owner) {
       return owner === "player" ? nextDir : computerDir;
     }
@@ -4502,8 +4506,13 @@
       return cellsForwardFrom(start, direction, true);
     }
 
-    function cellsNearCells(effectCells, width) {
-      return cells.filter(cell => effectCells.some(effectCell => hexDistance(cell, effectCell) <= width));
+    function cellKeySet(cellList = []) {
+      return new Set(cellList.map(cell => keyOf(cell)));
+    }
+
+    function cellsNearCells(effectCells, width, excludedCells = []) {
+      const excluded = cellKeySet(excludedCells);
+      return cells.filter(cell => !excluded.has(keyOf(cell)) && effectCells.some(effectCell => hexDistance(cell, effectCell) <= width));
     }
 
     function pushCircleAttack({ owner, profile, target, createdAt, impactAt, delay, radius, damage, stunChance, hidden = false, flat = false }) {
@@ -4548,6 +4557,7 @@
 
       if (character.id === "moray") {
         const lineCells = boardLineThrough(target, direction);
+        const excludedCells = (owner === "player" ? snake : computerSnake).map(segment => ({ q: segment.q, r: segment.r }));
         for (let index = 0; index < 4; index += 1) {
           projectiles.push({
             kind: "line",
@@ -4556,7 +4566,8 @@
             source: { q: source.q, r: source.r },
             target: { q: target.q, r: target.r },
             lineCells,
-            width: small.radius,
+            excludedCells,
+            width: bandDistanceFromTotalWidth(small.radius),
             createdAt: now,
             impactAt: now + small.delay + index * 320,
             delay: small.delay + index * 320,
@@ -4576,7 +4587,8 @@
           kind: "swamp",
           owner,
           cells: trail,
-          width: small.radius,
+          excludedCells: trail,
+          width: bandDistanceFromTotalWidth(small.radius),
           damage: small.damage,
           stunChance,
           startedAt: now + small.delay,
@@ -4753,8 +4765,10 @@
       ), 0);
     }
 
-    function damageSnakeCells(parts, effectCells, width, damageScale) {
+    function damageSnakeCells(parts, effectCells, width, damageScale, excludedCells = []) {
+      const excluded = cellKeySet(excludedCells);
       return parts.reduce((total, segment) => {
+        if (excluded.has(keyOf(segment))) return total;
         const hit = effectCells.some(cell => hexDistance(segment, cell) <= width);
         return hit ? total + damageScale : total;
       }, 0);
@@ -4821,11 +4835,12 @@
         let playerDamage = 0;
         let computerDamage = 0;
         if (projectile.kind === "line") {
-          playerDamage = damageSnakeCells(snake, projectile.lineCells, projectile.width, projectile.damage);
-          computerDamage = damageSnakeCells(computerSnake, projectile.lineCells, projectile.width, projectile.damage);
+          playerDamage = damageSnakeCells(snake, projectile.lineCells, projectile.width, projectile.damage, projectile.excludedCells);
+          computerDamage = damageSnakeCells(computerSnake, projectile.lineCells, projectile.width, projectile.damage, projectile.excludedCells);
           blasts.push({
             kind: "line",
             lineCells: projectile.lineCells,
+            excludedCells: projectile.excludedCells,
             width: projectile.width,
             target: projectile.target,
             owner: projectile.owner,
@@ -4859,8 +4874,8 @@
       activeHazards.forEach(hazard => {
         if (now < hazard.startedAt || now < hazard.nextTickAt) return;
         hazard.nextTickAt = now + hazard.tickMs;
-        const playerDamage = damageSnakeCells(snake, hazard.cells, hazard.width, hazard.damage);
-        const computerDamage = damageSnakeCells(computerSnake, hazard.cells, hazard.width, hazard.damage);
+        const playerDamage = damageSnakeCells(snake, hazard.cells, hazard.width, hazard.damage, hazard.excludedCells);
+        const computerDamage = damageSnakeCells(computerSnake, hazard.cells, hazard.width, hazard.damage, hazard.excludedCells);
         applyBlastDamage("player", playerDamage);
         applyBlastDamage("computer", computerDamage);
         if (hazard.owner !== "player" && playerDamage > 0) applyAttackStun("player", hazard.stunChance, now, { interrupt: false });
@@ -5190,7 +5205,7 @@
           const progress = Math.min(1, Math.max(0, (now - projectile.createdAt) / (projectile.delay || baseAttackDelayMs)));
           const alpha = 0.18 + progress * 0.32;
           const blastCharacter = characterFor(projectile.owner);
-          cellsNearCells(projectile.lineCells, projectile.width).forEach(cell => {
+          cellsNearCells(projectile.lineCells, projectile.width, projectile.excludedCells).forEach(cell => {
             const { x, y } = axialToPixel(cell);
             hexPath(x, y, cellSize * 0.88);
             ctx.fillStyle = hexToRgba(blastCharacter.accent || blastCharacter.color, alpha);
@@ -5247,7 +5262,7 @@
         const progress = (now - hazard.startedAt) / Math.max(1, hazard.endAt - hazard.startedAt);
         const alpha = 0.24 * (1 - progress * 0.55);
         const blastCharacter = characterFor(hazard.owner);
-        cellsNearCells(hazard.cells, hazard.width).forEach(cell => {
+        cellsNearCells(hazard.cells, hazard.width, hazard.excludedCells).forEach(cell => {
           const { x, y } = axialToPixel(cell);
           hexPath(x, y, cellSize * 0.9);
           ctx.fillStyle = hexToRgba(blastCharacter.accent || blastCharacter.color, alpha);
@@ -5266,7 +5281,7 @@
           const progress = Math.min(1, (now - blast.startedAt) / blastDurationMs);
           const alpha = 1 - progress;
           const blastCharacter = characterFor(blast.owner);
-          cellsNearCells(blast.lineCells, blast.width).forEach(cell => {
+          cellsNearCells(blast.lineCells, blast.width, blast.excludedCells).forEach(cell => {
             const { x, y } = axialToPixel(cell);
             hexPath(x, y, cellSize * 0.94);
             ctx.fillStyle = hexToRgba(blastCharacter.accent || blastCharacter.color, 0.32 * alpha);
