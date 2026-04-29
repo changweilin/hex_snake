@@ -203,13 +203,14 @@
     .portrait-lightbox {
       position: fixed;
       inset: 0;
-      z-index: 120;
+      z-index: 1000;
       display: grid;
       grid-template-rows: minmax(0, 1fr) auto;
       gap: 12px;
       padding: max(14px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
       background: rgba(7, 10, 16, 0.92);
       place-items: center;
+      isolation: isolate;
     }
 
     .portrait-lightbox[hidden] {
@@ -217,6 +218,8 @@
     }
 
     .portrait-lightbox-figure {
+      position: relative;
+      z-index: 0;
       min-width: 0;
       min-height: 0;
       width: min(92vw, 680px);
@@ -231,6 +234,7 @@
       height: 100%;
       object-fit: contain;
       filter: drop-shadow(0 24px 54px rgba(0, 0, 0, 0.58));
+      pointer-events: none;
     }
 
     .portrait-lightbox-caption {
@@ -241,7 +245,13 @@
     }
 
     .portrait-lightbox-close {
+      position: fixed;
+      top: max(14px, env(safe-area-inset-top));
+      right: max(14px, env(safe-area-inset-right));
+      z-index: 1002;
+      width: auto;
       min-width: 120px;
+      pointer-events: auto;
     }
 
     .portrait-lightbox-arrow {
@@ -254,7 +264,7 @@
       transform: translateY(-50%);
       font-size: 2.2rem;
       line-height: 1;
-      z-index: 1;
+      z-index: 1001;
     }
 
     .portrait-lightbox-arrow[data-portrait-lightbox-shift="-1"] {
@@ -290,6 +300,12 @@
 
     button.secondary.portrait-lightbox-arrow {
       width: 48px;
+    }
+
+    button.secondary.portrait-lightbox-close {
+      width: auto;
+      min-width: 120px;
+      z-index: 1002;
     }
 
     .side {
@@ -423,6 +439,7 @@
 
     .gm-settings {
       display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 10px;
       padding: 10px;
       border-radius: 8px;
@@ -434,10 +451,23 @@
       display: none;
     }
 
-    .food-stock-grid {
+    .gm-settings > .food-stock-grid {
+      display: contents;
+    }
+
+    .gm-preset-row {
+      grid-column: 1 / -1;
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 10px;
+    }
+
+    .gm-settings .field + .field {
+      margin-top: 0;
+    }
+
+    .gm-settings > button {
+      grid-column: 1 / -1;
     }
 
     .field {
@@ -575,7 +605,11 @@
       --owner-line: #ffedd5;
     }
 
-    [data-owner="computer"] {
+    [data-owner="computer"],
+    .fighter-card[data-owner="computer"],
+    .intro-avatar-button[data-owner="computer"],
+    .portrait-option[data-owner="computer"],
+    .fighter-portrait[data-owner="computer"] {
       --owner-color: #a78bfa;
       --owner-line: #ede9fe;
     }
@@ -984,12 +1018,12 @@
     }
 
     .portrait-moves {
-      display: flex;
-      flex-wrap: wrap;
+      display: grid;
       gap: 6px;
     }
 
     .portrait-moves span {
+      display: block;
       padding: 4px 8px;
       border: 1px solid color-mix(in srgb, var(--fighter-line), transparent 34%);
       border-radius: 999px;
@@ -1062,61 +1096,87 @@
       flex: 0 0 auto;
     }
 
-    .powder-icon {
-      border-radius: 4px 4px 5px 5px;
-      background: linear-gradient(180deg, #6b7280 0%, #27272a 42%, #111827 100%);
-      border: 1px solid #94a3b8;
-      box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.28);
+    .resource-chip.is-flashing .resource-icon {
+      animation: resource-flash 560ms ease-in-out 3;
     }
 
-    .powder-icon::before {
+    .energy-icon {
+      --icon-rotate: -8deg;
+      border-radius: 4px 4px 5px 5px;
+      background:
+        linear-gradient(90deg, transparent 0 24%, rgba(255, 255, 255, 0.34) 24% 34%, transparent 34%),
+        linear-gradient(180deg, #ef4444 0 18%, #b91c1c 18% 58%, #7f1d1d 58% 100%);
+      border: 1px solid #fecaca;
+      box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.28), 0 0 8px rgba(239, 68, 68, 0.2);
+      transform: rotate(-8deg);
+    }
+
+    .energy-icon::before {
       content: "";
       position: absolute;
       left: 4px;
       top: -4px;
-      width: 5px;
-      height: 5px;
-      border-radius: 50%;
-      background: #facc15;
-      box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.22);
+      width: 6px;
+      height: 4px;
+      border-radius: 2px 2px 1px 1px;
+      background: #e5e7eb;
+      border: 1px solid #f8fafc;
     }
 
-    .powder-icon::after {
+    .energy-icon::after {
       content: "";
       position: absolute;
-      left: 3px;
+      left: 2px;
       top: 5px;
-      width: 6px;
-      height: 2px;
-      border-radius: 999px;
-      background: #f59e0b;
+      width: 8px;
+      height: 4px;
+      border-radius: 2px;
+      background: #f8fafc;
+      box-shadow: inset 0 0 0 1px rgba(239, 68, 68, 0.42);
     }
 
     .missile-icon {
-      transform: rotate(-35deg);
+      --icon-rotate: -10deg;
+      transform: rotate(-10deg);
     }
 
     .missile-icon::before {
       content: "";
       position: absolute;
-      left: 3px;
-      top: 2px;
-      width: 8px;
+      left: 2px;
+      top: 4px;
+      width: 10px;
       height: 10px;
-      border-radius: 7px 7px 3px 3px;
-      background: linear-gradient(180deg, #e5e7eb 0%, #9ca3af 100%);
-      border: 1px solid #f8fafc;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 34% 28%, #f8fafc 0 12%, transparent 13%),
+        linear-gradient(180deg, #52525b 0%, #18181b 100%);
+      border: 1px solid #a1a1aa;
+      box-shadow: inset -2px -2px 0 rgba(0, 0, 0, 0.34);
     }
 
     .missile-icon::after {
       content: "";
       position: absolute;
-      left: 2px;
-      top: 10px;
-      width: 10px;
-      height: 5px;
-      background: linear-gradient(90deg, #ef4444 0 30%, #f97316 30% 70%, #facc15 70%);
-      clip-path: polygon(50% 100%, 0 0, 100% 0);
+      left: 8px;
+      top: 0;
+      width: 6px;
+      height: 7px;
+      border-top: 2px solid #facc15;
+      border-right: 2px solid #facc15;
+      border-radius: 0 7px 0 0;
+      transform: rotate(12deg);
+    }
+
+    @keyframes resource-flash {
+      0%, 100% {
+        filter: brightness(1);
+        transform: scale(1) rotate(var(--icon-rotate, 0deg));
+      }
+      45% {
+        filter: brightness(1.9) drop-shadow(0 0 7px #facc15);
+        transform: scale(1.25) rotate(var(--icon-rotate, 0deg));
+      }
     }
 
     .resource-row {
@@ -1223,11 +1283,10 @@
 
     .hex-dir-button {
       position: absolute;
-      left: 50%;
-      top: 50%;
-      width: 37.2%;
+      left: var(--joy-x);
+      top: var(--joy-y);
+      width: 35.5%;
       aspect-ratio: 1;
-      translate: -50% -50%;
       padding: 0;
       min-height: 0;
       display: grid;
@@ -1236,9 +1295,14 @@
       background: rgba(15, 23, 42, 0.84);
       color: var(--ink);
       border: 1px solid rgba(255, 255, 255, 0.2);
-      font-size: 0.72rem;
+      font-size: 0.8rem;
       line-height: 1;
+      transform: translate(-50%, -50%) rotate(-30deg);
       z-index: 2;
+    }
+
+    .hex-dir-button > span {
+      transform: rotate(30deg);
     }
 
     .hex-dir-button.active {
@@ -1247,12 +1311,12 @@
       border-color: rgba(255, 255, 255, 0.6);
     }
 
-    .hex-dir-button[data-dir="0"] { transform: translate(0, -88%); }
-    .hex-dir-button[data-dir="1"] { transform: translate(75%, -44%); }
-    .hex-dir-button[data-dir="2"] { transform: translate(75%, 44%); }
-    .hex-dir-button[data-dir="3"] { transform: translate(0, 88%); }
-    .hex-dir-button[data-dir="4"] { transform: translate(-75%, 44%); }
-    .hex-dir-button[data-dir="5"] { transform: translate(-75%, -44%); }
+    .hex-dir-button[data-dir="0"] { --joy-x: 34.5%; --joy-y: 23.2%; }
+    .hex-dir-button[data-dir="1"] { --joy-x: 65.5%; --joy-y: 23.2%; }
+    .hex-dir-button[data-dir="2"] { --joy-x: 81%; --joy-y: 50%; }
+    .hex-dir-button[data-dir="3"] { --joy-x: 65.5%; --joy-y: 76.8%; }
+    .hex-dir-button[data-dir="4"] { --joy-x: 34.5%; --joy-y: 76.8%; }
+    .hex-dir-button[data-dir="5"] { --joy-x: 19%; --joy-y: 50%; }
 
     .joystick.locked {
       border-color: var(--accent);
@@ -1446,6 +1510,115 @@
       color: var(--ink);
     }
 
+    .rule-food-line,
+    .rule-food-effect {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .rule-food-effect {
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+
+    .food-icon-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      flex: 0 0 auto;
+      vertical-align: middle;
+    }
+
+    .food-icon {
+      --food-color: #94a3b8;
+      --food-line: #f8fafc;
+      position: relative;
+      display: inline-block;
+      width: 18px;
+      height: 18px;
+      flex: 0 0 18px;
+      background: var(--food-color);
+      border: 2px solid var(--food-line);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22);
+    }
+
+    .food-icon.is-protein {
+      border-radius: 999px;
+    }
+
+    .food-icon.is-fat {
+      transform: rotate(45deg) scale(0.86);
+    }
+
+    .food-icon.is-fat::after {
+      transform: translate(-50%, -50%) rotate(-45deg);
+    }
+
+    .food-icon.is-fiber {
+      clip-path: polygon(50% 0%, 98% 35%, 79% 92%, 21% 92%, 2% 35%);
+    }
+
+    .food-icon.is-carb {
+      clip-path: polygon(50% 4%, 96% 88%, 4% 88%);
+    }
+
+    .food-icon.is-black {
+      border-radius: 999px;
+    }
+
+    .food-icon::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 8px;
+      height: 8px;
+      transform: translate(-50%, -50%);
+      border-color: #111720;
+      color: #111720;
+      pointer-events: none;
+    }
+
+    .food-icon.is-protein::after {
+      width: 10px;
+      height: 7px;
+      border-bottom: 2px solid currentColor;
+      border-radius: 50%;
+      transform: translate(-50%, -48%) rotate(-16deg);
+    }
+
+    .food-icon.is-fat::after {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: currentColor;
+    }
+
+    .food-icon.is-fiber::after {
+      width: 10px;
+      height: 12px;
+      border-left: 2px solid currentColor;
+      border-top: 2px solid currentColor;
+      border-radius: 70% 0 0 0;
+      transform: translate(-34%, -42%) rotate(24deg);
+    }
+
+    .food-icon.is-carb::after {
+      width: 9px;
+      height: 7px;
+      border-left: 2px solid currentColor;
+      border-bottom: 2px solid currentColor;
+      transform: translate(-50%, -44%) rotate(-45deg);
+    }
+
+    .food-icon.is-black::after {
+      width: 11px;
+      height: 6px;
+      border-top: 2px solid #e5e7eb;
+      transform: translate(-50%, -30%) skewX(-18deg);
+    }
+
     .rules-character-list li {
       padding: 10px;
       border-radius: 8px;
@@ -1629,6 +1802,29 @@
         overflow: visible;
         position: relative;
         z-index: 220;
+      }
+
+      .side .section.settings-section {
+        grid-template-columns: 1fr;
+      }
+
+      .side .settings-section .settings-actions {
+        display: grid;
+        grid-template-columns: minmax(54px, 1fr) minmax(54px, 1fr) minmax(44px, 0.72fr) 38px;
+        gap: 5px;
+        justify-self: end;
+        width: min(100%, calc(100vw - max(6px, env(safe-area-inset-left)) - max(6px, env(safe-area-inset-right)) - 12px));
+        max-width: 100%;
+        align-items: stretch;
+      }
+
+      .side .settings-section .surrender-button,
+      .side .settings-section .rules-toggle,
+      .side .settings-section .gm-toggle,
+      .side .settings-section .settings-toggle {
+        width: 100%;
+        min-width: 0;
+        min-height: 38px;
       }
 
       .side .settings-section.open {
@@ -1986,7 +2182,7 @@
           <div class="dialog">
             <div id="winnerPortrait" hidden></div>
             <h2 id="overlayTitle">準備開局</h2>
-            <p id="overlayText">每吃 6 個食物獲得 1 枚砲彈，最多 3 枚；發射時會消耗紅黃綠藍各 1 點。</p>
+            <p id="overlayText">每吃 1 個食物獲得 2 點能量，集滿 6 點獲得 1 枚炸彈，最多 3 枚；能量與炸彈都滿時，施放消耗炸彈的招式會立刻把滿能量轉為 1 枚炸彈；小招消耗紅黃綠藍各 1 點，大招消耗 2 枚炸彈與紅黃綠藍各 2 點。</p>
             <button id="startButton" type="button">開始</button>
             <button id="introCloseButton" class="secondary intro-close-button" type="button" hidden>關閉</button>
           </div>
@@ -2012,6 +2208,7 @@
         <div class="field">
           <label for="computerDifficulty">電腦難度</label>
           <select id="computerDifficulty">
+            <option value="novice">新手</option>
             <option value="low">低</option>
             <option value="medium" selected>中</option>
             <option value="high">高</option>
@@ -2049,7 +2246,7 @@
             <input id="surrenderKey" type="text" value="T" maxlength="1" inputmode="text">
           </div>
           <div class="field">
-            <label for="dirKey0">上方攻擊</label>
+            <label for="dirKey0">左上攻擊</label>
             <input id="dirKey0" data-keybind-dir="0" type="text" value="W" maxlength="1" inputmode="text">
           </div>
           <div class="field">
@@ -2057,11 +2254,11 @@
             <input id="dirKey1" data-keybind-dir="1" type="text" value="E" maxlength="1" inputmode="text">
           </div>
           <div class="field">
-            <label for="dirKey2">右下攻擊</label>
+            <label for="dirKey2">右方攻擊</label>
             <input id="dirKey2" data-keybind-dir="2" type="text" value="D" maxlength="1" inputmode="text">
           </div>
           <div class="field">
-            <label for="dirKey3">下方攻擊</label>
+            <label for="dirKey3">右下攻擊</label>
             <input id="dirKey3" data-keybind-dir="3" type="text" value="X" maxlength="1" inputmode="text">
           </div>
           <div class="field">
@@ -2069,7 +2266,7 @@
             <input id="dirKey4" data-keybind-dir="4" type="text" value="Z" maxlength="1" inputmode="text">
           </div>
           <div class="field">
-            <label for="dirKey5">左上攻擊</label>
+            <label for="dirKey5">左方攻擊</label>
             <input id="dirKey5" data-keybind-dir="5" type="text" value="A" maxlength="1" inputmode="text">
           </div>
         </div>
@@ -2094,6 +2291,14 @@
             <label for="initialLength">初始長度</label>
             <input id="initialLength" type="number" min="1" max="12" step="1" value="3" inputmode="numeric">
           </div>
+          <div class="field">
+            <label for="initialEnergy">初始能量</label>
+            <input id="initialEnergy" type="number" min="0" max="6" step="1" value="0" inputmode="numeric">
+          </div>
+          <div class="field">
+            <label for="initialBombs">初始炸彈</label>
+            <input id="initialBombs" type="number" min="0" max="3" step="1" value="0" inputmode="numeric">
+          </div>
           <div class="food-stock-grid" aria-label="各色食物初始值">
             <div class="field">
               <label for="initialProtein">紅色食物</label>
@@ -2112,7 +2317,12 @@
               <input id="initialCarb" data-initial-stock="carb" type="number" min="0" max="20" step="1" value="0" inputmode="numeric">
             </div>
           </div>
-          <button id="resetGmSettingsButton" class="secondary" type="button">重設 GM 參數</button>
+          <div class="gm-preset-row">
+            <button id="realModeButton" class="secondary" type="button">真實模式</button>
+            <button id="ultimateModeButton" class="secondary" type="button">戰鬥模式</button>
+            <button id="midGameModeButton" class="secondary" type="button">中期模式</button>
+            <button id="lateGameModeButton" class="secondary" type="button">後期模式</button>
+          </div>
         </div>
         </div>
       </section>
@@ -2140,12 +2350,12 @@
           <div class="control-card">
             <div class="joystick-zone" id="joyZone" aria-label="移動方向">
               <div class="joystick">
-                <button class="hex-dir-button" type="button" data-dir-button="0" data-dir="0">W</button>
-                <button class="hex-dir-button" type="button" data-dir-button="1" data-dir="1">E</button>
-                <button class="hex-dir-button" type="button" data-dir-button="2" data-dir="2">D</button>
-                <button class="hex-dir-button" type="button" data-dir-button="3" data-dir="3">X</button>
-                <button class="hex-dir-button" type="button" data-dir-button="4" data-dir="4">Z</button>
-                <button class="hex-dir-button" type="button" data-dir-button="5" data-dir="5">A</button>
+                <button class="hex-dir-button" type="button" data-dir-button="0" data-dir="0"><span>W</span></button>
+                <button class="hex-dir-button" type="button" data-dir-button="1" data-dir="1"><span>E</span></button>
+                <button class="hex-dir-button" type="button" data-dir-button="2" data-dir="2"><span>D</span></button>
+                <button class="hex-dir-button" type="button" data-dir-button="3" data-dir="3"><span>X</span></button>
+                <button class="hex-dir-button" type="button" data-dir-button="4" data-dir="4"><span>Z</span></button>
+                <button class="hex-dir-button" type="button" data-dir-button="5" data-dir="5"><span>A</span></button>
                 <div class="stick" id="stick"></div>
               </div>
             </div>
@@ -2222,13 +2432,18 @@
     const initialSpeedInput = document.querySelector("#initialSpeed");
     const gmSettings = document.querySelector("#gmSettings");
     const initialLengthInput = document.querySelector("#initialLength");
+    const initialEnergyInput = document.querySelector("#initialEnergy");
+    const initialBombsInput = document.querySelector("#initialBombs");
     const initialStockInputs = [...document.querySelectorAll("[data-initial-stock]")];
     const playerCharacterInput = document.querySelector("#playerCharacter");
     const computerCharacterInput = document.querySelector("#computerCharacter");
     const keybindInputs = [...document.querySelectorAll("[id$='AttackKey'], #pauseKey, #surrenderKey, [data-keybind-dir]")];
     const resetBestTimeButton = document.querySelector("#resetBestTimeButton");
     const resetSettingsButton = document.querySelector("#resetSettingsButton");
-    const resetGmSettingsButton = document.querySelector("#resetGmSettingsButton");
+    const realModeButton = document.querySelector("#realModeButton");
+    const midGameModeButton = document.querySelector("#midGameModeButton");
+    const ultimateModeButton = document.querySelector("#ultimateModeButton");
+    const lateGameModeButton = document.querySelector("#lateGameModeButton");
     const gmToggle = document.querySelector("#gmToggle");
     const gmContent = document.querySelector("#gmContent");
     const settingsToggle = document.querySelector("#settingsToggle");
@@ -2248,6 +2463,7 @@
     const maxInitialLength = 12;
     const attackNeedTotal = 6;
     const maxAmmo = 3;
+    const bigAttackBombCost = 2;
     const baseAttackDelayMs = 2000;
     const baseAttackCooldownMs = 2400;
     const baseStepMs = 460;
@@ -2260,8 +2476,14 @@
     const moveBonusPerPoint = 0.04;
     const damageBonusPerPoint = 0.07;
     const maxFoodStock = 20;
-    const collisionStunMs = 1000;
+    const collisionStunMs = 2000;
     const collisionSlowMs = 1000;
+    const attackStunMs = 500;
+    const attackSlowMs = 500;
+    const baseAttackStunChance = 0.3;
+    const attackStunChanceBonusPerPoint = 0.01;
+    const maxAttackStunChanceBonus = 0.2;
+    const maxCollisionParalysisMs = 8000;
     const rangeDamageFalloffEnabled = false;
     const targetMaxHex = 6;
     const gameOverRestartDelayMs = 700;
@@ -2272,6 +2494,8 @@
       initialSpeed: 1,
       gmMode: false,
       initialLength: 3,
+      initialEnergy: 0,
+      initialBombs: 0,
       initialStock: {
         protein: 0,
         fat: 0,
@@ -2288,6 +2512,8 @@
     let initialSpeed = 1;
     let gmMode = false;
     let initialLength = 3;
+    let initialEnergy = 0;
+    let initialBombs = 0;
     let initialStock = { protein: 0, fat: 0, fiber: 0, carb: 0 };
     let playerCharacterId = "dragon";
     let computerCharacterId = "moray";
@@ -2300,53 +2526,34 @@
       { q: -1, r: 0, angle: -150, key: "a" }
     ];
     const foodTypes = [
-      { id: "protein", label: "蛋白", name: "蛋白質", foodName: "紅色食物", effect: "提升攻擊施展與冷卻速度，滿庫存約 2x", color: "#ef4444", line: "#fecaca" },
+      { id: "protein", label: "蛋白", name: "蛋白質", foodName: "紅色食物", effect: "爆炸半徑由 2 門檻式提升到 3，再到 4", color: "#ef4444", line: "#fecaca" },
       { id: "fat", label: "油脂", name: "油脂", foodName: "黃色食物", effect: "攻擊傷害係數基礎 2，滿庫存約 3.4", color: "#facc15", line: "#fef08a" },
       { id: "fiber", label: "纖維", name: "纖維素", foodName: "綠色食物", effect: "提升移動速度，滿庫存約 1.8x", color: "#22c55e", line: "#bbf7d0" },
-      { id: "carb", label: "碳水", name: "碳水", foodName: "藍色食物", effect: "爆炸半徑由 2 門檻式提升到 3，再到 4", color: "#3b82f6", line: "#bfdbfe" }
+      { id: "carb", label: "碳水", name: "碳水", foodName: "藍色食物", effect: "提升攻擊施展與冷卻速度，並提高命中暈眩機率", color: "#3b82f6", line: "#bfdbfe" }
     ];
-    const foodTypeById = new Map(foodTypes.map(type => [type.id, type]));
-    const characters = [
-      { id: "dragon", name: "白龍", food: "balanced", foodLabel: "均衡", motto: "墜落不是終點，躍門才是回聲。", smallMove: "雲鱗回旋", bigMove: "越門白衡龍息", move: "越門白衡龍息", detail: "均衡型角色；白龍吃食後補出的新食物有 50% 機率為雙色，提供更彈性的資源路線。", color: "#f8fafc", body: "#cbd5e1", line: "#bae6fd", accent: "#fbbf24" },
-      { id: "sandworm", name: "沙蟲", food: "fat", foodLabel: "黃色食物", motto: "在最低的沙裡，也藏著翻天的牙。", smallMove: "潛沙突咬", bigMove: "流沙葬獸震爆", move: "流沙葬獸震爆", detail: "偏好黃色脂肪；食物生成較容易偏向黃色，但吃食收益與其他角色相同。", color: "#facc15", body: "#ca8a04", line: "#fef08a", accent: "#92400e" },
-      { id: "quetzal", name: "羽蛇神", food: "fiber", foodLabel: "綠色食物", motto: "名字不滅，羽翼就不會折。", smallMove: "祖語翠羽", bigMove: "祭風裂界", move: "祭風裂界", detail: "偏好綠色纖維；食物生成較容易偏向綠色，但吃食收益與其他角色相同。", color: "#22c55e", body: "#15803d", line: "#bbf7d0", accent: "#67e8f9" },
-      { id: "moray", name: "海鰻", food: "carb", foodLabel: "藍色食物", motto: "讓垂鉤者，先學會窒息。", smallMove: "暗潮電咬", bigMove: "逆浪噬船雷", move: "逆浪噬船雷", detail: "偏好藍色碳水；食物生成較容易偏向藍色，但吃食收益與其他角色相同。", color: "#3b82f6", body: "#1d4ed8", line: "#bfdbfe", accent: "#93c5fd" },
-      { id: "lobster", name: "龍蝦", food: "protein", foodLabel: "紅色食物", motto: "混沌若有節奏，沉默也會成王。", smallMove: "古螯斷浪", bigMove: "萬年赤螯破浪", move: "萬年赤螯破浪", detail: "偏好紅色蛋白質；食物生成較容易偏向紅色，但吃食收益與其他角色相同。", color: "#ef4444", body: "#b91c1c", line: "#fecaca", accent: "#f97316" }
-    ];
-    const characterStories = {
-      dragon: [
-        "昔日雲海之上的白龍，曾以一息定潮、一爪開天。直到龍鱗失色，墜入低谷，連逐浪的犬影都敢在牠身後吠叫。",
-        "牠吞下屈辱，也吞下每一口能重築筋骨的食糧。今日再入六角戰場，不求憐憫，只求一躍越門，讓失去的王座重新記起牠的名字。"
-      ],
-      moray: [
-        "海鰻生於被網線割裂的暗潮。牠看見族群被燈火引誘、被冰艙沉默，於是把恐懼磨成電流，把逆流當作宣戰。",
-        "牠不是守護者口中的純善英雄，而是人類船影下的惡名。只要貪婪的鉤索還垂進海裡，牠就會咬穿浪峰，讓捕獵者也學會窒息。"
-      ],
-      lobster: [
-        "龍蝦的魂魄曾只是一團渾沌，在深海裂縫裡隨時間漂流。潮汐沖刷牠，壓力鍛造牠，孤獨反覆敲打牠的甲殼。",
-        "萬次揮螯之後，混亂開始有了節奏；萬年沉默之後，節奏終於長出智慧。牠踏上戰場時，每一步都像古老意志醒來。"
-      ],
-      sandworm: [
-        "沙蟲沒有豐饒的故鄉，只有乾裂的土、稀薄的獵物，和比牠龐大得多的陰影。牠學會把身形藏進貧瘠，把心跳壓到沙粒之下。",
-        "每一次伏擊都是賭局，每一次吞食都是翻身的籌碼。牠相信階層不是天命，只要咬得夠準，最底層的沙也能埋葬巨獸。"
-      ],
-      quetzal: [
-        "羽蛇神在強權的夾縫間展翼：一邊是鐵與旗幟，一邊是被迫噤聲的祖語。祂帶著少數族裔的記憶飛行，不讓祭歌被風沙磨滅。",
-        "祂追尋的勝利不只是疆界，而是心靈仍能命名自身。當翠羽劃開戰場，古老信仰便在新世界裡重新發光。"
-      ]
+    const blackFoodType = { id: "black", label: "蠱食", name: "蠱食", foodName: "黑色食物", effect: "特殊食物；吃下後紅黃綠藍隨機一種庫存 +1，並獲得 3 點能量", color: "#050505", line: "#e5e7eb" };
+    const foodTypeById = new Map([...foodTypes, blackFoodType].map(type => [type.id, type]));
+    const foodLabels = {
+      balanced: "均衡",
+      protein: "紅色食物",
+      fat: "黃色食物",
+      fiber: "綠色食物",
+      carb: "藍色食物",
+      black: "黑色食物"
     };
-    characters.forEach(character => {
-      character.story = characterStories[character.id] || [];
-    });
-    const portraitSlugs = {
-      dragon: "white_dragon",
-      sandworm: "sandworm",
-      quetzal: "quetzalcoatl",
-      moray: "moray_eel",
-      lobster: "ghost_lobster"
+    const poseAliases = {
+      opening: "opening",
+      intro: "opening",
+      idle: "intro",
+      attack: "small",
+      small: "small",
+      big: "big",
+      victory: "victory",
+      defeat: "defeat"
     };
-    const portraitPoses = new Set(["intro", "idle", "attack", "victory", "defeat"]);
-    const characterById = new Map(characters.map(character => [character.id, character]));
+    const portraitPoses = new Set(Object.keys(poseAliases));
+    let characters = [];
+    let characterById = new Map();
     const colors = {
       cell: "#2a3445",
       cellAlt: "#303c4d",
@@ -2383,6 +2590,7 @@
     let foods = [];
     let projectiles = [];
     let blasts = [];
+    let hazards = [];
     let dir;
     let nextDir;
     let computerDir;
@@ -2396,6 +2604,10 @@
     let computerAmmo;
     let playerAmmoCharge;
     let computerAmmoCharge;
+    let playerEnergyFlashUntil = 0;
+    let computerEnergyFlashUntil = 0;
+    let playerBombFlashUntil = 0;
+    let computerBombFlashUntil = 0;
     let best = Number(localStorage.getItem("hexSnakeBest") || 0);
     let bestTotalMs = Number(localStorage.getItem("hexSnakeBestTotalMs") || 0);
     let totalElapsedMs = 0;
@@ -2407,8 +2619,14 @@
     let lastComputerStep = 0;
     let playerStunUntil = 0;
     let playerSlowUntil = 0;
+    let playerCollisionParalysisMs = 0;
     let computerStunUntil = 0;
     let computerSlowUntil = 0;
+    let computerCollisionParalysisMs = 0;
+    let playerUndergroundFrom = 0;
+    let playerUndergroundUntil = 0;
+    let computerUndergroundFrom = 0;
+    let computerUndergroundUntil = 0;
     let lastTimerFrame = 0;
     let lastPlayerAttackMs = -Infinity;
     let lastComputerAttackMs = 0;
@@ -2433,11 +2651,58 @@
     let portraitLightboxDidSwipe = false;
     let restartUnlockAt = 0;
 
+    const portraitSizeWidths = {
+      sm: 512,
+      md: 1024,
+      full: 2160
+    };
+
     bestEl.textContent = best;
-    buildCharacterOptions();
-    buildCharacterStage();
-    buildResourceHud();
-    buildRulesContent();
+
+    function normalizeCharacter(entry) {
+      const foodPreference = foodLabels[entry.foodPreference] ? entry.foodPreference : "balanced";
+      const food = foodTypes.some(type => type.id === foodPreference) ? foodPreference : "balanced";
+      const colors = entry.colors || {};
+      const representColor = entry.representColor || colors.body || "#f8fafc";
+      return {
+        ...entry,
+        food,
+        foodLabel: foodLabels[foodPreference] || foodLabels.balanced,
+        specialFood: entry.specialFood || (foodPreference === "black" ? "black" : null),
+        detail: entry.foodEffect || "",
+        color: representColor,
+        body: colors.body || representColor,
+        line: colors.line || "#f8fafc",
+        accent: colors.accent || representColor,
+        story: Array.isArray(entry.story) ? entry.story : [],
+        portraits: entry.portraits || {},
+        slug: entry.slug || entry.id,
+        move: entry.bigMove || entry.smallMove || entry.name
+      };
+    }
+
+    async function loadCharacterDatabase() {
+      const response = await fetch("data/characters.json", { cache: "no-store" });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      if (!Array.isArray(data) || data.length === 0) {
+        throw new Error("data/characters.json must contain at least one character.");
+      }
+      characters = data.map(normalizeCharacter);
+      characterById = new Map(characters.map(character => [character.id, character]));
+      playerCharacterId = characterById.has(playerCharacterId) ? playerCharacterId : characters[0].id;
+      computerCharacterId = characterById.has(computerCharacterId) ? computerCharacterId : characters[Math.min(1, characters.length - 1)].id;
+    }
+
+    function showCharacterDatabaseError(error) {
+      console.error(error);
+      overlayTitle.textContent = "角色資料載入失敗";
+      overlayText.textContent = `找不到或無法解析 data/characters.json：${error.message}`;
+      startButton.textContent = "重新載入";
+      startButton.onclick = () => window.location.reload();
+      setOverlayChromeVisible(true);
+      overlay.classList.add("show");
+    }
 
     function characterFor(owner) {
       return characterById.get(owner === "player" ? playerCharacterId : computerCharacterId) || characters[0];
@@ -2474,19 +2739,37 @@
       if (character.id === "moray") {
         return `<svg ${common}><path class="body" d="M12 61 C29 24 50 79 72 36 C80 21 94 36 82 52 C65 75 40 54 31 82 C26 93 10 82 12 61Z"/><path class="accent" d="M24 65 C34 58 41 61 49 69 C37 70 29 75 20 83Z"/><path class="line" d="M71 46 L91 49"/><circle class="eye" cx="78" cy="39" r="3"/></svg>`;
       }
+      if (character.id === "gu_king") {
+        return `<svg ${common}><path class="body" d="M12 58 C22 34 42 31 54 43 C66 55 82 42 89 61 C80 75 61 71 50 61 C38 51 24 69 12 58Z"/><path class="accent" d="M18 47 L8 34 M30 41 L24 25 M43 41 L42 22 M56 47 L64 27 M69 53 L83 39 M25 67 L17 82 M40 65 L37 84 M56 65 L61 83 M72 65 L85 78"/><path class="line" d="M22 54 C32 45 40 45 50 54 C61 64 72 63 83 56"/><circle class="eye" cx="83" cy="58" r="3"/></svg>`;
+      }
       return `<svg ${common}><path class="body" d="M27 52 C27 34 73 34 73 52 C73 78 27 78 27 52Z"/><path class="accent" d="M30 43 L9 27 C3 36 9 49 24 50Z"/><path class="accent" d="M70 43 L91 27 C97 36 91 49 76 50Z"/><path class="line" d="M37 34 L27 13 M50 31 L50 9 M63 34 L73 13"/><circle class="eye" cx="42" cy="49" r="3"/><circle class="eye" cx="58" cy="49" r="3"/></svg>`;
     }
 
-    function portraitUrl(character, pose) {
-      const slug = portraitSlugs[character.id] || character.id;
+    function portraitUrl(character, pose, size = "full") {
       const safePose = portraitPoses.has(pose) ? pose : "idle";
-      return `assets/portraits/${slug}_${safePose}.png`;
+      const semanticPose = poseAliases[safePose] || "intro";
+      const portrait = character.portraits?.[semanticPose] || character.portraits?.intro || character.portraits?.opening;
+      if (portrait) {
+        if (typeof portrait === "string") return portrait;
+        return portrait[size] || portrait.full || portrait.md || portrait.sm || character.avatar || "";
+      }
+      const slug = character.slug || character.id;
+      const legacyPose = safePose === "idle" ? "idle" : safePose === "attack" ? "attack" : semanticPose === "opening" ? "intro" : semanticPose;
+      if (size === "sm" || size === "md") {
+        return `assets/portraits/${size}/${slug}_${legacyPose}.png`;
+      }
+      return `assets/portraits/${slug}_${legacyPose}.png`;
     }
 
     const preloadedPortraits = new Set();
 
-    function preloadPortrait(character, pose) {
-      const url = portraitUrl(character, pose);
+    function portraitSrcset(character, pose, includeFull = false) {
+      const sizes = includeFull ? ["sm", "md", "full"] : ["sm", "md"];
+      return sizes.map(size => `${portraitUrl(character, pose, size)} ${portraitSizeWidths[size]}w`).join(", ");
+    }
+
+    function preloadPortrait(character, pose, size = "sm") {
+      const url = portraitUrl(character, pose, size);
       if (preloadedPortraits.has(url)) return;
       preloadedPortraits.add(url);
       const image = new Image();
@@ -2496,23 +2779,33 @@
 
     function preloadPortraitsFor(owner) {
       const character = characterFor(owner);
-      ["intro", "idle", "attack", "victory", "defeat"].forEach(pose => preloadPortrait(character, pose));
+      ["intro", "idle", "attack", "victory", "defeat"].forEach(pose => preloadPortrait(character, pose, "sm"));
+      ["intro", "victory", "defeat"].forEach(pose => preloadPortrait(character, pose, "md"));
     }
 
     function preloadAllPortraits() {
       characters.forEach(character => {
-        ["intro", "idle", "attack", "victory", "defeat"].forEach(pose => preloadPortrait(character, pose));
+        ["intro", "idle"].forEach(pose => preloadPortrait(character, pose, "sm"));
       });
     }
 
-    function fighterArt(character, pose = "idle", portrait = false) {
+    function portraitSizesAttribute(variant) {
+      if (variant === "full") return "86vw";
+      if (variant === "small") return "(max-width: 700px) 46vw, 220px";
+      return "(max-width: 700px) 46vw, 360px";
+    }
+
+    function fighterArt(character, pose = "idle", portrait = false, variant = "medium") {
       const imageClass = `fighter-avatar-image${portrait ? " portrait" : ""}`;
       const fallbackSvg = fighterSvg(character, portrait).replace("<svg ", "<svg hidden ");
       const loadMode = portrait || pose === "attack" ? "eager" : "lazy";
+      const initialSize = variant === "small" ? "sm" : "md";
       return `
         <img
           class="${imageClass}"
-          src="${portraitUrl(character, pose)}"
+          src="${portraitUrl(character, pose, initialSize)}"
+          srcset="${portraitSrcset(character, pose)}"
+          sizes="${portraitSizesAttribute(variant)}"
           alt="${character.name}"
           decoding="async"
           loading="${loadMode}"
@@ -2524,15 +2817,20 @@
     }
 
     function fighterPortraitImage(character, pose = "idle") {
+      const fallbackSvg = fighterSvg(character, true).replace("<svg ", "<svg hidden ");
       return `
         <img
           class="fighter-avatar-image portrait"
-          src="${portraitUrl(character, pose)}"
+          src="${portraitUrl(character, pose, "sm")}"
+          srcset="${portraitSrcset(character, pose)}"
+          sizes="72px"
           alt="${character.name}"
           decoding="async"
           loading="eager"
           data-pose="${pose}"
+          onerror="this.hidden=true;this.nextElementSibling.hidden=false"
         >
+        ${fallbackSvg}
       `;
     }
 
@@ -2546,21 +2844,55 @@
     function characterStoryMarkup(character) {
       const motto = character.motto ? `<p class="portrait-motto">「${character.motto}」</p>` : "";
       const moves = character.smallMove && character.bigMove
-        ? `<div class="portrait-moves" aria-label="${character.name}招式"><span>小招：${character.smallMove}</span><span>大招：${character.bigMove}</span></div>`
+        ? `<div class="portrait-moves" aria-label="${character.name}招式與食補效果"><span>小招：${character.smallMove}</span><span>大招：${character.bigMove}</span><span>食補效果：${character.detail}</span></div>`
         : "";
       const story = (character.story || []).map(paragraph => `<p>${paragraph}</p>`).join("");
       return `${motto}${moves}${story}`;
     }
 
+    function foodIconMarkup(typeOrId, extraClass = "") {
+      const type = typeof typeOrId === "string" ? foodTypeById.get(typeOrId) : typeOrId;
+      if (!type) return "";
+      return `<span class="food-icon is-${type.id} ${extraClass}" style="--food-color:${type.color};--food-line:${type.line};" aria-hidden="true"></span>`;
+    }
+
+    function foodIconGroupMarkup(typeIds, label) {
+      const ids = Array.isArray(typeIds) ? typeIds : [typeIds];
+      const icons = ids.map(id => foodIconMarkup(id)).join("");
+      return `<span class="food-icon-group" aria-label="${label}">${icons}</span>`;
+    }
+
+    function weightedFoodIconMarkup(character) {
+      if (character?.specialFood === "black") {
+        return foodIconGroupMarkup("black", "加權產出黑色食物");
+      }
+      if (character?.food === "balanced") {
+        return foodIconGroupMarkup(foodTypes.map(type => type.id), "均衡產出紅黃綠藍食物");
+      }
+      return foodIconGroupMarkup(character?.food, `加權產出${character.foodLabel}`);
+    }
+
     function buildRulesContent() {
-      const foodLegend = foodTypes.map(type => `<li><b>${type.foodName}</b>: ${type.name}，${type.effect}</li>`).join("");
+      const foodLegend = foodTypes.map(type => `
+        <li class="rule-food-line">
+          ${foodIconGroupMarkup(type.id, `自然產出${type.foodName}`)}
+          <span><b>${type.foodName}</b>: ${type.name}，${type.effect}</span>
+        </li>
+      `).join("");
+      const specialFoodLegend = `
+        <li class="rule-food-line">
+          ${foodIconGroupMarkup("black", blackFoodType.foodName)}
+          <span><b>${blackFoodType.foodName}</b>: ${blackFoodType.name}，${blackFoodType.effect}；不會自然產出。</span>
+        </li>
+      `;
       const characterLegend = characters.map(character => {
         const story = (character.story || []).map(paragraph => `<p>${paragraph}</p>`).join("");
         return `
           <li>
             <b>${character.name}</b> / ${character.foodLabel}<br>
-            小招：${character.smallMove}；大招：${character.bigMove}<br>
-            ${character.detail}<br>
+            小招：${character.smallMove}<br>
+            大招：${character.bigMove}<br>
+            <span class="rule-food-effect">食補效果：${weightedFoodIconMarkup(character)}<span>${character.detail}</span></span><br>
             「${character.motto}」
             <div class="rules-character-story">${story}</div>
           </li>
@@ -2570,9 +2902,8 @@
         <section class="rules-block">
           <h3>遊戲流程</h3>
           <ul class="rules-list">
-            <li>開局前可在同列的齒輪中調整棋盤半徑、食物數、難度、角色和鍵位；開始後設定會鎖定到下一局。</li>
-            <li>玩家與對手會在六角棋盤上持續前進，吃食物累積分數、食物庫存與砲彈。</li>
-            <li>被砲彈爆炸命中會扣除 HP；HP 歸零才會結束本局。撞擊不會直接死亡，而是造成麻痺與減速。</li>
+            <li>玩家與對手會在六角棋盤上持續前進，吃食物累積分數、食物庫存與能量。</li>
+            <li>被炸彈爆炸命中會扣除 HP，並有 ${Math.round(baseAttackStunChance * 100)}% 基礎機率暈眩；HP 歸零才會結束本局。撞擊不會直接死亡，而是造成麻痺與減速。</li>
           </ul>
         </section>
         <section class="rules-block">
@@ -2587,12 +2918,12 @@
           <h3>食物與資源</h3>
           <ul class="rules-list">
             ${foodLegend}
+            ${specialFoodLegend}
             <li><b>食物收益</b>：單色食物給同色庫存 2 點；雙色食物給兩色各 1 點；每次吃食仍只增加 1 分與 1 段蛇身。</li>
-            <li><b>白龍</b>：白龍吃食後補出的新食物有 50% 機率為雙色，雙色食物可被任一方拾取。</li>
-            <li><b>砲彈</b>：每吃 ${attackNeedTotal} 個食物獲得 1 枚，最多 ${maxAmmo} 枚。</li>
-            <li><b>發射成本</b>：每次發射需 1 枚砲彈，且紅黃綠藍四種庫存各至少 1 點；發射後四種庫存各消耗 1。</li>
-            <li><b>庫存上限</b>：每種食物最多累積 ${maxFoodStock} 點；專精角色只影響補貨偏好，不會額外增加吃食收益。</li>
-            <li><b>撞擊懲罰</b>：撞到對手會停止 ${collisionStunMs / 1000} 秒，再減速 ${collisionSlowMs / 1000} 秒；撞到自己懲罰加倍。</li>
+            <li><b>能量</b>：每吃 1 個食物獲得 2 點能量，集滿 ${attackNeedTotal} 點獲得 1 枚炸彈；炸彈最多 ${maxAmmo} 枚，也是大招施放資源。若炸彈已滿，滿格能量會保留，直到施放消耗炸彈的招式後立即轉為 1 枚炸彈。</li>
+            <li><b>施放成本</b>：小招需紅黃綠藍四種庫存各至少 1 點，施放後各消耗 1；大招需 ${bigAttackBombCost} 枚炸彈，且四種庫存各至少 2 點，施放後消耗 ${bigAttackBombCost} 枚炸彈並使四種庫存各消耗 2。</li>
+            <li><b>庫存上限</b>：每種食物最多累積 ${maxFoodStock} 點；一般專精角色只影響補貨偏好，特殊角色可能產出專屬食物。</li>
+            <li><b>撞擊懲罰</b>：撞到對手會停止 ${collisionStunMs / 1000} 秒，再減速 ${collisionSlowMs / 1000} 秒；撞到自己懲罰加倍，累積停止時間超過 ${maxCollisionParalysisMs / 1000} 秒會落敗。</li>
           </ul>
         </section>
         <section class="rules-block">
@@ -2702,7 +3033,7 @@
               const label = owner === "player" ? "玩家" : "對手";
               return `
                 <button class="intro-avatar-button" type="button" data-owner="${owner}" data-open-intro="${owner}" style="${characterStyle(character, owner)}" aria-label="開啟${label}角色選擇">
-                  <div class="fighter-portrait" data-owner="${owner}" data-owner-mark="${ownerMeta(owner).mark}">${fighterArt(character, "intro", true)}</div>
+                  <div class="fighter-portrait" data-owner="${owner}" data-owner-mark="${ownerMeta(owner).mark}">${fighterArt(character, "intro", true, "small")}</div>
                   <span class="intro-avatar-label">${ownerMeta(owner).label} · ${character.name}</span>
                 </button>
               `;
@@ -2719,7 +3050,7 @@
               const label = owner === "player" ? "玩家" : "對手";
               return `
                 <button class="portrait-option ${owner === selectedPortraitOwner ? "is-selected" : ""}" type="button" data-owner="${owner}" data-portrait-owner="${owner}" style="${characterStyle(character, owner)}" onclick="selectPortraitOwner('${owner}')">
-                <div class="fighter-portrait" data-owner="${owner}" data-owner-mark="${ownerMeta(owner).mark}" data-full-portrait="${owner}">${fighterArt(character, "intro", true)}</div>
+                <div class="fighter-portrait" data-owner="${owner}" data-owner-mark="${ownerMeta(owner).mark}" data-full-portrait="${owner}">${fighterArt(character, "intro", true, "small")}</div>
                 <span class="portrait-option-label">${ownerMeta(owner).label} · ${character.name}</span>
               </button>
             `;
@@ -2730,7 +3061,10 @@
             <div class="portrait-copy" style="${characterStyle(selectedCharacter, selectedPortraitOwner)}">
               <small>${selectedPortraitOwner === "player" ? "玩家角色" : "對手角色"}</small>
               <strong>${selectedCharacter.name}</strong>
-              <span>此處用於選擇出戰角色；招式與特性請開啟規則說明查看。</span>
+              <span>${selectedCharacter.foodLabel}專精</span>
+              <div class="portrait-story">
+                ${characterStoryMarkup(selectedCharacter)}
+              </div>
             </div>
             <button class="secondary portrait-arrow" type="button" data-portrait-shift="1" aria-label="下一位" onclick="applySelectedPortraitCharacter(1)">›</button>
           </div>
@@ -2761,7 +3095,9 @@
 
     function renderPortraitLightbox() {
       const character = characterFor(portraitLightboxOwner);
-      portraitLightboxImage.src = portraitUrl(character, "intro");
+      portraitLightboxImage.src = portraitUrl(character, "intro", "full");
+      portraitLightboxImage.srcset = portraitSrcset(character, "intro", true);
+      portraitLightboxImage.sizes = portraitSizesAttribute("full");
       portraitLightboxImage.alt = character.name;
       portraitLightboxCaption.textContent = `${ownerMeta(portraitLightboxOwner).label} / ${character.name}`;
     }
@@ -2782,6 +3118,8 @@
     function closePortraitLightbox() {
       portraitLightbox.hidden = true;
       portraitLightboxImage.removeAttribute("src");
+      portraitLightboxImage.removeAttribute("srcset");
+      portraitLightboxImage.removeAttribute("sizes");
       portraitLightboxImage.alt = "";
       portraitLightboxCaption.textContent = "";
     }
@@ -2837,6 +3175,14 @@
       return Object.fromEntries(foodTypes.map(type => [type.id, clampInitialStock(initialStock[type.id])]));
     }
 
+    function startingEnergy() {
+      return gmMode ? clampInitialEnergy(initialEnergy) : defaultSettings.initialEnergy;
+    }
+
+    function startingBombs() {
+      return gmMode ? clampInitialBombs(initialBombs) : defaultSettings.initialBombs;
+    }
+
     function foodBonus(stock, typeId, perPoint, maxBonus) {
       return Math.min(maxBonus, stock[typeId] * perPoint);
     }
@@ -2850,11 +3196,15 @@
     }
 
     function areaMultiplier(stock) {
-      return 1 + stock.carb / maxFoodStock;
+      return 1 + stock.protein / maxFoodStock;
     }
 
     function attackSpeedMultiplier(stock) {
-      return 1 + foodBonus(stock, "protein", attackSpeedBonusPerPoint, maxAttackSpeedBonus);
+      return 1 + foodBonus(stock, "carb", attackSpeedBonusPerPoint, maxAttackSpeedBonus);
+    }
+
+    function attackStunChance(stock) {
+      return Math.min(1, baseAttackStunChance + foodBonus(stock, "carb", attackStunChanceBonusPerPoint, maxAttackStunChanceBonus));
     }
 
     function moveInterval(stock) {
@@ -2880,31 +3230,68 @@
     }
 
     function blastRadius(stock) {
-      if (stock.carb >= maxFoodStock * 0.8) return 4;
-      if (stock.carb >= maxFoodStock * 0.4) return 3;
+      if (stock.protein >= maxFoodStock * 0.8) return 4;
+      if (stock.protein >= maxFoodStock * 0.4) return 3;
       return baseBlastHexRadius;
     }
 
-    function hasAttackFoodCost(stock) {
-      return foodTypes.every(type => stock[type.id] > 0);
+    function attackFoodCost(profile = "big") {
+      return profile === "small" ? 1 : 2;
+    }
+
+    function attackBombCost(profile = "big") {
+      return profile === "small" ? 0 : bigAttackBombCost;
+    }
+
+    function hasAttackFoodCost(stock, profile = "big") {
+      const cost = attackFoodCost(profile);
+      return foodTypes.every(type => stock[type.id] >= cost);
     }
 
     function ammoFor(owner) {
       return owner === "player" ? playerAmmo : computerAmmo;
     }
 
+    function ammoChargeFor(owner) {
+      return owner === "player" ? playerAmmoCharge : computerAmmoCharge;
+    }
+
     function canAttack(owner, profile = "big") {
       const stock = owner === "player" ? playerStock : computerStock;
-      return (profile === "small" || ammoFor(owner) > 0) && hasAttackFoodCost(stock);
+      return ammoFor(owner) >= attackBombCost(profile) && hasAttackFoodCost(stock, profile);
+    }
+
+    function convertFullEnergyToAmmo(owner) {
+      if (ammoChargeFor(owner) < attackNeedTotal || ammoFor(owner) >= maxAmmo) return false;
+      const now = performance.now();
+      if (owner === "player") {
+        playerAmmo += 1;
+        playerAmmoCharge = 0;
+        playerEnergyFlashUntil = now + 1700;
+        playerBombFlashUntil = now + 1700;
+      } else {
+        computerAmmo += 1;
+        computerAmmoCharge = 0;
+        computerEnergyFlashUntil = now + 1700;
+        computerBombFlashUntil = now + 1700;
+      }
+      return true;
     }
 
     function consumeAttackCost(owner, stock, profile = "big") {
+      const cost = attackFoodCost(profile);
+      const bombCost = attackBombCost(profile);
+      const hadFullEnergy = ammoChargeFor(owner) >= attackNeedTotal;
+      const hadFullBombs = ammoFor(owner) >= maxAmmo;
       foodTypes.forEach(type => {
-        stock[type.id] = Math.max(0, stock[type.id] - 1);
+        stock[type.id] = Math.max(0, stock[type.id] - cost);
       });
-      if (profile !== "small") {
-        if (owner === "player") playerAmmo = Math.max(0, playerAmmo - 1);
-        else computerAmmo = Math.max(0, computerAmmo - 1);
+      if (bombCost > 0) {
+        if (owner === "player") playerAmmo = Math.max(0, playerAmmo - bombCost);
+        else computerAmmo = Math.max(0, computerAmmo - bombCost);
+        if (hadFullEnergy && hadFullBombs) {
+          convertFullEnergyToAmmo(owner);
+        }
       }
     }
 
@@ -2912,18 +3299,28 @@
       stock[typeId] = Math.min(maxFoodStock, stock[typeId] + amount);
     }
 
-    function addAmmoCharge(owner) {
+    function addAmmoCharge(owner, amount = 1) {
       if (owner === "player") {
-        playerAmmoCharge += 1;
+        playerAmmoCharge += amount;
         if (playerAmmoCharge >= attackNeedTotal) {
-          playerAmmo = Math.min(maxAmmo, playerAmmo + 1);
-          playerAmmoCharge = 0;
+          if (playerAmmo < maxAmmo) {
+            playerAmmo = Math.min(maxAmmo, playerAmmo + 1);
+            playerAmmoCharge = 0;
+          } else {
+            playerAmmoCharge = attackNeedTotal;
+          }
+          playerEnergyFlashUntil = performance.now() + 1700;
         }
       } else {
-        computerAmmoCharge += 1;
+        computerAmmoCharge += amount;
         if (computerAmmoCharge >= attackNeedTotal) {
-          computerAmmo = Math.min(maxAmmo, computerAmmo + 1);
-          computerAmmoCharge = 0;
+          if (computerAmmo < maxAmmo) {
+            computerAmmo = Math.min(maxAmmo, computerAmmo + 1);
+            computerAmmoCharge = 0;
+          } else {
+            computerAmmoCharge = attackNeedTotal;
+          }
+          computerEnergyFlashUntil = performance.now() + 1700;
         }
       }
     }
@@ -2936,9 +3333,15 @@
     function collectFood(owner, food) {
       const stock = owner === "player" ? playerStock : computerStock;
       const types = foodTypeIds(food);
+      if (types.includes("black")) {
+        const randomType = foodTypes[Math.floor(Math.random() * foodTypes.length)];
+        addStock(stock, randomType.id, 1);
+        addAmmoCharge(owner, 3);
+        return;
+      }
       const stockGain = types.length > 1 ? 1 : 2;
       types.forEach(typeId => addStock(stock, typeId, stockGain));
-      addAmmoCharge(owner);
+      addAmmoCharge(owner, 2);
     }
 
     function formatTime(ms) {
@@ -2990,7 +3393,8 @@
       });
       hexDirButtons.forEach(button => {
         const direction = directions[Number(button.dataset.dir)];
-        if (direction) button.textContent = keyLabel(direction.key);
+        const label = button.querySelector("span") || button;
+        if (direction) label.textContent = keyLabel(direction.key);
       });
       document.querySelector("#smallAttackKey").value = keyLabel(keybinds.smallAttack);
       document.querySelector("#bigAttackKey").value = keyLabel(keybinds.bigAttack);
@@ -3052,6 +3456,18 @@
       return Math.min(maxFoodStock, Math.max(0, parsed));
     }
 
+    function clampInitialEnergy(value) {
+      const parsed = Number.parseInt(value, 10);
+      if (!Number.isFinite(parsed)) return 0;
+      return Math.min(attackNeedTotal, Math.max(0, parsed));
+    }
+
+    function clampInitialBombs(value) {
+      const parsed = Number.parseInt(value, 10);
+      if (!Number.isFinite(parsed)) return 0;
+      return Math.min(maxAmmo, Math.max(0, parsed));
+    }
+
     function buildCells() {
       cells = [];
       for (let q = -radius; q <= radius; q += 1) {
@@ -3076,7 +3492,7 @@
     }
 
     function setComputerDifficulty(value) {
-      computerDifficulty = ["low", "medium", "high"].includes(value) ? value : "medium";
+      computerDifficulty = ["novice", "low", "medium", "high"].includes(value) ? value : "medium";
       computerDifficultyInput.value = computerDifficulty;
     }
 
@@ -3088,6 +3504,16 @@
     function setInitialLength(value) {
       initialLength = clampInitialLength(value);
       initialLengthInput.value = initialLength;
+    }
+
+    function setInitialEnergy(value) {
+      initialEnergy = clampInitialEnergy(value);
+      initialEnergyInput.value = initialEnergy;
+    }
+
+    function setInitialBombs(value) {
+      initialBombs = clampInitialBombs(value);
+      initialBombsInput.value = initialBombs;
     }
 
     function setInitialStock(typeId, value) {
@@ -3106,6 +3532,8 @@
     function updateGmControlState() {
       const disabled = running;
       initialLengthInput.disabled = disabled;
+      initialEnergyInput.disabled = disabled;
+      initialBombsInput.disabled = disabled;
       initialStockInputs.forEach(input => {
         input.disabled = disabled;
       });
@@ -3116,19 +3544,67 @@
       setFoodCount(defaultSettings.foodCount);
       setInitialSpeed(defaultSettings.initialSpeed);
       setInitialLength(defaultSettings.initialLength);
+      setInitialEnergy(defaultSettings.initialEnergy);
+      setInitialBombs(defaultSettings.initialBombs);
       foodTypes.forEach(type => setInitialStock(type.id, defaultSettings.initialStock[type.id]));
     }
 
-    function setSettingsLocked(locked) {
+    function refreshGmPreview() {
+      resetGame();
+      resize();
+      if (overlay.classList.contains("show")) {
+        renderIntroPortraits(false);
+      }
+    }
+
+    function applyUltimateModePreset() {
+      setGmMode(true);
+      setInitialBombs(maxAmmo);
+      setInitialEnergy(attackNeedTotal);
+      foodTypes.forEach(type => setInitialStock(type.id, 4));
+    }
+
+    function applyMidGameModePreset() {
+      setGmMode(true);
+      setInitialBombs(maxAmmo);
+      setInitialEnergy(attackNeedTotal);
+      foodTypes.forEach(type => setInitialStock(type.id, Math.floor(maxFoodStock / 2)));
+    }
+
+    function applyLateGameModePreset() {
+      setGmMode(true);
+      setInitialBombs(maxAmmo);
+      setInitialEnergy(attackNeedTotal);
+      foodTypes.forEach(type => setInitialStock(type.id, maxFoodStock));
+    }
+
+    function setGmSettingsLocked(locked) {
       gridSizeInput.disabled = locked;
       foodCountInput.disabled = locked;
-      computerDifficultyInput.disabled = locked;
       initialSpeedInput.disabled = locked;
+      initialLengthInput.disabled = locked;
+      initialEnergyInput.disabled = locked;
+      initialBombsInput.disabled = locked;
+      initialStockInputs.forEach(input => {
+        input.disabled = locked;
+      });
       gmToggle.disabled = locked;
-      resetGmSettingsButton.disabled = locked;
+      realModeButton.disabled = locked;
+      midGameModeButton.disabled = locked;
+      ultimateModeButton.disabled = locked;
+      lateGameModeButton.disabled = locked;
+    }
+
+    function setSettingsLocked(locked) {
+      if (locked) {
+        setSettingsOpen(false);
+        setGmOpen(false);
+      }
+      settingsToggle.disabled = locked;
+      computerDifficultyInput.disabled = locked;
       playerCharacterInput.disabled = locked;
       computerCharacterInput.disabled = locked;
-      updateGmControlState();
+      setGmSettingsLocked(locked);
     }
 
     function keyOf(cell) {
@@ -3239,13 +3715,18 @@
       computerHp = computerSnake.length;
       playerStock = startingStock();
       computerStock = startingStock();
-      playerAmmo = 0;
-      computerAmmo = 0;
-      playerAmmoCharge = 0;
-      computerAmmoCharge = 0;
+      playerAmmo = startingBombs();
+      computerAmmo = startingBombs();
+      playerAmmoCharge = startingEnergy();
+      computerAmmoCharge = startingEnergy();
+      playerEnergyFlashUntil = 0;
+      computerEnergyFlashUntil = 0;
+      playerBombFlashUntil = 0;
+      computerBombFlashUntil = 0;
       foods = [];
       projectiles = [];
       blasts = [];
+      hazards = [];
       targetCell = { ...snake[0] };
       targetActive = false;
       totalElapsedMs = 0;
@@ -3255,8 +3736,14 @@
       lastComputerStep = 0;
       playerStunUntil = 0;
       playerSlowUntil = 0;
+      playerCollisionParalysisMs = 0;
       computerStunUntil = 0;
       computerSlowUntil = 0;
+      computerCollisionParalysisMs = 0;
+      playerUndergroundFrom = 0;
+      playerUndergroundUntil = 0;
+      computerUndergroundFrom = 0;
+      computerUndergroundUntil = 0;
       lastPlayerAttackMs = -Infinity;
       lastComputerAttackMs = 0;
       gameOver = false;
@@ -3277,13 +3764,15 @@
       setInitialSpeed(initialSpeedInput.value);
       setGmMode(gmMode);
       setInitialLength(initialLengthInput.value);
+      setInitialEnergy(initialEnergyInput.value);
+      setInitialBombs(initialBombsInput.value);
       initialStockInputs.forEach(input => setInitialStock(input.dataset.initialStock, input.value));
       playerCharacterId = characterById.has(playerCharacterInput.value) ? playerCharacterInput.value : "dragon";
       computerCharacterId = characterById.has(computerCharacterInput.value) ? computerCharacterInput.value : "moray";
       resetGame();
       running = true;
       setSettingsLocked(true);
-      setStatus("對戰中：吃四種食物累積砲彈資源。");
+      setStatus("對戰中：吃食物累積能量，集滿可獲得炸彈。");
       overlay.classList.remove("show");
       characterStage.hidden = false;
       lastPlayerStep = performance.now();
@@ -3331,6 +3820,15 @@
       return [firstType.id, secondType.id];
     }
 
+    function randomFoodTypeIdsForCharacter(character) {
+      if (character?.specialFood === "black" && Math.random() < 1 / 3) {
+        return ["black"];
+      }
+      const preferredFoodId = character ? character.food : null;
+      const dualColor = character?.food === "balanced" && Math.random() < 0.5;
+      return randomFoodTypeIds(preferredFoodId, dualColor);
+    }
+
     function placeFoods(preferredOwners = []) {
       const occupied = new Set([
         ...snake.map(keyOf),
@@ -3344,9 +3842,7 @@
         const cell = openCells[Math.floor(Math.random() * openCells.length)];
         const owner = preferredOwners[generated];
         const character = owner ? characterFor(owner) : null;
-        const preferredFoodId = character ? character.food : null;
-        const dualColor = character?.food === "balanced" && Math.random() < 0.5;
-        foods.push({ q: cell.q, r: cell.r, types: randomFoodTypeIds(preferredFoodId, dualColor) });
+        foods.push({ q: cell.q, r: cell.r, types: randomFoodTypeIdsForCharacter(character) });
         occupied.add(keyOf(cell));
         generated += 1;
       }
@@ -3355,12 +3851,15 @@
     function updateStockHud(owner, stock, ammo, ammoCharge) {
       const totalEl = resourceEls.get(owner);
       if (totalEl) {
+        const now = performance.now();
+        const energyFlashing = now < (owner === "player" ? playerEnergyFlashUntil : computerEnergyFlashUntil);
+        const bombFlashing = now < (owner === "player" ? playerBombFlashUntil : computerBombFlashUntil);
         totalEl.innerHTML = `
-          <span class="resource-chip" title="Gunpowder">
-            <span class="resource-icon powder-icon" aria-hidden="true"></span>
+          <span class="resource-chip${energyFlashing ? " is-flashing" : ""}" title="能量">
+            <span class="resource-icon energy-icon" aria-hidden="true"></span>
             <span>${ammoCharge}/${attackNeedTotal}</span>
           </span>
-          <span class="resource-chip" title="Missile">
+          <span class="resource-chip${bombFlashing ? " is-flashing" : ""}" title="炸彈">
             <span class="resource-icon missile-icon" aria-hidden="true"></span>
             <span>${ammo}/${maxAmmo}</span>
           </span>
@@ -3446,6 +3945,36 @@
       return items[Math.floor(Math.random() * items.length)];
     }
 
+    function isNoviceComputer() {
+      return computerDifficulty === "novice";
+    }
+
+    function computerAvoidsOpponentBody() {
+      const ignoreBodyChance = { novice: 0.55, low: 0.35, medium: 0, high: 0 }[computerDifficulty] ?? 0;
+      return Math.random() >= ignoreBodyChance;
+    }
+
+    function computerCanGrow() {
+      return !isNoviceComputer();
+    }
+
+    function computerCanUseAttack() {
+      return !isNoviceComputer();
+    }
+
+    function computerShouldSaveForBigAttack() {
+      const saveChance = { medium: 0.45, high: 0.3 }[computerDifficulty] ?? 0;
+      return Math.random() < saveChance;
+    }
+
+    function chooseComputerAttackProfile() {
+      if (!computerCanUseAttack()) return null;
+      if (computerDifficulty === "low") return canAttack("computer", "small") ? "small" : null;
+      if (canAttack("computer", "big")) return "big";
+      if (!canAttack("computer", "small")) return null;
+      return computerShouldSaveForBigAttack() ? null : "small";
+    }
+
     function cellsWithinDistance(origin, minDistance, maxDistance) {
       return cells.filter(cell => {
         const distance = hexDistance(cell, origin);
@@ -3507,9 +4036,11 @@
       const playerHead = snake[0];
       const playerThreat = nextWrappedCell(playerHead, nextDir);
       const occupied = new Set([
-        ...snake.map(keyOf),
         ...computerSnake.slice(0, -1).map(keyOf)
       ]);
+      if (computerAvoidsOpponentBody()) {
+        snake.forEach(segment => occupied.add(keyOf(segment)));
+      }
       const options = [];
 
       directions.forEach((_, candidate) => {
@@ -3537,7 +4068,7 @@
         const bValue = Number.isFinite(b.tacticalValue) ? b.tacticalValue : b.fallbackValue;
         return aValue - bValue;
       });
-      const randomChance = { high: 0, medium: 0.3, low: 0.52 }[computerDifficulty];
+      const randomChance = { high: 0, medium: 0.3, low: 0.52, novice: 0.52 }[computerDifficulty];
 
       if (Math.random() < randomChance) return randomItem(options).direction;
       return options[0].direction;
@@ -3550,45 +4081,263 @@
         hexDirButtons.forEach(button => button.classList.toggle("active", Number(button.dataset.dir) === newDir));
         updateHud();
       }
-      if (!running || gameOver) autoStartGame();
+    }
+
+    function attackStats(stock, profile = "big") {
+      const isSmall = profile === "small";
+      return {
+        delay: attackDelay(stock) * (isSmall ? 0.62 : 1),
+        radius: Math.max(1, blastRadius(stock) + (isSmall ? -1 : 0)),
+        damage: damageMultiplier(stock) * (isSmall ? 0.55 : 1)
+      };
+    }
+
+    function ownerDirection(owner) {
+      return owner === "player" ? nextDir : computerDir;
+    }
+
+    function directionFromSourceToTarget(source, target, fallbackDirection = 0) {
+      if (!source || !target || keyOf(source) === keyOf(target)) return fallbackDirection;
+      const start = axialToPixel(source);
+      const end = axialToPixel(target);
+      const vx = end.x - start.x;
+      const vy = end.y - start.y;
+      if (!vx && !vy) return fallbackDirection;
+      let bestDirection = fallbackDirection;
+      let bestDot = -Infinity;
+      directions.forEach((direction, index) => {
+        const angle = direction.angle * Math.PI / 180;
+        const dot = vx * Math.cos(angle) + vy * Math.sin(angle);
+        if (dot > bestDot) {
+          bestDot = dot;
+          bestDirection = index;
+        }
+      });
+      return bestDirection;
+    }
+
+    function cellsForwardFrom(source, direction, includeSource = true) {
+      const path = includeSource ? [{ q: source.q, r: source.r }] : [];
+      let cursor = source;
+      while (true) {
+        const next = nextCell(cursor, direction);
+        if (!isInside(next)) break;
+        path.push(next);
+        cursor = next;
+      }
+      return path;
+    }
+
+    function boardLineThrough(origin, direction) {
+      let start = origin;
+      const opposite = (direction + 3) % 6;
+      while (isInside(nextCell(start, opposite))) {
+        start = nextCell(start, opposite);
+      }
+      return cellsForwardFrom(start, direction, true);
+    }
+
+    function cellsNearCells(effectCells, width) {
+      return cells.filter(cell => effectCells.some(effectCell => hexDistance(cell, effectCell) <= width));
+    }
+
+    function pushCircleAttack({ owner, profile, target, createdAt, impactAt, delay, radius, damage, stunChance, hidden = false, flat = false }) {
+      projectiles.push({
+        kind: "circle",
+        owner,
+        profile,
+        source: { q: target.q, r: target.r },
+        target: { q: target.q, r: target.r },
+        createdAt,
+        impactAt,
+        delay,
+        radius,
+        damage,
+        stunChance,
+        hidden,
+        flat
+      });
+    }
+
+    function scheduleCharacterBigAttack(owner, character, source, target, now, stock, stunChance) {
+      const small = attackStats(stock, "small");
+      const direction = directionFromSourceToTarget(source, target, ownerDirection(owner));
+
+      if (character.id === "dragon") {
+        const path = cellsForwardFrom(source, ownerDirection(owner), true);
+        path.forEach((cell, index) => {
+          pushCircleAttack({
+            owner,
+            profile: "big",
+            target: cell,
+            createdAt: now,
+            impactAt: now + small.delay + index * 140,
+            delay: small.delay + index * 140,
+            radius: small.radius * 2,
+            damage: small.damage * 2,
+            stunChance
+          });
+        });
+        return small.delay + path.length * 140;
+      }
+
+      if (character.id === "moray") {
+        const lineCells = boardLineThrough(target, direction);
+        for (let index = 0; index < 4; index += 1) {
+          projectiles.push({
+            kind: "line",
+            owner,
+            profile: "big",
+            source: { q: source.q, r: source.r },
+            target: { q: target.q, r: target.r },
+            lineCells,
+            width: small.radius,
+            createdAt: now,
+            impactAt: now + small.delay + index * 320,
+            delay: small.delay + index * 320,
+            damage: small.damage * 0.5,
+            stunChance,
+            stackStun: true
+          });
+        }
+        return small.delay + 960;
+      }
+
+      if (character.id === "quetzal") {
+        const trail = (owner === "player" ? snake : computerSnake).map(segment => ({ q: segment.q, r: segment.r }));
+        const speedScale = attackSpeedMultiplier(stock);
+        const duration = Math.max(1400, 4200 / speedScale);
+        hazards.push({
+          kind: "swamp",
+          owner,
+          cells: trail,
+          width: small.radius,
+          damage: small.damage,
+          stunChance,
+          startedAt: now + small.delay,
+          nextTickAt: now + small.delay,
+          tickMs: moveInterval(stock),
+          endAt: now + small.delay + duration
+        });
+        return small.delay + duration;
+      }
+
+      if (character.id === "sandworm") {
+        const delay = small.delay * 2;
+        const undergroundFrom = now + Math.max(0, delay - 1000);
+        const undergroundUntil = now + delay + 1000;
+        if (owner === "player") {
+          playerUndergroundFrom = undergroundFrom;
+          playerUndergroundUntil = Math.max(playerUndergroundUntil, undergroundUntil);
+        } else {
+          computerUndergroundFrom = undergroundFrom;
+          computerUndergroundUntil = Math.max(computerUndergroundUntil, undergroundUntil);
+        }
+        pushCircleAttack({
+          owner,
+          profile: "big",
+          target,
+          createdAt: now,
+          impactAt: now + delay,
+          delay,
+          radius: Math.max(0.5, small.radius * 0.5),
+          damage: small.damage * 4,
+          stunChance,
+          hidden: true
+        });
+        return delay;
+      }
+
+      if (character.id === "lobster") {
+        pushCircleAttack({
+          owner,
+          profile: "big",
+          target: source,
+          createdAt: now,
+          impactAt: now + small.delay,
+          delay: small.delay,
+          radius: small.radius * 2,
+          damage: small.damage * 2,
+          stunChance,
+          flat: true
+        });
+        return small.delay;
+      }
+
+      if (character.id === "gu_king") {
+        for (let index = 0; index < 3; index += 1) {
+          pushCircleAttack({
+            owner,
+            profile: "big",
+            target,
+            createdAt: now,
+            impactAt: now + small.delay + index * 360,
+            delay: small.delay + index * 360,
+            radius: small.radius,
+            damage: small.damage,
+            stunChance
+          });
+        }
+        return small.delay + 720;
+      }
+
+      const big = attackStats(stock, "big");
+      pushCircleAttack({ owner, profile: "big", target, createdAt: now, impactAt: now + big.delay, delay: big.delay, radius: big.radius, damage: big.damage, stunChance });
+      return big.delay;
     }
 
     function launchAttack(owner, target, now, profile = "big") {
       const stock = owner === "player" ? playerStock : computerStock;
       const lastAttack = owner === "player" ? lastPlayerAttackMs : lastComputerAttackMs;
       const source = owner === "player" ? snake[0] : computerSnake[0];
+      const character = characterFor(owner);
       const isSmall = profile === "small";
       if (!canAttack(owner, profile)) return false;
       if (now - lastAttack < attackCooldown(stock) * (isSmall ? 0.58 : 1)) return false;
-      const delay = attackDelay(stock) * (isSmall ? 0.62 : 1);
-      const radius = Math.max(1, blastRadius(stock) + (isSmall ? -1 : 0));
-      const damage = damageMultiplier(stock) * (isSmall ? 0.55 : 1);
+      const stats = attackStats(stock, profile);
+      const stunChance = attackStunChance(stock);
       consumeAttackCost(owner, stock, profile);
-      if (owner === "player") lastPlayerAttackMs = now;
-      else lastComputerAttackMs = now;
-      setFighterPose(owner, "attack", Math.max(180, Math.min(delay, 320)));
-      projectiles.push({
-        owner,
-        profile,
-        source: { q: source.q, r: source.r },
-        target: { q: target.q, r: target.r },
-        createdAt: now,
-        impactAt: now + delay,
-        delay,
-        radius,
-        damage
-      });
+      if (owner === "player") {
+        lastPlayerAttackMs = now;
+        playerBombFlashUntil = now + 1200;
+      } else {
+        lastComputerAttackMs = now;
+        computerBombFlashUntil = now + 1200;
+      }
+      const poseDuration = isSmall
+        ? stats.delay
+        : scheduleCharacterBigAttack(owner, character, source, target, now, stock, stunChance);
+      if (isSmall) {
+        projectiles.push({
+          kind: "circle",
+          owner,
+          profile,
+          source: { q: source.q, r: source.r },
+          target: { q: target.q, r: target.r },
+          createdAt: now,
+          impactAt: now + stats.delay,
+          delay: stats.delay,
+          radius: stats.radius,
+          damage: stats.damage,
+          stunChance
+        });
+      }
+      setFighterPose(owner, "attack", Math.max(180, Math.min(poseDuration, 520)));
       updateHud();
       return true;
     }
 
     function maybeComputerAttack(now) {
-      const cooldown = { low: 6200, medium: 4700, high: 3400 }[computerDifficulty] / attackSpeedMultiplier(computerStock);
-      if (now - lastComputerAttackMs < cooldown || !canAttack("computer")) return;
+      if (!computerCanUseAttack()) return;
+      const profile = chooseComputerAttackProfile();
+      if (!profile) return;
+      const profileCooldownScale = profile === "small" ? 0.7 : 1;
+      const cooldown = { novice: 6200, low: 6200, medium: 4700, high: 3400 }[computerDifficulty] * profileCooldownScale / attackSpeedMultiplier(computerStock);
+      if (now - lastComputerAttackMs < cooldown) return;
       const target = chooseComputerAttackTarget();
-      if (launchAttack("computer", target, now)) {
+      if (launchAttack("computer", target, now, profile)) {
         lastComputerAttackMs = now;
-        setStatus("電腦發射砲彈，2 秒後落地。");
+        setStatus(profile === "small" ? "電腦施放小招。" : "電腦施放大招，2 秒後落地。");
       }
     }
 
@@ -3602,6 +4351,19 @@
       }, 0);
     }
 
+    function damageSnakeFlat(parts, target, radius, damageScale) {
+      return parts.reduce((total, segment) => (
+        hexDistance(segment, target) <= radius ? total + damageScale : total
+      ), 0);
+    }
+
+    function damageSnakeCells(parts, effectCells, width, damageScale) {
+      return parts.reduce((total, segment) => {
+        const hit = effectCells.some(cell => hexDistance(segment, cell) <= width);
+        return hit ? total + damageScale : total;
+      }, 0);
+    }
+
     function applyBlastDamage(owner, damage) {
       if (damage <= 0) return;
       if (owner === "player") {
@@ -3611,15 +4373,40 @@
       }
     }
 
-    function applyCollisionPenalty(owner, severity = 1, now = performance.now()) {
-      const stunUntil = now + collisionStunMs * severity;
-      const slowUntil = stunUntil + collisionSlowMs * severity;
+    function interruptCasting(owner) {
+      projectiles = projectiles.filter(projectile => projectile.owner !== owner);
+    }
+
+    function applyAttackStun(owner, chance = baseAttackStunChance, now = performance.now(), options = {}) {
+      if (Math.random() >= chance) return false;
+      if (options.interrupt !== false) interruptCasting(owner);
+      const currentStunUntil = owner === "player" ? playerStunUntil : computerStunUntil;
+      const stunBase = options.stack ? Math.max(now, currentStunUntil) : now;
+      const stunUntil = stunBase + attackStunMs;
+      const slowUntil = stunUntil + attackSlowMs;
       if (owner === "player") {
         playerStunUntil = Math.max(playerStunUntil, stunUntil);
         playerSlowUntil = Math.max(playerSlowUntil, slowUntil);
       } else {
         computerStunUntil = Math.max(computerStunUntil, stunUntil);
         computerSlowUntil = Math.max(computerSlowUntil, slowUntil);
+      }
+      return true;
+    }
+
+    function applyCollisionPenalty(owner, severity = 1, now = performance.now()) {
+      const stunUntil = now + collisionStunMs * severity;
+      const slowUntil = stunUntil + collisionSlowMs * severity;
+      if (owner === "player") {
+        playerStunUntil = Math.max(playerStunUntil, stunUntil);
+        playerSlowUntil = Math.max(playerSlowUntil, slowUntil);
+        playerCollisionParalysisMs += collisionStunMs * severity;
+        return playerCollisionParalysisMs > maxCollisionParalysisMs;
+      } else {
+        computerStunUntil = Math.max(computerStunUntil, stunUntil);
+        computerSlowUntil = Math.max(computerSlowUntil, slowUntil);
+        computerCollisionParalysisMs += collisionStunMs * severity;
+        return computerCollisionParalysisMs > maxCollisionParalysisMs;
       }
     }
 
@@ -3635,12 +4422,54 @@
       projectiles = projectiles.filter(projectile => now < projectile.impactAt);
 
       landed.forEach(projectile => {
-        const radius = projectile.radius || baseBlastHexRadius;
-        blasts.push({ target: projectile.target, owner: projectile.owner, radius, startedAt: now, endAt: now + blastDurationMs });
-        applyBlastDamage("player", damageSnake(snake, projectile.target, radius, projectile.damage || 1));
-        applyBlastDamage("computer", damageSnake(computerSnake, projectile.target, radius, projectile.damage || 1));
+        let playerDamage = 0;
+        let computerDamage = 0;
+        if (projectile.kind === "line") {
+          playerDamage = damageSnakeCells(snake, projectile.lineCells, projectile.width, projectile.damage);
+          computerDamage = damageSnakeCells(computerSnake, projectile.lineCells, projectile.width, projectile.damage);
+          blasts.push({
+            kind: "line",
+            lineCells: projectile.lineCells,
+            width: projectile.width,
+            target: projectile.target,
+            owner: projectile.owner,
+            startedAt: now,
+            endAt: now + blastDurationMs
+          });
+        } else {
+          const radius = projectile.radius || baseBlastHexRadius;
+          const damage = projectile.damage || 1;
+          const damageFn = projectile.flat ? damageSnakeFlat : damageSnake;
+          playerDamage = damageFn(snake, projectile.target, radius, damage);
+          computerDamage = damageFn(computerSnake, projectile.target, radius, damage);
+          blasts.push({ kind: "circle", target: projectile.target, owner: projectile.owner, radius, startedAt: now, endAt: now + blastDurationMs });
+          if (projectile.profile === "big" && characterFor(projectile.owner).id === "sandworm") {
+            if (projectile.owner !== "player" && keyOf(projectile.target) === keyOf(snake[0])) playerHp = 0;
+            if (projectile.owner !== "computer" && keyOf(projectile.target) === keyOf(computerSnake[0])) computerHp = 0;
+          }
+        }
+        applyBlastDamage("player", playerDamage);
+        applyBlastDamage("computer", computerDamage);
+        if (projectile.owner !== "player" && playerDamage > 0) applyAttackStun("player", projectile.stunChance, now, { stack: projectile.stackStun });
+        if (projectile.owner !== "computer" && computerDamage > 0) applyAttackStun("computer", projectile.stunChance, now, { stack: projectile.stackStun });
       });
       blasts = blasts.filter(blast => now <= blast.endAt);
+      if (playerHp <= 0 || computerHp <= 0) endGame(playerHp <= 0, computerHp <= 0);
+    }
+
+    function resolveHazards(now) {
+      const activeHazards = hazards.filter(hazard => now <= hazard.endAt);
+      hazards = activeHazards;
+      activeHazards.forEach(hazard => {
+        if (now < hazard.startedAt || now < hazard.nextTickAt) return;
+        hazard.nextTickAt = now + hazard.tickMs;
+        const playerDamage = damageSnakeCells(snake, hazard.cells, hazard.width, hazard.damage);
+        const computerDamage = damageSnakeCells(computerSnake, hazard.cells, hazard.width, hazard.damage);
+        applyBlastDamage("player", playerDamage);
+        applyBlastDamage("computer", computerDamage);
+        if (hazard.owner !== "player" && playerDamage > 0) applyAttackStun("player", hazard.stunChance, now, { interrupt: false });
+        if (hazard.owner !== "computer" && computerDamage > 0) applyAttackStun("computer", hazard.stunChance, now, { interrupt: false });
+      });
       if (playerHp <= 0 || computerHp <= 0) endGame(playerHp <= 0, computerHp <= 0);
     }
 
@@ -3673,10 +4502,14 @@
 
       const playerCollision = collisionSeverity(playerSelfHit, playerOpponentHit);
       const computerCollision = collisionSeverity(computerSelfHit, computerOpponentHit);
-      if (playerCollision) applyCollisionPenalty("player", playerCollision);
-      if (computerCollision) applyCollisionPenalty("computer", computerCollision);
+      const playerParalysisLimitReached = playerCollision && applyCollisionPenalty("player", playerCollision);
+      const computerParalysisLimitReached = computerCollision && applyCollisionPenalty("computer", computerCollision);
       if (playerCollision || computerCollision) {
         setStatus("撞擊造成麻痺與減速，撞到自己懲罰加倍。");
+      }
+      if (playerParalysisLimitReached || computerParalysisLimitReached) {
+        endGame(playerParalysisLimitReached, computerParalysisLimitReached);
+        return;
       }
 
       if (!playerCollision) {
@@ -3699,8 +4532,12 @@
 
       if (!computerCollision && computerEating) {
         computerScore += 1;
-        collectFood("computer", computerEatenFood);
-        computerHp = Math.min(computerSnake.length, computerHp + 1);
+        if (computerCanGrow()) {
+          collectFood("computer", computerEatenFood);
+          computerHp = Math.min(computerSnake.length, computerHp + 1);
+        } else {
+          computerSnake.pop();
+        }
       } else if (!computerCollision) {
         computerSnake.pop();
       }
@@ -3732,9 +4569,10 @@
       const playerCollision = collisionSeverity(playerSelfHit, playerOpponentHit);
 
       if (playerCollision) {
-        applyCollisionPenalty("player", playerCollision);
+        const playerParalysisLimitReached = applyCollisionPenalty("player", playerCollision);
         setStatus("撞擊造成麻痺與減速，撞到自己懲罰加倍。");
         updateHud();
+        if (playerParalysisLimitReached) endGame(true, false);
         return;
       }
 
@@ -3766,17 +4604,22 @@
       const computerCollision = collisionSeverity(computerSelfHit, computerOpponentHit);
 
       if (computerCollision) {
-        applyCollisionPenalty("computer", computerCollision);
+        const computerParalysisLimitReached = applyCollisionPenalty("computer", computerCollision);
         setStatus("對手撞擊後麻痺並減速。");
         updateHud();
+        if (computerParalysisLimitReached) endGame(false, true);
         return;
       }
 
       computerSnake.unshift(computerNext);
       if (computerEating) {
         computerScore += 1;
-        collectFood("computer", computerEatenFood);
-        computerHp = Math.min(computerSnake.length, computerHp + 1);
+        if (computerCanGrow()) {
+          collectFood("computer", computerEatenFood);
+          computerHp = Math.min(computerSnake.length, computerHp + 1);
+        } else {
+          computerSnake.pop();
+        }
         foods = foods.filter(food => keyOf(food) !== computerNextKey);
         placeFoods(["computer"]);
       } else {
@@ -3831,6 +4674,7 @@
       }
       if (!paused) {
         resolveProjectiles(now);
+        resolveHazards(now);
         maybeComputerAttack(now);
       }
       if (running && !paused) {
@@ -3849,12 +4693,14 @@
         }
       }
       blasts = blasts.filter(blast => now <= blast.endAt);
+      hazards = hazards.filter(hazard => now <= hazard.endAt);
       updateHud();
       draw();
       rafId = requestAnimationFrame(loop);
     }
 
     function draw() {
+      const now = performance.now();
       const rect = playArea.getBoundingClientRect();
       ctx.clearRect(0, 0, rect.width, rect.height);
       ctx.fillStyle = "#111720";
@@ -3879,9 +4725,10 @@
 
       drawProjectiles();
       drawTarget();
+      drawHazards();
       drawBlasts();
 
-      if (computerSnake) {
+      if (computerSnake && !(now >= computerUndergroundFrom && now <= computerUndergroundUntil)) {
         const computerCharacter = characterFor("computer");
         drawSnake(computerSnake, {
           head: computerCharacter.color,
@@ -3891,7 +4738,8 @@
           ownerColor: colors.computerHead,
           ownerLine: colors.computerHeadLine,
           character: computerCharacter,
-          owner: "computer"
+          owner: "computer",
+          direction: computerDir
         });
       }
 
@@ -3905,7 +4753,8 @@
           ownerColor: colors.head,
           ownerLine: colors.headLine,
           character: playerCharacter,
-          owner: "player"
+          owner: "player",
+          direction: dir
         });
       }
     }
@@ -3913,6 +4762,19 @@
     function drawProjectiles() {
       const now = performance.now();
       projectiles.forEach(projectile => {
+        if (projectile.hidden) return;
+        if (projectile.kind === "line") {
+          const progress = Math.min(1, Math.max(0, (now - projectile.createdAt) / (projectile.delay || baseAttackDelayMs)));
+          const alpha = 0.18 + progress * 0.32;
+          const blastCharacter = characterFor(projectile.owner);
+          cellsNearCells(projectile.lineCells, projectile.width).forEach(cell => {
+            const { x, y } = axialToPixel(cell);
+            hexPath(x, y, cellSize * 0.88);
+            ctx.fillStyle = hexToRgba(blastCharacter.accent || blastCharacter.color, alpha);
+            ctx.fill();
+          });
+          return;
+        }
         const start = axialToPixel(projectile.source || projectile.target);
         const end = axialToPixel(projectile.target);
         const progress = Math.min(1, Math.max(0, (now - projectile.createdAt) / (projectile.delay || baseAttackDelayMs)));
@@ -3937,6 +4799,7 @@
     function drawTarget() {
       if (!targetCell || !snake) return;
       if (!targetActive && !canAttack("player", selectedAttackProfile)) return;
+      if (selectedAttackProfile === "big" && characterFor("player").id === "sandworm") return;
       const { x, y } = axialToPixel(targetCell);
       ctx.beginPath();
       const previewRadius = Math.max(1, blastRadius(playerStock) + (selectedAttackProfile === "small" ? -1 : 0));
@@ -3954,9 +4817,43 @@
       ctx.stroke();
     }
 
+    function drawHazards() {
+      const now = performance.now();
+      hazards.forEach(hazard => {
+        if (now < hazard.startedAt || now > hazard.endAt) return;
+        const progress = (now - hazard.startedAt) / Math.max(1, hazard.endAt - hazard.startedAt);
+        const alpha = 0.24 * (1 - progress * 0.55);
+        const blastCharacter = characterFor(hazard.owner);
+        cellsNearCells(hazard.cells, hazard.width).forEach(cell => {
+          const { x, y } = axialToPixel(cell);
+          hexPath(x, y, cellSize * 0.9);
+          ctx.fillStyle = hexToRgba(blastCharacter.accent || blastCharacter.color, alpha);
+          ctx.fill();
+          ctx.strokeStyle = hexToRgba(blastCharacter.line, alpha + 0.16);
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        });
+      });
+    }
+
     function drawBlasts() {
       const now = performance.now();
       blasts.forEach(blast => {
+        if (blast.kind === "line") {
+          const progress = Math.min(1, (now - blast.startedAt) / blastDurationMs);
+          const alpha = 1 - progress;
+          const blastCharacter = characterFor(blast.owner);
+          cellsNearCells(blast.lineCells, blast.width).forEach(cell => {
+            const { x, y } = axialToPixel(cell);
+            hexPath(x, y, cellSize * 0.94);
+            ctx.fillStyle = hexToRgba(blastCharacter.accent || blastCharacter.color, 0.32 * alpha);
+            ctx.fill();
+            ctx.strokeStyle = hexToRgba("#ffffff", 0.55 * alpha);
+            ctx.lineWidth = 2;
+            ctx.stroke();
+          });
+          return;
+        }
         const { x, y } = axialToPixel(blast.target);
         const progress = Math.min(1, (now - blast.startedAt) / blastDurationMs);
         const alpha = 1 - progress;
@@ -3985,7 +4882,10 @@
       ctx.strokeStyle = "#f8fafc";
       ctx.lineWidth = Math.max(2, cellSize * 0.09);
 
-      if (type.id === "protein") {
+      if (type.id === "black") {
+        ctx.beginPath();
+        ctx.arc(x, y, size * 0.78, 0, Math.PI * 2);
+      } else if (type.id === "protein") {
         ctx.beginPath();
         ctx.arc(x, y, size * 0.74, 0, Math.PI * 2);
       } else if (type.id === "fat") {
@@ -4032,7 +4932,23 @@
       ctx.lineWidth = Math.max(2, cellSize * 0.08);
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
-      if (type.id === "protein") {
+      if (type.id === "black") {
+        ctx.strokeStyle = "#e5e7eb";
+        ctx.lineWidth = Math.max(2, cellSize * 0.07);
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.38, y);
+        for (let i = 0; i < 6; i += 1) {
+          const px = x - size * 0.28 + i * size * 0.12;
+          const py = y + (i % 2 === 0 ? -size * 0.16 : size * 0.16);
+          ctx.lineTo(px, py);
+        }
+        ctx.lineTo(x + size * 0.38, y);
+        ctx.stroke();
+        ctx.fillStyle = "#e5e7eb";
+        ctx.beginPath();
+        ctx.arc(x - size * 0.38, y, size * 0.1, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (type.id === "protein") {
         ctx.beginPath();
         ctx.moveTo(x - size * 0.32, y - size * 0.08);
         ctx.bezierCurveTo(x - size * 0.18, y - size * 0.36, x + size * 0.22, y - size * 0.36, x + size * 0.34, y - size * 0.04);
@@ -4070,6 +4986,186 @@
       return `rgba(${r},${g},${b},${alpha})`;
     }
 
+    function drawLocalHex(size) {
+      ctx.beginPath();
+      for (let i = 0; i < 6; i += 1) {
+        const angle = Math.PI / 180 * (60 * i - 30);
+        const px = size * Math.cos(angle);
+        const py = size * Math.sin(angle);
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+    }
+
+    function strokeHeadEye(x, y, radius, fill = "#111720") {
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fillStyle = fill;
+      ctx.fill();
+      ctx.strokeStyle = "rgba(255,255,255,0.56)";
+      ctx.lineWidth = Math.max(1, cellSize * 0.028);
+      ctx.stroke();
+    }
+
+    function drawMirroredPath(points, scaleY = 1) {
+      ctx.beginPath();
+      points.forEach(([px, py], index) => {
+        if (index === 0) ctx.moveTo(px, py * scaleY);
+        else ctx.lineTo(px, py * scaleY);
+      });
+      ctx.stroke();
+    }
+
+    function drawSnakeHeadDetail(x, y, palette) {
+      const character = palette.character;
+      if (!character) return;
+      const headSize = cellSize * 0.82;
+      const angle = directions[palette.direction ?? 0]?.angle ?? -90;
+      const accent = character.accent || palette.headLine;
+      const line = character.line || palette.headLine;
+
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angle * Math.PI / 180);
+      drawLocalHex(headSize * 0.94);
+      ctx.clip();
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+
+      ctx.fillStyle = hexToRgba("#ffffff", palette.owner === "computer" ? 0.1 : 0.16);
+      ctx.beginPath();
+      ctx.ellipse(headSize * 0.06, -headSize * 0.24, headSize * 0.42, headSize * 0.16, -0.25, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (character.id === "dragon") {
+        ctx.strokeStyle = line;
+        ctx.lineWidth = Math.max(1.6, cellSize * 0.055);
+        drawMirroredPath([[-headSize * 0.2, -headSize * 0.18], [headSize * 0.1, -headSize * 0.26], [headSize * 0.42, -headSize * 0.08]]);
+        drawMirroredPath([[-headSize * 0.2, -headSize * 0.18], [headSize * 0.1, -headSize * 0.26], [headSize * 0.42, -headSize * 0.08]], -1);
+        ctx.fillStyle = accent;
+        [[-0.18, -0.46], [0.02, -0.42], [-0.18, 0.46], [0.02, 0.42]].forEach(([hx, hy]) => {
+          ctx.beginPath();
+          ctx.moveTo(headSize * hx, headSize * hy);
+          ctx.lineTo(headSize * (hx + 0.2), headSize * (hy * 0.58));
+          ctx.lineTo(headSize * (hx - 0.05), headSize * (hy * 0.22));
+          ctx.closePath();
+          ctx.fill();
+        });
+        strokeHeadEye(headSize * 0.22, -headSize * 0.18, Math.max(2, cellSize * 0.07));
+      } else if (character.id === "sandworm") {
+        ctx.strokeStyle = line;
+        ctx.lineWidth = Math.max(1.8, cellSize * 0.065);
+        for (let i = -1; i <= 1; i += 1) {
+          ctx.beginPath();
+          ctx.ellipse(headSize * (0.08 - i * 0.16), 0, headSize * 0.18, headSize * 0.52, 0, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        ctx.fillStyle = "#111720";
+        ctx.beginPath();
+        ctx.ellipse(headSize * 0.42, 0, headSize * 0.18, headSize * 0.34, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = accent;
+        ctx.lineWidth = Math.max(1.2, cellSize * 0.04);
+        [-0.45, -0.15, 0.15, 0.45].forEach(offset => {
+          ctx.beginPath();
+          ctx.moveTo(headSize * 0.28, headSize * offset);
+          ctx.lineTo(headSize * 0.48, headSize * offset * 0.55);
+          ctx.stroke();
+        });
+      } else if (character.id === "quetzal") {
+        ctx.fillStyle = accent;
+        [-0.42, -0.2, 0.02, 0.24].forEach((fy, index) => {
+          ctx.beginPath();
+          ctx.moveTo(-headSize * 0.36 + index * headSize * 0.08, headSize * fy);
+          ctx.lineTo(-headSize * 0.04 + index * headSize * 0.08, headSize * (fy - 0.22));
+          ctx.lineTo(headSize * 0.06 + index * headSize * 0.05, headSize * (fy + 0.02));
+          ctx.closePath();
+          ctx.fill();
+        });
+        ctx.strokeStyle = line;
+        ctx.lineWidth = Math.max(1.4, cellSize * 0.052);
+        ctx.beginPath();
+        ctx.moveTo(-headSize * 0.28, headSize * 0.28);
+        ctx.quadraticCurveTo(headSize * 0.12, -headSize * 0.24, headSize * 0.42, -headSize * 0.02);
+        ctx.stroke();
+        strokeHeadEye(headSize * 0.18, -headSize * 0.16, Math.max(2, cellSize * 0.065));
+      } else if (character.id === "moray") {
+        ctx.strokeStyle = accent;
+        ctx.lineWidth = Math.max(2, cellSize * 0.075);
+        ctx.beginPath();
+        ctx.moveTo(-headSize * 0.44, headSize * 0.12);
+        ctx.quadraticCurveTo(-headSize * 0.02, -headSize * 0.2, headSize * 0.48, -headSize * 0.04);
+        ctx.stroke();
+        ctx.strokeStyle = line;
+        ctx.lineWidth = Math.max(1.4, cellSize * 0.046);
+        ctx.beginPath();
+        ctx.moveTo(headSize * 0.12, headSize * 0.16);
+        ctx.lineTo(headSize * 0.48, headSize * 0.16);
+        ctx.stroke();
+        ctx.fillStyle = "#f8fafc";
+        [-0.02, 0.12, 0.26].forEach(tx => {
+          ctx.beginPath();
+          ctx.moveTo(headSize * tx, headSize * 0.16);
+          ctx.lineTo(headSize * (tx + 0.07), headSize * 0.29);
+          ctx.lineTo(headSize * (tx + 0.13), headSize * 0.16);
+          ctx.closePath();
+          ctx.fill();
+        });
+        strokeHeadEye(headSize * 0.22, -headSize * 0.16, Math.max(2, cellSize * 0.065));
+      } else if (character.id === "gu_king") {
+        ctx.strokeStyle = accent;
+        ctx.lineWidth = Math.max(1.6, cellSize * 0.06);
+        [-0.36, -0.18, 0, 0.18, 0.36].forEach(offset => {
+          ctx.beginPath();
+          ctx.moveTo(-headSize * 0.36, headSize * offset);
+          ctx.lineTo(-headSize * 0.5, headSize * (offset + Math.sign(offset || 1) * 0.14));
+          ctx.stroke();
+        });
+        ctx.fillStyle = hexToRgba(accent, 0.84);
+        ctx.beginPath();
+        ctx.moveTo(headSize * 0.02, -headSize * 0.36);
+        ctx.lineTo(headSize * 0.18, -headSize * 0.16);
+        ctx.lineTo(headSize * 0.34, -headSize * 0.36);
+        ctx.lineTo(headSize * 0.42, -headSize * 0.1);
+        ctx.lineTo(headSize * 0.1, headSize * 0.02);
+        ctx.closePath();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(headSize * 0.02, headSize * 0.36);
+        ctx.lineTo(headSize * 0.18, headSize * 0.16);
+        ctx.lineTo(headSize * 0.34, headSize * 0.36);
+        ctx.lineTo(headSize * 0.42, headSize * 0.1);
+        ctx.lineTo(headSize * 0.1, -headSize * 0.02);
+        ctx.closePath();
+        ctx.fill();
+        strokeHeadEye(headSize * 0.2, -headSize * 0.12, Math.max(2, cellSize * 0.06), "#0f172a");
+        strokeHeadEye(headSize * 0.2, headSize * 0.12, Math.max(2, cellSize * 0.06), "#0f172a");
+      } else {
+        ctx.strokeStyle = line;
+        ctx.lineWidth = Math.max(1.7, cellSize * 0.062);
+        ctx.beginPath();
+        ctx.moveTo(-headSize * 0.16, -headSize * 0.36);
+        ctx.quadraticCurveTo(headSize * 0.18, -headSize * 0.34, headSize * 0.38, -headSize * 0.08);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(-headSize * 0.16, headSize * 0.36);
+        ctx.quadraticCurveTo(headSize * 0.18, headSize * 0.34, headSize * 0.38, headSize * 0.08);
+        ctx.stroke();
+        ctx.strokeStyle = accent;
+        ctx.lineWidth = Math.max(2, cellSize * 0.07);
+        ctx.beginPath();
+        ctx.moveTo(-headSize * 0.42, -headSize * 0.18);
+        ctx.lineTo(-headSize * 0.1, -headSize * 0.02);
+        ctx.lineTo(-headSize * 0.42, headSize * 0.18);
+        ctx.stroke();
+        strokeHeadEye(headSize * 0.18, -headSize * 0.12, Math.max(2, cellSize * 0.06));
+        strokeHeadEye(headSize * 0.18, headSize * 0.12, Math.max(2, cellSize * 0.06));
+      }
+
+      ctx.restore();
+    }
+
     function drawSnake(parts, palette) {
       parts.forEach((segment, index) => {
         const { x, y } = axialToPixel(segment);
@@ -4080,6 +5176,9 @@
         ctx.lineWidth = index === 0 ? 3 : 1.5;
         ctx.stroke();
         drawSnakeOwnerMark(x, y, index, palette);
+        if (index === 0) {
+          drawSnakeHeadDetail(x, y, palette);
+        }
         drawSnakeSegmentDetail(x, y, index, palette);
 
       });
@@ -4140,7 +5239,7 @@
       const distance = Math.hypot(x, y);
       if (distance < Math.max(4, rect.width * 0.035)) return null;
       const angle = Math.atan2(y, x) * 180 / Math.PI;
-      const adjusted = (angle + 450 + 30) % 360;
+      const adjusted = (angle + 510) % 360;
       return Math.floor(adjusted / 60) % 6;
     }
 
@@ -4231,9 +5330,9 @@
       targetStick.style.transform = "translate(0, 0)";
       if (targetActive && running && !paused && !gameOver) {
         if (launchAttack("player", targetCell || snake[0], performance.now())) {
-          setStatus("玩家發射砲彈，2 秒後落地。");
+          setStatus("玩家施放炸彈，2 秒後落地。");
         } else {
-          setStatus("攻擊需要 1 枚砲彈，且紅黃綠藍四種庫存各至少 1。");
+          setStatus(`大招需要 ${bigAttackBombCost} 枚炸彈，且四種庫存各至少 2。`);
         }
       }
       targetActive = false;
@@ -4256,7 +5355,7 @@
         setStatus(`${moveName} 發動。`);
         return true;
       }
-      setStatus(profile === "small" ? "小招需要紅黃綠藍四種庫存各至少 1。" : "大招需要 1 枚砲彈，且四種庫存各至少 1。");
+      setStatus(profile === "small" ? "小招需要紅黃綠藍四種庫存各至少 1。" : `大招需要 ${bigAttackBombCost} 枚炸彈，且四種庫存各至少 2。`);
       return false;
     }
 
@@ -4286,7 +5385,7 @@
         return;
       }
       paused = !paused;
-      setStatus(paused ? "已暫停" : "對戰中：吃四種食物累積砲彈資源。");
+      setStatus(paused ? "已暫停" : "對戰中：吃食物累積能量，集滿可獲得炸彈。");
       overlayTitle.textContent = "暫停";
       overlayText.textContent = "按開始或快捷鍵繼續。";
       startButton.textContent = "繼續";
@@ -4320,6 +5419,7 @@
     }
 
     function toggleSettings() {
+      if (settingsToggle.disabled || running) return;
       setSettingsOpen(settingsToggle.getAttribute("aria-expanded") !== "true");
     }
 
@@ -4332,6 +5432,7 @@
     }
 
     function toggleGmSettings() {
+      if (gmToggle.disabled || running) return;
       setGmOpen(gmToggle.getAttribute("aria-expanded") !== "true");
     }
 
@@ -4340,18 +5441,10 @@
 
     settingsToggle.addEventListener("pointerdown", event => {
       event.stopPropagation();
-      if (event.pointerType !== "mouse") {
-        event.preventDefault();
-        toggleSettings();
-      }
     });
 
     gmToggle.addEventListener("pointerdown", event => {
       event.stopPropagation();
-      if (event.pointerType !== "mouse") {
-        event.preventDefault();
-        toggleGmSettings();
-      }
     });
 
     settingsContent.addEventListener("pointerdown", event => {
@@ -4502,6 +5595,20 @@
       resize();
     });
 
+    initialEnergyInput.addEventListener("change", () => {
+      if (running) return;
+      setInitialEnergy(initialEnergyInput.value);
+      resetGame();
+      resize();
+    });
+
+    initialBombsInput.addEventListener("change", () => {
+      if (running) return;
+      setInitialBombs(initialBombsInput.value);
+      resetGame();
+      resize();
+    });
+
     initialStockInputs.forEach(input => {
       input.addEventListener("change", () => {
         if (running) return;
@@ -4535,24 +5642,34 @@
       updateHud();
     });
 
-    resetGmSettingsButton.addEventListener("click", () => {
+    realModeButton.addEventListener("click", () => {
       if (running) return;
       setGmMode(true);
       resetGmParameters();
-      resetGame();
-      resize();
-      overlayTitle.textContent = "GM 參數已重設";
-      overlayText.textContent = "棋盤大小、食物數量、初始速度、初始長度與四色食物初始值已恢復預設。";
-      startButton.textContent = "開始";
-      renderIntroPortraits(true);
-      overlay.classList.add("show");
+      refreshGmPreview();
+    });
+
+    midGameModeButton.addEventListener("click", () => {
+      if (running) return;
+      applyMidGameModePreset();
+      refreshGmPreview();
+    });
+
+    ultimateModeButton.addEventListener("click", () => {
+      if (running) return;
+      applyUltimateModePreset();
+      refreshGmPreview();
+    });
+
+    lateGameModeButton.addEventListener("click", () => {
+      if (running) return;
+      applyLateGameModePreset();
+      refreshGmPreview();
     });
 
     resetSettingsButton.addEventListener("click", () => {
       if (running) return;
-      resetGmParameters();
       setComputerDifficulty(defaultSettings.computerDifficulty);
-      setGmMode(defaultSettings.gmMode);
       playerCharacterId = defaultSettings.playerCharacterId;
       computerCharacterId = defaultSettings.computerCharacterId;
       playerCharacterInput.value = playerCharacterId;
@@ -4564,7 +5681,7 @@
       resetGame();
       resize();
       overlayTitle.textContent = "已回到預設值";
-      overlayText.textContent = "棋盤、食物、速度、GM 模式與鍵位都已恢復預設。";
+      overlayText.textContent = "一般設定已恢復預設，GM 設定維持不變。";
       startButton.textContent = "開始";
       renderIntroPortraits(true);
       overlay.classList.add("show");
@@ -4606,9 +5723,13 @@
     });
 
     startButton.addEventListener("click", () => {
+      if (!characters.length) {
+        window.location.reload();
+        return;
+      }
       if (paused && running && !gameOver) {
         paused = false;
-        setStatus("對戰中：吃四種食物累積砲彈資源。");
+        setStatus("對戰中：吃食物累積能量，集滿可獲得炸彈。");
         overlay.classList.remove("show");
         characterStage.hidden = false;
         lastPlayerStep = performance.now();
@@ -4622,7 +5743,7 @@
         return;
       }
       overlayTitle.textContent = "準備開局";
-      overlayText.textContent = "每吃 6 個食物獲得 1 枚砲彈，最多 3 枚；發射時會消耗紅黃綠藍各 1 點。";
+      overlayText.textContent = `每吃 1 個食物獲得 2 點能量，集滿 ${attackNeedTotal} 點獲得 1 枚炸彈，最多 ${maxAmmo} 枚；能量與炸彈都滿時，施放消耗炸彈的招式會立刻把滿能量轉為 1 枚炸彈；小招消耗紅黃綠藍各 1 點，大招消耗 ${bigAttackBombCost} 枚炸彈與紅黃綠藍各 2 點。`;
       startButton.textContent = "開始";
       setOverlayChromeVisible(true);
       startGame();
@@ -4728,7 +5849,7 @@
           return;
         }
         paused = !paused;
-        setStatus(paused ? "已暫停" : "對戰中：吃四種食物累積砲彈資源。");
+        setStatus(paused ? "已暫停" : "對戰中：吃食物累積能量，集滿可獲得炸彈。");
         overlayTitle.textContent = "暫停";
         overlayText.textContent = "按繼續回到對戰。";
         startButton.textContent = "繼續";
@@ -4747,9 +5868,9 @@
           if (!autoStartGame()) return;
         }
         if (launchAttack("player", targetCell || snake[0], performance.now())) {
-          setStatus("玩家發射砲彈，2 秒後落地。");
+          setStatus("玩家施放炸彈，2 秒後落地。");
         } else {
-          setStatus("攻擊需要 1 枚砲彈，且紅黃綠藍四種庫存各至少 1。");
+          setStatus(`大招需要 ${bigAttackBombCost} 枚炸彈，且四種庫存各至少 2。`);
         }
         return;
       }
@@ -4763,27 +5884,43 @@
 
     window.addEventListener("resize", resize);
 
-    setGridSize(gridSizeInput.value);
-    setFoodCount(foodCountInput.value);
-    setComputerDifficulty(computerDifficultyInput.value);
-    setInitialSpeed(initialSpeedInput.value);
-    setGmMode(defaultSettings.gmMode);
-    setInitialLength(initialLengthInput.value);
-    initialStockInputs.forEach(input => setInitialStock(input.dataset.initialStock, input.value));
-    setSettingsLocked(false);
-    applyKeybinds();
-    setLeftHandMode(localStorage.getItem("hexSnakeLeftHandMode") === "1");
-    updateAttackButtons();
-    resetGame();
-    resize();
-    renderIntroPortraits(false);
-    preloadPortraitsFor("player");
-    preloadPortraitsFor("computer");
-    if ("requestIdleCallback" in window) {
-      requestIdleCallback(preloadAllPortraits, { timeout: 1500 });
-    } else {
-      setTimeout(preloadAllPortraits, 250);
+    async function bootstrap() {
+      try {
+        await loadCharacterDatabase();
+      } catch (error) {
+        showCharacterDatabaseError(error);
+        return;
+      }
+      buildCharacterOptions();
+      buildCharacterStage();
+      buildResourceHud();
+      buildRulesContent();
+      setGridSize(gridSizeInput.value);
+      setFoodCount(foodCountInput.value);
+      setComputerDifficulty(computerDifficultyInput.value);
+      setInitialSpeed(initialSpeedInput.value);
+      setGmMode(defaultSettings.gmMode);
+      setInitialLength(initialLengthInput.value);
+      setInitialEnergy(initialEnergyInput.value);
+      setInitialBombs(initialBombsInput.value);
+      initialStockInputs.forEach(input => setInitialStock(input.dataset.initialStock, input.value));
+      setSettingsLocked(false);
+      applyKeybinds();
+      setLeftHandMode(localStorage.getItem("hexSnakeLeftHandMode") === "1");
+      updateAttackButtons();
+      resetGame();
+      resize();
+      renderIntroPortraits(false);
+      preloadPortraitsFor("player");
+      preloadPortraitsFor("computer");
+      if ("requestIdleCallback" in window) {
+        requestIdleCallback(preloadAllPortraits, { timeout: 1500 });
+      } else {
+        setTimeout(preloadAllPortraits, 250);
+      }
     }
+
+    bootstrap();
   </script>
 </body>
 </html>

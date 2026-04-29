@@ -1,0 +1,159 @@
+[
+  {
+    "id": "dragon",
+    "slug": "white_dragon",
+    "name": "白龍",
+    "representColor": "#f8fafc",
+    "appearance": "曾墜入低谷的雲海白龍，銀白鱗片、淡藍光痕與金色角冠交錯，姿態像重新躍門的古老王者。",
+    "avatar": "assets/portraits/sm/white_dragon_intro.png",
+    "portraits": {
+      "opening": { "full": "assets/portraits/white_dragon_intro.png", "md": "assets/portraits/md/white_dragon_intro.png", "sm": "assets/portraits/sm/white_dragon_intro.png" },
+      "intro": { "full": "assets/portraits/white_dragon_idle.png", "md": "assets/portraits/md/white_dragon_idle.png", "sm": "assets/portraits/sm/white_dragon_idle.png" },
+      "small": { "full": "assets/portraits/white_dragon_attack.png", "md": "assets/portraits/md/white_dragon_attack.png", "sm": "assets/portraits/sm/white_dragon_attack.png" },
+      "big": { "full": "assets/portraits/white_dragon_attack.png", "md": "assets/portraits/md/white_dragon_attack.png", "sm": "assets/portraits/sm/white_dragon_attack.png" },
+      "victory": { "full": "assets/portraits/white_dragon_victory.png", "md": "assets/portraits/md/white_dragon_victory.png", "sm": "assets/portraits/sm/white_dragon_victory.png" },
+      "defeat": { "full": "assets/portraits/white_dragon_defeat.png", "md": "assets/portraits/md/white_dragon_defeat.png", "sm": "assets/portraits/sm/white_dragon_defeat.png" }
+    },
+    "foodEffect": "均衡型角色；白龍吃食後補出的新食物有 50% 機率為雙色，提供更彈性的資源路線。",
+    "story": [
+      "昔日雲海之上的白龍，曾以一息定潮、一爪開天。直到龍鱗失色，墜入低谷，連逐浪的犬影都敢在牠身後吠叫。",
+      "牠吞下屈辱，也吞下每一口能重築筋骨的食糧。今日再入六角戰場，不求憐憫，只求一躍越門，讓失去的王座重新記起牠的名字。"
+    ],
+    "motto": "墜落不是終點，躍門才是回聲。",
+    "smallMove": "雲鱗回旋",
+    "bigMove": "越門龍息",
+    "colors": { "body": "#cbd5e1", "line": "#bae6fd", "accent": "#fbbf24" },
+    "foodPreference": "balanced"
+  },
+  {
+    "id": "sandworm",
+    "slug": "sandworm",
+    "name": "沙蟲",
+    "representColor": "#facc15",
+    "appearance": "伏在貧瘠沙層下的巨蟲，金黃甲節、褐色利齒與沙暴般的輪廓充滿翻身的壓迫感。",
+    "avatar": "assets/portraits/sm/sandworm_intro.png",
+    "portraits": {
+      "opening": { "full": "assets/portraits/sandworm_intro.png", "md": "assets/portraits/md/sandworm_intro.png", "sm": "assets/portraits/sm/sandworm_intro.png" },
+      "intro": { "full": "assets/portraits/sandworm_idle.png", "md": "assets/portraits/md/sandworm_idle.png", "sm": "assets/portraits/sm/sandworm_idle.png" },
+      "small": { "full": "assets/portraits/sandworm_attack.png", "md": "assets/portraits/md/sandworm_attack.png", "sm": "assets/portraits/sm/sandworm_attack.png" },
+      "big": { "full": "assets/portraits/sandworm_attack.png", "md": "assets/portraits/md/sandworm_attack.png", "sm": "assets/portraits/sm/sandworm_attack.png" },
+      "victory": { "full": "assets/portraits/sandworm_victory.png", "md": "assets/portraits/md/sandworm_victory.png", "sm": "assets/portraits/sm/sandworm_victory.png" },
+      "defeat": { "full": "assets/portraits/sandworm_defeat.png", "md": "assets/portraits/md/sandworm_defeat.png", "sm": "assets/portraits/sm/sandworm_defeat.png" }
+    },
+    "foodEffect": "偏好黃色脂肪；食物生成較容易偏向黃色，但吃食收益與其他角色相同。",
+    "story": [
+      "沙蟲沒有豐饒的故鄉，只有乾裂的土、稀薄的獵物，和比牠龐大得多的陰影。牠學會把身形藏進貧瘠，把心跳壓到沙粒之下。",
+      "每一次伏擊都是賭局，每一次吞食都是翻身的籌碼。牠相信階層不是天命，只要咬得夠準，最底層的沙也能埋葬巨獸。"
+    ],
+    "motto": "在最低的沙裡，也藏著翻天的牙。",
+    "smallMove": "潛沙突咬",
+    "bigMove": "貧土潛襲",
+    "colors": { "body": "#ca8a04", "line": "#fef08a", "accent": "#92400e" },
+    "foodPreference": "fat"
+  },
+  {
+    "id": "quetzal",
+    "slug": "quetzalcoatl",
+    "name": "羽蛇神",
+    "representColor": "#22c55e",
+    "appearance": "翠羽與蛇身交織的古神，羽冠像風中祭旗，青綠光芒守住不願消失的祖語。",
+    "avatar": "assets/portraits/sm/quetzalcoatl_intro.png",
+    "portraits": {
+      "opening": { "full": "assets/portraits/quetzalcoatl_intro.png", "md": "assets/portraits/md/quetzalcoatl_intro.png", "sm": "assets/portraits/sm/quetzalcoatl_intro.png" },
+      "intro": { "full": "assets/portraits/quetzalcoatl_idle.png", "md": "assets/portraits/md/quetzalcoatl_idle.png", "sm": "assets/portraits/sm/quetzalcoatl_idle.png" },
+      "small": { "full": "assets/portraits/quetzalcoatl_attack.png", "md": "assets/portraits/md/quetzalcoatl_attack.png", "sm": "assets/portraits/sm/quetzalcoatl_attack.png" },
+      "big": { "full": "assets/portraits/quetzalcoatl_attack.png", "md": "assets/portraits/md/quetzalcoatl_attack.png", "sm": "assets/portraits/sm/quetzalcoatl_attack.png" },
+      "victory": { "full": "assets/portraits/quetzalcoatl_victory.png", "md": "assets/portraits/md/quetzalcoatl_victory.png", "sm": "assets/portraits/sm/quetzalcoatl_victory.png" },
+      "defeat": { "full": "assets/portraits/quetzalcoatl_defeat.png", "md": "assets/portraits/md/quetzalcoatl_defeat.png", "sm": "assets/portraits/sm/quetzalcoatl_defeat.png" }
+    },
+    "foodEffect": "偏好綠色纖維；食物生成較容易偏向綠色，但吃食收益與其他角色相同。",
+    "story": [
+      "羽蛇神在強權的夾縫間展翼：一邊是鐵與旗幟，一邊是被迫噤聲的祖語。祂帶著少數族裔的記憶飛行，不讓祭歌被風沙磨滅。",
+      "祂追尋的勝利不只是疆界，而是心靈仍能命名自身。當翠羽劃開戰場，古老信仰便在新世界裡重新發光。"
+    ],
+    "motto": "名字不滅，羽翼就不會折。",
+    "smallMove": "祖語翠羽",
+    "bigMove": "祖語沼界",
+    "colors": { "body": "#15803d", "line": "#bbf7d0", "accent": "#67e8f9" },
+    "foodPreference": "fiber"
+  },
+  {
+    "id": "moray",
+    "slug": "moray_eel",
+    "name": "海鰻",
+    "representColor": "#3b82f6",
+    "appearance": "暗潮中竄出的藍色海鰻，電光沿背脊閃爍，眼神像正等待鉤索落水的逆浪。",
+    "avatar": "assets/portraits/sm/moray_eel_intro.png",
+    "portraits": {
+      "opening": { "full": "assets/portraits/moray_eel_intro.png", "md": "assets/portraits/md/moray_eel_intro.png", "sm": "assets/portraits/sm/moray_eel_intro.png" },
+      "intro": { "full": "assets/portraits/moray_eel_idle.png", "md": "assets/portraits/md/moray_eel_idle.png", "sm": "assets/portraits/sm/moray_eel_idle.png" },
+      "small": { "full": "assets/portraits/moray_eel_attack.png", "md": "assets/portraits/md/moray_eel_attack.png", "sm": "assets/portraits/sm/moray_eel_attack.png" },
+      "big": { "full": "assets/portraits/moray_eel_attack.png", "md": "assets/portraits/md/moray_eel_attack.png", "sm": "assets/portraits/sm/moray_eel_attack.png" },
+      "victory": { "full": "assets/portraits/moray_eel_victory.png", "md": "assets/portraits/md/moray_eel_victory.png", "sm": "assets/portraits/sm/moray_eel_victory.png" },
+      "defeat": { "full": "assets/portraits/moray_eel_defeat.png", "md": "assets/portraits/md/moray_eel_defeat.png", "sm": "assets/portraits/sm/moray_eel_defeat.png" }
+    },
+    "foodEffect": "偏好藍色碳水；食物生成較容易偏向藍色，但吃食收益與其他角色相同。",
+    "story": [
+      "海鰻生於被網線割裂的暗潮。牠看見族群被燈火引誘、被冰艙沉默，於是把恐懼磨成電流，把逆流當作宣戰。",
+      "牠不是守護者口中的純善英雄，而是人類船影下的惡名。只要貪婪的鉤索還垂進海裡，牠就會咬穿浪峰，讓捕獵者也學會窒息。"
+    ],
+    "motto": "讓垂鉤者，先學會窒息。",
+    "smallMove": "暗潮電咬",
+    "bigMove": "逆潮電磁砲",
+    "colors": { "body": "#1d4ed8", "line": "#bfdbfe", "accent": "#93c5fd" },
+    "foodPreference": "carb"
+  },
+  {
+    "id": "lobster",
+    "slug": "ghost_lobster",
+    "name": "龍蝦",
+    "representColor": "#ef4444",
+    "appearance": "深海裂縫裡醒來的赤螯龍蝦，紅甲厚重、古螯發亮，像渾沌終於長出節奏。",
+    "avatar": "assets/portraits/sm/ghost_lobster_intro.png",
+    "portraits": {
+      "opening": { "full": "assets/portraits/ghost_lobster_intro.png", "md": "assets/portraits/md/ghost_lobster_intro.png", "sm": "assets/portraits/sm/ghost_lobster_intro.png" },
+      "intro": { "full": "assets/portraits/ghost_lobster_idle.png", "md": "assets/portraits/md/ghost_lobster_idle.png", "sm": "assets/portraits/sm/ghost_lobster_idle.png" },
+      "small": { "full": "assets/portraits/ghost_lobster_attack.png", "md": "assets/portraits/md/ghost_lobster_attack.png", "sm": "assets/portraits/sm/ghost_lobster_attack.png" },
+      "big": { "full": "assets/portraits/ghost_lobster_attack.png", "md": "assets/portraits/md/ghost_lobster_attack.png", "sm": "assets/portraits/sm/ghost_lobster_attack.png" },
+      "victory": { "full": "assets/portraits/ghost_lobster_victory.png", "md": "assets/portraits/md/ghost_lobster_victory.png", "sm": "assets/portraits/sm/ghost_lobster_victory.png" },
+      "defeat": { "full": "assets/portraits/ghost_lobster_defeat.png", "md": "assets/portraits/md/ghost_lobster_defeat.png", "sm": "assets/portraits/sm/ghost_lobster_defeat.png" }
+    },
+    "foodEffect": "偏好紅色蛋白質；食物生成較容易偏向紅色，但吃食收益與其他角色相同。",
+    "story": [
+      "龍蝦的魂魄曾只是一團渾沌，在深海裂縫裡隨時間漂流。潮汐沖刷牠，壓力鍛造牠，孤獨反覆敲打牠的甲殼。",
+      "萬次揮螯之後，混亂開始有了節奏；萬年沉默之後，節奏終於長出智慧。牠踏上戰場時，每一步都像古老意志醒來。"
+    ],
+    "motto": "混沌若有節奏，沉默也會成王。",
+    "smallMove": "古螯斷浪",
+    "bigMove": "混沌爆螯",
+    "colors": { "body": "#b91c1c", "line": "#fecaca", "accent": "#f97316" },
+    "foodPreference": "protein"
+  },
+  {
+    "id": "gu_king",
+    "slug": "gu_king",
+    "name": "蠱王",
+    "representColor": "#050505",
+    "appearance": "不見天日的黑色蜈蚣，甲節如冷鐵相扣，毒足密布，像從地底王座爬出的先手暴君。",
+    "avatar": "assets/portraits/sm/gu_king_icon.png",
+    "portraits": {
+      "opening": { "full": "assets/portraits/gu_king_intro.png", "md": "assets/portraits/md/gu_king_intro.png", "sm": "assets/portraits/sm/gu_king_intro.png" },
+      "intro": { "full": "assets/portraits/gu_king_idle.png", "md": "assets/portraits/md/gu_king_idle.png", "sm": "assets/portraits/sm/gu_king_idle.png" },
+      "small": { "full": "assets/portraits/gu_king_attack.png", "md": "assets/portraits/md/gu_king_attack.png", "sm": "assets/portraits/sm/gu_king_attack.png" },
+      "big": { "full": "assets/portraits/gu_king_attack.png", "md": "assets/portraits/md/gu_king_attack.png", "sm": "assets/portraits/sm/gu_king_attack.png" },
+      "victory": { "full": "assets/portraits/gu_king_victory.png", "md": "assets/portraits/md/gu_king_victory.png", "sm": "assets/portraits/sm/gu_king_victory.png" },
+      "defeat": { "full": "assets/portraits/gu_king_defeat.png", "md": "assets/portraits/md/gu_king_defeat.png", "sm": "assets/portraits/sm/gu_king_defeat.png" }
+    },
+    "foodEffect": "黑色蜈蚣的食補能力；蠱王吃食後補出的新食物有 1/3 機率成為黑色食物。黑色食物不會自然產出，吃下後紅黃綠藍隨機一種庫存 +1，並獲得 3 點能量。",
+    "story": [
+      "蠱王出生在不見天日的甕底。那裡沒有仁慈，只有先咬住對手的人，才有資格活到下一次飢餓。",
+      "牠把弱肉強食磨成本能，把先下手為強刻進每一節黑甲。槍桿子出政權，毒足踏過的地方，就是牠臨時又絕對的王朝。"
+    ],
+    "motto": "先手不是選擇，是活下去的本能。",
+    "smallMove": "毒足先斬",
+    "bigMove": "甕底毒煙令",
+    "colors": { "body": "#111827", "line": "#9ca3af", "accent": "#a3e635" },
+    "foodPreference": "black",
+    "specialFood": "black"
+  }
+]
