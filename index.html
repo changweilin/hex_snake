@@ -2561,6 +2561,7 @@
     let foods = [];
     let projectiles = [];
     let blasts = [];
+    let hazards = [];
     let dir;
     let nextDir;
     let computerDir;
@@ -2593,6 +2594,10 @@
     let computerStunUntil = 0;
     let computerSlowUntil = 0;
     let computerCollisionParalysisMs = 0;
+    let playerUndergroundFrom = 0;
+    let playerUndergroundUntil = 0;
+    let computerUndergroundFrom = 0;
+    let computerUndergroundUntil = 0;
     let lastTimerFrame = 0;
     let lastPlayerAttackMs = -Infinity;
     let lastComputerAttackMs = 0;
@@ -3590,6 +3595,7 @@
       foods = [];
       projectiles = [];
       blasts = [];
+      hazards = [];
       targetCell = { ...snake[0] };
       targetActive = false;
       totalElapsedMs = 0;
@@ -3603,6 +3609,10 @@
       computerStunUntil = 0;
       computerSlowUntil = 0;
       computerCollisionParalysisMs = 0;
+      playerUndergroundFrom = 0;
+      playerUndergroundUntil = 0;
+      computerUndergroundFrom = 0;
+      computerUndergroundUntil = 0;
       lastPlayerAttackMs = -Infinity;
       lastComputerAttackMs = 0;
       gameOver = false;
@@ -3940,16 +3950,218 @@
       }
     }
 
+    function attackStats(stock, profile = "big") {
+      const isSmall = profile === "small";
+      return {
+        delay: attackDelay(stock) * (isSmall ? 0.62 : 1),
+        radius: Math.max(1, blastRadius(stock) + (isSmall ? -1 : 0)),
+        damage: damageMultiplier(stock) * (isSmall ? 0.55 : 1)
+      };
+    }
+
+    function ownerDirection(owner) {
+      return owner === "player" ? nextDir : computerDir;
+    }
+
+    function directionFromSourceToTarget(source, target, fallbackDirection = 0) {
+      if (!source || !target || keyOf(source) === keyOf(target)) return fallbackDirection;
+      const start = axialToPixel(source);
+      const end = axialToPixel(target);
+      const vx = end.x - start.x;
+      const vy = end.y - start.y;
+      if (!vx && !vy) return fallbackDirection;
+      let bestDirection = fallbackDirection;
+      let bestDot = -Infinity;
+      directions.forEach((direction, index) => {
+        const angle = direction.angle * Math.PI / 180;
+        const dot = vx * Math.cos(angle) + vy * Math.sin(angle);
+        if (dot > bestDot) {
+          bestDot = dot;
+          bestDirection = index;
+        }
+      });
+      return bestDirection;
+    }
+
+    function cellsForwardFrom(source, direction, includeSource = true) {
+      const path = includeSource ? [{ q: source.q, r: source.r }] : [];
+      let cursor = source;
+      while (true) {
+        const next = nextCell(cursor, direction);
+        if (!isInside(next)) break;
+        path.push(next);
+        cursor = next;
+      }
+      return path;
+    }
+
+    function boardLineThrough(origin, direction) {
+      let start = origin;
+      const opposite = (direction + 3) % 6;
+      while (isInside(nextCell(start, opposite))) {
+        start = nextCell(start, opposite);
+      }
+      return cellsForwardFrom(start, direction, true);
+    }
+
+    function cellsNearCells(effectCells, width) {
+      return cells.filter(cell => effectCells.some(effectCell => hexDistance(cell, effectCell) <= width));
+    }
+
+    function pushCircleAttack({ owner, profile, target, createdAt, impactAt, delay, radius, damage, stunChance, hidden = false, flat = false }) {
+      projectiles.push({
+        kind: "circle",
+        owner,
+        profile,
+        source: { q: target.q, r: target.r },
+        target: { q: target.q, r: target.r },
+        createdAt,
+        impactAt,
+        delay,
+        radius,
+        damage,
+        stunChance,
+        hidden,
+        flat
+      });
+    }
+
+    function scheduleCharacterBigAttack(owner, character, source, target, now, stock, stunChance) {
+      const small = attackStats(stock, "small");
+      const direction = directionFromSourceToTarget(source, target, ownerDirection(owner));
+
+      if (character.id === "dragon") {
+        const path = cellsForwardFrom(source, ownerDirection(owner), true);
+        path.forEach((cell, index) => {
+          pushCircleAttack({
+            owner,
+            profile: "big",
+            target: cell,
+            createdAt: now,
+            impactAt: now + small.delay + index * 140,
+            delay: small.delay + index * 140,
+            radius: small.radius * 2,
+            damage: small.damage * 2,
+            stunChance
+          });
+        });
+        return small.delay + path.length * 140;
+      }
+
+      if (character.id === "moray") {
+        const lineCells = boardLineThrough(target, direction);
+        for (let index = 0; index < 4; index += 1) {
+          projectiles.push({
+            kind: "line",
+            owner,
+            profile: "big",
+            source: { q: source.q, r: source.r },
+            target: { q: target.q, r: target.r },
+            lineCells,
+            width: small.radius,
+            createdAt: now,
+            impactAt: now + small.delay + index * 320,
+            delay: small.delay + index * 320,
+            damage: small.damage * 0.5,
+            stunChance,
+            stackStun: true
+          });
+        }
+        return small.delay + 960;
+      }
+
+      if (character.id === "quetzal") {
+        const trail = (owner === "player" ? snake : computerSnake).map(segment => ({ q: segment.q, r: segment.r }));
+        const speedScale = attackSpeedMultiplier(stock);
+        const duration = Math.max(1400, 4200 / speedScale);
+        hazards.push({
+          kind: "swamp",
+          owner,
+          cells: trail,
+          width: small.radius,
+          damage: small.damage,
+          stunChance,
+          startedAt: now + small.delay,
+          nextTickAt: now + small.delay,
+          tickMs: moveInterval(stock),
+          endAt: now + small.delay + duration
+        });
+        return small.delay + duration;
+      }
+
+      if (character.id === "sandworm") {
+        const delay = small.delay * 2;
+        const undergroundFrom = now + Math.max(0, delay - 1000);
+        const undergroundUntil = now + delay + 1000;
+        if (owner === "player") {
+          playerUndergroundFrom = undergroundFrom;
+          playerUndergroundUntil = Math.max(playerUndergroundUntil, undergroundUntil);
+        } else {
+          computerUndergroundFrom = undergroundFrom;
+          computerUndergroundUntil = Math.max(computerUndergroundUntil, undergroundUntil);
+        }
+        pushCircleAttack({
+          owner,
+          profile: "big",
+          target,
+          createdAt: now,
+          impactAt: now + delay,
+          delay,
+          radius: Math.max(0.5, small.radius * 0.5),
+          damage: small.damage * 4,
+          stunChance,
+          hidden: true
+        });
+        return delay;
+      }
+
+      if (character.id === "lobster") {
+        pushCircleAttack({
+          owner,
+          profile: "big",
+          target: source,
+          createdAt: now,
+          impactAt: now + small.delay,
+          delay: small.delay,
+          radius: small.radius * 2,
+          damage: small.damage * 2,
+          stunChance,
+          flat: true
+        });
+        return small.delay;
+      }
+
+      if (character.id === "gu_king") {
+        for (let index = 0; index < 3; index += 1) {
+          pushCircleAttack({
+            owner,
+            profile: "big",
+            target,
+            createdAt: now,
+            impactAt: now + small.delay + index * 360,
+            delay: small.delay + index * 360,
+            radius: small.radius,
+            damage: small.damage,
+            stunChance
+          });
+        }
+        return small.delay + 720;
+      }
+
+      const big = attackStats(stock, "big");
+      pushCircleAttack({ owner, profile: "big", target, createdAt: now, impactAt: now + big.delay, delay: big.delay, radius: big.radius, damage: big.damage, stunChance });
+      return big.delay;
+    }
+
     function launchAttack(owner, target, now, profile = "big") {
       const stock = owner === "player" ? playerStock : computerStock;
       const lastAttack = owner === "player" ? lastPlayerAttackMs : lastComputerAttackMs;
       const source = owner === "player" ? snake[0] : computerSnake[0];
+      const character = characterFor(owner);
       const isSmall = profile === "small";
       if (!canAttack(owner, profile)) return false;
       if (now - lastAttack < attackCooldown(stock) * (isSmall ? 0.58 : 1)) return false;
-      const delay = attackDelay(stock) * (isSmall ? 0.62 : 1);
-      const radius = Math.max(1, blastRadius(stock) + (isSmall ? -1 : 0));
-      const damage = damageMultiplier(stock) * (isSmall ? 0.55 : 1);
+      const stats = attackStats(stock, profile);
       const stunChance = attackStunChance(stock);
       consumeAttackCost(owner, stock, profile);
       if (owner === "player") {
@@ -3959,19 +4171,25 @@
         lastComputerAttackMs = now;
         computerBombFlashUntil = now + 1200;
       }
-      setFighterPose(owner, "attack", Math.max(180, Math.min(delay, 320)));
-      projectiles.push({
-        owner,
-        profile,
-        source: { q: source.q, r: source.r },
-        target: { q: target.q, r: target.r },
-        createdAt: now,
-        impactAt: now + delay,
-        delay,
-        radius,
-        damage,
-        stunChance
-      });
+      const poseDuration = isSmall
+        ? stats.delay
+        : scheduleCharacterBigAttack(owner, character, source, target, now, stock, stunChance);
+      if (isSmall) {
+        projectiles.push({
+          kind: "circle",
+          owner,
+          profile,
+          source: { q: source.q, r: source.r },
+          target: { q: target.q, r: target.r },
+          createdAt: now,
+          impactAt: now + stats.delay,
+          delay: stats.delay,
+          radius: stats.radius,
+          damage: stats.damage,
+          stunChance
+        });
+      }
+      setFighterPose(owner, "attack", Math.max(180, Math.min(poseDuration, 520)));
       updateHud();
       return true;
     }
@@ -4000,6 +4218,19 @@
       }, 0);
     }
 
+    function damageSnakeFlat(parts, target, radius, damageScale) {
+      return parts.reduce((total, segment) => (
+        hexDistance(segment, target) <= radius ? total + damageScale : total
+      ), 0);
+    }
+
+    function damageSnakeCells(parts, effectCells, width, damageScale) {
+      return parts.reduce((total, segment) => {
+        const hit = effectCells.some(cell => hexDistance(segment, cell) <= width);
+        return hit ? total + damageScale : total;
+      }, 0);
+    }
+
     function applyBlastDamage(owner, damage) {
       if (damage <= 0) return;
       if (owner === "player") {
@@ -4013,11 +4244,13 @@
       projectiles = projectiles.filter(projectile => projectile.owner !== owner);
     }
 
-    function applyAttackStun(owner, chance = baseAttackStunChance, now = performance.now()) {
+    function applyAttackStun(owner, chance = baseAttackStunChance, now = performance.now(), options = {}) {
       if (Math.random() >= chance) return false;
-      const stunUntil = now + attackStunMs;
+      if (options.interrupt !== false) interruptCasting(owner);
+      const currentStunUntil = owner === "player" ? playerStunUntil : computerStunUntil;
+      const stunBase = options.stack ? Math.max(now, currentStunUntil) : now;
+      const stunUntil = stunBase + attackStunMs;
       const slowUntil = stunUntil + attackSlowMs;
-      interruptCasting(owner);
       if (owner === "player") {
         playerStunUntil = Math.max(playerStunUntil, stunUntil);
         playerSlowUntil = Math.max(playerSlowUntil, slowUntil);
@@ -4056,17 +4289,54 @@
       projectiles = projectiles.filter(projectile => now < projectile.impactAt);
 
       landed.forEach(projectile => {
-        const radius = projectile.radius || baseBlastHexRadius;
-        const damage = projectile.damage || 1;
-        const playerDamage = damageSnake(snake, projectile.target, radius, damage);
-        const computerDamage = damageSnake(computerSnake, projectile.target, radius, damage);
-        blasts.push({ target: projectile.target, owner: projectile.owner, radius, startedAt: now, endAt: now + blastDurationMs });
+        let playerDamage = 0;
+        let computerDamage = 0;
+        if (projectile.kind === "line") {
+          playerDamage = damageSnakeCells(snake, projectile.lineCells, projectile.width, projectile.damage);
+          computerDamage = damageSnakeCells(computerSnake, projectile.lineCells, projectile.width, projectile.damage);
+          blasts.push({
+            kind: "line",
+            lineCells: projectile.lineCells,
+            width: projectile.width,
+            target: projectile.target,
+            owner: projectile.owner,
+            startedAt: now,
+            endAt: now + blastDurationMs
+          });
+        } else {
+          const radius = projectile.radius || baseBlastHexRadius;
+          const damage = projectile.damage || 1;
+          const damageFn = projectile.flat ? damageSnakeFlat : damageSnake;
+          playerDamage = damageFn(snake, projectile.target, radius, damage);
+          computerDamage = damageFn(computerSnake, projectile.target, radius, damage);
+          blasts.push({ kind: "circle", target: projectile.target, owner: projectile.owner, radius, startedAt: now, endAt: now + blastDurationMs });
+          if (projectile.profile === "big" && characterFor(projectile.owner).id === "sandworm") {
+            if (projectile.owner !== "player" && keyOf(projectile.target) === keyOf(snake[0])) playerHp = 0;
+            if (projectile.owner !== "computer" && keyOf(projectile.target) === keyOf(computerSnake[0])) computerHp = 0;
+          }
+        }
         applyBlastDamage("player", playerDamage);
         applyBlastDamage("computer", computerDamage);
-        if (projectile.owner !== "player" && playerDamage > 0) applyAttackStun("player", projectile.stunChance, now);
-        if (projectile.owner !== "computer" && computerDamage > 0) applyAttackStun("computer", projectile.stunChance, now);
+        if (projectile.owner !== "player" && playerDamage > 0) applyAttackStun("player", projectile.stunChance, now, { stack: projectile.stackStun });
+        if (projectile.owner !== "computer" && computerDamage > 0) applyAttackStun("computer", projectile.stunChance, now, { stack: projectile.stackStun });
       });
       blasts = blasts.filter(blast => now <= blast.endAt);
+      if (playerHp <= 0 || computerHp <= 0) endGame(playerHp <= 0, computerHp <= 0);
+    }
+
+    function resolveHazards(now) {
+      const activeHazards = hazards.filter(hazard => now <= hazard.endAt);
+      hazards = activeHazards;
+      activeHazards.forEach(hazard => {
+        if (now < hazard.startedAt || now < hazard.nextTickAt) return;
+        hazard.nextTickAt = now + hazard.tickMs;
+        const playerDamage = damageSnakeCells(snake, hazard.cells, hazard.width, hazard.damage);
+        const computerDamage = damageSnakeCells(computerSnake, hazard.cells, hazard.width, hazard.damage);
+        applyBlastDamage("player", playerDamage);
+        applyBlastDamage("computer", computerDamage);
+        if (hazard.owner !== "player" && playerDamage > 0) applyAttackStun("player", hazard.stunChance, now, { interrupt: false });
+        if (hazard.owner !== "computer" && computerDamage > 0) applyAttackStun("computer", hazard.stunChance, now, { interrupt: false });
+      });
       if (playerHp <= 0 || computerHp <= 0) endGame(playerHp <= 0, computerHp <= 0);
     }
 
@@ -4271,6 +4541,7 @@
       }
       if (!paused) {
         resolveProjectiles(now);
+        resolveHazards(now);
         maybeComputerAttack(now);
       }
       if (running && !paused) {
@@ -4289,12 +4560,14 @@
         }
       }
       blasts = blasts.filter(blast => now <= blast.endAt);
+      hazards = hazards.filter(hazard => now <= hazard.endAt);
       updateHud();
       draw();
       rafId = requestAnimationFrame(loop);
     }
 
     function draw() {
+      const now = performance.now();
       const rect = playArea.getBoundingClientRect();
       ctx.clearRect(0, 0, rect.width, rect.height);
       ctx.fillStyle = "#111720";
@@ -4319,9 +4592,10 @@
 
       drawProjectiles();
       drawTarget();
+      drawHazards();
       drawBlasts();
 
-      if (computerSnake) {
+      if (computerSnake && !(now >= computerUndergroundFrom && now <= computerUndergroundUntil)) {
         const computerCharacter = characterFor("computer");
         drawSnake(computerSnake, {
           head: computerCharacter.color,
@@ -4355,6 +4629,19 @@
     function drawProjectiles() {
       const now = performance.now();
       projectiles.forEach(projectile => {
+        if (projectile.hidden) return;
+        if (projectile.kind === "line") {
+          const progress = Math.min(1, Math.max(0, (now - projectile.createdAt) / (projectile.delay || baseAttackDelayMs)));
+          const alpha = 0.18 + progress * 0.32;
+          const blastCharacter = characterFor(projectile.owner);
+          cellsNearCells(projectile.lineCells, projectile.width).forEach(cell => {
+            const { x, y } = axialToPixel(cell);
+            hexPath(x, y, cellSize * 0.88);
+            ctx.fillStyle = hexToRgba(blastCharacter.accent || blastCharacter.color, alpha);
+            ctx.fill();
+          });
+          return;
+        }
         const start = axialToPixel(projectile.source || projectile.target);
         const end = axialToPixel(projectile.target);
         const progress = Math.min(1, Math.max(0, (now - projectile.createdAt) / (projectile.delay || baseAttackDelayMs)));
@@ -4379,6 +4666,7 @@
     function drawTarget() {
       if (!targetCell || !snake) return;
       if (!targetActive && !canAttack("player", selectedAttackProfile)) return;
+      if (selectedAttackProfile === "big" && characterFor("player").id === "sandworm") return;
       const { x, y } = axialToPixel(targetCell);
       ctx.beginPath();
       const previewRadius = Math.max(1, blastRadius(playerStock) + (selectedAttackProfile === "small" ? -1 : 0));
@@ -4396,9 +4684,43 @@
       ctx.stroke();
     }
 
+    function drawHazards() {
+      const now = performance.now();
+      hazards.forEach(hazard => {
+        if (now < hazard.startedAt || now > hazard.endAt) return;
+        const progress = (now - hazard.startedAt) / Math.max(1, hazard.endAt - hazard.startedAt);
+        const alpha = 0.24 * (1 - progress * 0.55);
+        const blastCharacter = characterFor(hazard.owner);
+        cellsNearCells(hazard.cells, hazard.width).forEach(cell => {
+          const { x, y } = axialToPixel(cell);
+          hexPath(x, y, cellSize * 0.9);
+          ctx.fillStyle = hexToRgba(blastCharacter.accent || blastCharacter.color, alpha);
+          ctx.fill();
+          ctx.strokeStyle = hexToRgba(blastCharacter.line, alpha + 0.16);
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        });
+      });
+    }
+
     function drawBlasts() {
       const now = performance.now();
       blasts.forEach(blast => {
+        if (blast.kind === "line") {
+          const progress = Math.min(1, (now - blast.startedAt) / blastDurationMs);
+          const alpha = 1 - progress;
+          const blastCharacter = characterFor(blast.owner);
+          cellsNearCells(blast.lineCells, blast.width).forEach(cell => {
+            const { x, y } = axialToPixel(cell);
+            hexPath(x, y, cellSize * 0.94);
+            ctx.fillStyle = hexToRgba(blastCharacter.accent || blastCharacter.color, 0.32 * alpha);
+            ctx.fill();
+            ctx.strokeStyle = hexToRgba("#ffffff", 0.55 * alpha);
+            ctx.lineWidth = 2;
+            ctx.stroke();
+          });
+          return;
+        }
         const { x, y } = axialToPixel(blast.target);
         const progress = Math.min(1, (now - blast.startedAt) / blastDurationMs);
         const alpha = 1 - progress;

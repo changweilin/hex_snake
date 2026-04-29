@@ -21,7 +21,7 @@
     ],
     "motto": "墜落不是終點，躍門才是回聲。",
     "smallMove": "雲鱗回旋",
-    "bigMove": "越門白衡龍息",
+    "bigMove": "越門龍息",
     "colors": { "body": "#cbd5e1", "line": "#bae6fd", "accent": "#fbbf24" },
     "foodPreference": "balanced"
   },
@@ -47,7 +47,7 @@
     ],
     "motto": "在最低的沙裡，也藏著翻天的牙。",
     "smallMove": "潛沙突咬",
-    "bigMove": "流沙葬獸震爆",
+    "bigMove": "貧土潛襲",
     "colors": { "body": "#ca8a04", "line": "#fef08a", "accent": "#92400e" },
     "foodPreference": "fat"
   },
@@ -73,7 +73,7 @@
     ],
     "motto": "名字不滅，羽翼就不會折。",
     "smallMove": "祖語翠羽",
-    "bigMove": "祭風裂界",
+    "bigMove": "祖語沼界",
     "colors": { "body": "#15803d", "line": "#bbf7d0", "accent": "#67e8f9" },
     "foodPreference": "fiber"
   },
@@ -99,7 +99,7 @@
     ],
     "motto": "讓垂鉤者，先學會窒息。",
     "smallMove": "暗潮電咬",
-    "bigMove": "逆浪噬船雷",
+    "bigMove": "逆潮電磁砲",
     "colors": { "body": "#1d4ed8", "line": "#bfdbfe", "accent": "#93c5fd" },
     "foodPreference": "carb"
   },
@@ -125,7 +125,7 @@
     ],
     "motto": "混沌若有節奏，沉默也會成王。",
     "smallMove": "古螯斷浪",
-    "bigMove": "萬年赤螯破浪",
+    "bigMove": "混沌爆螯",
     "colors": { "body": "#b91c1c", "line": "#fecaca", "accent": "#f97316" },
     "foodPreference": "protein"
   },
@@ -151,7 +151,7 @@
     ],
     "motto": "先手不是選擇，是活下去的本能。",
     "smallMove": "毒足先斬",
-    "bigMove": "蠱甕黑權令",
+    "bigMove": "甕底毒煙令",
     "colors": { "body": "#111827", "line": "#9ca3af", "accent": "#a3e635" },
     "foodPreference": "black",
     "specialFood": "black"
