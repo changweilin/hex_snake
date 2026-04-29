@@ -1,0 +1,8 @@
+interface:
+  display_name: "Hex Snake Director"
+  short_description: "Coordinate Hex Snake specialist workflows."
+  brand_color: "#6366F1"
+  default_prompt: "Use $hex-snake-director to decompose Hex Snake requests and coordinate specialist handoffs."
+
+policy:
+  allow_implicit_invocation: true

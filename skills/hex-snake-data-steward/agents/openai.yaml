@@ -1,0 +1,4 @@
+interface:
+  display_name: "Hex Snake Data Steward"
+  short_description: "Manage Hex Snake character and balance data consistency."
+  default_prompt: "Use $hex-snake-data-steward to update or validate Hex Snake JSON data."

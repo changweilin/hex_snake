@@ -1,0 +1,4 @@
+interface:
+  display_name: "Hex Snake I18n Localization"
+  short_description: "Extract, translate, and protect Hex Snake multilingual text."
+  default_prompt: "Use $hex-snake-i18n-localization to localize Hex Snake text safely."
