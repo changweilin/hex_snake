@@ -2453,41 +2453,49 @@
     const keyEls = [...document.querySelectorAll(".key")];
     const mobileInputQuery = window.matchMedia("(hover: none), (pointer: coarse), (max-width: 900px)");
 
-    const minGridSize = 6;
-    const maxGridSize = 12;
-    const minFoodCount = 1;
-    const maxFoodCount = 4;
-    const minInitialSpeed = 0.5;
-    const maxInitialSpeed = 3;
-    const minInitialLength = 1;
-    const maxInitialLength = 12;
-    const attackNeedTotal = 6;
-    const maxAmmo = 3;
-    const bigAttackBombCost = 2;
-    const baseAttackDelayMs = 2000;
-    const baseAttackCooldownMs = 2400;
-    const baseStepMs = 460;
-    const blastDurationMs = 520;
-    const baseBlastHexRadius = 2;
-    const maxAttackSpeedBonus = 1;
-    const maxMoveBonus = 0.8;
-    const maxDamageBonus = 1.4;
-    const attackSpeedBonusPerPoint = 0.05;
-    const moveBonusPerPoint = 0.04;
-    const damageBonusPerPoint = 0.07;
-    const maxFoodStock = 20;
-    const collisionStunMs = 2000;
-    const collisionSlowMs = 1000;
-    const attackStunMs = 500;
-    const attackSlowMs = 500;
-    const baseAttackStunChance = 0.3;
-    const attackStunChanceBonusPerPoint = 0.01;
-    const maxAttackStunChanceBonus = 0.2;
-    const maxCollisionParalysisMs = 8000;
-    const rangeDamageFalloffEnabled = false;
-    const targetMaxHex = 6;
-    const gameOverRestartDelayMs = 700;
-    const defaultSettings = {
+    let minGridSize = 6;
+    let maxGridSize = 12;
+    let minFoodCount = 1;
+    let maxFoodCount = 4;
+    let minInitialSpeed = 0.5;
+    let maxInitialSpeed = 3;
+    let minInitialLength = 1;
+    let maxInitialLength = 12;
+    let attackNeedTotal = 6;
+    let maxAmmo = 3;
+    let bigAttackBombCost = 2;
+    let baseAttackDelayMs = 2000;
+    let baseAttackCooldownMs = 2400;
+    let baseStepMs = 460;
+    let blastDurationMs = 520;
+    let baseBlastHexRadius = 2;
+    let maxAttackSpeedBonus = 1;
+    let maxMoveBonus = 0.8;
+    let maxDamageBonus = 1.4;
+    let attackSpeedBonusPerPoint = 0.05;
+    let moveBonusPerPoint = 0.04;
+    let damageBonusPerPoint = 0.07;
+    let maxFoodStock = 20;
+    let foodEnergy = 2;
+    let blackFoodEnergy = 3;
+    let singleColorStockGain = 2;
+    let dualColorStockGain = 1;
+    let preferredFoodWeight = 0.4;
+    let otherFoodWeight = 0.2;
+    let balancedDualChance = 0.5;
+    let blackSpecialChance = 1 / 3;
+    let collisionStunMs = 2000;
+    let collisionSlowMs = 1000;
+    let attackStunMs = 500;
+    let attackSlowMs = 500;
+    let baseAttackStunChance = 0.3;
+    let attackStunChanceBonusPerPoint = 0.01;
+    let maxAttackStunChanceBonus = 0.2;
+    let maxCollisionParalysisMs = 8000;
+    let rangeDamageFalloffEnabled = false;
+    let targetMaxHex = 6;
+    let gameOverRestartDelayMs = 700;
+    let defaultSettings = {
       gridSize: 10,
       foodCount: 4,
       computerDifficulty: "medium",
@@ -2517,6 +2525,95 @@
     let initialStock = { protein: 0, fat: 0, fiber: 0, carb: 0 };
     let playerCharacterId = "dragon";
     let computerCharacterId = "moray";
+    function applyBalanceConfig(config) {
+      if (!config || typeof config !== "object") return;
+      minGridSize = config.limits?.gridSize?.min ?? minGridSize;
+      maxGridSize = config.limits?.gridSize?.max ?? maxGridSize;
+      minFoodCount = config.limits?.foodCount?.min ?? minFoodCount;
+      maxFoodCount = config.limits?.foodCount?.max ?? maxFoodCount;
+      minInitialSpeed = config.limits?.initialSpeed?.min ?? minInitialSpeed;
+      maxInitialSpeed = config.limits?.initialSpeed?.max ?? maxInitialSpeed;
+      minInitialLength = config.limits?.initialLength?.min ?? minInitialLength;
+      maxInitialLength = config.limits?.initialLength?.max ?? maxInitialLength;
+      attackNeedTotal = config.resources?.attackNeedTotal ?? attackNeedTotal;
+      maxAmmo = config.resources?.maxAmmo ?? maxAmmo;
+      maxFoodStock = config.resources?.maxFoodStock ?? maxFoodStock;
+      foodEnergy = config.resources?.foodEnergy ?? foodEnergy;
+      blackFoodEnergy = config.resources?.blackFoodEnergy ?? blackFoodEnergy;
+      singleColorStockGain = config.resources?.singleColorStockGain ?? singleColorStockGain;
+      dualColorStockGain = config.resources?.dualColorStockGain ?? dualColorStockGain;
+      baseStepMs = config.movement?.baseStepMs ?? baseStepMs;
+      moveBonusPerPoint = config.movement?.moveBonusPerPoint ?? moveBonusPerPoint;
+      maxMoveBonus = config.movement?.maxMoveBonus ?? maxMoveBonus;
+      targetMaxHex = config.movement?.targetMaxHex ?? targetMaxHex;
+      bigAttackBombCost = config.attack?.bigAttackBombCost ?? bigAttackBombCost;
+      baseAttackDelayMs = config.attack?.baseAttackDelayMs ?? baseAttackDelayMs;
+      baseAttackCooldownMs = config.attack?.baseAttackCooldownMs ?? baseAttackCooldownMs;
+      baseBlastHexRadius = config.attack?.baseBlastHexRadius ?? baseBlastHexRadius;
+      blastDurationMs = config.attack?.blastDurationMs ?? blastDurationMs;
+      attackSpeedBonusPerPoint = config.attack?.attackSpeedBonusPerPoint ?? attackSpeedBonusPerPoint;
+      maxAttackSpeedBonus = config.attack?.maxAttackSpeedBonus ?? maxAttackSpeedBonus;
+      damageBonusPerPoint = config.attack?.damageBonusPerPoint ?? damageBonusPerPoint;
+      maxDamageBonus = config.attack?.maxDamageBonus ?? maxDamageBonus;
+      baseAttackStunChance = config.attack?.baseAttackStunChance ?? baseAttackStunChance;
+      attackStunChanceBonusPerPoint = config.attack?.attackStunChanceBonusPerPoint ?? attackStunChanceBonusPerPoint;
+      maxAttackStunChanceBonus = config.attack?.maxAttackStunChanceBonus ?? maxAttackStunChanceBonus;
+      attackStunMs = config.attack?.attackStunMs ?? attackStunMs;
+      attackSlowMs = config.attack?.attackSlowMs ?? attackSlowMs;
+      rangeDamageFalloffEnabled = config.attack?.rangeDamageFalloffEnabled ?? rangeDamageFalloffEnabled;
+      collisionStunMs = config.collision?.collisionStunMs ?? collisionStunMs;
+      collisionSlowMs = config.collision?.collisionSlowMs ?? collisionSlowMs;
+      maxCollisionParalysisMs = config.collision?.maxCollisionParalysisMs ?? maxCollisionParalysisMs;
+      preferredFoodWeight = config.foodWeights?.preferred ?? preferredFoodWeight;
+      otherFoodWeight = config.foodWeights?.other ?? otherFoodWeight;
+      balancedDualChance = config.foodWeights?.balancedDualChance ?? balancedDualChance;
+      blackSpecialChance = config.foodWeights?.blackSpecialChance ?? blackSpecialChance;
+      defaultSettings = { ...defaultSettings, ...(config.defaults || {}), initialStock: { ...defaultSettings.initialStock, ...(config.defaults?.initialStock || {}) } };
+      gridSize = defaultSettings.gridSize;
+      radius = gridSize - 1;
+      foodCount = defaultSettings.foodCount;
+      computerDifficulty = defaultSettings.computerDifficulty;
+      initialSpeed = defaultSettings.initialSpeed;
+      gmMode = defaultSettings.gmMode;
+      initialLength = defaultSettings.initialLength;
+      initialEnergy = defaultSettings.initialEnergy;
+      initialBombs = defaultSettings.initialBombs;
+      initialStock = { ...defaultSettings.initialStock };
+      playerCharacterId = defaultSettings.playerCharacterId;
+      computerCharacterId = defaultSettings.computerCharacterId;
+      gridSizeInput.min = minGridSize;
+      gridSizeInput.max = maxGridSize;
+      gridSizeInput.value = defaultSettings.gridSize;
+      foodCountInput.min = minFoodCount;
+      foodCountInput.max = maxFoodCount;
+      foodCountInput.value = defaultSettings.foodCount;
+      initialSpeedInput.min = minInitialSpeed;
+      initialSpeedInput.max = maxInitialSpeed;
+      initialSpeedInput.value = defaultSettings.initialSpeed;
+      initialLengthInput.min = minInitialLength;
+      initialLengthInput.max = maxInitialLength;
+      initialLengthInput.value = defaultSettings.initialLength;
+      initialEnergyInput.max = attackNeedTotal;
+      initialEnergyInput.value = defaultSettings.initialEnergy;
+      initialBombsInput.max = maxAmmo;
+      initialBombsInput.value = defaultSettings.initialBombs;
+      initialStockInputs.forEach(input => {
+        input.max = maxFoodStock;
+        input.value = defaultSettings.initialStock[input.dataset.initialStock] || 0;
+      });
+      computerDifficultyInput.value = defaultSettings.computerDifficulty;
+    }
+
+    async function loadBalanceConfig() {
+      try {
+        const response = await fetch("data/balance.json", { cache: "no-store" });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        applyBalanceConfig(await response.json());
+      } catch (error) {
+        console.warn(`Using built-in balance defaults: ${error.message}`);
+      }
+    }
+
     const directions = [
       { q: 0, r: -1, angle: -90, key: "w" },
       { q: 1, r: -1, angle: -30, key: "e" },
@@ -3336,12 +3433,12 @@
       if (types.includes("black")) {
         const randomType = foodTypes[Math.floor(Math.random() * foodTypes.length)];
         addStock(stock, randomType.id, 1);
-        addAmmoCharge(owner, 3);
+        addAmmoCharge(owner, blackFoodEnergy);
         return;
       }
-      const stockGain = types.length > 1 ? 1 : 2;
+      const stockGain = types.length > 1 ? dualColorStockGain : singleColorStockGain;
       types.forEach(typeId => addStock(stock, typeId, stockGain));
-      addAmmoCharge(owner, 2);
+      addAmmoCharge(owner, foodEnergy);
     }
 
     function formatTime(ms) {
@@ -3805,7 +3902,7 @@
       }
       let roll = Math.random();
       for (const type of foodTypes) {
-        const weight = type.id === preferredFoodId ? 0.4 : 0.2;
+        const weight = type.id === preferredFoodId ? preferredFoodWeight : otherFoodWeight;
         if (roll < weight) return type;
         roll -= weight;
       }
@@ -3821,11 +3918,11 @@
     }
 
     function randomFoodTypeIdsForCharacter(character) {
-      if (character?.specialFood === "black" && Math.random() < 1 / 3) {
+      if (character?.specialFood === "black" && Math.random() < blackSpecialChance) {
         return ["black"];
       }
       const preferredFoodId = character ? character.food : null;
-      const dualColor = character?.food === "balanced" && Math.random() < 0.5;
+      const dualColor = character?.food === "balanced" && Math.random() < balancedDualChance;
       return randomFoodTypeIds(preferredFoodId, dualColor);
     }
 
@@ -5885,6 +5982,7 @@
     window.addEventListener("resize", resize);
 
     async function bootstrap() {
+      await loadBalanceConfig();
       try {
         await loadCharacterDatabase();
       } catch (error) {

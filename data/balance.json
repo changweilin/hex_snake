@@ -1,0 +1,84 @@
+{
+  "limits": {
+    "gridSize": { "min": 6, "max": 12 },
+    "foodCount": { "min": 1, "max": 4 },
+    "initialSpeed": { "min": 0.5, "max": 3 },
+    "initialLength": { "min": 1, "max": 12 }
+  },
+  "defaults": {
+    "gridSize": 10,
+    "foodCount": 4,
+    "computerDifficulty": "medium",
+    "initialSpeed": 1,
+    "gmMode": false,
+    "initialLength": 3,
+    "initialEnergy": 0,
+    "initialBombs": 0,
+    "initialStock": {
+      "protein": 0,
+      "fat": 0,
+      "fiber": 0,
+      "carb": 0
+    },
+    "playerCharacterId": "dragon",
+    "computerCharacterId": "moray"
+  },
+  "resources": {
+    "attackNeedTotal": 6,
+    "maxAmmo": 3,
+    "maxFoodStock": 20,
+    "foodEnergy": 2,
+    "blackFoodEnergy": 3,
+    "singleColorStockGain": 2,
+    "dualColorStockGain": 1
+  },
+  "movement": {
+    "baseStepMs": 460,
+    "moveBonusPerPoint": 0.04,
+    "maxMoveBonus": 0.8,
+    "targetMaxHex": 6
+  },
+  "attack": {
+    "bigAttackBombCost": 2,
+    "baseAttackDelayMs": 2000,
+    "baseAttackCooldownMs": 2400,
+    "baseBlastHexRadius": 2,
+    "blastDurationMs": 520,
+    "attackSpeedBonusPerPoint": 0.05,
+    "maxAttackSpeedBonus": 1,
+    "damageBonusPerPoint": 0.07,
+    "maxDamageBonus": 1.4,
+    "baseAttackStunChance": 0.3,
+    "attackStunChanceBonusPerPoint": 0.01,
+    "maxAttackStunChanceBonus": 0.2,
+    "attackStunMs": 500,
+    "attackSlowMs": 500,
+    "rangeDamageFalloffEnabled": false
+  },
+  "collision": {
+    "collisionStunMs": 2000,
+    "collisionSlowMs": 1000,
+    "maxCollisionParalysisMs": 8000
+  },
+  "foodWeights": {
+    "preferred": 0.4,
+    "other": 0.2,
+    "balancedDualChance": 0.5,
+    "blackSpecialChance": 0.3333333333333333
+  },
+  "simulation": {
+    "defaultRuns": 10000,
+    "smokeRuns": 100,
+    "maxMatchMs": 120000,
+    "tickMs": 100,
+    "balanceWinRateMin": 0.45,
+    "balanceWinRateMax": 0.55,
+    "characterAverageTolerance": 0.05
+  },
+  "playerModel": {
+    "pathPrecision": 0.82,
+    "aimPrecision": 0.78,
+    "skillStrategy": "balanced",
+    "foodStrategy": "balanced"
+  }
+}
