@@ -4508,6 +4508,20 @@
       return cellsForwardFrom(start, direction, true);
     }
 
+    function dragonChargePath(source, direction, targetSnake) {
+      const targetCells = cellKeySet(targetSnake);
+      const path = [];
+      let cursor = source;
+      let carryAfterHit = false;
+      while (isInside(cursor)) {
+        path.push({ q: cursor.q, r: cursor.r });
+        if (carryAfterHit) break;
+        if (targetCells.has(keyOf(cursor))) carryAfterHit = true;
+        cursor = nextCell(cursor, direction);
+      }
+      return path;
+    }
+
     function cellKeySet(cellList = []) {
       return new Set(cellList.map(cell => keyOf(cell)));
     }
@@ -4540,7 +4554,8 @@
       const direction = directionFromSourceToTarget(source, target, ownerDirection(owner));
 
       if (character.id === "dragon") {
-        const path = cellsForwardFrom(source, ownerDirection(owner), true);
+        const targetSnake = owner === "player" ? computerSnake : snake;
+        const path = dragonChargePath(source, direction, targetSnake);
         path.forEach((cell, index) => {
           pushCircleAttack({
             owner,
@@ -4573,7 +4588,7 @@
             createdAt: now,
             impactAt: now + small.delay + index * 320,
             delay: small.delay + index * 320,
-            damage: small.damage * 0.5,
+            damage: small.damage * 0.75,
             stunChance,
             stackStun: true
           });
@@ -4583,8 +4598,7 @@
 
       if (character.id === "quetzal") {
         const trail = (owner === "player" ? snake : computerSnake).map(segment => ({ q: segment.q, r: segment.r }));
-        const speedScale = attackSpeedMultiplier(stock);
-        const duration = Math.max(1400, 4200 / speedScale);
+        const duration = 2500;
         hazards.push({
           kind: "swamp",
           owner,
@@ -4622,7 +4636,8 @@
           radius: Math.max(0.5, small.radius * 0.5),
           damage: small.damage * 4,
           stunChance,
-          hidden: true
+          hidden: true,
+          sandwormParalyzeOnHead: true
         });
         return delay;
       }
@@ -4635,7 +4650,7 @@
           createdAt: now,
           impactAt: now + small.delay,
           delay: small.delay,
-          radius: small.radius * 2,
+          radius: small.radius * 2.5,
           damage: small.damage * 2,
           stunChance,
           flat: true
@@ -4653,7 +4668,7 @@
             impactAt: now + small.delay + index * 360,
             delay: small.delay + index * 360,
             radius: small.radius,
-            damage: small.damage,
+            damage: small.damage * 0.9,
             stunChance
           });
         }
@@ -4830,6 +4845,18 @@
       }
     }
 
+    function applyCollisionParalysis(owner, now = performance.now()) {
+      const stunUntil = now + collisionStunMs;
+      const slowUntil = stunUntil + collisionSlowMs;
+      if (owner === "player") {
+        playerStunUntil = Math.max(playerStunUntil, stunUntil);
+        playerSlowUntil = Math.max(playerSlowUntil, slowUntil);
+      } else {
+        computerStunUntil = Math.max(computerStunUntil, stunUntil);
+        computerSlowUntil = Math.max(computerSlowUntil, slowUntil);
+      }
+    }
+
     function collisionSeverity(selfHit, opponentHit) {
       if (selfHit) return 2;
       if (opponentHit) return 1;
@@ -4864,9 +4891,9 @@
           playerDamage = damageFn(snake, projectile.target, radius, damage);
           computerDamage = damageFn(computerSnake, projectile.target, radius, damage);
           blasts.push({ kind: "circle", target: projectile.target, owner: projectile.owner, radius, startedAt: now, endAt: now + blastDurationMs });
-          if (projectile.profile === "big" && characterFor(projectile.owner).id === "sandworm") {
-            if (projectile.owner !== "player" && keyOf(projectile.target) === keyOf(snake[0])) playerHp = 0;
-            if (projectile.owner !== "computer" && keyOf(projectile.target) === keyOf(computerSnake[0])) computerHp = 0;
+          if (projectile.sandwormParalyzeOnHead) {
+            if (projectile.owner !== "player" && keyOf(projectile.target) === keyOf(snake[0])) applyCollisionParalysis("player", now);
+            if (projectile.owner !== "computer" && keyOf(projectile.target) === keyOf(computerSnake[0])) applyCollisionParalysis("computer", now);
           }
         }
         applyBlastDamage("player", playerDamage);

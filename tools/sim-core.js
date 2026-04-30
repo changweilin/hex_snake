@@ -428,6 +428,20 @@ function boardLineThrough(state, origin, direction) {
   return cellsForwardFrom(state, start, direction, true);
 }
 
+function dragonChargePath(state, source, direction, targetSnake) {
+  const targetCells = cellKeySet(targetSnake);
+  const path = [];
+  let cursor = source;
+  let carryAfterHit = false;
+  while (isInside(cursor, state.radius)) {
+    path.push({ ...cursor });
+    if (carryAfterHit) break;
+    if (targetCells.has(keyOf(cursor))) carryAfterHit = true;
+    cursor = nextCell(cursor, direction);
+  }
+  return path;
+}
+
 function pushCircleAttack(state, attack) {
   state.projectiles.push({ kind: "circle", ...attack });
 }
@@ -438,7 +452,7 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
   const direction = directionFromSourceToTarget(source, target, attacker.dir);
   const characterId = attacker.character.id;
   if (characterId === "dragon") {
-    const path = cellsForwardFrom(state, source, attacker.dir, true);
+    const path = dragonChargePath(state, source, direction, defender.snake);
     path.forEach((cell, index) => pushCircleAttack(state, {
       owner: attacker.owner,
       profile: "big",
@@ -463,7 +477,7 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
         excludedCells,
         width: bandDistanceFromTotalWidth(small.radius),
         impactAt: now + small.delay + index * 320,
-        damage: small.damage * 0.5,
+        damage: small.damage * 0.75,
         stunChance,
         stackStun: true
       });
@@ -484,7 +498,7 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
       startedAt: now + small.delay,
       nextTickAt: now + small.delay,
       tickMs: moveInterval(attacker, balance, now),
-      endAt: now + small.delay + Math.max(1400, 4200 / attackSpeedMultiplier(attacker.stock, balance))
+      endAt: now + small.delay + 2500
     });
     return;
   }
@@ -500,7 +514,7 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
       radius: Math.max(0.5, small.radius * 0.5),
       damage: small.damage * 4,
       stunChance,
-      sandwormExecute: true
+      sandwormParalyzeOnHead: true
     });
     return;
   }
@@ -510,7 +524,7 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
       profile: "big",
       target: source,
       impactAt: now + small.delay,
-      radius: small.radius * 2,
+      radius: small.radius * 2.5,
       damage: small.damage * 2,
       stunChance,
       flat: true
@@ -525,7 +539,7 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
         target,
         impactAt: now + small.delay + index * 360,
         radius: small.radius,
-        damage: small.damage,
+        damage: small.damage * 0.9,
         stunChance
       });
     }
@@ -585,6 +599,11 @@ function applyAttackStun(state, target, chance, now, balance, options = {}) {
   return true;
 }
 
+function applyCollisionParalysis(target, now, balance) {
+  target.stunUntil = Math.max(target.stunUntil, now + balance.collision.collisionStunMs);
+  target.slowUntil = Math.max(target.slowUntil, target.stunUntil + balance.collision.collisionSlowMs);
+}
+
 function resolveProjectiles(state, now, balance) {
   const landed = state.projectiles.filter(projectile => now >= projectile.impactAt);
   if (!landed.length) return;
@@ -604,9 +623,9 @@ function resolveProjectiles(state, now, balance) {
       const damageFn = projectile.flat ? damageSnakeFlat : damageSnake;
       playerDamage = damageFn(player.snake, projectile.target, projectile.radius, projectile.damage, balance);
       computerDamage = damageFn(computer.snake, projectile.target, projectile.radius, projectile.damage, balance);
-      if (projectile.sandwormExecute) {
-        if (projectile.owner !== "player" && keyOf(projectile.target) === keyOf(player.snake[0])) playerDamage = Math.max(playerDamage, player.hp);
-        if (projectile.owner !== "computer" && keyOf(projectile.target) === keyOf(computer.snake[0])) computerDamage = Math.max(computerDamage, computer.hp);
+      if (projectile.sandwormParalyzeOnHead) {
+        if (projectile.owner !== "player" && keyOf(projectile.target) === keyOf(player.snake[0])) applyCollisionParalysis(player, now, balance);
+        if (projectile.owner !== "computer" && keyOf(projectile.target) === keyOf(computer.snake[0])) applyCollisionParalysis(computer, now, balance);
       }
     }
     applyDamage(state, player, playerDamage, projectile.profile || "big", now);
