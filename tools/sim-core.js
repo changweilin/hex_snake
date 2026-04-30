@@ -282,11 +282,14 @@ function buildCharacterMap(characters) {
 }
 
 function makePolicy(overrides = {}) {
+  const inferredDifficulty = overrides.aiDifficulty
+    || (overrides.skillStrategy === "spamSmall" ? "low" : overrides.skillStrategy === "preferBig" ? "high" : "medium");
   return {
     pathPrecision: clamp(Number(overrides.pathPrecision ?? 0.82), 0, 1),
     aimPrecision: clamp(Number(overrides.aimPrecision ?? 0.78), 0, 1),
     skillStrategy: overrides.skillStrategy || "balanced",
-    foodStrategy: overrides.foodStrategy || "balanced"
+    foodStrategy: overrides.foodStrategy || "balanced",
+    aiDifficulty: ["novice", "low", "medium", "high"].includes(inferredDifficulty) ? inferredDifficulty : "medium"
   };
 }
 
@@ -313,6 +316,8 @@ function makeFighter(owner, character, start, direction, settings, balance, poli
     collisionParalysisMs: 0,
     undergroundFrom: 0,
     undergroundUntil: 0,
+    lastVisibleSnake: snake.map(segment => ({ ...segment })),
+    lastVisibleDir: direction,
     stats: {
       smallCasts: 0,
       bigCasts: 0,
@@ -331,25 +336,125 @@ function canTurn(snake, currentDir, newDir) {
   return snake.length < 2 || (newDir + 3) % 6 !== currentDir;
 }
 
+const characterAiProfiles = {
+  dragon: { role: "rush", preferredFood: "balanced" },
+  sandworm: { role: "ambush", preferredFood: "fat" },
+  quetzal: { role: "control", preferredFood: "fiber" },
+  moray: { role: "status", preferredFood: "carb" },
+  lobster: { role: "melee", preferredFood: "protein" },
+  gu_king: { role: "burst", preferredFood: "black" }
+};
+
+function aiProfileFor(fighter) {
+  return characterAiProfiles[fighter.character.id] || { role: "balanced", preferredFood: fighter.character.foodPreference };
+}
+
+function isUnderground(fighter, now) {
+  return fighter.character.id === "sandworm" && fighter.undergroundFrom && now >= fighter.undergroundFrom && now <= fighter.undergroundUntil;
+}
+
+function updateVisibleMemory(state) {
+  Object.values(state.fighters || {}).forEach(fighter => {
+    if (!isUnderground(fighter, state.now)) {
+      fighter.lastVisibleSnake = fighter.snake.map(segment => ({ ...segment }));
+      fighter.lastVisibleDir = fighter.dir;
+    }
+  });
+}
+
+function perceivedSnakeFor(state, observer, target) {
+  if (!isUnderground(target, state.now)) return target.snake;
+  return (target.lastVisibleSnake && target.lastVisibleSnake.length ? target.lastVisibleSnake : target.snake).map(segment => ({ ...segment }));
+}
+
+function isDebuffed(fighter, now) {
+  return now < fighter.stunUntil || now < fighter.slowUntil || fighter.collisionParalysisMs > 0;
+}
+
+function hasResourcePressure(fighter, balance) {
+  const stockCap = balance.resources.maxFoodStock;
+  const nearStockCap = FOOD_TYPES.some(type => (fighter.stock[type] || 0) >= stockCap - 2);
+  const ammoFull = fighter.ammo >= balance.resources.maxAmmo && fighter.ammoCharge >= balance.resources.attackNeedTotal - 1;
+  return nearStockCap || ammoFull;
+}
+
+function strongestVisibleDamage(state, attacker, defender, balance, profile) {
+  const stats = attackStats(attacker.stock, profile, balance);
+  const targetSnake = perceivedSnakeFor(state, attacker, defender);
+  const head = targetSnake[0];
+  const candidates = cellsWithinDistance(state, head, 0, Math.max(1, Math.ceil(stats.radius + 1)));
+  return candidates.reduce((best, cell) => Math.max(best, damageSnake(targetSnake, cell, stats.radius, stats.damage, balance)), 0);
+}
+
+function isOpponentConstrained(state, opponent) {
+  const occupied = new Set(opponent.snake.slice(0, -1).map(keyOf));
+  const exits = DIRECTIONS.filter((_, direction) => {
+    if (!canTurn(opponent.snake, opponent.dir, direction)) return false;
+    return !occupied.has(keyOf(nextWrappedCell(opponent.snake[0], direction, state.radius)));
+  });
+  return exits.length <= 2;
+}
+
+function hasRoleBigOpportunity(state, fighter, opponent, balance) {
+  const profile = aiProfileFor(fighter);
+  const perceived = perceivedSnakeFor(state, fighter, opponent);
+  const distance = hexDistance(fighter.snake[0], perceived[0]);
+  if (profile.role === "rush") return distance <= 4 || isOpponentConstrained(state, opponent);
+  if (profile.role === "ambush") return distance >= 2 && distance <= 5;
+  if (profile.role === "control") return distance <= 5 || state.foods.some(food => hexDistance(food, perceived[0]) <= 2);
+  if (profile.role === "status") return isDebuffed(opponent, state.now) || strongestVisibleDamage(state, fighter, opponent, balance, "small") > 0;
+  if (profile.role === "melee") return distance <= 2;
+  if (profile.role === "burst") return hasResourcePressure(fighter, balance) || fighter.ammo >= balance.resources.maxAmmo;
+  return distance <= 3;
+}
+
+function shouldUseBigAttack(state, fighter, opponent, balance) {
+  if (!canAttack(fighter, "big", balance)) return false;
+  const difficulty = fighter.policy.aiDifficulty;
+  if (difficulty === "low") {
+    const distance = hexDistance(fighter.snake[0], perceivedSnakeFor(state, fighter, opponent)[0]);
+    return !canAttack(fighter, "small", balance) || hasResourcePressure(fighter, balance) || distance <= 2 && state.rng.next() < 0.35 || state.rng.next() < 0.18;
+  }
+  if (difficulty === "medium" || difficulty === "high") {
+    const lethal = strongestVisibleDamage(state, fighter, opponent, balance, "big") >= opponent.hp;
+    return isDebuffed(opponent, state.now) || lethal || hasResourcePressure(fighter, balance) || (difficulty === "high" && hasRoleBigOpportunity(state, fighter, opponent, balance));
+  }
+  return false;
+}
+
 function foodValueFor(fighter, opponent, food, policy) {
   const ownDistance = hexDistance(fighter.snake[0], food);
   const opponentDistance = hexDistance(opponent.snake[0], food);
   const types = food.types || [];
-  const prefers = types.includes(fighter.character.foodPreference);
+  const aiProfile = aiProfileFor(fighter);
+  const preferredFood = aiProfile.preferredFood || fighter.character.foodPreference;
+  const prefers = preferredFood === "balanced" ? types.some(type => FOOD_TYPES.includes(type)) : types.includes(preferredFood);
   if (policy.foodStrategy === "denyOpponent") return opponentDistance - ownDistance * 0.7;
   if (policy.foodStrategy === "selfStockpile") return -ownDistance + types.reduce((sum, type) => sum + (fighter.stock[type] || 0), 0) * 0.03;
   if (policy.foodStrategy === "preferredFood") return (prefers ? 3 : 0) - ownDistance;
-  return -ownDistance + (opponentDistance <= ownDistance ? 0.4 : 0);
+  const roleBonus = policy.aiDifficulty === "high" && prefers ? 1.5 : 0;
+  return -ownDistance + roleBonus + (opponentDistance <= ownDistance ? 0.4 : 0);
 }
 
 function chooseFoodTarget(state, fighter, opponent) {
-  if (!state.foods.length) return opponent.snake[0];
+  const perceivedOpponent = perceivedSnakeFor(state, fighter, opponent);
+  const distance = hexDistance(fighter.snake[0], perceivedOpponent[0]);
+  if (fighter.policy.aiDifficulty === "high") {
+    const role = aiProfileFor(fighter).role;
+    if ((role === "rush" && distance <= 5) || (role === "melee" && distance <= 3)) return perceivedOpponent[0];
+    if (role === "ambush" && canAttack(fighter, "big", state.balance) && distance <= 5) {
+      const flank = cellsWithinDistance(state, perceivedOpponent[0], 1, 2).sort((a, b) => hexDistance(a, fighter.snake[0]) - hexDistance(b, fighter.snake[0]))[0];
+      if (flank) return flank;
+    }
+  }
+  if (!state.foods.length) return perceivedOpponent[0];
   return [...state.foods].sort((a, b) => foodValueFor(fighter, opponent, b, fighter.policy) - foodValueFor(fighter, opponent, a, fighter.policy))[0];
 }
 
 function directionToward(state, fighter, opponent, target) {
   const occupied = new Set(fighter.snake.slice(0, -1).map(keyOf));
-  if (fighter.policy.pathPrecision > 0.35) opponent.snake.forEach(segment => occupied.add(keyOf(segment)));
+  const perceivedOpponent = perceivedSnakeFor(state, fighter, opponent);
+  if (fighter.policy.pathPrecision > 0.35 && !isUnderground(opponent, state.now)) perceivedOpponent.forEach(segment => occupied.add(keyOf(segment)));
   const options = [];
   DIRECTIONS.forEach((_, direction) => {
     if (!canTurn(fighter.snake, fighter.dir, direction)) return;
@@ -376,20 +481,45 @@ function cellsWithinDistance(state, origin, minDistance, maxDistance) {
   });
 }
 
-function chooseAttackProfile(fighter, balance, rng) {
+function nearestFoodDistanceForState(state, cell) {
+  if (!state.foods.length) return Number.POSITIVE_INFINITY;
+  return Math.min(...state.foods.map(food => hexDistance(cell, food)));
+}
+
+function chooseAttackProfile(stateOrFighter, fighterOrBalance, opponentOrRng, maybeBalance) {
+  if (maybeBalance) return chooseAiAttackProfile(stateOrFighter, fighterOrBalance, opponentOrRng, maybeBalance);
+  const fighter = stateOrFighter;
+  const balance = fighterOrBalance;
+  const rng = opponentOrRng;
   const strategy = fighter.policy.skillStrategy;
-  if (strategy === "spamSmall") return canAttack(fighter, "small", balance) ? "small" : null;
+  if (strategy === "spamSmall") return canAttack(fighter, "small", balance) ? "small" : canAttack(fighter, "big", balance) ? "big" : null;
   if (strategy === "preferBig") return canAttack(fighter, "big", balance) ? "big" : canAttack(fighter, "small", balance) ? "small" : null;
   if (strategy === "saveBurst") return canAttack(fighter, "big", balance) ? "big" : null;
-  if (canAttack(fighter, "big", balance) && rng.next() < 0.55) return "big";
+  if (canAttack(fighter, "big", balance) && (!rng || rng.next() < 0.55)) return "big";
   return canAttack(fighter, "small", balance) ? "small" : null;
+}
+
+function chooseAiAttackProfile(state, fighter, opponent, balance) {
+  if (fighter.policy.aiDifficulty === "novice") return null;
+  if (shouldUseBigAttack(state, fighter, opponent, balance)) return "big";
+  if (canAttack(fighter, "small", balance)) return "small";
+  if (fighter.policy.aiDifficulty === "low" && canAttack(fighter, "big", balance)) return "big";
+  return null;
 }
 
 function chooseAttackTarget(state, attacker, defender, balance, profile) {
   const stats = attackStats(attacker.stock, profile, balance);
-  const head = defender.snake[0];
+  const targetSnake = perceivedSnakeFor(state, attacker, defender);
+  const head = targetSnake[0];
   const candidates = cellsWithinDistance(state, head, 0, Math.max(1, Math.ceil(stats.radius + 1)));
-  candidates.sort((a, b) => damageSnake(defender.snake, b, stats.radius, stats.damage, balance) - damageSnake(defender.snake, a, stats.radius, stats.damage, balance));
+  candidates.sort((a, b) => {
+    const damageDiff = damageSnake(targetSnake, b, stats.radius, stats.damage, balance) - damageSnake(targetSnake, a, stats.radius, stats.damage, balance);
+    if (damageDiff) return damageDiff;
+    const role = aiProfileFor(attacker).role;
+    if (attacker.policy.aiDifficulty === "high" && (role === "rush" || role === "status")) return hexDistance(a, head) - hexDistance(b, head);
+    if (attacker.policy.aiDifficulty === "high" && role === "control") return nearestFoodDistanceForState(state, a) - nearestFoodDistanceForState(state, b);
+    return 0;
+  });
   if (state.rng.next() <= attacker.policy.aimPrecision) return { ...candidates[0] };
   const missRadius = 1 + Math.floor((1 - attacker.policy.aimPrecision) * 3);
   const loose = cellsWithinDistance(state, head, missRadius, missRadius + 2);
@@ -798,10 +928,11 @@ function simulateMatch(options) {
     state.now += tickMs;
     resolveProjectiles(state, state.now, balance);
     resolveHazards(state, state.now, balance);
+    updateVisibleMemory(state);
     for (const [owner, fighter] of Object.entries(state.fighters)) {
       const opponent = owner === "player" ? state.fighters.computer : state.fighters.player;
       if (state.now >= fighter.stunUntil) {
-        const profile = chooseAttackProfile(fighter, balance, state.rng);
+        const profile = chooseAttackProfile(state, fighter, opponent, balance);
         if (profile) launchAttack(state, fighter, opponent, profile, state.now, balance);
       }
       sampleStock(fighter);
@@ -935,6 +1066,14 @@ module.exports = {
   canAttack,
   buildCharacterMap,
   makePolicy,
+  createMatchState,
+  chooseAttackProfile,
+  chooseAttackTarget,
+  chooseFoodTarget,
+  directionToward,
+  perceivedSnakeFor,
+  isUnderground,
+  updateVisibleMemory,
   simulateMatch,
   runSeries
 };

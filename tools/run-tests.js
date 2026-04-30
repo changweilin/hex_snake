@@ -14,8 +14,12 @@ const {
   attackStats,
   buildCharacterMap,
   canAttack,
+  chooseAttackProfile,
+  chooseAttackTarget,
+  chooseFoodTarget,
   collectFood,
   createBoard,
+  createMatchState,
   createRng,
   damageSnake,
   emptyStock,
@@ -23,6 +27,7 @@ const {
   loadBalance,
   loadCharacters,
   nextWrappedCell,
+  perceivedSnakeFor,
   randomFoodTypeIdsForCharacter,
   runSeries,
   simulateMatch
@@ -78,6 +83,113 @@ test("attack costs and damage calculations match core rules", () => {
   const stats = attackStats(fighter.stock, "small", balance);
   const damage = damageSnake([{ q: 0, r: 0 }, { q: 1, r: 0 }], { q: 0, r: 0 }, stats.radius, stats.damage, balance);
   assert.ok(damage > 0);
+});
+
+test("low difficulty can cast big attacks but still prefers small attacks", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("dragon"),
+    computerCharacter: characterById.get("moray"),
+    seed: "low-big-preference",
+    initialBombs: balance.attack.bigAttackBombCost,
+    initialStock: Object.fromEntries(FOOD_TYPES.map(type => [type, 6])),
+    computerModel: { aiDifficulty: "low", skillStrategy: "spamSmall", aimPrecision: 0.45, pathPrecision: 0.48 }
+  });
+  const computer = state.fighters.computer;
+  const player = state.fighters.player;
+  const choices = { small: 0, big: 0 };
+  for (let index = 0; index < 200; index++) {
+    const profile = chooseAttackProfile(state, computer, player, balance);
+    if (profile) choices[profile] += 1;
+  }
+  assert.ok(choices.big > 0);
+  assert.ok(choices.small > choices.big);
+});
+
+test("medium and high difficulties hold big attacks for tactical windows", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("dragon"),
+    computerCharacter: characterById.get("moray"),
+    seed: "tactical-hold",
+    initialBombs: balance.attack.bigAttackBombCost,
+    initialStock: Object.fromEntries(FOOD_TYPES.map(type => [type, 6])),
+    computerModel: { aiDifficulty: "medium", skillStrategy: "balanced", aimPrecision: 0.7, pathPrecision: 0.7 }
+  });
+  state.now = 100;
+  const computer = state.fighters.computer;
+  const player = state.fighters.player;
+  player.hp = 100;
+  assert.equal(chooseAttackProfile(state, computer, player, balance), "small");
+  player.stunUntil = 1000;
+  assert.equal(chooseAttackProfile(state, computer, player, balance), "big");
+});
+
+test("sandworm underground perception uses last visible snake instead of true position", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("sandworm"),
+    computerCharacter: characterById.get("moray"),
+    seed: "sandworm-memory",
+    initialBombs: balance.attack.bigAttackBombCost,
+    initialStock: Object.fromEntries(FOOD_TYPES.map(type => [type, 6])),
+    computerModel: { aiDifficulty: "high", skillStrategy: "preferBig", aimPrecision: 1, pathPrecision: 1 }
+  });
+  const player = state.fighters.player;
+  const computer = state.fighters.computer;
+  state.now = 500;
+  player.lastVisibleSnake = [{ q: 0, r: 0 }, { q: -1, r: 0 }];
+  player.snake = [{ q: 4, r: -4 }, { q: 3, r: -3 }];
+  player.undergroundFrom = 100;
+  player.undergroundUntil = 1000;
+  assert.deepEqual(perceivedSnakeFor(state, computer, player)[0], { q: 0, r: 0 });
+  const target = chooseAttackTarget(state, computer, player, balance, "big");
+  assert.ok(hexDistance(target, { q: 0, r: 0 }) < hexDistance(target, { q: 4, r: -4 }));
+});
+
+test("high difficulty character archetypes alter movement targets", () => {
+  const dragonState = createMatchState({
+    balance,
+    playerCharacter: characterById.get("dragon"),
+    computerCharacter: characterById.get("moray"),
+    seed: "dragon-rush-target",
+    computerModel: { aiDifficulty: "high", skillStrategy: "preferBig", aimPrecision: 1, pathPrecision: 1 }
+  });
+  dragonState.foods = [];
+  dragonState.fighters.computer.snake[0] = { q: 1, r: -1 };
+  dragonState.fighters.player.snake[0] = { q: 0, r: 0 };
+  assert.deepEqual(chooseFoodTarget(dragonState, dragonState.fighters.computer, dragonState.fighters.player), { q: 0, r: 0 });
+
+  const quetzalState = createMatchState({
+    balance,
+    playerCharacter: characterById.get("dragon"),
+    computerCharacter: characterById.get("quetzal"),
+    seed: "quetzal-fiber-target",
+    computerModel: { aiDifficulty: "high", skillStrategy: "preferBig", aimPrecision: 1, pathPrecision: 1 }
+  });
+  quetzalState.foods = [
+    { q: 1, r: 0, types: ["fat"] },
+    { q: 3, r: -1, types: ["fiber"] }
+  ];
+  assert.deepEqual(chooseFoodTarget(quetzalState, quetzalState.fighters.computer, quetzalState.fighters.player), quetzalState.foods[1]);
+});
+
+test("auto battle attack decisions are owner-mirrored under equal conditions", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("moray"),
+    computerCharacter: characterById.get("moray"),
+    seed: "mirror-ai",
+    initialBombs: balance.attack.bigAttackBombCost,
+    initialStock: Object.fromEntries(FOOD_TYPES.map(type => [type, 6])),
+    playerModel: { aiDifficulty: "high", skillStrategy: "preferBig", aimPrecision: 1, pathPrecision: 1 },
+    computerModel: { aiDifficulty: "high", skillStrategy: "preferBig", aimPrecision: 1, pathPrecision: 1 }
+  });
+  state.now = 100;
+  state.fighters.player.stunUntil = 1000;
+  state.fighters.computer.stunUntil = 1000;
+  assert.equal(chooseAttackProfile(state, state.fighters.player, state.fighters.computer, balance), "big");
+  assert.equal(chooseAttackProfile(state, state.fighters.computer, state.fighters.player, balance), "big");
 });
 
 test("protein fractional radius deals proportional outer-ring damage", () => {

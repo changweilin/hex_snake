@@ -5,7 +5,7 @@
     "name": "白龍",
     "representColor": "#f8fafc",
     "appearance": "曾墜入低谷的雲海白龍，銀白鱗片、淡藍潮痕與金色角冠交錯，姿態像重新破浪的古老王者。",
-    "avatar": "assets/portraits/sm/white_dragon_intro.png",
+    "avatar": "assets/portraits/sm/white_dragon_chibi.png",
     "portraits": {
       "opening": { "full": "assets/portraits/white_dragon_intro.png", "md": "assets/portraits/md/white_dragon_intro.png", "sm": "assets/portraits/sm/white_dragon_intro.png" },
       "intro": { "full": "assets/portraits/white_dragon_idle.png", "md": "assets/portraits/md/white_dragon_idle.png", "sm": "assets/portraits/sm/white_dragon_idle.png" },
@@ -31,7 +31,7 @@
     "name": "沙蟲",
     "representColor": "#facc15",
     "appearance": "伏在貧瘠沙層下的巨蟲，金黃甲節、褐色利齒與沙暴般的輪廓充滿翻身的壓迫感。",
-    "avatar": "assets/portraits/sm/sandworm_intro.png",
+    "avatar": "assets/portraits/sm/sandworm_chibi.png",
     "portraits": {
       "opening": { "full": "assets/portraits/sandworm_intro.png", "md": "assets/portraits/md/sandworm_intro.png", "sm": "assets/portraits/sm/sandworm_intro.png" },
       "intro": { "full": "assets/portraits/sandworm_idle.png", "md": "assets/portraits/md/sandworm_idle.png", "sm": "assets/portraits/sm/sandworm_idle.png" },
@@ -57,7 +57,7 @@
     "name": "羽蛇",
     "representColor": "#22c55e",
     "appearance": "翠羽與蛇身交織的古老羽蛇，羽冠像風中祭旗，青綠光芒守住不願消失的祖語。",
-    "avatar": "assets/portraits/sm/quetzalcoatl_intro.png",
+    "avatar": "assets/portraits/sm/quetzalcoatl_chibi.png",
     "portraits": {
       "opening": { "full": "assets/portraits/quetzalcoatl_intro.png", "md": "assets/portraits/md/quetzalcoatl_intro.png", "sm": "assets/portraits/sm/quetzalcoatl_intro.png" },
       "intro": { "full": "assets/portraits/quetzalcoatl_idle.png", "md": "assets/portraits/md/quetzalcoatl_idle.png", "sm": "assets/portraits/sm/quetzalcoatl_idle.png" },
@@ -83,7 +83,7 @@
     "name": "電鰻",
     "representColor": "#3b82f6",
     "appearance": "暗潮中竄出的藍色電鰻，電光沿背脊閃爍，眼神像正等待鉤索落水的逆浪。",
-    "avatar": "assets/portraits/sm/moray_eel_intro.png",
+    "avatar": "assets/portraits/sm/moray_eel_chibi.png",
     "portraits": {
       "opening": { "full": "assets/portraits/moray_eel_intro.png", "md": "assets/portraits/md/moray_eel_intro.png", "sm": "assets/portraits/sm/moray_eel_intro.png" },
       "intro": { "full": "assets/portraits/moray_eel_idle.png", "md": "assets/portraits/md/moray_eel_idle.png", "sm": "assets/portraits/sm/moray_eel_idle.png" },
@@ -109,7 +109,7 @@
     "name": "智蝦",
     "representColor": "#ef4444",
     "appearance": "深海裂縫裡醒來的赤螯智蝦，紅甲厚重、古螯發亮，像渾沌終於長出節奏。",
-    "avatar": "assets/portraits/sm/ghost_lobster_intro.png",
+    "avatar": "assets/portraits/sm/ghost_lobster_chibi.png",
     "portraits": {
       "opening": { "full": "assets/portraits/ghost_lobster_intro.png", "md": "assets/portraits/md/ghost_lobster_intro.png", "sm": "assets/portraits/sm/ghost_lobster_intro.png" },
       "intro": { "full": "assets/portraits/ghost_lobster_idle.png", "md": "assets/portraits/md/ghost_lobster_idle.png", "sm": "assets/portraits/sm/ghost_lobster_idle.png" },
@@ -135,7 +135,7 @@
     "name": "蠱王",
     "representColor": "#050505",
     "appearance": "不見天日的黑色蜈蚣，甲節如冷鐵相扣，毒足密布，像從地底王座爬出的先手暴君。",
-    "avatar": "assets/portraits/sm/gu_king_icon.png",
+    "avatar": "assets/portraits/sm/gu_king_chibi.png",
     "portraits": {
       "opening": { "full": "assets/portraits/gu_king_intro.png", "md": "assets/portraits/md/gu_king_intro.png", "sm": "assets/portraits/sm/gu_king_intro.png" },
       "intro": { "full": "assets/portraits/gu_king_idle.png", "md": "assets/portraits/md/gu_king_idle.png", "sm": "assets/portraits/sm/gu_king_idle.png" },
