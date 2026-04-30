@@ -4088,6 +4088,9 @@
       if (character?.specialFood === "black" && Math.random() < blackSpecialChance) {
         return ["black"];
       }
+      if (character?.specialFood === "black") {
+        return randomFoodTypeIds(null, false);
+      }
       const preferredFoodId = character ? character.food : null;
       const dualColor = character?.food === "balanced" && Math.random() < balancedDualChance;
       return randomFoodTypeIds(preferredFoodId, dualColor);

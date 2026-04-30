@@ -23,6 +23,7 @@ const {
   loadBalance,
   loadCharacters,
   nextWrappedCell,
+  randomFoodTypeIdsForCharacter,
   runSeries,
   simulateMatch
 } = require("./sim-core");
@@ -52,6 +53,19 @@ test("food collection applies stock and energy rules", () => {
   collectFood(fighter, { types: ["fat", "carb"] }, balance, createRng("dual"));
   assert.equal(fighter.stock.fat, balance.resources.dualColorStockGain);
   assert.equal(fighter.stock.carb, balance.resources.dualColorStockGain);
+});
+
+test("gu king food generation only creates black or single-color foods", () => {
+  const guKing = characterById.get("gu_king");
+  const rng = createRng("gu-king-food-regression");
+  const seen = new Set();
+  for (let index = 0; index < 500; index += 1) {
+    const types = randomFoodTypeIdsForCharacter(guKing, balance, rng);
+    assert.equal(types.length, 1);
+    assert.ok(types[0] === "black" || FOOD_TYPES.includes(types[0]));
+    seen.add(types[0]);
+  }
+  assert.ok(seen.has("black"));
 });
 
 test("attack costs and damage calculations match core rules", () => {

@@ -227,6 +227,7 @@ function randomFoodType(preferredFoodId, balance, rng) {
 
 function randomFoodTypeIdsForCharacter(character, balance, rng) {
   if (character?.specialFood === "black" && rng.next() < balance.foodWeights.blackSpecialChance) return ["black"];
+  if (character?.specialFood === "black") return [randomFoodType(null, balance, rng)];
   const preferredFoodId = character?.foodPreference || "balanced";
   const first = randomFoodType(preferredFoodId, balance, rng);
   if (preferredFoodId !== "balanced" || rng.next() >= balance.foodWeights.balancedDualChance) return [first];
@@ -900,6 +901,7 @@ module.exports = {
   createStartingSnake,
   emptyStock,
   collectFood,
+  randomFoodTypeIdsForCharacter,
   damageSnake,
   attackStats,
   canAttack,
