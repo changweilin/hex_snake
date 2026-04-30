@@ -120,6 +120,69 @@ function average(values) {
   return values.reduce((sum, value) => sum + value, 0) / values.length;
 }
 
+function standardDeviation(values) {
+  if (!values.length) return 0;
+  const mean = average(values);
+  const variance = values.reduce((sum, value) => sum + ((value - mean) ** 2), 0) / values.length;
+  return Math.sqrt(variance);
+}
+
+function roundMetric(value) {
+  return Number(value.toFixed(6));
+}
+
+function statTriplet(values) {
+  return {
+    average: roundMetric(average(values)),
+    standardDeviation: roundMetric(standardDeviation(values)),
+    median: roundMetric(median(values))
+  };
+}
+
+const fighterMetricKeys = [
+  "hp",
+  "length",
+  "score",
+  "smallCasts",
+  "bigCasts",
+  "smallCastRate",
+  "damageDealt",
+  "damageTaken",
+  "damageTakenBySmall",
+  "damageTakenByBig",
+  "stunApplied",
+  "foodCollected",
+  "averageStock",
+  "hpDiff",
+  "scoreDiff"
+];
+
+function flattenFighterMetrics(fighter) {
+  return {
+    hp: fighter.hp,
+    length: fighter.length,
+    score: fighter.score,
+    smallCasts: fighter.smallCasts,
+    bigCasts: fighter.bigCasts,
+    smallCastRate: fighter.smallCastRate,
+    damageDealt: fighter.damageDealt,
+    damageTaken: fighter.damageTaken,
+    damageTakenBySmall: fighter.damageTakenByCause.small,
+    damageTakenByBig: fighter.damageTakenByCause.big,
+    stunApplied: fighter.stunApplied,
+    foodCollected: fighter.foodCollected,
+    averageStock: fighter.averageStock,
+    hpDiff: fighter.hpDiff,
+    scoreDiff: fighter.scoreDiff
+  };
+}
+
+function fighterForCharacter(match, characterId) {
+  if (match.player?.characterId === characterId) return match.player;
+  if (match.computer?.characterId === characterId) return match.computer;
+  return null;
+}
+
 function makeEmptyCharacterRow(difficulty, characterId) {
   return {
     difficulty,
@@ -158,6 +221,55 @@ function makeEmptyMatchupRow(difficulty, characterA, characterB) {
     maxDurationMs: 0,
     durations: []
   };
+}
+
+function summarizeMatchupStats(matches, characters) {
+  const rows = [];
+  const pairs = createUnorderedPairs(characters);
+  difficulties.forEach(difficulty => {
+    pairs.forEach(([characterA, characterB]) => {
+      const group = matches.filter(match => (
+        match.difficulty === difficulty &&
+        match.pair[0] === characterA &&
+        match.pair[1] === characterB
+      ));
+      const row = {
+        difficulty,
+        characterA,
+        characterB,
+        runs: group.length,
+        characterAWins: group.filter(match => match.winnerCharacterId === characterA).length,
+        characterBWins: group.filter(match => match.winnerCharacterId === characterB).length,
+        draws: group.filter(match => !match.winnerCharacterId).length
+      };
+      row.characterAWinRate = row.runs ? roundMetric(row.characterAWins / row.runs) : 0;
+      row.characterBWinRate = row.runs ? roundMetric(row.characterBWins / row.runs) : 0;
+      row.drawRate = row.runs ? roundMetric(row.draws / row.runs) : 0;
+      const duration = statTriplet(group.map(match => match.durationMs));
+      row.durationMsAverage = duration.average;
+      row.durationMsStandardDeviation = duration.standardDeviation;
+      row.durationMsMedian = duration.median;
+
+      [
+        ["characterA", characterA],
+        ["characterB", characterB]
+      ].forEach(([prefix, characterId]) => {
+        fighterMetricKeys.forEach(metric => {
+          const values = group
+            .map(match => fighterForCharacter(match, characterId))
+            .filter(Boolean)
+            .map(flattenFighterMetrics)
+            .map(metrics => metrics[metric]);
+          const stats = statTriplet(values);
+          row[`${prefix}${metric[0].toUpperCase()}${metric.slice(1)}Average`] = stats.average;
+          row[`${prefix}${metric[0].toUpperCase()}${metric.slice(1)}StandardDeviation`] = stats.standardDeviation;
+          row[`${prefix}${metric[0].toUpperCase()}${metric.slice(1)}Median`] = stats.median;
+        });
+      });
+      rows.push(row);
+    });
+  });
+  return rows;
 }
 
 function summarizeMatches(matches, characters) {
@@ -267,6 +379,33 @@ function matchupRowsToCsv(rows) {
   return [header, ...rows.map(row => header.map(key => row[key]))];
 }
 
+function matchupStatsRowsToCsv(rows) {
+  const fixed = [
+    "difficulty",
+    "characterA",
+    "characterB",
+    "runs",
+    "characterAWins",
+    "characterBWins",
+    "draws",
+    "characterAWinRate",
+    "characterBWinRate",
+    "drawRate",
+    "durationMsAverage",
+    "durationMsStandardDeviation",
+    "durationMsMedian"
+  ];
+  const metricColumns = [];
+  ["characterA", "characterB"].forEach(prefix => {
+    fighterMetricKeys.forEach(metric => {
+      const label = `${prefix}${metric[0].toUpperCase()}${metric.slice(1)}`;
+      metricColumns.push(`${label}Average`, `${label}StandardDeviation`, `${label}Median`);
+    });
+  });
+  const header = [...fixed, ...metricColumns];
+  return [header, ...rows.map(row => header.map(key => row[key]))];
+}
+
 function createJobId(now = new Date()) {
   const stamp = now.toISOString().replace(/[-:]/g, "").replace(/\..+$/, "").replace("T", "-");
   return `sim-${stamp}-${process.pid}`;
@@ -349,6 +488,8 @@ function normalizeMatchRecord(entry, match) {
     fatalCause: match.fatalCause,
     topDamageCause: match.topDamageCause,
     durationMs: match.durationMs,
+    player: match.player,
+    computer: match.computer,
     seed: match.seed
   };
 }
@@ -396,19 +537,24 @@ function runJob(jobId) {
   }
 
   const summary = summarizeMatches(matches, characters);
+  const matchupStats = summarizeMatchupStats(matches, characters);
   const outputBase = path.join(reportsDir, job.id);
   const outputs = {
     matches: `${outputBase}-matches.json`,
     characterDifficultyJson: `${outputBase}-character-difficulty.json`,
     characterDifficultyCsv: `${outputBase}-character-difficulty.csv`,
     matchupDifficultyJson: `${outputBase}-matchup-difficulty.json`,
-    matchupDifficultyCsv: `${outputBase}-matchup-difficulty.csv`
+    matchupDifficultyCsv: `${outputBase}-matchup-difficulty.csv`,
+    matchupStatsJson: `${outputBase}-matchup-stats.json`,
+    matchupStatsCsv: `${outputBase}-matchup-stats.csv`
   };
   writeJson(outputs.matches, matches);
   writeJson(outputs.characterDifficultyJson, summary.characterDifficulty);
   writeCsv(outputs.characterDifficultyCsv, characterRowsToCsv(summary.characterDifficulty));
   writeJson(outputs.matchupDifficultyJson, summary.matchupDifficulty);
   writeCsv(outputs.matchupDifficultyCsv, matchupRowsToCsv(summary.matchupDifficulty));
+  writeJson(outputs.matchupStatsJson, matchupStats);
+  writeCsv(outputs.matchupStatsCsv, matchupStatsRowsToCsv(matchupStats));
 
   job.status = job.status === "stopped" ? "stopped" : "completed";
   job.completedAt = new Date().toISOString();
@@ -495,6 +641,7 @@ module.exports = {
   createUnorderedPairs,
   createSchedule,
   summarizeMatches,
+  summarizeMatchupStats,
   runJob,
   runInline,
   startJob

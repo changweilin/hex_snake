@@ -5,7 +5,8 @@ const {
   createUnorderedPairs,
   difficulties,
   difficultyPresets,
-  summarizeMatches
+  summarizeMatches,
+  summarizeMatchupStats
 } = require("./sim-scheduler");
 
 const {
@@ -168,6 +169,55 @@ test("scheduled summaries are deterministic for the same raw matches", () => {
     durationMs: 1000 + index
   }));
   assert.deepEqual(summarizeMatches(matches, characters), summarizeMatches(matches, characters));
+});
+
+test("scheduled matchup stats include 45 rows with averages, standard deviations, and medians", () => {
+  const fighter = (characterId, value) => ({
+    characterId,
+    hp: value,
+    length: value,
+    score: value,
+    smallCasts: value,
+    bigCasts: value,
+    smallCastRate: value / 10,
+    damageDealt: value,
+    damageTaken: value,
+    damageTakenByCause: { small: value, big: value },
+    stunApplied: value,
+    foodCollected: value,
+    averageStock: value,
+    hpDiff: value,
+    scoreDiff: value
+  });
+  const matches = [
+    {
+      difficulty: "low",
+      pair: ["dragon", "moray"],
+      winnerCharacterId: "dragon",
+      durationMs: 1000,
+      player: fighter("dragon", 2),
+      computer: fighter("moray", 4)
+    },
+    {
+      difficulty: "low",
+      pair: ["dragon", "moray"],
+      winnerCharacterId: "moray",
+      durationMs: 3000,
+      player: fighter("moray", 8),
+      computer: fighter("dragon", 6)
+    }
+  ];
+  const rows = summarizeMatchupStats(matches, characters);
+  const row = rows.find(entry => entry.difficulty === "low" && entry.characterA === "dragon" && entry.characterB === "moray");
+  assert.equal(rows.length, 45);
+  assert.equal(row.runs, 2);
+  assert.equal(row.characterAWinRate, 0.5);
+  assert.equal(row.durationMsAverage, 2000);
+  assert.equal(row.durationMsStandardDeviation, 1000);
+  assert.equal(row.durationMsMedian, 2000);
+  assert.equal(row.characterAHpAverage, 4);
+  assert.equal(row.characterAHpStandardDeviation, 2);
+  assert.equal(row.characterAHpMedian, 4);
 });
 
 let failed = 0;
