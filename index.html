@@ -1217,6 +1217,7 @@
     }
 
     .resource-chip {
+      position: relative;
       display: inline-flex;
       align-items: center;
       gap: 4px;
@@ -1228,6 +1229,11 @@
       color: var(--muted);
       font-size: 0.78rem;
       font-weight: 700;
+    }
+
+    .resource-chip.is-flashing {
+      animation: resource-chip-flash 560ms ease-in-out 3;
+      border-color: rgba(250, 204, 21, 0.78);
     }
 
     .resource-icon {
@@ -1316,8 +1322,23 @@
         transform: scale(1) rotate(var(--icon-rotate, 0deg));
       }
       45% {
-        filter: brightness(1.9) drop-shadow(0 0 7px #facc15);
-        transform: scale(1.25) rotate(var(--icon-rotate, 0deg));
+        filter: brightness(2.35) saturate(1.35) drop-shadow(0 0 12px #fde047);
+        transform: scale(1.42) rotate(var(--icon-rotate, 0deg));
+      }
+    }
+
+    @keyframes resource-chip-flash {
+      0%, 100% {
+        background: #151b25;
+        box-shadow: none;
+        color: var(--muted);
+      }
+      45% {
+        background: #3b2f0b;
+        box-shadow:
+          0 0 0 2px rgba(250, 204, 21, 0.42),
+          0 0 18px rgba(250, 204, 21, 0.72);
+        color: #fff7d6;
       }
     }
 
@@ -2350,7 +2371,7 @@
             <input id="relayModeInput" type="checkbox">
             <span>接力賽</span>
           </label>
-          <div class="relay-score" id="relayScore">玩家 0 勝 / 電腦 0 勝 / 平手 0</div>
+          <div class="relay-score" id="relayScore">P1 0 勝 / P2 0 勝 / 平手 0</div>
         </div>
       </div>
     </section>
@@ -4330,7 +4351,7 @@
       const visible = computerBattleMode && (running || gameOver);
       relayPanel.hidden = !visible;
       relayModeInput.checked = relayMode;
-      relayScore.textContent = `玩家 ${relayPlayerWins} 勝 / 電腦 ${relayComputerWins} 勝 / 平手 ${relayDraws}`;
+      relayScore.textContent = `P1 ${relayPlayerWins} 勝 / P2 ${relayComputerWins} 勝 / 平手 ${relayDraws}`;
     }
 
     function updateAutoBattleControls() {
@@ -4339,6 +4360,17 @@
       autoBattleSpeedSelect.value = String(computerBattleSpeed);
       autoPauseButton.textContent = paused ? "繼續" : "暫停";
       updateRelayControls();
+    }
+
+    function sandwormUndergroundAlpha(owner, now) {
+      if (characterFor(owner).id !== "sandworm") return 1;
+      const from = owner === "player" ? playerUndergroundFrom : computerUndergroundFrom;
+      const until = owner === "player" ? playerUndergroundUntil : computerUndergroundUntil;
+      if (!from || now < from || now > until) return 1;
+      const fadeMs = 650;
+      const fadeIn = Math.min(1, Math.max(0, (now - from) / fadeMs));
+      const fadeOut = Math.min(1, Math.max(0, (until - now) / fadeMs));
+      return 0.2 + (1 - Math.min(fadeIn, fadeOut)) * 0.8;
     }
 
     function canTurn(newDir) {
@@ -5244,7 +5276,7 @@
       }
       renderWinnerPortrait(winnerOwner, playerLost, computerLost);
       overlayText.textContent = computerBattleMode && relayMode
-        ? `玩家 ${score} 分，電腦 ${computerScore} 分。接力賽：玩家 ${relayPlayerWins} 勝，電腦 ${relayComputerWins} 勝，平手 ${relayDraws}。`
+        ? `P1 ${score} 分，P2 ${computerScore} 分。接力賽：P1 ${relayPlayerWins} 勝，P2 ${relayComputerWins} 勝，平手 ${relayDraws}。`
         : `玩家 ${score} 分，電腦 ${computerScore} 分。按開始再來一局。`;
       startButton.textContent = "重新開始";
       overlay.classList.add("show");
@@ -5329,7 +5361,7 @@
       drawHazards();
       drawBlasts();
 
-      if (computerSnake && !(now >= computerUndergroundFrom && now <= computerUndergroundUntil)) {
+      if (computerSnake) {
         const computerCharacter = characterFor("computer");
         drawSnake(computerSnake, {
           head: computerCharacter.color,
@@ -5340,7 +5372,8 @@
           ownerLine: colors.computerHeadLine,
           character: computerCharacter,
           owner: "computer",
-          direction: computerDir
+          direction: computerDir,
+          alpha: sandwormUndergroundAlpha("computer", now)
         });
       }
 
@@ -5355,7 +5388,8 @@
           ownerLine: colors.headLine,
           character: playerCharacter,
           owner: "player",
-          direction: dir
+          direction: dir,
+          alpha: sandwormUndergroundAlpha("player", now)
         });
       }
     }
@@ -5768,6 +5802,8 @@
     }
 
     function drawSnake(parts, palette) {
+      ctx.save();
+      ctx.globalAlpha *= palette.alpha ?? 1;
       parts.forEach((segment, index) => {
         const { x, y } = axialToPixel(segment);
         hexPath(x, y, cellSize * (index === 0 ? 0.82 : 0.76));
@@ -5783,6 +5819,7 @@
         drawSnakeSegmentDetail(x, y, index, palette);
 
       });
+      ctx.restore();
     }
 
     function drawSnakeOwnerMark(x, y, index, palette) {
