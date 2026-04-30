@@ -219,6 +219,132 @@
       display: none;
     }
 
+    .replay-controls {
+      position: absolute;
+      left: 50%;
+      bottom: 1rem;
+      z-index: 8;
+      display: grid;
+      grid-template-columns: auto auto 1fr auto auto;
+      align-items: center;
+      gap: 0.5rem;
+      width: min(720px, calc(100% - 2rem));
+      padding: 0.62rem;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 8px;
+      background: rgba(17, 24, 39, 0.9);
+      box-shadow: 0 16px 44px rgba(0, 0, 0, 0.36);
+      transform: translateX(-50%);
+      backdrop-filter: blur(12px);
+    }
+
+    .replay-controls[hidden] {
+      display: none;
+    }
+
+    .replay-controls button,
+    .replay-controls select {
+      min-height: 2.3rem;
+    }
+
+    .replay-controls input[type="range"] {
+      width: 100%;
+      min-width: 0;
+    }
+
+    .replay-time {
+      color: var(--muted);
+      font-size: 0.82rem;
+      white-space: nowrap;
+    }
+
+    .replay-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 1200;
+      display: grid;
+      place-items: center;
+      padding: 1rem;
+      background: rgba(5, 8, 13, 0.72);
+      backdrop-filter: blur(10px);
+    }
+
+    .replay-modal[hidden] {
+      display: none;
+    }
+
+    .replay-dialog {
+      width: min(760px, 100%);
+      max-height: min(82vh, 760px);
+      overflow: auto;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 10px;
+      background: #1a2230;
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.46);
+    }
+
+    .replay-header,
+    .replay-list-header,
+    .replay-row,
+    .replay-empty {
+      padding: 0.85rem 1rem;
+    }
+
+    .replay-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .replay-header h2,
+    .replay-list-header h3 {
+      margin: 0;
+    }
+
+    .replay-list-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      color: var(--muted);
+    }
+
+    .replay-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.75rem;
+      align-items: center;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .replay-title {
+      display: block;
+      color: var(--ink);
+      font-weight: 700;
+    }
+
+    .replay-meta {
+      margin-top: 0.25rem;
+      color: var(--muted);
+      font-size: 0.84rem;
+    }
+
+    .replay-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 0.45rem;
+    }
+
+    .replay-message {
+      min-height: 1.2rem;
+      padding: 0 1rem 0.85rem;
+      color: #facc15;
+      font-size: 0.86rem;
+    }
+
     .auto-battle-panel label {
       color: var(--muted);
       font-size: 0.78rem;
@@ -555,7 +681,8 @@
       width: 100%;
     }
 
-    .settings-toggle {
+    .settings-toggle,
+    .replay-toggle {
       width: 44px;
       min-height: 44px;
       padding: 0;
@@ -583,6 +710,13 @@
       color: #fde68a;
     }
 
+    .gm-letter {
+      font-weight: 800;
+      font-size: 1.12rem;
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
     .rules-toggle {
       width: auto;
       min-width: 72px;
@@ -595,6 +729,8 @@
 
     .settings-toggle:hover,
     .settings-toggle:focus-visible,
+    .replay-toggle:hover,
+    .replay-toggle:focus-visible,
     .gm-toggle:hover,
     .gm-toggle:focus-visible,
     .rules-toggle:hover,
@@ -604,13 +740,29 @@
       outline-offset: 2px;
     }
 
-    .settings-toggle svg {
+    .settings-toggle svg,
+    .replay-toggle svg,
+    .settings-action-icon {
       width: 22px;
       height: 22px;
       stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
     }
 
-    .settings-title {
+    .settings-action-icon {
+      display: none;
+    }
+
+    .surrender-icon {
+      fill: #fff;
+      stroke: none;
+    }
+
+    .settings-title,
+    .replay-toggle-label {
       position: absolute;
       width: 1px;
       height: 1px;
@@ -2065,7 +2217,7 @@
 
       .side .settings-section .settings-actions {
         display: grid;
-        grid-template-columns: minmax(54px, 1fr) minmax(54px, 1fr) minmax(44px, 0.72fr) 38px;
+        grid-template-columns: repeat(5, minmax(34px, 1fr));
         gap: 5px;
         justify-self: end;
         width: min(100%, calc(100vw - max(6px, env(safe-area-inset-left)) - max(6px, env(safe-area-inset-right)) - 12px));
@@ -2076,10 +2228,14 @@
       .side .settings-section .surrender-button,
       .side .settings-section .rules-toggle,
       .side .settings-section .gm-toggle,
+      .side .settings-section .replay-toggle,
       .side .settings-section .settings-toggle {
         width: 100%;
         min-width: 0;
         min-height: 38px;
+        padding: 0;
+        display: inline-grid;
+        place-items: center;
       }
 
       .side .settings-section.open {
@@ -2087,9 +2243,33 @@
       }
 
       .side .settings-section .settings-toggle {
-        width: 38px;
         min-height: 38px;
         padding: 0;
+      }
+
+      .side .settings-section .settings-actions button {
+        min-height: 38px;
+        padding: 0;
+        font-size: 0;
+      }
+
+      .side .settings-section .settings-action-icon {
+        display: block;
+      }
+
+      .side .settings-section .gm-letter {
+        display: block;
+        font-size: 1.08rem;
+      }
+
+      .side .settings-section .settings-action-label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
       }
 
       .side .settings-section .settings-content {
@@ -2441,9 +2621,26 @@
             <div class="dialog-actions">
               <button id="startButton" type="button">開始</button>
               <button id="computerBattleButton" class="secondary" type="button">電腦對弈</button>
+              <button id="replayArchiveButton" class="secondary" type="button">重播紀錄</button>
             </div>
             <button id="introCloseButton" class="secondary intro-close-button" type="button" hidden>關閉</button>
           </div>
+        </div>
+        <div class="replay-controls" id="replayControls" hidden aria-label="重播控制">
+          <button id="replayReverseButton" class="secondary" type="button">倒放</button>
+          <button id="replayPlayButton" type="button">暫停</button>
+          <input id="replayTimeline" type="range" min="0" max="0" step="1" value="0" aria-label="重播時間軸">
+          <select id="replaySpeedSelect" aria-label="重播速度">
+            <option value="0.25">x0.25</option>
+            <option value="0.5">x0.5</option>
+            <option value="0.75">x0.75</option>
+            <option value="1" selected>x1</option>
+            <option value="1.5">x1.5</option>
+            <option value="2">x2</option>
+            <option value="4">x4</option>
+          </select>
+          <button id="replayExitButton" class="secondary" type="button">離開</button>
+          <span class="replay-time" id="replayTime">0:00 / 0:00</span>
         </div>
         <div class="auto-battle-panel" id="autoBattlePanel" hidden aria-label="電腦對弈速度">
           <label for="autoBattleSpeedSelect">速度</label>
@@ -2464,9 +2661,26 @@
     <aside class="side" aria-label="控制面板">
       <section class="section settings-section">
         <div class="settings-actions">
-        <button class="surrender-button" id="surrenderButton" type="button">投降</button>
-        <button class="rules-toggle" id="rulesButton" type="button" aria-haspopup="dialog" aria-controls="rulesModal" aria-expanded="false">規則</button>
-        <button class="gm-toggle" id="gmToggle" type="button" aria-expanded="false" aria-controls="gmContent" title="GM 設定">GM</button>
+        <button class="surrender-button" id="surrenderButton" type="button" title="投降" aria-label="投降">
+          <svg class="settings-action-icon surrender-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h2v18H5V3Z"/><path d="M8 4h11l-2.2 4 2.2 4H8V4Z"/></svg>
+          <span class="settings-action-label">投降</span>
+        </button>
+        <button class="rules-toggle" id="rulesButton" type="button" aria-haspopup="dialog" aria-controls="rulesModal" aria-expanded="false" title="規則" aria-label="規則">
+          <svg class="settings-action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 0 4 22V5.5Z"/><path d="M8 7h8"/><path d="M8 11h8"/></svg>
+          <span class="settings-action-label">規則</span>
+        </button>
+        <button class="gm-toggle" id="gmToggle" type="button" aria-expanded="false" aria-controls="gmContent" title="GM 設定" aria-label="GM 設定">
+          <span class="gm-letter" aria-hidden="true">G</span>
+          <span class="settings-action-label">GM</span>
+        </button>
+        <button class="replay-toggle" id="settingsReplayButton" type="button" title="重播紀錄" aria-label="重播紀錄">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 7v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7"/>
+            <path d="M7 4h10"/>
+            <path d="M9 9l6 3-6 3V9Z"/>
+          </svg>
+          <span class="replay-toggle-label">重播紀錄</span>
+        </button>
         <button class="settings-toggle" id="settingsToggle" type="button" aria-expanded="false" aria-controls="settingsContent" title="開局設定">
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -2661,6 +2875,25 @@
     <button class="secondary portrait-lightbox-arrow" type="button" data-portrait-lightbox-shift="1" aria-label="Next">&rsaquo;</button>
     <button id="portraitLightboxClose" class="secondary portrait-lightbox-close" type="button">關閉</button>
   </div>
+  <div class="replay-modal" id="replayModal" hidden aria-modal="true" role="dialog" aria-labelledby="replayTitle">
+    <div class="replay-dialog">
+      <div class="replay-header">
+        <h2 id="replayTitle">重播紀錄</h2>
+        <button id="replayModalClose" class="secondary" type="button">關閉</button>
+      </div>
+      <div id="replayMessage" class="replay-message"></div>
+      <div class="replay-list-header">
+        <h3>最近 5 場</h3>
+        <span id="recentReplayCount">0 / 5</span>
+      </div>
+      <div id="recentReplayList"></div>
+      <div class="replay-list-header">
+        <h3>我的最愛 5 場</h3>
+        <span id="favoriteReplayCount">0 / 5</span>
+      </div>
+      <div id="favoriteReplayList"></div>
+    </div>
+  </div>
 
   <script>
     const canvas = document.querySelector("#game");
@@ -2671,6 +2904,22 @@
     const overlayText = document.querySelector("#overlayText");
     const startButton = document.querySelector("#startButton");
     const computerBattleButton = document.querySelector("#computerBattleButton");
+    const replayArchiveButton = document.querySelector("#replayArchiveButton");
+    const settingsReplayButton = document.querySelector("#settingsReplayButton");
+    const replayControls = document.querySelector("#replayControls");
+    const replayReverseButton = document.querySelector("#replayReverseButton");
+    const replayPlayButton = document.querySelector("#replayPlayButton");
+    const replayTimeline = document.querySelector("#replayTimeline");
+    const replaySpeedSelect = document.querySelector("#replaySpeedSelect");
+    const replayExitButton = document.querySelector("#replayExitButton");
+    const replayTime = document.querySelector("#replayTime");
+    const replayModal = document.querySelector("#replayModal");
+    const replayModalClose = document.querySelector("#replayModalClose");
+    const replayMessage = document.querySelector("#replayMessage");
+    const recentReplayList = document.querySelector("#recentReplayList");
+    const favoriteReplayList = document.querySelector("#favoriteReplayList");
+    const recentReplayCount = document.querySelector("#recentReplayCount");
+    const favoriteReplayCount = document.querySelector("#favoriteReplayCount");
     const autoBattlePanel = document.querySelector("#autoBattlePanel");
     const autoBattleSpeedSelect = document.querySelector("#autoBattleSpeedSelect");
     const autoSpeedMenu = document.querySelector("#autoSpeedMenu");
@@ -3044,6 +3293,19 @@
     let portraitSwipeStartX = null;
     let portraitLightboxDidSwipe = false;
     let restartUnlockAt = 0;
+    const replayRecentKey = "hexSnakeReplayRecent";
+    const replayFavoritesKey = "hexSnakeReplayFavorites";
+    const replayLimit = 5;
+    const replaySnapshotIntervalMs = 200;
+    const replayMaxSnapshots = 900;
+    const replayPlaybackSpeeds = [0.25, 0.5, 0.75, 1, 1.5, 2, 4];
+    let activeReplayRecording = null;
+    let lastReplaySnapshotAt = -Infinity;
+    let replayMode = false;
+    let replayPlayback = null;
+    let replayReturnOverlay = null;
+    let replayRafId = 0;
+    let replaySurrendered = false;
 
     const portraitSizeWidths = {
       sm: 512,
@@ -3374,6 +3636,7 @@
       overlayText.hidden = !visible;
       startButton.hidden = !visible;
       computerBattleButton.hidden = !visible || (running && !gameOver);
+      replayArchiveButton.hidden = !visible;
       introCloseButton.hidden = true;
     }
 
@@ -3383,6 +3646,7 @@
       overlayText.hidden = true;
       startButton.hidden = false;
       computerBattleButton.hidden = false;
+      replayArchiveButton.hidden = false;
       introCloseButton.hidden = true;
       startButton.textContent = "開始";
     }
@@ -3393,6 +3657,7 @@
       overlayText.hidden = true;
       startButton.hidden = true;
       computerBattleButton.hidden = true;
+      replayArchiveButton.hidden = true;
       introCloseButton.hidden = false;
     }
 
@@ -3794,6 +4059,433 @@
       return `${minutes}:${String(seconds).padStart(2, "0")}`;
     }
 
+    function replayClone(value) {
+      return JSON.parse(JSON.stringify(value));
+    }
+
+    function replayLoadList(key) {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(key) || "[]");
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function replaySaveList(key, list) {
+      localStorage.setItem(key, JSON.stringify(list));
+    }
+
+    function replayCharacterName(id) {
+      return characterById.get(id)?.name || id || "?";
+    }
+
+    function replayTitleFor(record) {
+      const date = new Date(record.createdAt || Date.now());
+      const dateText = Number.isNaN(date.getTime()) ? "" : date.toLocaleString("zh-TW", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+      const winner = record.winnerOwner === "player" ? "玩家勝" : record.winnerOwner === "computer" ? "電腦勝" : "平手";
+      return `${dateText} ${winner} ${record.score}:${record.computerScore}`;
+    }
+
+    function replayMetaFor(record) {
+      const mode = record.computerBattleMode ? (record.relayMode ? "連戰" : "電腦對弈") : "玩家戰鬥";
+      return `${mode} · ${replayCharacterName(record.playerCharacterId)} vs ${replayCharacterName(record.computerCharacterId)} · ${formatTime(record.durationMs || 0)} · ${record.snapshots?.length || 0} frames`;
+    }
+
+    function normalizeReplayRecord(record) {
+      return {
+        ...record,
+        snapshots: Array.isArray(record.snapshots) ? record.snapshots : []
+      };
+    }
+
+    function compactTimedItems(items, now, fields) {
+      return replayClone(items || []).map(item => {
+        fields.forEach(field => {
+          if (Number.isFinite(item[field])) item[field] = Math.round(item[field] - now);
+        });
+        return item;
+      });
+    }
+
+    function restoreTimedItems(items, now, fields) {
+      return replayClone(items || []).map(item => {
+        fields.forEach(field => {
+          if (Number.isFinite(item[field])) item[field] = now + item[field];
+        });
+        return item;
+      });
+    }
+
+    function createReplaySnapshot(now, final = false) {
+      return {
+        t: Math.round(totalElapsedMs),
+        final,
+        radius,
+        gridSize,
+        playerCharacterId,
+        computerCharacterId,
+        dir,
+        nextDir,
+        computerDir,
+        snake: replayClone(snake || []),
+        computerSnake: replayClone(computerSnake || []),
+        foods: replayClone(foods || []),
+        projectiles: compactTimedItems(projectiles, now, ["createdAt", "impactAt"]),
+        blasts: compactTimedItems(blasts, now, ["startedAt", "endAt"]),
+        hazards: compactTimedItems(hazards, now, ["startedAt", "endAt", "nextTickAt"]),
+        targetCell: targetCell ? { ...targetCell } : null,
+        targetActive,
+        score,
+        computerScore,
+        playerHp,
+        computerHp,
+        playerStock: replayClone(playerStock || {}),
+        computerStock: replayClone(computerStock || {}),
+        playerAmmo,
+        computerAmmo,
+        playerAmmoCharge,
+        computerAmmoCharge,
+        totalElapsedMs,
+        lastFeedElapsedMs,
+        playerStunRemaining: Math.max(0, playerStunUntil - now),
+        playerSlowRemaining: Math.max(0, playerSlowUntil - now),
+        computerStunRemaining: Math.max(0, computerStunUntil - now),
+        computerSlowRemaining: Math.max(0, computerSlowUntil - now),
+        playerCollisionParalysisMs,
+        computerCollisionParalysisMs,
+        playerUndergroundRemaining: Math.max(0, playerUndergroundUntil - now),
+        computerUndergroundRemaining: Math.max(0, computerUndergroundUntil - now)
+      };
+    }
+
+    function startReplayRecording() {
+      activeReplayRecording = {
+        id: `replay-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        createdAt: new Date().toISOString(),
+        playerCharacterId,
+        computerCharacterId,
+        computerBattleMode,
+        relayMode,
+        settings: {
+          gridSize,
+          foodCount,
+          computerDifficulty,
+          initialSpeed,
+          gmMode,
+          initialLength,
+          initialEnergy,
+          initialBombs,
+          initialStock: replayClone(initialStock)
+        },
+        snapshots: []
+      };
+      lastReplaySnapshotAt = -Infinity;
+      recordReplaySnapshot(performance.now(), true);
+    }
+
+    function recordReplaySnapshot(now, force = false) {
+      if (!activeReplayRecording || replayMode || !snake || !computerSnake) return;
+      if (!force && now - lastReplaySnapshotAt < replaySnapshotIntervalMs) return;
+      activeReplayRecording.snapshots.push(createReplaySnapshot(now));
+      lastReplaySnapshotAt = now;
+      if (activeReplayRecording.snapshots.length > replayMaxSnapshots) {
+        const keep = activeReplayRecording.snapshots.filter((_, index) => index % 2 === 0);
+        activeReplayRecording.snapshots = keep;
+      }
+    }
+
+    function replayWinnerOwner(playerLost, computerLost) {
+      if (!playerLost && computerLost) return "player";
+      if (playerLost && !computerLost) return "computer";
+      if (playerLost && computerLost && score > computerScore) return "player";
+      if (playerLost && computerLost && computerScore > score) return "computer";
+      return null;
+    }
+
+    function finishReplayRecording(playerLost, computerLost) {
+      if (!activeReplayRecording) return;
+      const now = performance.now();
+      recordReplaySnapshot(now, true);
+      activeReplayRecording.snapshots.push(createReplaySnapshot(now, true));
+      const record = normalizeReplayRecord({
+        ...activeReplayRecording,
+        durationMs: Math.round(totalElapsedMs),
+        score,
+        computerScore,
+        winnerOwner: replayWinnerOwner(playerLost, computerLost),
+        playerLost,
+        computerLost,
+        surrendered: replaySurrendered,
+        title: ""
+      });
+      record.title = replayTitleFor(record);
+      activeReplayRecording = null;
+      if (record.snapshots.length < 2) return;
+      const recent = replayLoadList(replayRecentKey).filter(item => item.id !== record.id);
+      recent.unshift(record);
+      while (recent.length > replayLimit) recent.pop();
+      try {
+        replaySaveList(replayRecentKey, recent);
+      } catch {
+        while (recent.length > 1) {
+          recent.pop();
+          try {
+            replaySaveList(replayRecentKey, recent);
+            break;
+          } catch {
+            continue;
+          }
+        }
+      }
+    }
+
+    function isReplayFavorite(recordId) {
+      return replayLoadList(replayFavoritesKey).some(record => record.id === recordId);
+    }
+
+    function setReplayMessage(text = "") {
+      replayMessage.textContent = text;
+    }
+
+    function renderReplayList(container, records, favoriteSection = false) {
+      container.innerHTML = "";
+      if (!records.length) {
+        const empty = document.createElement("div");
+        empty.className = "replay-empty";
+        empty.textContent = "目前沒有紀錄。";
+        container.append(empty);
+        return;
+      }
+      records.forEach(record => {
+        const row = document.createElement("div");
+        row.className = "replay-row";
+        row.innerHTML = `
+          <div>
+            <span class="replay-title">${record.title || replayTitleFor(record)}</span>
+            <div class="replay-meta">${replayMetaFor(record)}</div>
+          </div>
+          <div class="replay-actions">
+            <button type="button" data-replay-play="${record.id}">播放</button>
+            <button class="secondary" type="button" data-replay-favorite="${record.id}">${isReplayFavorite(record.id) ? "取消最愛" : "加入最愛"}</button>
+            <button class="secondary" type="button" data-replay-delete="${record.id}" data-replay-section="${favoriteSection ? "favorite" : "recent"}">刪除</button>
+          </div>
+        `;
+        container.append(row);
+      });
+    }
+
+    function refreshReplayModal() {
+      const recent = replayLoadList(replayRecentKey).map(normalizeReplayRecord);
+      const favorites = replayLoadList(replayFavoritesKey).map(normalizeReplayRecord);
+      recentReplayCount.textContent = `${recent.length} / ${replayLimit}`;
+      favoriteReplayCount.textContent = `${favorites.length} / ${replayLimit}`;
+      renderReplayList(recentReplayList, recent, false);
+      renderReplayList(favoriteReplayList, favorites, true);
+    }
+
+    function openReplayModal() {
+      if (running && !gameOver) return;
+      clearRelayRestartTimer();
+      setReplayMessage("");
+      refreshReplayModal();
+      replayModal.hidden = false;
+    }
+
+    function closeReplayModal() {
+      replayModal.hidden = true;
+    }
+
+    function findReplayRecord(recordId) {
+      return [...replayLoadList(replayFavoritesKey), ...replayLoadList(replayRecentKey)].find(record => record.id === recordId);
+    }
+
+    function toggleReplayFavorite(recordId) {
+      const favorites = replayLoadList(replayFavoritesKey);
+      const existingIndex = favorites.findIndex(record => record.id === recordId);
+      if (existingIndex >= 0) {
+        favorites.splice(existingIndex, 1);
+        replaySaveList(replayFavoritesKey, favorites);
+        setReplayMessage("已取消最愛。");
+        refreshReplayModal();
+        return;
+      }
+      if (favorites.length >= replayLimit) {
+        setReplayMessage("我的最愛已滿 5 場，請先取消一場最愛。");
+        return;
+      }
+      const record = findReplayRecord(recordId);
+      if (!record) return;
+      favorites.unshift(record);
+      replaySaveList(replayFavoritesKey, favorites);
+      setReplayMessage("已加入最愛。");
+      refreshReplayModal();
+    }
+
+    function deleteReplayRecord(recordId, section) {
+      const key = section === "favorite" ? replayFavoritesKey : replayRecentKey;
+      replaySaveList(key, replayLoadList(key).filter(record => record.id !== recordId));
+      setReplayMessage("已刪除紀錄。");
+      refreshReplayModal();
+    }
+
+    function replayDuration(record) {
+      const last = record.snapshots[record.snapshots.length - 1];
+      return Math.max(0, last?.t || record.durationMs || 0);
+    }
+
+    function snapshotForReplayTime(record, t) {
+      const snapshots = record.snapshots || [];
+      if (!snapshots.length) return null;
+      let low = 0;
+      let high = snapshots.length - 1;
+      while (low < high) {
+        const mid = Math.ceil((low + high) / 2);
+        if ((snapshots[mid].t || 0) <= t) low = mid;
+        else high = mid - 1;
+      }
+      return snapshots[low] || snapshots[0];
+    }
+
+    function applyReplaySnapshot(snapshot, record) {
+      if (!snapshot) return;
+      const now = performance.now();
+      const previousPlayerCharacterId = playerCharacterId;
+      const previousComputerCharacterId = computerCharacterId;
+      playerCharacterId = snapshot.playerCharacterId || record.playerCharacterId;
+      computerCharacterId = snapshot.computerCharacterId || record.computerCharacterId;
+      gridSize = snapshot.gridSize || record.settings?.gridSize || gridSize;
+      radius = snapshot.radius ?? gridSize - 1;
+      buildCells();
+      dir = snapshot.dir || 0;
+      nextDir = snapshot.nextDir || dir;
+      computerDir = snapshot.computerDir || 3;
+      snake = replayClone(snapshot.snake || []);
+      computerSnake = replayClone(snapshot.computerSnake || []);
+      foods = replayClone(snapshot.foods || []);
+      projectiles = restoreTimedItems(snapshot.projectiles, now, ["createdAt", "impactAt"]);
+      blasts = restoreTimedItems(snapshot.blasts, now, ["startedAt", "endAt"]);
+      hazards = restoreTimedItems(snapshot.hazards, now, ["startedAt", "endAt", "nextTickAt"]);
+      targetCell = snapshot.targetCell ? { ...snapshot.targetCell } : null;
+      targetActive = Boolean(snapshot.targetActive);
+      score = snapshot.score || 0;
+      computerScore = snapshot.computerScore || 0;
+      playerHp = snapshot.playerHp ?? snake.length;
+      computerHp = snapshot.computerHp ?? computerSnake.length;
+      playerStock = replayClone(snapshot.playerStock || {});
+      computerStock = replayClone(snapshot.computerStock || {});
+      playerAmmo = snapshot.playerAmmo || 0;
+      computerAmmo = snapshot.computerAmmo || 0;
+      playerAmmoCharge = snapshot.playerAmmoCharge || 0;
+      computerAmmoCharge = snapshot.computerAmmoCharge || 0;
+      totalElapsedMs = snapshot.totalElapsedMs || snapshot.t || 0;
+      lastFeedElapsedMs = snapshot.lastFeedElapsedMs || 0;
+      playerStunUntil = now + (snapshot.playerStunRemaining || 0);
+      playerSlowUntil = now + (snapshot.playerSlowRemaining || 0);
+      computerStunUntil = now + (snapshot.computerStunRemaining || 0);
+      computerSlowUntil = now + (snapshot.computerSlowRemaining || 0);
+      playerCollisionParalysisMs = snapshot.playerCollisionParalysisMs || 0;
+      computerCollisionParalysisMs = snapshot.computerCollisionParalysisMs || 0;
+      playerUndergroundUntil = now + (snapshot.playerUndergroundRemaining || 0);
+      computerUndergroundUntil = now + (snapshot.computerUndergroundRemaining || 0);
+      if (previousPlayerCharacterId !== playerCharacterId || previousComputerCharacterId !== computerCharacterId || !characterStage.innerHTML) {
+        buildCharacterStage();
+      }
+      updateHud();
+      draw();
+    }
+
+    function updateReplayControls() {
+      if (!replayPlayback) return;
+      const duration = replayPlayback.duration;
+      replayTimeline.max = String(Math.max(0, Math.round(duration)));
+      replayTimeline.value = String(Math.max(0, Math.min(duration, Math.round(replayPlayback.time))));
+      replayPlayButton.textContent = replayPlayback.paused ? "播放" : "暫停";
+      replayReverseButton.classList.toggle("is-selected", replayPlayback.direction < 0);
+      replayReverseButton.textContent = replayPlayback.direction < 0 ? "正放" : "倒放";
+      replayTime.textContent = `${formatTime(replayPlayback.time)} / ${formatTime(duration)}`;
+    }
+
+    function renderReplayFrame() {
+      if (!replayPlayback) return;
+      const now = performance.now();
+      const delta = replayPlayback.lastFrameAt ? now - replayPlayback.lastFrameAt : 0;
+      replayPlayback.lastFrameAt = now;
+      if (!replayPlayback.paused) {
+        replayPlayback.time += delta * replayPlayback.speed * replayPlayback.direction;
+        if (replayPlayback.time <= 0) {
+          replayPlayback.time = 0;
+          replayPlayback.paused = true;
+        }
+        if (replayPlayback.time >= replayPlayback.duration) {
+          replayPlayback.time = replayPlayback.duration;
+          replayPlayback.paused = true;
+        }
+      }
+      applyReplaySnapshot(snapshotForReplayTime(replayPlayback.record, replayPlayback.time), replayPlayback.record);
+      updateReplayControls();
+      replayRafId = requestAnimationFrame(renderReplayFrame);
+    }
+
+    function startReplayPlayback(record) {
+      record = normalizeReplayRecord(record);
+      if (!record.snapshots.length) return;
+      closeReplayModal();
+      cancelAnimationFrame(rafId);
+      clearRelayRestartTimer();
+      replayReturnOverlay = {
+        shown: overlay.classList.contains("show"),
+        title: overlayTitle.textContent,
+        text: overlayText.textContent,
+        startText: startButton.textContent,
+        gameOver
+      };
+      replayMode = true;
+      running = false;
+      paused = true;
+      gameOver = false;
+      computerBattleMode = false;
+      setSettingsLocked(true);
+      setOverlayChromeVisible(false);
+      overlay.classList.remove("show");
+      replayControls.hidden = false;
+      replaySpeedSelect.value = "1";
+      replayPlayback = {
+        record,
+        time: 0,
+        duration: replayDuration(record),
+        speed: 1,
+        direction: 1,
+        paused: false,
+        lastFrameAt: 0
+      };
+      applyReplaySnapshot(record.snapshots[0], record);
+      updateReplayControls();
+      cancelAnimationFrame(replayRafId);
+      replayRafId = requestAnimationFrame(renderReplayFrame);
+    }
+
+    function exitReplayPlayback() {
+      if (!replayMode) return;
+      cancelAnimationFrame(replayRafId);
+      replayMode = false;
+      replayPlayback = null;
+      replayControls.hidden = true;
+      setSettingsLocked(false);
+      resetGame();
+      resize();
+      if (replayReturnOverlay?.shown) {
+        overlayTitle.textContent = replayReturnOverlay.title;
+        overlayText.textContent = replayReturnOverlay.text;
+        startButton.textContent = replayReturnOverlay.startText;
+        gameOver = Boolean(replayReturnOverlay.gameOver);
+        overlay.classList.add("show");
+      } else {
+        returnToStartScreen();
+      }
+      replayReturnOverlay = null;
+    }
+
     function normalizeKey(value, fallback) {
       if (value === " " || value === "Space") return " ";
       const trimmed = String(value || "").trim();
@@ -4082,6 +4774,7 @@
         setGmOpen(false);
       }
       settingsToggle.disabled = locked;
+      settingsReplayButton.disabled = locked;
       computerDifficultyInput.disabled = locked;
       playerCharacterInput.disabled = locked;
       computerCharacterInput.disabled = locked;
@@ -4231,6 +4924,7 @@
       lastVisibleComputerDir = computerDir;
       lastPlayerAttackMs = -Infinity;
       lastComputerAttackMs = 0;
+      replaySurrendered = false;
       gameOver = false;
       paused = false;
       placeFoods();
@@ -4243,6 +4937,7 @@
     }
 
     function startGame(options = {}) {
+      if (replayMode) return false;
       if (gameOver && !canRestartAfterGameOver()) return false;
       clearRelayRestartTimer();
       computerBattleMode = Boolean(options.computerBattle);
@@ -4268,6 +4963,7 @@
       lastPlayerStep = performance.now();
       lastComputerStep = lastPlayerStep;
       lastTimerFrame = lastPlayerStep;
+      startReplayRecording();
       cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(loop);
       return true;
@@ -4289,6 +4985,7 @@
       overlayText.textContent = "重新選擇角色後按開始。";
       startButton.textContent = "開始";
       computerBattleButton.hidden = false;
+      replayArchiveButton.hidden = false;
       renderIntroPortraits(false);
       overlay.classList.add("show");
     }
@@ -4463,7 +5160,7 @@
     }
 
     function updateAutoBattleControls() {
-      const visible = computerBattleMode && running && !gameOver;
+      const visible = computerBattleMode && running && !gameOver && !replayMode;
       autoBattlePanel.hidden = !visible;
       autoBattleSpeedSelect.textContent = autoBattleSpeedLabel(computerBattleSpeed);
       autoBattleSpeedSelect.dataset.value = String(computerBattleSpeed);
@@ -5496,6 +6193,7 @@
 
     function endGame(playerLost = true, computerLost = false) {
       if (gameOver) return;
+      finishReplayRecording(playerLost, computerLost);
       running = false;
       gameOver = true;
       updateAutoBattleControls();
@@ -5580,6 +6278,7 @@
       blasts = blasts.filter(blast => now <= blast.endAt);
       hazards = hazards.filter(hazard => now <= hazard.endAt);
       updateHud();
+      recordReplaySnapshot(now);
       updateAutoBattleControls();
       draw();
       rafId = requestAnimationFrame(loop);
@@ -6051,6 +6750,7 @@
     }
 
     function drawTarget() {
+      if (replayMode && !targetActive) return;
       if (!targetCell || !snake) return;
       if (!targetActive && !canAttack("player", selectedAttackProfile)) return;
       if (selectedAttackProfile === "big" && characterFor("player").id === "sandworm") return;
@@ -6736,6 +7436,7 @@
     }
 
     function moveTargetStick(event) {
+      if (replayMode) return;
       if (!running || gameOver) {
         if (!autoStartGame()) return;
       }
@@ -6774,6 +7475,7 @@
     }
 
     function launchPlayerAttack(target, profile = selectedAttackProfile) {
+      if (replayMode) return false;
       if (!running || gameOver) {
         if (!autoStartGame()) return false;
       }
@@ -6815,6 +7517,7 @@
     }
 
     function togglePause() {
+      if (replayMode) return;
       if (!running || gameOver) {
         startGame();
         return;
@@ -6835,6 +7538,7 @@
     }
 
     function surrenderGame() {
+      if (replayMode) return;
       if (!running || gameOver) {
         if (computerBattleMode && relayMode) {
           setRelayMode(false, false, false);
@@ -6844,10 +7548,12 @@
       }
       setStatus("你已投降。");
       setRelayMode(false, false, false);
+      replaySurrendered = true;
       endGame(true, false);
     }
 
     function attackBoardCellFromPointer(event) {
+      if (replayMode) return;
       if (event.target !== canvas) return;
       const rect = canvas.getBoundingClientRect();
       const target = nearestInsideCell(pixelToAxial(event.clientX - rect.left, event.clientY - rect.top));
@@ -6899,6 +7605,7 @@
     });
 
     characterStage.addEventListener("pointerdown", event => {
+      if (replayMode) return;
       const module = event.target.closest('[data-module="player"]');
       if (!module) return;
       module.setPointerCapture(event.pointerId);
@@ -7152,6 +7859,58 @@
     surrenderButton.addEventListener("click", surrenderGame);
     rulesButton.addEventListener("click", openRulesModal);
     rulesCloseButton.addEventListener("click", closeRulesModal);
+    replayArchiveButton.addEventListener("click", openReplayModal);
+    settingsReplayButton.addEventListener("click", openReplayModal);
+    replayModalClose.addEventListener("click", closeReplayModal);
+    replayModal.addEventListener("pointerdown", event => {
+      if (event.target === replayModal) closeReplayModal();
+    });
+    replayModal.querySelector(".replay-dialog").addEventListener("pointerdown", event => event.stopPropagation());
+    replayModal.addEventListener("click", event => {
+      const playButton = event.target.closest("[data-replay-play]");
+      const favoriteButton = event.target.closest("[data-replay-favorite]");
+      const deleteButton = event.target.closest("[data-replay-delete]");
+      if (playButton) {
+        const record = findReplayRecord(playButton.dataset.replayPlay);
+        if (record) startReplayPlayback(record);
+        return;
+      }
+      if (favoriteButton) {
+        toggleReplayFavorite(favoriteButton.dataset.replayFavorite);
+        return;
+      }
+      if (deleteButton) {
+        deleteReplayRecord(deleteButton.dataset.replayDelete, deleteButton.dataset.replaySection);
+      }
+    });
+    replayPlayButton.addEventListener("click", () => {
+      if (!replayPlayback) return;
+      replayPlayback.paused = !replayPlayback.paused;
+      replayPlayback.lastFrameAt = performance.now();
+      updateReplayControls();
+    });
+    replayReverseButton.addEventListener("click", () => {
+      if (!replayPlayback) return;
+      replayPlayback.direction *= -1;
+      replayPlayback.paused = false;
+      replayPlayback.lastFrameAt = performance.now();
+      updateReplayControls();
+    });
+    replaySpeedSelect.addEventListener("change", () => {
+      if (!replayPlayback) return;
+      const speed = Number(replaySpeedSelect.value);
+      replayPlayback.speed = replayPlaybackSpeeds.includes(speed) ? speed : 1;
+      replayPlayback.lastFrameAt = performance.now();
+    });
+    replayTimeline.addEventListener("input", () => {
+      if (!replayPlayback) return;
+      replayPlayback.time = Number(replayTimeline.value) || 0;
+      replayPlayback.paused = true;
+      replayPlayback.lastFrameAt = performance.now();
+      applyReplaySnapshot(snapshotForReplayTime(replayPlayback.record, replayPlayback.time), replayPlayback.record);
+      updateReplayControls();
+    });
+    replayExitButton.addEventListener("click", exitReplayPlayback);
     rulesModal.addEventListener("pointerdown", event => {
       if (event.target === rulesModal) closeRulesModal();
     });
@@ -7182,6 +7941,7 @@
     });
 
     startButton.addEventListener("click", () => {
+      if (replayMode) return;
       if (!characters.length) {
         window.location.reload();
         return;
@@ -7210,6 +7970,7 @@
     });
 
     computerBattleButton.addEventListener("click", () => {
+      if (replayMode) return;
       if (!characters.length) {
         window.location.reload();
         return;
@@ -7374,6 +8135,16 @@
     });
 
     window.addEventListener("keydown", event => {
+      if (replayMode) {
+        if (event.key === "Escape" || event.key === "Esc") exitReplayPlayback();
+        if (event.key === " " && replayPlayback) {
+          event.preventDefault();
+          replayPlayback.paused = !replayPlayback.paused;
+          replayPlayback.lastFrameAt = performance.now();
+          updateReplayControls();
+        }
+        return;
+      }
       if (!rulesModal.hidden) {
         if (event.key === "Escape" || event.key === "Esc") closeRulesModal();
         return;
