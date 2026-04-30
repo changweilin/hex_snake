@@ -1062,6 +1062,34 @@
       cursor: zoom-in;
     }
 
+    .fighter-portrait.is-random {
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      cursor: default;
+    }
+
+    .overlay.intro-details .fighter-portrait.is-random {
+      cursor: default;
+    }
+
+    .random-portrait-mark {
+      width: min(54%, 132px);
+      aspect-ratio: 1;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      border: 2px solid color-mix(in srgb, var(--fighter-line), transparent 20%);
+      background:
+        radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.34), transparent 24%),
+        color-mix(in srgb, var(--fighter-color), #101720 26%);
+      color: var(--ink);
+      font-size: clamp(2.4rem, 9vw, 4.8rem);
+      font-weight: 950;
+      line-height: 1;
+      box-shadow: 0 18px 45px rgba(0, 0, 0, 0.32);
+    }
+
     .overlay.intro-details .fighter-portrait .fighter-avatar-image,
     .overlay.intro-details .fighter-portrait .fighter-avatar {
       width: 90%;
@@ -2658,6 +2686,7 @@
       playerCharacterId: "dragon",
       computerCharacterId: "moray"
     };
+    const randomCharacterChoiceId = "__random__";
     let gridSize = 10;
     let radius = gridSize - 1;
     let foodCount = 4;
@@ -2670,6 +2699,8 @@
     let initialStock = { protein: 0, fat: 0, fiber: 0, carb: 0 };
     let playerCharacterId = "dragon";
     let computerCharacterId = "moray";
+    let playerCharacterChoice = "dragon";
+    let computerCharacterChoice = "moray";
     function applyBalanceConfig(config) {
       if (!config || typeof config !== "object") return;
       minGridSize = config.limits?.gridSize?.min ?? minGridSize;
@@ -2726,6 +2757,8 @@
       initialStock = { ...defaultSettings.initialStock };
       playerCharacterId = defaultSettings.playerCharacterId;
       computerCharacterId = defaultSettings.computerCharacterId;
+      playerCharacterChoice = playerCharacterId;
+      computerCharacterChoice = computerCharacterId;
       gridSizeInput.min = minGridSize;
       gridSizeInput.max = maxGridSize;
       gridSizeInput.value = defaultSettings.gridSize;
@@ -2858,6 +2891,7 @@
     let paused = false;
     let computerBattleMode = false;
     let computerBattleSpeed = normalizeAutoBattleSpeed(localStorage.getItem("hexSnakeAutoBattleSpeed"));
+    let relayModePreference = localStorage.getItem("hexSnakeRelayMode") === "1";
     let relayMode = false;
     let relayPlayerWins = 0;
     let relayComputerWins = 0;
@@ -2941,6 +2975,9 @@
       characterById = new Map(characters.map(character => [character.id, character]));
       playerCharacterId = characterById.has(playerCharacterId) ? playerCharacterId : characters[0].id;
       computerCharacterId = characterById.has(computerCharacterId) ? computerCharacterId : characters[Math.min(1, characters.length - 1)].id;
+      playerCharacterChoice = playerCharacterId;
+      computerCharacterChoice = computerCharacterId;
+      loadSavedCharacterChoices();
     }
 
     function showCharacterDatabaseError(error) {
@@ -2957,6 +2994,34 @@
       return characterById.get(owner === "player" ? playerCharacterId : computerCharacterId) || characters[0];
     }
 
+    function characterChoiceFor(owner) {
+      return owner === "player" ? playerCharacterChoice : computerCharacterChoice;
+    }
+
+    function isRandomCharacterChoice(owner) {
+      return characterChoiceFor(owner) === randomCharacterChoiceId;
+    }
+
+    function selectedCharacterFor(owner) {
+      return isRandomCharacterChoice(owner) ? null : characterFor(owner);
+    }
+
+    function randomCharacter() {
+      return characters[Math.floor(Math.random() * characters.length)] || characters[0];
+    }
+
+    function randomPortraitMarkup(owner) {
+      return `
+        <div class="fighter-portrait is-random" data-owner="${owner}" data-owner-mark="${ownerMeta(owner).mark}" style="${characterStyle({
+          color: ownerMeta(owner).color,
+          line: ownerMeta(owner).line,
+          accent: "#fbbf24"
+        }, owner)}">
+          <span class="random-portrait-mark" aria-hidden="true">?</span>
+        </div>
+      `;
+    }
+
     function ownerMeta(owner) {
       return owner === "computer"
         ? { mark: "P2", label: "P2", color: colors.computerHead, line: colors.computerHeadLine }
@@ -2965,12 +3030,14 @@
 
     function buildCharacterOptions() {
       [playerCharacterInput, computerCharacterInput].forEach(select => {
-        select.innerHTML = characters.map(character => (
+        select.innerHTML = [
+          `<option value="${randomCharacterChoiceId}">隨機選擇 / 開局抽選</option>`,
+          ...characters.map(character => (
           `<option value="${character.id}">${character.name} / ${character.foodLabel}</option>`
-        )).join("");
+          ))
+        ].join("");
       });
-      playerCharacterInput.value = playerCharacterId;
-      computerCharacterInput.value = computerCharacterId;
+      syncCharacterInputs();
     }
 
     function fighterSvg(character, portrait = false) {
@@ -3273,7 +3340,7 @@
       introDetailsOpen = showDetails;
       if (showDetails) setIntroDetailsChrome();
       else setIntroLobbyChrome();
-      const selectedCharacter = characterFor(selectedPortraitOwner);
+      const selectedCharacter = selectedCharacterFor(selectedPortraitOwner);
       winnerPortrait.hidden = false;
       characterStage.hidden = true;
       characterStage.innerHTML = "";
@@ -3281,12 +3348,16 @@
         winnerPortrait.innerHTML = `
           <div class="intro-avatar-gate">
             ${["player", "computer"].map(owner => {
-              const character = characterFor(owner);
+              const character = selectedCharacterFor(owner);
               const label = owner === "player" ? "玩家" : "對手";
               return `
-                <button class="intro-avatar-button" type="button" data-owner="${owner}" data-open-intro="${owner}" style="${characterStyle(character, owner)}" aria-label="開啟${label}角色選擇">
-                  <div class="fighter-portrait" data-owner="${owner}" data-owner-mark="${ownerMeta(owner).mark}">${fighterArt(character, "intro", true, "small")}</div>
-                  <span class="intro-avatar-label">${ownerMeta(owner).label} · ${character.name}</span>
+                <button class="intro-avatar-button" type="button" data-owner="${owner}" data-open-intro="${owner}" style="${characterStyle(character || {
+                  color: ownerMeta(owner).color,
+                  line: ownerMeta(owner).line,
+                  accent: "#fbbf24"
+                }, owner)}" aria-label="開啟${label}角色選擇">
+                  ${character ? `<div class="fighter-portrait" data-owner="${owner}" data-owner-mark="${ownerMeta(owner).mark}">${fighterArt(character, "intro", true, "small")}</div>` : randomPortraitMarkup(owner)}
+                  <span class="intro-avatar-label">${ownerMeta(owner).label} · ${character ? character.name : "隨機選擇"}</span>
                 </button>
               `;
             }).join("")}
@@ -3298,24 +3369,32 @@
         <div class="portrait-select" data-portrait-select>
           <div class="portrait-pair">
           ${["player", "computer"].map(owner => {
-              const character = characterFor(owner);
+              const character = selectedCharacterFor(owner);
               const label = owner === "player" ? "玩家" : "對手";
               return `
-                <button class="portrait-option ${owner === selectedPortraitOwner ? "is-selected" : ""}" type="button" data-owner="${owner}" data-portrait-owner="${owner}" style="${characterStyle(character, owner)}" onclick="selectPortraitOwner('${owner}')">
-                <div class="fighter-portrait" data-owner="${owner}" data-owner-mark="${ownerMeta(owner).mark}" data-full-portrait="${owner}">${fighterArt(character, "intro", true, "small")}</div>
-                <span class="portrait-option-label">${ownerMeta(owner).label} · ${character.name}</span>
+                <button class="portrait-option ${owner === selectedPortraitOwner ? "is-selected" : ""}" type="button" data-owner="${owner}" data-portrait-owner="${owner}" style="${characterStyle(character || {
+                  color: ownerMeta(owner).color,
+                  line: ownerMeta(owner).line,
+                  accent: "#fbbf24"
+                }, owner)}">
+                ${character ? `<div class="fighter-portrait" data-owner="${owner}" data-owner-mark="${ownerMeta(owner).mark}" data-full-portrait="${owner}">${fighterArt(character, "intro", true, "small")}</div>` : randomPortraitMarkup(owner)}
+                <span class="portrait-option-label">${ownerMeta(owner).label} · ${character ? character.name : "隨機選擇"}</span>
               </button>
             `;
           }).join("")}
           </div>
           <div class="portrait-controls">
             <button class="secondary portrait-arrow" type="button" data-portrait-shift="-1" aria-label="上一位" onclick="applySelectedPortraitCharacter(-1)">‹</button>
-            <div class="portrait-copy" style="${characterStyle(selectedCharacter, selectedPortraitOwner)}">
+            <div class="portrait-copy" style="${characterStyle(selectedCharacter || {
+              color: ownerMeta(selectedPortraitOwner).color,
+              line: ownerMeta(selectedPortraitOwner).line,
+              accent: "#fbbf24"
+            }, selectedPortraitOwner)}">
               <small>${selectedPortraitOwner === "player" ? "玩家角色" : "對手角色"}</small>
-              <strong>${selectedCharacter.name}</strong>
-              <span>${selectedCharacter.foodLabel}專精</span>
+              <strong>${selectedCharacter ? selectedCharacter.name : "隨機選擇"}</strong>
+              <span>${selectedCharacter ? `${selectedCharacter.foodLabel}專精` : "開始遊戲時抽選角色"}</span>
               <div class="portrait-story">
-                ${characterStoryMarkup(selectedCharacter)}
+                ${selectedCharacter ? characterStoryMarkup(selectedCharacter) : ""}
               </div>
             </div>
             <button class="secondary portrait-arrow" type="button" data-portrait-shift="1" aria-label="下一位" onclick="applySelectedPortraitCharacter(1)">›</button>
@@ -3329,20 +3408,28 @@
       renderIntroPortraits(true);
     }
 
-    function applySelectedPortraitCharacter(delta) {
-      const currentId = selectedPortraitOwner === "player" ? playerCharacterId : computerCharacterId;
-      const currentIndex = Math.max(0, characters.findIndex(character => character.id === currentId));
-      const nextCharacter = characters[(currentIndex + delta + characters.length) % characters.length];
+    function setSelectedPortraitCharacter(characterId) {
+      if (characterId !== randomCharacterChoiceId && !characterById.has(characterId)) return;
       if (selectedPortraitOwner === "player") {
-        playerCharacterId = nextCharacter.id;
-        playerCharacterInput.value = nextCharacter.id;
+        playerCharacterChoice = characterId;
+        if (characterId !== randomCharacterChoiceId) playerCharacterId = characterId;
       } else {
-        computerCharacterId = nextCharacter.id;
-        computerCharacterInput.value = nextCharacter.id;
+        computerCharacterChoice = characterId;
+        if (characterId !== randomCharacterChoiceId) computerCharacterId = characterId;
       }
-      preloadPortraitsFor(selectedPortraitOwner);
+      syncCharacterInputs();
+      saveCharacterChoices();
+      if (characterId !== randomCharacterChoiceId) preloadPortraitsFor(selectedPortraitOwner);
       renderIntroPortraits(true);
       resize();
+    }
+
+    function applySelectedPortraitCharacter(delta) {
+      const currentId = characterChoiceFor(selectedPortraitOwner);
+      const choices = [randomCharacterChoiceId, ...characters.map(character => character.id)];
+      const currentIndex = Math.max(0, choices.indexOf(currentId));
+      const nextChoice = choices[(currentIndex + delta + choices.length) % choices.length];
+      setSelectedPortraitCharacter(nextChoice);
     }
 
     function renderPortraitLightbox() {
@@ -3631,6 +3718,44 @@
 
     function saveKeybinds() {
       localStorage.setItem("hexSnakeKeybinds", JSON.stringify(keybinds));
+    }
+
+    function loadSavedCharacterChoices() {
+      const savedPlayer = localStorage.getItem("hexSnakePlayerCharacterId");
+      const savedComputer = localStorage.getItem("hexSnakeComputerCharacterId");
+      if (savedPlayer === randomCharacterChoiceId || characterById.has(savedPlayer)) playerCharacterChoice = savedPlayer;
+      if (savedComputer === randomCharacterChoiceId || characterById.has(savedComputer)) computerCharacterChoice = savedComputer;
+      playerCharacterId = characterById.has(playerCharacterChoice) ? playerCharacterChoice : characters[0].id;
+      computerCharacterId = characterById.has(computerCharacterChoice) ? computerCharacterChoice : characters[Math.min(1, characters.length - 1)].id;
+    }
+
+    function saveCharacterChoices() {
+      localStorage.setItem("hexSnakePlayerCharacterId", playerCharacterChoice);
+      localStorage.setItem("hexSnakeComputerCharacterId", computerCharacterChoice);
+    }
+
+    function syncCharacterInputs() {
+      playerCharacterInput.value = playerCharacterChoice;
+      computerCharacterInput.value = computerCharacterChoice;
+    }
+
+    function resolveCharacterChoice(owner, choice) {
+      const fallback = owner === "player" ? characters[0] : characters[Math.min(1, characters.length - 1)];
+      if (choice === randomCharacterChoiceId) return randomCharacter().id;
+      return characterById.has(choice) ? choice : fallback.id;
+    }
+
+    function resolveCharacterChoicesForStart() {
+      playerCharacterChoice = playerCharacterInput.value === randomCharacterChoiceId || characterById.has(playerCharacterInput.value)
+        ? playerCharacterInput.value
+        : defaultSettings.playerCharacterId;
+      computerCharacterChoice = computerCharacterInput.value === randomCharacterChoiceId || characterById.has(computerCharacterInput.value)
+        ? computerCharacterInput.value
+        : defaultSettings.computerCharacterId;
+      playerCharacterId = resolveCharacterChoice("player", playerCharacterChoice);
+      computerCharacterId = resolveCharacterChoice("computer", computerCharacterChoice);
+      syncCharacterInputs();
+      saveCharacterChoices();
     }
 
     function applyKeybinds() {
@@ -4012,8 +4137,8 @@
       if (gameOver && !canRestartAfterGameOver()) return false;
       clearRelayRestartTimer();
       computerBattleMode = Boolean(options.computerBattle);
-      if (computerBattleMode && options.resetRelayMode) setRelayMode(false, true);
-      if (!computerBattleMode) setRelayMode(false);
+      if (computerBattleMode) setRelayMode(relayModePreference, Boolean(options.resetRelayScore), false);
+      if (!computerBattleMode) setRelayMode(false, false, false);
       if (computerBattleMode) setComputerBattleSpeed(localStorage.getItem("hexSnakeAutoBattleSpeed"), false);
       setFoodCount(foodCountInput.value);
       setComputerDifficulty(computerDifficultyInput.value);
@@ -4023,8 +4148,7 @@
       setInitialEnergy(initialEnergyInput.value);
       setInitialBombs(initialBombsInput.value);
       initialStockInputs.forEach(input => setInitialStock(input.dataset.initialStock, input.value));
-      playerCharacterId = characterById.has(playerCharacterInput.value) ? playerCharacterInput.value : "dragon";
-      computerCharacterId = characterById.has(computerCharacterInput.value) ? computerCharacterInput.value : "moray";
+      resolveCharacterChoicesForStart();
       resetGame();
       running = true;
       setSettingsLocked(true);
@@ -4049,10 +4173,9 @@
     function returnToStartScreen() {
       clearRelayRestartTimer();
       computerBattleMode = false;
-      setRelayMode(false);
+      setRelayMode(false, false, false);
       updateAutoBattleControls();
       resetGame();
-      selectedPortraitOwner = "player";
       overlayTitle.textContent = "準備開局";
       overlayText.textContent = "重新選擇角色後按開始。";
       startButton.textContent = "開始";
@@ -4192,9 +4315,12 @@
       relayDraws = 0;
     }
 
-    function setRelayMode(enabled, resetScore = false) {
-      relayMode = Boolean(enabled) && computerBattleMode;
+    function setRelayMode(enabled, resetScore = false, persist = true) {
+      if (persist) relayModePreference = Boolean(enabled);
+      const requestedRelayMode = persist ? relayModePreference : Boolean(enabled);
+      relayMode = requestedRelayMode && computerBattleMode;
       relayModeInput.checked = relayMode;
+      if (persist) localStorage.setItem("hexSnakeRelayMode", relayModePreference ? "1" : "0");
       if (resetScore) resetRelayScore();
       if (!relayMode) clearRelayRestartTimer();
       updateRelayControls();
@@ -5877,13 +6003,13 @@
     function surrenderGame() {
       if (!running || gameOver) {
         if (computerBattleMode && relayMode) {
-          setRelayMode(false);
+          setRelayMode(false, false, false);
           setStatus("接力賽已停止。");
         }
         return;
       }
       setStatus("你已投降。");
-      setRelayMode(false);
+      setRelayMode(false, false, false);
       endGame(true, false);
     }
 
@@ -5962,7 +6088,17 @@
     winnerPortrait.addEventListener("click", event => {
       const fullPortrait = event.target.closest("[data-full-portrait]");
       if (fullPortrait) {
-        openPortraitLightbox(fullPortrait.dataset.fullPortrait === "computer" ? "computer" : "player");
+        const owner = fullPortrait.dataset.fullPortrait === "computer" ? "computer" : "player";
+        if (owner !== selectedPortraitOwner) {
+          selectPortraitOwner(owner);
+          return;
+        }
+        openPortraitLightbox(owner);
+        return;
+      }
+      const portraitOption = event.target.closest("[data-portrait-owner]");
+      if (portraitOption) {
+        selectPortraitOwner(portraitOption.dataset.portraitOwner === "computer" ? "computer" : "player");
         return;
       }
       const introButton = event.target.closest("[data-open-intro]");
@@ -6104,15 +6240,19 @@
     [playerCharacterInput, computerCharacterInput].forEach(input => {
       input.addEventListener("change", () => {
         if (running) return;
-        playerCharacterId = characterById.has(playerCharacterInput.value) ? playerCharacterInput.value : "dragon";
-        computerCharacterId = characterById.has(computerCharacterInput.value) ? computerCharacterInput.value : "moray";
+        playerCharacterChoice = playerCharacterInput.value === randomCharacterChoiceId || characterById.has(playerCharacterInput.value) ? playerCharacterInput.value : defaultSettings.playerCharacterId;
+        computerCharacterChoice = computerCharacterInput.value === randomCharacterChoiceId || characterById.has(computerCharacterInput.value) ? computerCharacterInput.value : defaultSettings.computerCharacterId;
+        if (characterById.has(playerCharacterChoice)) playerCharacterId = playerCharacterChoice;
+        if (characterById.has(computerCharacterChoice)) computerCharacterId = computerCharacterChoice;
+        syncCharacterInputs();
+        saveCharacterChoices();
         preloadPortraitsFor("player");
         preloadPortraitsFor("computer");
         buildCharacterStage();
         resetGame();
         resize();
         overlayTitle.textContent = "角色已更新";
-        overlayText.textContent = `玩家選擇 ${characterFor("player").name}，對手選擇 ${characterFor("computer").name}。`;
+        overlayText.textContent = `玩家選擇 ${selectedCharacterFor("player")?.name || "隨機選擇"}，對手選擇 ${selectedCharacterFor("computer")?.name || "隨機選擇"}。`;
         startButton.textContent = "開始";
         renderIntroPortraits(true);
         overlay.classList.add("show");
@@ -6155,8 +6295,10 @@
       setComputerDifficulty(defaultSettings.computerDifficulty);
       playerCharacterId = defaultSettings.playerCharacterId;
       computerCharacterId = defaultSettings.computerCharacterId;
-      playerCharacterInput.value = playerCharacterId;
-      computerCharacterInput.value = computerCharacterId;
+      playerCharacterChoice = playerCharacterId;
+      computerCharacterChoice = computerCharacterId;
+      syncCharacterInputs();
+      saveCharacterChoices();
       keybinds = structuredClone(defaultKeybinds);
       saveKeybinds();
       applyKeybinds();
@@ -6242,7 +6384,7 @@
       overlayTitle.textContent = "電腦對弈";
       overlayText.textContent = "雙方都交給電腦操作，右下角可調整對弈速度或暫停。";
       setOverlayChromeVisible(true);
-      startGame({ computerBattle: true, resetRelayMode: true });
+      startGame({ computerBattle: true, resetRelayScore: true });
     });
 
     autoBattleSpeedSelect.addEventListener("change", event => {
