@@ -197,21 +197,21 @@
     }
 
     .auto-battle-panel {
-      position: absolute;
+      position: fixed;
       right: max(10px, env(safe-area-inset-right));
-      bottom: max(10px, env(safe-area-inset-bottom));
-      z-index: 18;
+      top: max(10px, env(safe-area-inset-top));
+      z-index: 320;
       display: flex;
       align-items: center;
       justify-content: flex-end;
       gap: 6px;
       max-width: min(260px, calc(100% - 20px));
       padding: 8px;
-      border: 1px solid rgba(255, 255, 255, 0.14);
+      border: 1px solid rgba(255, 255, 255, 0.18);
       border-radius: 8px;
-      background: rgba(21, 27, 37, 0.82);
+      background: rgba(21, 27, 37, 0.58);
       box-shadow: 0 14px 42px rgba(0, 0, 0, 0.28);
-      backdrop-filter: blur(10px);
+      backdrop-filter: blur(12px);
       pointer-events: auto;
     }
 
@@ -226,12 +226,12 @@
       white-space: nowrap;
     }
 
-    .auto-battle-panel select,
+    .speed-scrubber,
     .auto-battle-panel button {
       min-height: 30px;
       padding: 6px 9px;
       border: 1px solid rgba(255, 255, 255, 0.12);
-      background: rgba(17, 23, 32, 0.92);
+      background: rgba(17, 23, 32, 0.72);
       color: var(--ink);
       border-radius: 8px;
       font: inherit;
@@ -240,24 +240,59 @@
       line-height: 1;
     }
 
-    .auto-battle-panel select {
-      width: 92px;
+    .speed-scrubber {
+      width: 62px;
+      min-width: 62px;
+      padding: 3px 7px;
+      cursor: ns-resize;
+      display: grid;
+      grid-template-rows: 8px 1fr 8px;
+      place-items: center;
+      gap: 1px;
+      touch-action: none;
+      user-select: none;
+    }
+
+    .speed-scrubber::before,
+    .speed-scrubber::after {
+      display: block;
+      color: rgba(243, 245, 247, 0.62);
+      font-size: 0.55rem;
+      line-height: 1;
+    }
+
+    .speed-scrubber::before {
+      content: "▲";
+    }
+
+    .speed-scrubber::after {
+      content: "▼";
+    }
+
+    .speed-scrubber.is-dragging {
+      border-color: rgba(245, 158, 11, 0.64);
+      background: rgba(245, 158, 11, 0.24);
+    }
+
+    .speed-scrubber.is-dragging::before,
+    .speed-scrubber.is-dragging::after {
+      color: rgba(255, 237, 213, 0.94);
     }
 
     .relay-panel {
-      position: absolute;
+      position: fixed;
       left: max(10px, env(safe-area-inset-left));
-      bottom: max(10px, env(safe-area-inset-bottom));
-      z-index: 18;
+      top: max(10px, env(safe-area-inset-top));
+      z-index: 320;
       display: grid;
       gap: 4px;
       max-width: min(260px, calc(100% - 20px));
       padding: 8px 10px;
-      border: 1px solid rgba(255, 255, 255, 0.14);
+      border: 1px solid rgba(255, 255, 255, 0.18);
       border-radius: 8px;
-      background: rgba(21, 27, 37, 0.82);
+      background: rgba(21, 27, 37, 0.58);
       box-shadow: 0 14px 42px rgba(0, 0, 0, 0.28);
-      backdrop-filter: blur(10px);
+      backdrop-filter: blur(12px);
       pointer-events: auto;
     }
 
@@ -289,8 +324,20 @@
     }
 
     @media (max-width: 620px) {
+      .auto-battle-panel,
       .relay-panel {
-        bottom: calc(max(10px, env(safe-area-inset-bottom)) + 50px);
+        top: auto;
+        bottom: max(10px, env(safe-area-inset-bottom));
+        max-width: min(154px, calc(50vw - 14px));
+      }
+
+      .relay-panel {
+        min-height: 46px;
+      }
+
+      .relay-score {
+        white-space: normal;
+        line-height: 1.15;
       }
     }
 
@@ -2355,15 +2402,7 @@
         </div>
         <div class="auto-battle-panel" id="autoBattlePanel" hidden aria-label="電腦對弈速度">
           <label for="autoBattleSpeedSelect">速度</label>
-          <select id="autoBattleSpeedSelect">
-            <option value="4">x4</option>
-            <option value="2">x2</option>
-            <option value="1.5">x1.5</option>
-            <option value="1">x1</option>
-            <option value="0.75">x0.75</option>
-            <option value="0.5">x0.5</option>
-            <option value="0.25">x0.25</option>
-          </select>
+          <button id="autoBattleSpeedSelect" class="speed-scrubber" type="button" role="slider" aria-orientation="vertical" aria-valuemin="0.25" aria-valuemax="4" aria-valuenow="1" aria-label="按住上下滑動調整電腦對弈速度">x1</button>
           <button type="button" data-auto-pause>暫停</button>
         </div>
         <div class="relay-panel" id="relayPanel" hidden aria-label="電腦接力賽">
@@ -4310,9 +4349,16 @@
       return autoBattleSpeeds.includes(parsed) ? parsed : 1;
     }
 
+    function autoBattleSpeedLabel(value) {
+      return `x${Number(value).toString()}`;
+    }
+
     function setComputerBattleSpeed(value, persist = true) {
       computerBattleSpeed = normalizeAutoBattleSpeed(value);
-      autoBattleSpeedSelect.value = String(computerBattleSpeed);
+      autoBattleSpeedSelect.textContent = autoBattleSpeedLabel(computerBattleSpeed);
+      autoBattleSpeedSelect.dataset.value = String(computerBattleSpeed);
+      autoBattleSpeedSelect.setAttribute("aria-valuenow", String(computerBattleSpeed));
+      autoBattleSpeedSelect.setAttribute("aria-valuetext", autoBattleSpeedLabel(computerBattleSpeed));
       if (persist) {
         localStorage.setItem("hexSnakeAutoBattleSpeed", String(computerBattleSpeed));
       }
@@ -4357,7 +4403,10 @@
     function updateAutoBattleControls() {
       const visible = computerBattleMode && running && !gameOver;
       autoBattlePanel.hidden = !visible;
-      autoBattleSpeedSelect.value = String(computerBattleSpeed);
+      autoBattleSpeedSelect.textContent = autoBattleSpeedLabel(computerBattleSpeed);
+      autoBattleSpeedSelect.dataset.value = String(computerBattleSpeed);
+      autoBattleSpeedSelect.setAttribute("aria-valuenow", String(computerBattleSpeed));
+      autoBattleSpeedSelect.setAttribute("aria-valuetext", autoBattleSpeedLabel(computerBattleSpeed));
       autoPauseButton.textContent = paused ? "繼續" : "暫停";
       updateRelayControls();
     }
@@ -6424,13 +6473,50 @@
       startGame({ computerBattle: true, resetRelayScore: true });
     });
 
-    autoBattleSpeedSelect.addEventListener("change", event => {
-      event.stopPropagation();
-      if (!computerBattleMode) return;
-      setComputerBattleSpeed(autoBattleSpeedSelect.value);
+    let autoBattleSpeedDrag = null;
+
+    function applyAutoBattleSpeedIndex(index) {
+      const nextIndex = Math.max(0, Math.min(autoBattleSpeeds.length - 1, index));
+      if (autoBattleSpeeds[nextIndex] === computerBattleSpeed) return;
+      setComputerBattleSpeed(autoBattleSpeeds[nextIndex]);
       resetAutoBattleStepTimers();
       updateAutoBattleControls();
+    }
+
+    autoBattleSpeedSelect.addEventListener("pointerdown", event => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (!computerBattleMode) return;
+      autoBattleSpeedDrag = {
+        pointerId: event.pointerId,
+        startY: event.clientY,
+        startIndex: autoBattleSpeeds.indexOf(computerBattleSpeed)
+      };
+      autoBattleSpeedSelect.classList.add("is-dragging");
+      autoBattleSpeedSelect.setPointerCapture(event.pointerId);
     });
+
+    autoBattleSpeedSelect.addEventListener("pointermove", event => {
+      if (!autoBattleSpeedDrag || event.pointerId !== autoBattleSpeedDrag.pointerId) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const stepDelta = Math.round((event.clientY - autoBattleSpeedDrag.startY) / 28);
+      applyAutoBattleSpeedIndex(autoBattleSpeedDrag.startIndex + stepDelta);
+    });
+
+    function endAutoBattleSpeedDrag(event) {
+      if (!autoBattleSpeedDrag || event.pointerId !== autoBattleSpeedDrag.pointerId) return;
+      event.preventDefault();
+      event.stopPropagation();
+      autoBattleSpeedSelect.classList.remove("is-dragging");
+      if (autoBattleSpeedSelect.hasPointerCapture(event.pointerId)) {
+        autoBattleSpeedSelect.releasePointerCapture(event.pointerId);
+      }
+      autoBattleSpeedDrag = null;
+    }
+
+    autoBattleSpeedSelect.addEventListener("pointerup", endAutoBattleSpeedDrag);
+    autoBattleSpeedSelect.addEventListener("pointercancel", endAutoBattleSpeedDrag);
 
     autoBattleSpeedSelect.addEventListener("wheel", event => {
       if (!computerBattleMode) return;
@@ -6438,12 +6524,16 @@
       event.stopPropagation();
       const currentIndex = autoBattleSpeeds.indexOf(computerBattleSpeed);
       const direction = event.deltaY > 0 ? 1 : -1;
-      const nextIndex = Math.max(0, Math.min(autoBattleSpeeds.length - 1, currentIndex + direction));
-      if (nextIndex === currentIndex) return;
-      setComputerBattleSpeed(autoBattleSpeeds[nextIndex]);
-      resetAutoBattleStepTimers();
-      updateAutoBattleControls();
+      applyAutoBattleSpeedIndex(currentIndex + direction);
     }, { passive: false });
+
+    autoBattleSpeedSelect.addEventListener("keydown", event => {
+      if (!computerBattleMode || !["ArrowUp", "ArrowDown"].includes(event.key)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const currentIndex = autoBattleSpeeds.indexOf(computerBattleSpeed);
+      applyAutoBattleSpeedIndex(currentIndex + (event.key === "ArrowDown" ? 1 : -1));
+    });
 
     relayModeInput.addEventListener("change", event => {
       event.stopPropagation();
