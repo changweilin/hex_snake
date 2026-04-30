@@ -5654,13 +5654,42 @@
     }
 
     function elementColorsFor(character) {
-      if (character.id === "dragon") return { primary: "#e0f2fe", secondary: "#fbbf24", glow: "#bae6fd" };
-      if (character.id === "sandworm") return { primary: "#facc15", secondary: "#92400e", glow: "#fef08a" };
-      if (character.id === "quetzal") return { primary: "#22c55e", secondary: "#67e8f9", glow: "#bbf7d0" };
-      if (character.id === "moray") return { primary: "#38bdf8", secondary: "#f8fafc", glow: "#93c5fd" };
-      if (character.id === "lobster") return { primary: "#ef4444", secondary: "#f97316", glow: "#fecaca" };
-      if (character.id === "gu_king") return { primary: "#a3e635", secondary: "#050505", glow: "#d9f99d" };
-      return { primary: character.accent || character.color, secondary: character.line, glow: character.line };
+      if (character.id === "dragon") return { primary: "#e0f2fe", secondary: "#fbbf24", glow: "#bae6fd", hot: "#ffffff", deep: "#38bdf8", palette: ["#ffffff", "#e0f2fe", "#bae6fd", "#38bdf8", "#fbbf24"] };
+      if (character.id === "sandworm") return { primary: "#facc15", secondary: "#92400e", glow: "#fef08a", hot: "#fde68a", deep: "#78350f", palette: ["#fef08a", "#facc15", "#f59e0b", "#92400e", "#78350f"] };
+      if (character.id === "quetzal") return { primary: "#22c55e", secondary: "#67e8f9", glow: "#bbf7d0", hot: "#f0fdfa", deep: "#15803d", palette: ["#f0fdfa", "#bbf7d0", "#22c55e", "#67e8f9", "#15803d"] };
+      if (character.id === "moray") return { primary: "#38bdf8", secondary: "#f8fafc", glow: "#93c5fd", hot: "#ffffff", deep: "#1d4ed8", palette: ["#ffffff", "#bfdbfe", "#38bdf8", "#3b82f6", "#1d4ed8"] };
+      if (character.id === "lobster") return { primary: "#ef4444", secondary: "#f97316", glow: "#fecaca", hot: "#fff7ed", deep: "#7f1d1d", palette: ["#fff7ed", "#fecaca", "#f97316", "#ef4444", "#7f1d1d"] };
+      if (character.id === "gu_king") return { primary: "#a3e635", secondary: "#050505", glow: "#d9f99d", hot: "#f7fee7", deep: "#365314", palette: ["#f7fee7", "#d9f99d", "#a3e635", "#4d7c0f", "#111827"] };
+      return { primary: character.accent || character.color, secondary: character.line, glow: character.line, hot: "#ffffff", deep: character.color, palette: ["#ffffff", character.accent || character.color, character.line, character.color] };
+    }
+
+    function paletteColor(character, index) {
+      const element = elementColorsFor(character);
+      return element.palette[index % element.palette.length];
+    }
+
+    function drawElementAura(x, y, radiusPx, progress, character, alpha = 1) {
+      const element = elementColorsFor(character);
+      const pulse = 0.84 + waveValue(progress, 0.17) * 0.28;
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      const gradient = ctx.createRadialGradient(x, y, radiusPx * 0.05, x, y, radiusPx * pulse);
+      gradient.addColorStop(0, hexToRgba(element.hot, 0.2 * alpha));
+      gradient.addColorStop(0.34, hexToRgba(element.primary, 0.16 * alpha));
+      gradient.addColorStop(0.68, hexToRgba(element.deep, 0.08 * alpha));
+      gradient.addColorStop(1, hexToRgba(element.glow, 0));
+      ctx.beginPath();
+      ctx.arc(x, y, radiusPx * pulse, 0, Math.PI * 2);
+      ctx.fillStyle = gradient;
+      ctx.fill();
+      for (let ring = 0; ring < 3; ring += 1) {
+        ctx.beginPath();
+        ctx.arc(x, y, radiusPx * (0.38 + ring * 0.19 + progress * 0.12), 0, Math.PI * 2);
+        ctx.strokeStyle = hexToRgba(element.palette[ring], alpha * (0.34 - ring * 0.07));
+        ctx.lineWidth = Math.max(1.2, cellSize * (0.04 + ring * 0.012));
+        ctx.stroke();
+      }
+      ctx.restore();
     }
 
     function drawFlameTongue(x, y, size, angle, color, line, alpha = 1) {
@@ -5672,10 +5701,10 @@
       ctx.bezierCurveTo(size * 0.46, -size * 0.42, size * 0.28, size * 0.32, 0, size * 0.86);
       ctx.bezierCurveTo(-size * 0.42, size * 0.28, -size * 0.34, -size * 0.36, 0, -size);
       ctx.closePath();
-      ctx.fillStyle = hexToRgba(color, 0.34 * alpha);
+      ctx.fillStyle = hexToRgba(color, 0.58 * alpha);
       ctx.fill();
-      ctx.strokeStyle = hexToRgba(line, 0.58 * alpha);
-      ctx.lineWidth = Math.max(1, cellSize * 0.03);
+      ctx.strokeStyle = hexToRgba(line, 0.86 * alpha);
+      ctx.lineWidth = Math.max(1.2, cellSize * 0.04);
       ctx.stroke();
       ctx.restore();
     }
@@ -5684,8 +5713,8 @@
       ctx.save();
       ctx.translate(x, y);
       ctx.rotate(angle);
-      ctx.strokeStyle = hexToRgba(color, 0.52 * alpha);
-      ctx.lineWidth = Math.max(1, cellSize * 0.032);
+      ctx.strokeStyle = hexToRgba(color, 0.82 * alpha);
+      ctx.lineWidth = Math.max(1.2, cellSize * 0.044);
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
       ctx.beginPath();
@@ -5709,10 +5738,10 @@
       ctx.lineTo(0, size);
       ctx.lineTo(-size * 0.3, 0);
       ctx.closePath();
-      ctx.fillStyle = hexToRgba(color, 0.28 * alpha);
+      ctx.fillStyle = hexToRgba(color, 0.46 * alpha);
       ctx.fill();
-      ctx.strokeStyle = hexToRgba(color, 0.62 * alpha);
-      ctx.lineWidth = Math.max(1, cellSize * 0.028);
+      ctx.strokeStyle = hexToRgba(color, 0.94 * alpha);
+      ctx.lineWidth = Math.max(1.2, cellSize * 0.038);
       ctx.stroke();
       ctx.restore();
     }
@@ -5722,30 +5751,32 @@
       ctx.save();
       ctx.globalCompositeOperation = "lighter";
       for (let i = 0; i < density; i += 1) {
-        const orbit = radiusPx * (0.34 + (i % 3) * 0.16);
+        const orbit = radiusPx * (0.28 + (i % 4) * 0.16);
         const angle = progress * Math.PI * (character.id === "moray" ? 4.8 : 1.6) + i * Math.PI * 2 / density;
         const px = x + Math.cos(angle) * orbit;
         const py = y + Math.sin(angle) * orbit * 0.78;
-        const motifAlpha = alpha * (0.54 + waveValue(progress, i * 0.11) * 0.28);
+        const motifAlpha = alpha * (0.74 + waveValue(progress, i * 0.11) * 0.38);
+        const color = paletteColor(character, i);
+        const nextColor = paletteColor(character, i + 1);
         if (character.id === "dragon") {
-          drawElementShard(px, py, cellSize * 0.18, angle, i % 2 ? element.primary : element.secondary, motifAlpha);
+          drawElementShard(px, py, cellSize * 0.24, angle, color, motifAlpha);
         } else if (character.id === "sandworm") {
-          drawDustCloud(px, py, cellSize * 0.34, progress + i * 0.07, element.primary, element.secondary);
+          drawDustCloud(px, py, cellSize * 0.48, progress + i * 0.07, color, nextColor);
         } else if (character.id === "quetzal") {
-          drawFeatherShape(px, py, cellSize * 0.22, angle + Math.PI / 2, element.primary, element.secondary, motifAlpha);
+          drawFeatherShape(px, py, cellSize * 0.3, angle + Math.PI / 2, color, nextColor, motifAlpha);
         } else if (character.id === "moray") {
           drawLightningBetween(
-            { x: px - Math.cos(angle) * cellSize * 0.22, y: py - Math.sin(angle) * cellSize * 0.22 },
-            { x: px + Math.cos(angle) * cellSize * 0.22, y: py + Math.sin(angle) * cellSize * 0.22 },
+            { x: px - Math.cos(angle) * cellSize * 0.34, y: py - Math.sin(angle) * cellSize * 0.34 },
+            { x: px + Math.cos(angle) * cellSize * 0.34, y: py + Math.sin(angle) * cellSize * 0.34 },
             progress + i * 0.09,
-            i % 2 ? element.primary : element.secondary,
-            0.55,
-            3
+            color,
+            0.88,
+            4
           );
         } else if (character.id === "lobster") {
-          drawFlameTongue(px, py, cellSize * 0.24, angle, i % 2 ? element.primary : element.secondary, element.glow, motifAlpha);
+          drawFlameTongue(px, py, cellSize * 0.34, angle, color, nextColor, motifAlpha);
         } else if (character.id === "gu_king") {
-          drawElementSigil(px, py, cellSize * 0.22, angle, i % 2 ? element.primary : element.glow, motifAlpha);
+          drawElementSigil(px, py, cellSize * 0.3, angle, color, motifAlpha);
         }
       }
       ctx.restore();
@@ -5760,7 +5791,7 @@
       const ny = dx / length;
       ctx.save();
       ctx.globalCompositeOperation = "lighter";
-      for (let i = 0; i < 4; i += 1) {
+      for (let i = 0; i < 7; i += 1) {
         const t = Math.max(0, progress - i * 0.08);
         const px = start.x + dx * t;
         const py = start.y + dy * t;
@@ -5773,8 +5804,8 @@
           px + nx * spread,
           py + ny * spread
         );
-        ctx.strokeStyle = hexToRgba(i % 2 ? element.primary : element.glow, 0.2 * (1 - i * 0.16));
-        ctx.lineWidth = Math.max(1, cellSize * 0.04);
+        ctx.strokeStyle = hexToRgba(element.palette[i % element.palette.length], 0.42 * (1 - i * 0.1));
+        ctx.lineWidth = Math.max(1.2, cellSize * (0.055 - i * 0.003));
         ctx.lineCap = "round";
         ctx.stroke();
       }
@@ -5786,10 +5817,15 @@
       ctx.save();
       ctx.beginPath();
       ctx.arc(x, y, radiusPx * (0.55 + progress * 0.45), 0, Math.PI * 2);
-      ctx.fillStyle = hexToRgba(fill, 0.16 * alpha);
+      ctx.fillStyle = hexToRgba(fill, 0.24 * alpha);
       ctx.fill();
-      ctx.strokeStyle = hexToRgba(stroke, 0.82 * alpha);
-      ctx.lineWidth = Math.max(1.5, cellSize * 0.08 * lineScale);
+      ctx.strokeStyle = hexToRgba(stroke, 0.96 * alpha);
+      ctx.lineWidth = Math.max(2, cellSize * 0.105 * lineScale);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(x, y, radiusPx * (0.28 + progress * 0.28), 0, Math.PI * 2);
+      ctx.strokeStyle = hexToRgba("#ffffff", 0.4 * alpha);
+      ctx.lineWidth = Math.max(1, cellSize * 0.04 * lineScale);
       ctx.stroke();
       ctx.restore();
     }
@@ -5798,11 +5834,11 @@
       ctx.save();
       ctx.translate(x, y);
       ctx.rotate(progress * Math.PI * 2);
-      for (let ring = 0; ring < 2; ring += 1) {
-        const size = radiusPx * (0.34 + progress * 0.36 + ring * 0.18);
+      for (let ring = 0; ring < 3; ring += 1) {
+        const size = radiusPx * (0.28 + progress * 0.42 + ring * 0.16);
         drawLocalHex(size);
-        ctx.strokeStyle = hexToRgba(ring ? line : color, (1 - progress) * (ring ? 0.44 : 0.68));
-        ctx.lineWidth = Math.max(1.2, cellSize * (ring ? 0.035 : 0.055));
+        ctx.strokeStyle = hexToRgba(ring ? line : color, (1 - progress) * (ring ? 0.58 : 0.88));
+        ctx.lineWidth = Math.max(1.4, cellSize * (ring ? 0.045 : 0.072));
         ctx.stroke();
       }
       ctx.restore();
@@ -5824,8 +5860,8 @@
         if (i === 0) ctx.moveTo(px, py);
         else ctx.lineTo(px, py);
       }
-      ctx.strokeStyle = hexToRgba(color, 0.86);
-      ctx.lineWidth = Math.max(1.5, cellSize * 0.055 * widthScale);
+      ctx.strokeStyle = hexToRgba(color, 0.96);
+      ctx.lineWidth = Math.max(1.8, cellSize * 0.075 * widthScale);
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
       ctx.stroke();
@@ -5841,10 +5877,10 @@
       ctx.quadraticCurveTo(size * 0.58, -size * 0.15, size * 0.12, size);
       ctx.quadraticCurveTo(-size * 0.42, size * 0.12, 0, -size);
       ctx.closePath();
-      ctx.fillStyle = hexToRgba(color, 0.44 * alpha);
+      ctx.fillStyle = hexToRgba(color, 0.62 * alpha);
       ctx.fill();
-      ctx.strokeStyle = hexToRgba(line, 0.82 * alpha);
-      ctx.lineWidth = Math.max(1, cellSize * 0.035);
+      ctx.strokeStyle = hexToRgba(line, 0.96 * alpha);
+      ctx.lineWidth = Math.max(1.2, cellSize * 0.045);
       ctx.stroke();
       ctx.beginPath();
       ctx.moveTo(0, -size * 0.72);
@@ -5866,7 +5902,7 @@
           0,
           Math.PI * 2
         );
-        ctx.fillStyle = hexToRgba(i % 2 ? line : color, 0.3 * (1 - progress));
+        ctx.fillStyle = hexToRgba(i % 2 ? line : color, 0.46 * (1 - progress));
         ctx.fill();
       }
       ctx.restore();
@@ -5879,14 +5915,14 @@
       ctx.rotate(-0.45 + progress * 0.3);
       ctx.beginPath();
       ctx.arc(0, 0, radiusPx * 0.56, -0.82, 0.82);
-      ctx.strokeStyle = hexToRgba(color, 0.72 * (1 - progress * 0.45));
-      ctx.lineWidth = Math.max(2, cellSize * 0.12);
+      ctx.strokeStyle = hexToRgba(color, 0.94 * (1 - progress * 0.38));
+      ctx.lineWidth = Math.max(2.5, cellSize * 0.16);
       ctx.lineCap = "round";
       ctx.stroke();
       ctx.beginPath();
       ctx.arc(radiusPx * 0.32, 0, radiusPx * 0.22, -1.2, 1.2);
-      ctx.strokeStyle = hexToRgba(line, 0.72 * (1 - progress * 0.35));
-      ctx.lineWidth = Math.max(1.5, cellSize * 0.065);
+      ctx.strokeStyle = hexToRgba(line, 0.92 * (1 - progress * 0.25));
+      ctx.lineWidth = Math.max(1.8, cellSize * 0.085);
       ctx.stroke();
       ctx.restore();
     }
@@ -5900,7 +5936,7 @@
         const py = y + Math.sin(angle * 1.13) * distance;
         ctx.beginPath();
         ctx.ellipse(px, py, cellSize * 0.07, cellSize * 0.035, angle, 0, Math.PI * 2);
-        ctx.fillStyle = hexToRgba(i % 2 ? color : line, 0.62 * (1 - progress * 0.35));
+        ctx.fillStyle = hexToRgba(i % 2 ? color : line, 0.86 * (1 - progress * 0.24));
         ctx.fill();
       }
       ctx.restore();
@@ -5918,7 +5954,7 @@
         ctx.lineTo(Math.cos(angle) * outer, Math.sin(angle) * outer);
         ctx.lineTo(Math.cos(angle + 0.08) * inner, Math.sin(angle + 0.08) * inner);
         ctx.closePath();
-        ctx.fillStyle = hexToRgba(i % 2 ? color : line, 0.44 * (1 - progress * 0.2));
+        ctx.fillStyle = hexToRgba(i % 2 ? color : line, 0.64 * (1 - progress * 0.12));
         ctx.fill();
       }
       ctx.restore();
@@ -5927,32 +5963,34 @@
     function drawProjectileCore(x, y, projectile, progress, character) {
       const radiusPx = cellSize * Math.max(0.7, projectile.radius || 1);
       const type = projectile.visualType || attackVisualType(projectile.owner, projectile.profile);
+      const isBig = projectile.profile === "big";
       ctx.save();
-      drawElementMotifs(x, y, radiusPx * 0.86, progress, character, 0.62, projectile.profile === "big" ? 8 : 5);
+      drawElementAura(x, y, radiusPx * (isBig ? 1.05 : 0.82), progress, character, isBig ? 0.72 : 0.5);
+      drawElementMotifs(x, y, radiusPx * (isBig ? 1.08 : 0.92), progress, character, isBig ? 0.95 : 0.82, isBig ? 16 : 10);
       if (type.startsWith("dragon")) {
         ctx.beginPath();
-        ctx.ellipse(x, y, cellSize * 0.34, cellSize * 0.13, progress * Math.PI, 0, Math.PI * 2);
-        ctx.fillStyle = hexToRgba(character.line, 0.68);
+        ctx.ellipse(x, y, cellSize * (isBig ? 0.52 : 0.42), cellSize * (isBig ? 0.2 : 0.16), progress * Math.PI, 0, Math.PI * 2);
+        ctx.fillStyle = hexToRgba(elementColorsFor(character).hot, 0.78);
         ctx.fill();
-        drawLightningBetween({ x: x - cellSize * 0.28, y }, { x: x + cellSize * 0.28, y }, progress, character.accent, 0.7, 4);
+        drawLightningBetween({ x: x - cellSize * 0.42, y }, { x: x + cellSize * 0.42, y }, progress, character.accent, 1.05, 5);
       } else if (type.startsWith("sandworm")) {
-        drawDustCloud(x, y, radiusPx * 0.7, progress, character.color, character.line);
+        drawDustCloud(x, y, radiusPx * 0.95, progress, character.color, character.line);
       } else if (type.startsWith("quetzal")) {
-        for (let i = 0; i < 3; i += 1) {
-          drawFeatherShape(x, y, cellSize * 0.34, progress * Math.PI * 4 + i * Math.PI * 2 / 3, character.accent, character.line, 0.9);
+        for (let i = 0; i < 5; i += 1) {
+          drawFeatherShape(x, y, cellSize * (isBig ? 0.46 : 0.38), progress * Math.PI * 4 + i * Math.PI * 2 / 5, paletteColor(character, i), character.line, 1);
         }
       } else if (type.startsWith("moray")) {
         ctx.beginPath();
-        ctx.arc(x, y, Math.max(4, cellSize * 0.14), 0, Math.PI * 2);
-        ctx.fillStyle = hexToRgba(character.accent, 0.68);
+        ctx.arc(x, y, Math.max(5, cellSize * (isBig ? 0.22 : 0.18)), 0, Math.PI * 2);
+        ctx.fillStyle = hexToRgba(elementColorsFor(character).hot, 0.82);
         ctx.fill();
-        drawPulseRing(x, y, cellSize * 0.42, progress, character.color, character.line, 0.7);
+        drawPulseRing(x, y, cellSize * (isBig ? 0.7 : 0.54), progress, character.color, character.line, 0.95);
       } else if (type.startsWith("lobster")) {
         drawClawArc(x, y, radiusPx, progress, character.color, character.line, 1);
         drawClawArc(x, y, radiusPx, progress, character.accent, character.line, -1);
       } else if (type.startsWith("gu_king")) {
         drawBugSwarm(x, y, radiusPx, progress, character.accent, character.line);
-        drawHexBurst(x, y, radiusPx * 0.72, progress, character.color, character.accent);
+        drawHexBurst(x, y, radiusPx * 0.9, progress, character.color, character.accent);
       } else {
         ctx.beginPath();
         ctx.arc(x, y, Math.max(5, cellSize * 0.16), 0, Math.PI * 2);
@@ -5969,27 +6007,29 @@
         if (projectile.hidden) {
           const progress = Math.min(1, Math.max(0, (now - projectile.createdAt) / (projectile.delay || baseAttackDelayMs)));
           const target = axialToPixel(projectile.target);
+          drawElementAura(target.x, target.y, cellSize * Math.max(1, projectile.radius || 1) * 1.24, progress, blastCharacter, 0.58);
           drawDustCloud(target.x, target.y, cellSize * Math.max(1, projectile.radius || 1) * 1.52, progress, blastCharacter.color, blastCharacter.line);
           drawSandSpike(target.x, target.y, cellSize * Math.max(1, projectile.radius || 1) * 1.52, progress, blastCharacter.accent, blastCharacter.line);
-          drawElementMotifs(target.x, target.y, cellSize * Math.max(1, projectile.radius || 1) * 0.92, progress, blastCharacter, 0.52, 6);
+          drawElementMotifs(target.x, target.y, cellSize * Math.max(1, projectile.radius || 1) * 1.12, progress, blastCharacter, 0.86, 12);
           return;
         }
         if (projectile.kind === "line") {
           const progress = Math.min(1, Math.max(0, (now - projectile.createdAt) / (projectile.delay || baseAttackDelayMs)));
-          const alpha = 0.18 + progress * 0.32;
+          const alpha = 0.3 + progress * 0.48;
           cellsNearCells(projectile.lineCells, projectile.width, projectile.excludedCells).forEach(cell => {
             const { x, y } = axialToPixel(cell);
+            drawElementAura(x, y, cellSize * 0.7, progress + cell.q * 0.02, blastCharacter, 0.22);
             hexPath(x, y, cellSize * 0.88);
             ctx.fillStyle = hexToRgba(blastCharacter.accent || blastCharacter.color, alpha);
             ctx.fill();
             ctx.strokeStyle = hexToRgba(blastCharacter.line, alpha + 0.16);
             ctx.lineWidth = Math.max(1, cellSize * 0.035);
             ctx.stroke();
-            if (cell.q % 2 === 0) drawElementMotifs(x, y, cellSize * 0.42, progress + cell.r * 0.03, blastCharacter, 0.32, 3);
+            if (cell.q % 2 === 0) drawElementMotifs(x, y, cellSize * 0.62, progress + cell.r * 0.03, blastCharacter, 0.62, 6);
           });
           const visibleCells = projectile.lineCells.slice(0, Math.max(0, Math.floor(projectile.lineCells.length * progress)));
           for (let i = 1; i < visibleCells.length; i += 1) {
-            drawLightningBetween(axialToPixel(visibleCells[i - 1]), axialToPixel(visibleCells[i]), progress + i * 0.07, blastCharacter.accent, 0.9, 3);
+            drawLightningBetween(axialToPixel(visibleCells[i - 1]), axialToPixel(visibleCells[i]), progress + i * 0.07, blastCharacter.accent, 1.3, 5);
           }
           return;
         }
@@ -5999,13 +6039,13 @@
         const x = start.x + (end.x - start.x) * progress;
         const y = start.y + (end.y - start.y) * progress;
         const arcHeight = Math.sin(progress * Math.PI) * cellSize * 1.5;
-        drawLightningBetween(start, { x, y: y - arcHeight }, progress, blastCharacter.line, 0.5, 4);
+        drawLightningBetween(start, { x, y: y - arcHeight }, progress, blastCharacter.line, 0.85, 5);
         drawElementWake(start, { x, y: y - arcHeight }, progress, blastCharacter);
         drawProjectileCore(x, y - arcHeight, projectile, progress, blastCharacter);
         ctx.beginPath();
-        ctx.arc(end.x, end.y, cellSize * Math.max(0.36, (projectile.radius || 1) * 0.22), 0, Math.PI * 2);
-        ctx.strokeStyle = hexToRgba(blastCharacter.line, 0.28);
-        ctx.lineWidth = 2;
+        ctx.arc(end.x, end.y, cellSize * Math.max(0.52, (projectile.radius || 1) * 0.32), 0, Math.PI * 2);
+        ctx.strokeStyle = hexToRgba(blastCharacter.line, 0.56);
+        ctx.lineWidth = Math.max(2, cellSize * 0.055);
         ctx.stroke();
       });
     }
@@ -6040,29 +6080,30 @@
         const blastCharacter = characterFor(hazard.owner);
         cellsNearCells(hazard.cells, hazard.width, hazard.excludedCells).forEach(cell => {
           const { x, y } = axialToPixel(cell);
+          drawElementAura(x, y, cellSize * 0.86, progress + (cell.q - cell.r) * 0.03, blastCharacter, 0.24);
           hexPath(x, y, cellSize * 0.9);
-          ctx.fillStyle = hexToRgba(blastCharacter.accent || blastCharacter.color, alpha);
+          ctx.fillStyle = hexToRgba(blastCharacter.accent || blastCharacter.color, alpha + 0.08);
           ctx.fill();
-          ctx.strokeStyle = hexToRgba(blastCharacter.line, alpha + 0.16);
-          ctx.lineWidth = 1.5;
+          ctx.strokeStyle = hexToRgba(blastCharacter.line, alpha + 0.34);
+          ctx.lineWidth = Math.max(1.5, cellSize * 0.045);
           ctx.stroke();
           if ((hazard.visualType || "").startsWith("quetzal")) {
-            drawElementMotifs(x, y, cellSize * 0.58, progress + (cell.q + cell.r) * 0.04, blastCharacter, 0.34, 4);
+            drawElementMotifs(x, y, cellSize * 0.78, progress + (cell.q + cell.r) * 0.04, blastCharacter, 0.72, 8);
             drawFeatherShape(
               x,
               y,
-              cellSize * 0.28,
+              cellSize * 0.38,
               progress * Math.PI * 2 + (cell.q - cell.r) * 0.42,
               blastCharacter.accent,
               blastCharacter.line,
-              0.5 * (1 - progress * 0.35)
+              0.88 * (1 - progress * 0.2)
             );
             ctx.save();
             ctx.beginPath();
             ctx.moveTo(x - cellSize * 0.34, y + cellSize * 0.2);
             ctx.quadraticCurveTo(x, y - cellSize * 0.36, x + cellSize * 0.34, y + cellSize * 0.12);
-            ctx.strokeStyle = hexToRgba(blastCharacter.line, 0.38 * (1 - progress * 0.35));
-            ctx.lineWidth = Math.max(1, cellSize * 0.035);
+            ctx.strokeStyle = hexToRgba(blastCharacter.line, 0.72 * (1 - progress * 0.24));
+            ctx.lineWidth = Math.max(1.3, cellSize * 0.05);
             ctx.stroke();
             ctx.restore();
           }
@@ -6073,22 +6114,23 @@
     function drawLineBlast(blast, progress, alpha, character) {
       cellsNearCells(blast.lineCells, blast.width, blast.excludedCells).forEach(cell => {
         const { x, y } = axialToPixel(cell);
+        drawElementAura(x, y, cellSize * 0.86, progress + cell.r * 0.04, character, 0.32 * alpha);
         hexPath(x, y, cellSize * 0.94);
-        ctx.fillStyle = hexToRgba(character.accent || character.color, 0.32 * alpha);
+        ctx.fillStyle = hexToRgba(character.accent || character.color, 0.5 * alpha);
         ctx.fill();
-        ctx.strokeStyle = hexToRgba("#ffffff", 0.55 * alpha);
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = hexToRgba("#ffffff", 0.82 * alpha);
+        ctx.lineWidth = Math.max(2, cellSize * 0.06);
         ctx.stroke();
         if ((blast.visualType || "").startsWith("moray")) {
-          drawPulseRing(x, y, cellSize * 0.72, progress, character.color, character.line, 0.45);
+          drawPulseRing(x, y, cellSize * 0.92, progress, character.color, character.line, 0.72);
         }
         if ((blast.visualType || "").startsWith("moray")) {
-          drawElementMotifs(x, y, cellSize * 0.5, progress + cell.q * 0.03, character, 0.36, 4);
+          drawElementMotifs(x, y, cellSize * 0.76, progress + cell.q * 0.03, character, 0.78, 8);
         }
       });
       if ((blast.visualType || "").startsWith("moray")) {
         for (let i = 1; i < blast.lineCells.length; i += 1) {
-          drawLightningBetween(axialToPixel(blast.lineCells[i - 1]), axialToPixel(blast.lineCells[i]), progress + i * 0.11, character.accent, 1.1, 4);
+          drawLightningBetween(axialToPixel(blast.lineCells[i - 1]), axialToPixel(blast.lineCells[i]), progress + i * 0.11, character.accent, 1.55, 6);
         }
       }
     }
@@ -6097,47 +6139,49 @@
       const { x, y } = axialToPixel(blast.target);
       const radiusPx = cellSize * (blast.radius || baseBlastHexRadius) * 1.52;
       const type = blast.visualType || attackVisualType(blast.owner, "big");
-      drawPulseRing(x, y, radiusPx, progress, character.color, character.line);
-      drawElementMotifs(x, y, radiusPx * 0.76, progress, character, 0.58 * alpha, type.endsWith("-big") ? 12 : 8);
+      const isBig = type.endsWith("-big");
+      drawElementAura(x, y, radiusPx * (isBig ? 1.04 : 0.86), progress, character, (isBig ? 0.92 : 0.68) * alpha);
+      drawPulseRing(x, y, radiusPx, progress, character.color, character.line, isBig ? 1.35 : 1);
+      drawElementMotifs(x, y, radiusPx * (isBig ? 0.94 : 0.82), progress, character, (isBig ? 1.05 : 0.84) * alpha, isBig ? 22 : 14);
       if (type.startsWith("dragon")) {
         drawHexBurst(x, y, radiusPx, progress, character.line, character.accent);
-        for (let i = 0; i < 5; i += 1) {
-          const angle = progress * Math.PI * 2 + i * Math.PI * 2 / 5;
+        for (let i = 0; i < 8; i += 1) {
+          const angle = progress * Math.PI * 2 + i * Math.PI * 2 / 8;
           drawLightningBetween(
             { x, y },
-            { x: x + Math.cos(angle) * radiusPx * 0.62, y: y + Math.sin(angle) * radiusPx * 0.62 },
+            { x: x + Math.cos(angle) * radiusPx * 0.78, y: y + Math.sin(angle) * radiusPx * 0.78 },
             progress + i * 0.1,
-            character.accent,
-            0.8,
-            4
+            paletteColor(character, i),
+            1.18,
+            5
           );
         }
       } else if (type.startsWith("sandworm")) {
         drawDustCloud(x, y, radiusPx, progress, character.color, character.line);
         drawSandSpike(x, y, radiusPx, progress, character.accent, character.line);
       } else if (type.startsWith("quetzal")) {
-        for (let i = 0; i < 8; i += 1) {
-          const angle = progress * Math.PI * 2 + i * Math.PI * 2 / 8;
+        for (let i = 0; i < 12; i += 1) {
+          const angle = progress * Math.PI * 2 + i * Math.PI * 2 / 12;
           drawFeatherShape(
-            x + Math.cos(angle) * radiusPx * 0.34,
-            y + Math.sin(angle) * radiusPx * 0.34,
-            cellSize * 0.34,
+            x + Math.cos(angle) * radiusPx * 0.42,
+            y + Math.sin(angle) * radiusPx * 0.42,
+            cellSize * 0.46,
             angle + Math.PI / 2,
-            character.accent,
-            character.line,
+            paletteColor(character, i),
+            paletteColor(character, i + 1),
             alpha
           );
         }
       } else if (type.startsWith("moray")) {
-        for (let i = 0; i < 6; i += 1) {
-          const angle = i * Math.PI * 2 / 6 + progress;
+        for (let i = 0; i < 10; i += 1) {
+          const angle = i * Math.PI * 2 / 10 + progress;
           drawLightningBetween(
             { x: x + Math.cos(angle) * radiusPx * 0.18, y: y + Math.sin(angle) * radiusPx * 0.18 },
-            { x: x + Math.cos(angle) * radiusPx * 0.72, y: y + Math.sin(angle) * radiusPx * 0.72 },
+            { x: x + Math.cos(angle) * radiusPx * 0.86, y: y + Math.sin(angle) * radiusPx * 0.86 },
             progress + i * 0.08,
-            character.accent,
-            0.95,
-            5
+            paletteColor(character, i),
+            1.25,
+            6
           );
         }
       } else if (type.startsWith("lobster")) {
