@@ -136,6 +136,10 @@ function damageMultiplier(stock, balance) {
   return 2 + foodBonus(stock, "fat", balance.attack.damageBonusPerPoint, balance.attack.maxDamageBonus);
 }
 
+function areaMultiplier(stock, balance) {
+  return 1 + ((stock.protein || 0) / balance.resources.maxFoodStock);
+}
+
 function attackSpeedMultiplier(stock, balance) {
   return 1 + foodBonus(stock, "carb", balance.attack.attackSpeedBonusPerPoint, balance.attack.maxAttackSpeedBonus);
 }
@@ -158,10 +162,7 @@ function attackCooldown(stock, balance) {
 }
 
 function blastRadius(stock, balance) {
-  const maxFoodStock = balance.resources.maxFoodStock;
-  if ((stock.protein || 0) >= maxFoodStock * 0.8) return 4;
-  if ((stock.protein || 0) >= maxFoodStock * 0.4) return 3;
-  return balance.attack.baseBlastHexRadius;
+  return balance.attack.baseBlastHexRadius * areaMultiplier(stock, balance);
 }
 
 function attackFoodCost(profile = "big") {
@@ -248,9 +249,17 @@ function collectFood(fighter, food, balance, rng) {
 
 function damageSnake(parts, target, radius, damageScale, balance) {
   const falloff = balance.attack.rangeDamageFalloffEnabled ? balance.attack.baseBlastHexRadius / Math.max(balance.attack.baseBlastHexRadius, radius) : 1;
+  const wholeRadius = Math.floor(radius);
+  const outerRingRatio = Math.max(0, Math.min(1, radius - wholeRadius));
+  const outerRingDistance = wholeRadius + 1;
   return parts.reduce((total, segment) => {
     const distance = hexDistance(segment, target);
-    if (distance > radius) return total;
+    if (distance > radius) {
+      if (outerRingRatio > 0 && distance === outerRingDistance) {
+        return total + damageScale * falloff * outerRingRatio;
+      }
+      return total;
+    }
     const hitChance = Math.max(0, Math.min(1, 1 - distance / radius));
     return total + damageScale * falloff * hitChance;
   }, 0);

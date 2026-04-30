@@ -2768,7 +2768,7 @@
       { q: -1, r: 0, angle: -150, key: "a" }
     ];
     const foodTypes = [
-      { id: "protein", label: "蛋白", name: "蛋白質", foodName: "紅色食物", effect: "爆炸半徑由 2 門檻式提升到 3，再到 4", color: "#ef4444", line: "#fecaca" },
+      { id: "protein", label: "蛋白", name: "蛋白質", foodName: "紅色食物", effect: "爆炸半徑由 2 連續成長到 4，小數部分會讓最外圈承受對應比例傷害", color: "#ef4444", line: "#fecaca" },
       { id: "fat", label: "油脂", name: "油脂", foodName: "黃色食物", effect: "攻擊傷害係數基礎 2，滿庫存約 3.4", color: "#facc15", line: "#fef08a" },
       { id: "fiber", label: "纖維", name: "纖維素", foodName: "綠色食物", effect: "提升移動速度，滿庫存約 1.8x", color: "#22c55e", line: "#bbf7d0" },
       { id: "carb", label: "碳水", name: "碳水", foodName: "藍色食物", effect: "提升攻擊施展與冷卻速度，並提高命中暈眩機率", color: "#3b82f6", line: "#bfdbfe" }
@@ -3448,7 +3448,7 @@
     }
 
     function areaMultiplier(stock) {
-      return 1 + stock.protein / maxFoodStock;
+      return 1 + (stock.protein || 0) / maxFoodStock;
     }
 
     function attackSpeedMultiplier(stock) {
@@ -3483,9 +3483,7 @@
     }
 
     function blastRadius(stock) {
-      if (stock.protein >= maxFoodStock * 0.8) return 4;
-      if (stock.protein >= maxFoodStock * 0.4) return 3;
-      return baseBlastHexRadius;
+      return baseBlastHexRadius * areaMultiplier(stock);
     }
 
     function attackFoodCost(profile = "big") {
@@ -4755,9 +4753,17 @@
 
     function damageSnake(parts, target, radius, damageScale) {
       const falloff = rangeDamageFalloffEnabled ? baseBlastHexRadius / Math.max(baseBlastHexRadius, radius) : 1;
+      const wholeRadius = Math.floor(radius);
+      const outerRingRatio = Math.max(0, Math.min(1, radius - wholeRadius));
+      const outerRingDistance = wholeRadius + 1;
       return parts.reduce((total, segment) => {
         const distance = hexDistance(segment, target);
-        if (distance > radius) return total;
+        if (distance > radius) {
+          if (outerRingRatio > 0 && distance === outerRingDistance) {
+            return total + damageScale * falloff * outerRingRatio;
+          }
+          return total;
+        }
         const hitChance = Math.max(0, Math.min(1, 1 - distance / radius));
         return total + damageScale * falloff * hitChance;
       }, 0);

@@ -80,6 +80,14 @@ test("attack costs and damage calculations match core rules", () => {
   assert.ok(damage > 0);
 });
 
+test("protein fractional radius deals proportional outer-ring damage", () => {
+  const stock = { protein: 5, fat: 0, fiber: 0, carb: 0 };
+  const stats = attackStats(stock, "big", balance);
+  assert.equal(stats.radius, 2.5);
+  const damage = damageSnake([{ q: 3, r: 0 }], { q: 0, r: 0 }, stats.radius, stats.damage, balance);
+  assert.equal(damage, stats.damage * 0.5);
+});
+
 test("same seed produces same series result", () => {
   const options = {
     balance,
