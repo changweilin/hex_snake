@@ -592,9 +592,11 @@ function dragonWrappedOrbPath(state, source, direction) {
   return path;
 }
 
-function firstPathHit(path, targetSnake) {
+function pathHits(path, targetSnake) {
   const targetCells = cellKeySet(targetSnake);
-  return path.find(cell => targetCells.has(keyOf(cell))) || null;
+  return path
+    .map((cell, index) => ({ cell, index }))
+    .filter(hit => targetCells.has(keyOf(hit.cell)));
 }
 
 function pushCircleAttack(state, attack) {
@@ -608,23 +610,35 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
   const characterId = attacker.character.id;
   if (characterId === "dragon") {
     const path = dragonWrappedOrbPath(state, source, attacker.dir);
-    const hit = firstPathHit(path, defender.snake);
-    const hitIndex = hit ? path.findIndex(cell => keyOf(cell) === keyOf(hit)) : -1;
-    const travelCells = hit ? path.slice(0, hitIndex + 1) : path;
-    const endCell = travelCells[travelCells.length - 1] || source;
+    const hits = pathHits(path, defender.snake);
+    const endCell = path[path.length - 1] || source;
     state.projectiles.push({
       kind: "dragonOrb",
       owner: attacker.owner,
       profile: "big",
-      target: hit ? { ...hit } : { ...endCell },
-      hasHit: Boolean(hit),
-      impactAt: now + small.delay + travelCells.length * 90,
+      target: { ...endCell },
+      pathCells: path,
+      impactAt: now + small.delay + path.length * 90,
       radius: small.radius,
       damage: small.damage,
       burstRadius: small.radius * 2,
       burstDamage: small.damage * 1.5,
       stunChance
     });
+    for (const hit of hits) {
+      state.projectiles.push({
+        kind: "dragonOrbBurst",
+        owner: attacker.owner,
+        profile: "big",
+        target: { ...hit.cell },
+        impactAt: now + small.delay + (hit.index + 1) * 90,
+        radius: small.radius,
+        damage: small.damage,
+        burstRadius: small.radius * 2,
+        burstDamage: small.damage * 1.5,
+        stunChance
+      });
+    }
     return;
   }
   if (characterId === "moray") {
@@ -790,7 +804,8 @@ function resolveProjectiles(state, now, balance) {
     let playerDamage = 0;
     let computerDamage = 0;
     if (projectile.kind === "dragonOrb") {
-      if (!projectile.hasHit) continue;
+      continue;
+    } else if (projectile.kind === "dragonOrbBurst") {
       const defenderDamage = damageSnake(defender.snake, projectile.target, projectile.radius, projectile.damage, balance);
       if (defenderOwner === "player") playerDamage += defenderDamage;
       else computerDamage += defenderDamage;

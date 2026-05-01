@@ -19,6 +19,8 @@
       --danger: #f06464;
       --cell: #2a3445;
       --cell-alt: #303c4d;
+      --p1-color: #f59e0b;
+      --p2-color: #a78bfa;
     }
 
     * {
@@ -73,11 +75,25 @@
     .topbar {
       min-height: 74px;
       display: grid;
-      grid-template-columns: 1fr auto;
+      grid-template-columns: minmax(280px, 1fr) minmax(360px, 0.95fr);
       gap: 14px;
-      align-items: center;
+      align-items: stretch;
       padding: 12px 14px;
       border-radius: 8px;
+    }
+
+    .report-panel,
+    .metrics {
+      min-width: 0;
+      border-radius: 8px;
+      background: rgba(17, 23, 32, 0.42);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+    }
+
+    .report-panel {
+      display: grid;
+      align-content: center;
+      padding: 10px 12px;
     }
 
     h1 {
@@ -85,6 +101,7 @@
       font-size: clamp(1.35rem, 2.2vw, 2.1rem);
       line-height: 1.05;
       letter-spacing: 0;
+      white-space: nowrap;
     }
 
     .status {
@@ -94,30 +111,85 @@
     }
 
     .metrics {
-      display: flex;
+      display: grid;
+      grid-template-columns: minmax(150px, 0.85fr) minmax(0, 1.15fr);
       gap: 8px;
-      flex-wrap: wrap;
-      justify-content: end;
+      padding: 8px;
+      align-items: stretch;
+    }
+
+    .player-status-list,
+    .match-metrics {
+      min-width: 0;
+      display: grid;
+      gap: 6px;
+    }
+
+    .match-metrics {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .metric {
-      min-width: 88px;
       padding: 8px 10px;
       border-radius: 8px;
       background: var(--panel-2);
       border: 1px solid rgba(255, 255, 255, 0.08);
       text-align: center;
+      min-width: 0;
+    }
+
+    .player-metric {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+      text-align: left;
+    }
+
+    .player-speed {
+      color: var(--ink);
+      font-size: 1rem;
+      font-weight: 950;
+      line-height: 1.2;
+      white-space: nowrap;
     }
 
     .metric span {
       display: block;
       color: var(--muted);
       font-size: 0.76rem;
+      white-space: nowrap;
+    }
+
+    .owner-name {
+      color: var(--owner-name-color);
+      font-weight: 950;
+    }
+
+    .owner-name.is-p1 {
+      --owner-name-color: var(--p1-color);
+    }
+
+    .owner-name.is-p2 {
+      --owner-name-color: var(--p2-color);
     }
 
     .metric strong {
+      display: block;
       font-size: 1.22rem;
       line-height: 1.2;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .match-metrics .metric {
+      padding: 7px 8px;
+    }
+
+    .match-metrics .metric strong {
+      font-size: 1rem;
     }
 
     .canvas-wrap {
@@ -203,15 +275,14 @@
     }
 
     .auto-battle-panel {
-      position: fixed;
-      right: max(10px, env(safe-area-inset-right));
-      top: max(10px, env(safe-area-inset-top));
-      z-index: 320;
+      position: relative;
+      z-index: 2;
       display: flex;
       align-items: center;
-      justify-content: flex-end;
+      justify-content: center;
       gap: 6px;
-      max-width: min(260px, calc(100% - 20px));
+      width: 100%;
+      max-width: 100%;
       padding: 8px;
       border: 1px solid rgba(255, 255, 255, 0.18);
       border-radius: 8px;
@@ -460,13 +531,12 @@
     }
 
     .relay-panel {
-      position: fixed;
-      left: max(10px, env(safe-area-inset-left));
-      top: max(10px, env(safe-area-inset-top));
-      z-index: 320;
+      position: relative;
+      z-index: 2;
       display: grid;
       gap: 4px;
-      max-width: min(260px, calc(100% - 20px));
+      width: 100%;
+      max-width: 100%;
       padding: 8px 10px;
       border: 1px solid rgba(255, 255, 255, 0.18);
       border-radius: 8px;
@@ -506,9 +576,19 @@
     @media (max-width: 620px) {
       .auto-battle-panel,
       .relay-panel {
+        position: fixed;
+        z-index: 320;
         top: auto;
         bottom: max(10px, env(safe-area-inset-bottom));
         max-width: min(154px, calc(50vw - 14px));
+      }
+
+      .auto-battle-panel {
+        right: max(10px, env(safe-area-inset-right));
+      }
+
+      .relay-panel {
+        left: max(10px, env(safe-area-inset-left));
       }
 
       .relay-panel {
@@ -939,6 +1019,7 @@
     }
 
     .fighter-card {
+      position: relative;
       min-width: 0;
       display: grid;
       grid-template-columns: 64px;
@@ -952,6 +1033,49 @@
       box-shadow: 0 12px 32px rgba(0, 0, 0, 0.32);
       backdrop-filter: blur(8px);
       pointer-events: auto;
+    }
+
+    .attack-callout {
+      position: absolute;
+      top: calc(100% + 7px);
+      left: 50%;
+      z-index: 6;
+      max-width: min(220px, 34vw);
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--owner-line);
+      background: rgba(15, 23, 36, 0.94);
+      color: #ffffff;
+      font-size: 0.78rem;
+      font-weight: 950;
+      line-height: 1.2;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      box-shadow: 0 10px 26px rgba(0, 0, 0, 0.34);
+      opacity: 0;
+      transform: translate(-50%, -4px) scale(0.96);
+      pointer-events: none;
+      transition: opacity 120ms ease, transform 120ms ease;
+    }
+
+    .attack-callout::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      bottom: 100%;
+      width: 9px;
+      height: 9px;
+      border-left: 1px solid var(--owner-line);
+      border-top: 1px solid var(--owner-line);
+      background: rgba(15, 23, 36, 0.94);
+      transform: translate(-50%, 4px) rotate(45deg);
+    }
+
+    .attack-callout.is-visible {
+      opacity: 1;
+      transform: translate(-50%, 0) scale(1);
     }
 
     .fighter-card[data-owner="player"] {
@@ -1174,6 +1298,7 @@
     }
 
     .result-portrait {
+      cursor: pointer;
       overflow: hidden;
     }
 
@@ -1625,6 +1750,12 @@
       gap: 10px;
     }
 
+    .battle-control-panels {
+      display: grid;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
     .control-section {
       position: relative;
       padding-bottom: 12px;
@@ -2067,6 +2198,20 @@
         padding: 8px;
       }
 
+      .report-panel,
+      .match-metrics {
+        display: none;
+      }
+
+      .report-panel,
+      .metrics {
+        border-radius: 7px;
+      }
+
+      .report-panel {
+        padding: 7px 8px;
+      }
+
       h1 {
         font-size: clamp(1rem, 4.2vw, 1.28rem);
         line-height: 1;
@@ -2081,15 +2226,29 @@
       }
 
       .metrics {
-        justify-content: start;
         display: grid;
-        grid-template-columns: repeat(7, minmax(0, 1fr));
+        grid-template-columns: minmax(0, 1fr);
+        padding: 5px;
+      }
+
+      .player-status-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 4px;
       }
 
       .metric {
         min-width: 0;
         padding: 4px 3px;
+      }
+
+      .player-metric {
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        gap: 1px;
+        text-align: center;
+      }
+
+      .player-speed {
+        font-size: clamp(0.72rem, 3.1vw, 0.95rem);
       }
 
       .metric span {
@@ -2327,6 +2486,12 @@
         padding: 5px;
       }
 
+      .attack-callout {
+        max-width: min(170px, 42vw);
+        padding: 5px 8px;
+        font-size: 0.68rem;
+      }
+
       .fighter-module {
         width: 42px;
       }
@@ -2560,7 +2725,7 @@
       }
 
       .metrics {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: minmax(0, 1fr);
       }
 
       .metric:nth-child(n + 5) {
@@ -2593,18 +2758,21 @@
   <main class="app" aria-label="六角貪食蛇對戰">
     <section class="stage">
       <header class="topbar">
-        <div>
+        <div class="report-panel">
           <h1>六角貪食蛇對戰</h1>
           <div class="status" id="status">右搖桿控制前進，左搖桿瞄準後放開攻擊。</div>
         </div>
-        <div class="metrics" aria-label="分數">
-          <div class="metric"><span>玩家</span><strong id="score">0</strong></div>
-          <div class="metric"><span>電腦</span><strong id="computerScore">0</strong></div>
-          <div class="metric"><span>最佳</span><strong id="best">0</strong></div>
-          <div class="metric"><span>速度</span><strong id="speed">1x</strong></div>
-          <div class="metric"><span>時間</span><strong id="totalTime">0:00</strong></div>
-          <div class="metric"><span>未進食</span><strong id="lastFeedTime">0:00</strong></div>
-          <div class="metric"><span>最久存活</span><strong id="bestTime">0:00</strong></div>
+        <div class="metrics" aria-label="P1 P2 狀態">
+          <div class="player-status-list" aria-label="P1 P2 狀態">
+            <div class="metric player-metric"><span><span class="owner-name is-p1">P1</span></span><strong id="score">0</strong><span class="player-speed" id="playerSpeed">1x</span></div>
+            <div class="metric player-metric"><span><span class="owner-name is-p2">P2</span></span><strong id="computerScore">0</strong><span class="player-speed" id="computerSpeed">1x</span></div>
+          </div>
+          <div class="match-metrics" aria-label="對戰資訊">
+            <div class="metric"><span>最佳</span><strong id="best">0</strong></div>
+            <div class="metric"><span>時間</span><strong id="totalTime">0:00</strong></div>
+            <div class="metric"><span>未進食</span><strong id="lastFeedTime">0:00</strong></div>
+            <div class="metric"><span>最久存活</span><strong id="bestTime">0:00</strong></div>
+          </div>
         </div>
       </header>
 
@@ -2618,7 +2786,7 @@
             <p id="overlayText">每吃 1 個食物獲得 2 點能量，集滿 6 點獲得 1 枚炸彈，最多 3 枚；能量與炸彈都滿時，施放消耗炸彈的招式會立刻把滿能量轉為 1 枚炸彈；小招消耗紅黃綠藍各 1 點，大招消耗 2 枚炸彈與紅黃綠藍各 2 點。</p>
             <div class="dialog-actions">
               <button id="startButton" type="button">開始</button>
-              <button id="computerBattleButton" class="secondary" type="button">電腦對弈</button>
+              <button id="computerBattleButton" class="secondary" type="button">自動對弈</button>
               <button id="replayArchiveButton" class="secondary" type="button">重播紀錄</button>
             </div>
             <button id="introCloseButton" class="secondary intro-close-button" type="button" hidden>關閉</button>
@@ -2640,19 +2808,6 @@
           </select>
           <button id="replayExitButton" class="secondary" type="button">離開</button>
           <span class="replay-time" id="replayTime">0:00 / 0:00</span>
-        </div>
-        <div class="auto-battle-panel" id="autoBattlePanel" hidden aria-label="電腦對弈速度">
-          <label for="autoBattleSpeedSelect">速度</label>
-          <button id="autoBattleSpeedSelect" class="speed-scrubber" type="button" role="slider" aria-orientation="vertical" aria-valuemin="0.25" aria-valuemax="4" aria-valuenow="1" aria-haspopup="menu" aria-controls="autoSpeedMenu" aria-expanded="false" aria-label="按住上下滑動調整電腦對弈速度，單擊開啟選項">x1</button>
-          <div class="auto-speed-menu" id="autoSpeedMenu" hidden aria-label="選擇電腦對弈速度"></div>
-          <button type="button" data-auto-pause aria-label="暫停">⏸</button>
-        </div>
-        <div class="relay-panel" id="relayPanel" hidden aria-label="電腦接力賽">
-          <label>
-            <input id="relayModeInput" type="checkbox">
-            <span>接力賽</span>
-          </label>
-          <div class="relay-score" id="relayScore">P1 0 勝 / P2 0 勝 / 平手 0</div>
         </div>
       </div>
     </section>
@@ -2690,7 +2845,7 @@
         </div>
         <div class="settings-content" id="settingsContent" hidden>
         <div class="field">
-          <label for="computerDifficulty">電腦難度</label>
+          <label for="computerDifficulty"><span class="owner-name is-p2">P2</span> 難度</label>
           <select id="computerDifficulty">
             <option value="novice">新手</option>
             <option value="low">低</option>
@@ -2700,11 +2855,11 @@
         </div>
         <div class="character-picks" hidden>
           <div class="field">
-            <label for="playerCharacter">我的角色</label>
+            <label for="playerCharacter"><span class="owner-name is-p1">P1</span> 角色</label>
             <select id="playerCharacter"></select>
           </div>
           <div class="field">
-            <label for="computerCharacter">對手角色</label>
+            <label for="computerCharacter"><span class="owner-name is-p2">P2</span> 角色</label>
             <select id="computerCharacter"></select>
           </div>
         </div>
@@ -2841,6 +2996,21 @@
             </div>
           </div>
         </div>
+        <div class="battle-control-panels" aria-label="自動對弈控制">
+          <div class="auto-battle-panel" id="autoBattlePanel" hidden aria-label="自動對弈速度">
+            <label for="autoBattleSpeedSelect">速度</label>
+            <button id="autoBattleSpeedSelect" class="speed-scrubber" type="button" role="slider" aria-orientation="vertical" aria-valuemin="0.25" aria-valuemax="4" aria-valuenow="1" aria-haspopup="menu" aria-controls="autoSpeedMenu" aria-expanded="false" aria-label="按住上下滑動調整自動對弈速度，單擊開啟選項">x1</button>
+            <div class="auto-speed-menu" id="autoSpeedMenu" hidden aria-label="選擇自動對弈速度"></div>
+            <button type="button" data-auto-pause aria-label="暫停">⏸</button>
+          </div>
+          <div class="relay-panel" id="relayPanel" hidden aria-label="自動接力賽">
+            <label>
+              <input id="relayModeInput" type="checkbox">
+              <span>接力賽</span>
+            </label>
+            <div class="relay-score" id="relayScore"><span class="owner-name is-p1">P1</span> 0 勝 / <span class="owner-name is-p2">P2</span> 0 勝 / 平手 0</div>
+          </div>
+        </div>
       </section>
     </aside>
   </main>
@@ -2925,7 +3095,8 @@
     const scoreEl = document.querySelector("#score");
     const computerScoreEl = document.querySelector("#computerScore");
     const bestEl = document.querySelector("#best");
-    const speedEl = document.querySelector("#speed");
+    const playerSpeedEl = document.querySelector("#playerSpeed");
+    const computerSpeedEl = document.querySelector("#computerSpeed");
     const totalTimeEl = document.querySelector("#totalTime");
     const lastFeedTimeEl = document.querySelector("#lastFeedTime");
     const bestTimeEl = document.querySelector("#bestTime");
@@ -3281,6 +3452,7 @@
     let targetActive = false;
     let moduleHoldTimer = null;
     let portraitPoseTimers = {};
+    let attackCalloutTimers = {};
     let selectedPortraitOwner = "player";
     let introDetailsOpen = false;
     let portraitLightboxOwner = "player";
@@ -3579,7 +3751,7 @@
         <section class="rules-block">
           <h3>遊戲流程</h3>
           <ul class="rules-list">
-            <li>玩家與對手會在六角棋盤上持續前進，吃食物累積分數、食物庫存與能量。</li>
+            <li>P1 與 P2 會在六角棋盤上持續前進，吃食物累積分數、食物庫存與能量。</li>
             <li>被炸彈爆炸命中會扣除 HP，並有 ${Math.round(baseAttackStunChance * 100)}% 基礎機率暈眩；HP 歸零才會結束本局。撞擊不會直接死亡，而是造成麻痺與減速。</li>
           </ul>
         </section>
@@ -3600,7 +3772,7 @@
             <li><b>能量</b>：每吃 1 個食物獲得 2 點能量，集滿 ${attackNeedTotal} 點獲得 1 枚炸彈；炸彈最多 ${maxAmmo} 枚，也是大招施放資源。若炸彈已滿，滿格能量會保留，直到施放消耗炸彈的招式後立即轉為 1 枚炸彈。</li>
             <li><b>施放成本</b>：小招需紅黃綠藍四種庫存各至少 1 點，施放後各消耗 1；大招需 ${bigAttackBombCost} 枚炸彈，且四種庫存各至少 2 點，施放後消耗 ${bigAttackBombCost} 枚炸彈並使四種庫存各消耗 2。</li>
             <li><b>庫存上限</b>：每種食物最多累積 ${maxFoodStock} 點；一般專精角色只影響補貨偏好，特殊角色可能產出專屬食物。</li>
-            <li><b>撞擊懲罰</b>：撞到對手會停止 ${collisionStunMs / 1000} 秒，再減速 ${collisionSlowMs / 1000} 秒；撞到自己懲罰加倍，累積停止時間超過 ${maxCollisionParalysisMs / 1000} 秒會落敗。</li>
+            <li><b>撞擊懲罰</b>：撞到另一方會停止 ${collisionStunMs / 1000} 秒，再減速 ${collisionSlowMs / 1000} 秒；撞到自己懲罰加倍，累積停止時間超過 ${maxCollisionParalysisMs / 1000} 秒會落敗。</li>
           </ul>
         </section>
         <section class="rules-block">
@@ -3666,6 +3838,7 @@
                 ${fighterPortraitImage(character, "idle")}
               </div>
             </div>
+            <div class="attack-callout" data-attack-callout="${owner}" aria-live="polite"></div>
           </div>
         `;
       }).join("");
@@ -3688,11 +3861,11 @@
       characterStage.innerHTML = "";
       winnerPortrait.innerHTML = `
         <div class="portrait-pair">
-          <div class="fighter-portrait result-portrait ${owner === "player" ? "is-winner" : ""} ${playerPose === "defeat" ? "is-defeated" : ""}" data-owner="player" data-owner-mark="${ownerMeta("player").mark}" style="${characterStyle(characterFor("player"), "player")}">
+          <div class="fighter-portrait result-portrait ${owner === "player" ? "is-winner" : ""} ${playerPose === "defeat" ? "is-defeated" : ""}" data-owner="player" data-result-owner="player" data-owner-mark="${ownerMeta("player").mark}" title="選擇 P1 角色" style="${characterStyle(characterFor("player"), "player")}">
             <span class="result-badge">${playerResult}</span>
             ${fighterArt(characterFor("player"), playerPose, true)}
           </div>
-          <div class="fighter-portrait result-portrait ${owner === "computer" ? "is-winner" : ""} ${computerPose === "defeat" ? "is-defeated" : ""}" data-owner="computer" data-owner-mark="${ownerMeta("computer").mark}" style="${characterStyle(characterFor("computer"), "computer")}">
+          <div class="fighter-portrait result-portrait ${owner === "computer" ? "is-winner" : ""} ${computerPose === "defeat" ? "is-defeated" : ""}" data-owner="computer" data-result-owner="computer" data-owner-mark="${ownerMeta("computer").mark}" title="選擇 P2 角色" style="${characterStyle(characterFor("computer"), "computer")}">
             <span class="result-badge">${computerResult}</span>
             ${fighterArt(characterFor("computer"), computerPose, true)}
           </div>
@@ -3713,7 +3886,7 @@
           <div class="intro-avatar-gate">
             ${["player", "computer"].map(owner => {
               const character = selectedCharacterFor(owner);
-              const label = owner === "player" ? "玩家" : "對手";
+              const label = owner === "player" ? "P1" : "P2";
               return `
                 <button class="intro-avatar-button" type="button" data-owner="${owner}" data-open-intro="${owner}" style="${characterStyle(character || {
                   color: ownerMeta(owner).color,
@@ -3721,7 +3894,7 @@
                   accent: "#fbbf24"
                 }, owner)}" aria-label="開啟${label}角色選擇">
                   ${character ? `<div class="fighter-portrait" data-owner="${owner}" data-owner-mark="${ownerMeta(owner).mark}">${fighterArt(character, "intro", true, "small")}</div>` : randomPortraitMarkup(owner)}
-                  <span class="intro-avatar-label">${ownerMeta(owner).label} · ${character ? character.name : "隨機選擇"}</span>
+                  <span class="intro-avatar-label"><span class="owner-name ${owner === "player" ? "is-p1" : "is-p2"}">${ownerMeta(owner).label}</span> · ${character ? character.name : "隨機選擇"}</span>
                 </button>
               `;
             }).join("")}
@@ -3734,7 +3907,7 @@
           <div class="portrait-pair">
           ${["player", "computer"].map(owner => {
               const character = selectedCharacterFor(owner);
-              const label = owner === "player" ? "玩家" : "對手";
+              const label = owner === "player" ? "P1" : "P2";
               return `
                 <button class="portrait-option ${owner === selectedPortraitOwner ? "is-selected" : ""}" type="button" data-owner="${owner}" data-portrait-owner="${owner}" style="${characterStyle(character || {
                   color: ownerMeta(owner).color,
@@ -3742,7 +3915,7 @@
                   accent: "#fbbf24"
                 }, owner)}">
                 ${character ? `<div class="fighter-portrait" data-owner="${owner}" data-owner-mark="${ownerMeta(owner).mark}" data-full-portrait="${owner}">${fighterArt(character, "intro", true, "small")}</div>` : randomPortraitMarkup(owner)}
-                <span class="portrait-option-label">${ownerMeta(owner).label} · ${character ? character.name : "隨機選擇"}</span>
+                <span class="portrait-option-label"><span class="owner-name ${owner === "player" ? "is-p1" : "is-p2"}">${ownerMeta(owner).label}</span> · ${character ? character.name : "隨機選擇"}</span>
               </button>
             `;
           }).join("")}
@@ -3754,7 +3927,7 @@
               line: ownerMeta(selectedPortraitOwner).line,
               accent: "#fbbf24"
             }, selectedPortraitOwner)}">
-              <small>${selectedPortraitOwner === "player" ? "玩家角色" : "對手角色"}</small>
+              <small><span class="owner-name ${selectedPortraitOwner === "player" ? "is-p1" : "is-p2"}">${selectedPortraitOwner === "player" ? "P1" : "P2"}</span> 角色</small>
               <strong>${selectedCharacter ? selectedCharacter.name : "隨機選擇"}</strong>
               <span>${selectedCharacter ? `${selectedCharacter.foodLabel}專精` : "開始遊戲時抽選角色"}</span>
               <div class="portrait-story">
@@ -3840,16 +4013,28 @@
       }
     }
 
+    function showAttackCallout(owner, profile) {
+      const callout = characterStage.querySelector(`[data-attack-callout="${owner}"]`);
+      if (!callout) return;
+      const character = characterFor(owner);
+      callout.textContent = profile === "small" ? character.smallMove : character.bigMove;
+      callout.classList.add("is-visible");
+      clearTimeout(attackCalloutTimers[owner]);
+      attackCalloutTimers[owner] = setTimeout(() => {
+        callout.classList.remove("is-visible");
+      }, 1200);
+    }
+
     function buildResourceHud() {
       resourceBoard.innerHTML = "";
       resourceEls = new Map();
       [
-        { owner: "player", title: "玩家", color: colors.head },
-        { owner: "computer", title: "電腦", color: colors.computerHead }
+        { owner: "player", title: "P1", color: colors.head },
+        { owner: "computer", title: "P2", color: colors.computerHead }
       ].forEach(group => {
         const panel = document.createElement("div");
         panel.className = "resource-panel";
-        panel.innerHTML = `<div class="resource-title"><span class="resource-owner">${group.title}</span><span class="resource-counters" data-total="${group.owner}"></span></div>`;
+        panel.innerHTML = `<div class="resource-title"><span class="resource-owner"><span class="owner-name ${group.owner === "player" ? "is-p1" : "is-p2"}">${group.title}</span></span><span class="resource-counters" data-total="${group.owner}"></span></div>`;
         foodTypes.forEach(type => {
           const row = document.createElement("div");
           row.className = "resource-row";
@@ -4077,12 +4262,12 @@
     function replayTitleFor(record) {
       const date = new Date(record.createdAt || Date.now());
       const dateText = Number.isNaN(date.getTime()) ? "" : date.toLocaleString("zh-TW", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
-      const winner = record.winnerOwner === "player" ? "玩家勝" : record.winnerOwner === "computer" ? "電腦勝" : "平手";
+      const winner = record.winnerOwner === "player" ? "P1 勝" : record.winnerOwner === "computer" ? "P2 勝" : "平手";
       return `${dateText} ${winner} ${record.score}:${record.computerScore}`;
     }
 
     function replayMetaFor(record) {
-      const mode = record.computerBattleMode ? (record.relayMode ? "連戰" : "電腦對弈") : "玩家戰鬥";
+      const mode = record.computerBattleMode ? (record.relayMode ? "連戰" : "自動對弈") : "P1 戰鬥";
       return `${mode} · ${replayCharacterName(record.playerCharacterId)} vs ${replayCharacterName(record.computerCharacterId)} · ${formatTime(record.durationMs || 0)} · ${record.snapshots?.length || 0} frames`;
     }
 
@@ -4927,6 +5112,8 @@
       renderWinnerPortrait(null);
       Object.values(portraitPoseTimers).forEach(clearTimeout);
       portraitPoseTimers = {};
+      Object.values(attackCalloutTimers).forEach(clearTimeout);
+      attackCalloutTimers = {};
       preloadPortraitsFor("player");
       preloadPortraitsFor("computer");
       buildCharacterStage();
@@ -5047,6 +5234,17 @@
       overlay.classList.add("show");
     }
 
+    function openGameOverCharacterSelect(owner) {
+      if (!gameOver) return;
+      const nextOwner = owner === "computer" ? "computer" : "player";
+      returnToStartScreen();
+      selectedPortraitOwner = nextOwner;
+      overlayTitle.textContent = "角色選擇";
+      overlayText.textContent = "選好角色後關閉選擇畫面，會回到開始畫面。";
+      renderIntroPortraits(true);
+      overlay.classList.add("show");
+    }
+
     function randomFoodType(preferredFoodId = null) {
       if (!preferredFoodId || preferredFoodId === "balanced") {
         return foodTypes[Math.floor(Math.random() * foodTypes.length)];
@@ -5137,7 +5335,8 @@
       const computerSpeedValue = isMovementStunned("computer", now) ? 0 : initialSpeed * moveMultiplier(computerStock) / (now < computerSlowUntil ? 2 : 1);
       const playerSpeed = Math.round(playerSpeedValue * 10) / 10;
       const computerSpeed = Math.round(computerSpeedValue * 10) / 10;
-      speedEl.textContent = `${playerSpeed}x/${computerSpeed}x`;
+      playerSpeedEl.textContent = `${playerSpeed}x`;
+      computerSpeedEl.textContent = `${computerSpeed}x`;
       keyEls.forEach(el => el.classList.toggle("active", Number(el.dataset.dir) === nextDir));
       updateStockHud("player", playerStock, playerAmmo, playerAmmoCharge);
       updateStockHud("computer", computerStock, computerAmmo, computerAmmoCharge);
@@ -5213,7 +5412,7 @@
       const visible = computerBattleMode && !replayMode;
       relayPanel.hidden = !visible;
       relayModeInput.checked = relayMode;
-      relayScore.textContent = `P1 ${relayPlayerWins} 勝 / P2 ${relayComputerWins} 勝 / 平手 ${relayDraws}`;
+      relayScore.innerHTML = `<span class="owner-name is-p1">P1</span> ${relayPlayerWins} 勝 / <span class="owner-name is-p2">P2</span> ${relayComputerWins} 勝 / 平手 ${relayDraws}`;
     }
 
     function updateAutoBattleControls() {
@@ -5696,9 +5895,11 @@
       return path;
     }
 
-    function firstPathHit(path, targetSnake) {
+    function pathHits(path, targetSnake) {
       const targetCells = cellKeySet(targetSnake);
-      return path.find(cell => targetCells.has(keyOf(cell))) || null;
+      return path
+        .map((cell, index) => ({ cell, index }))
+        .filter(hit => targetCells.has(keyOf(hit.cell)));
     }
 
     function cellKeySet(cellList = []) {
@@ -5745,28 +5946,46 @@
       if (character.id === "dragon") {
         const targetSnake = owner === "player" ? computerSnake : snake;
         const path = dragonWrappedOrbPath(source, ownerDirection(owner));
-        const hit = firstPathHit(path, targetSnake);
-        const travelCells = hit ? path.slice(0, path.findIndex(cell => keyOf(cell) === keyOf(hit)) + 1) : path;
-        const endCell = travelCells[travelCells.length - 1] || source;
+        const hits = pathHits(path, targetSnake);
+        const endCell = path[path.length - 1] || source;
+        const travelDelay = small.delay + path.length * 90;
         projectiles.push({
           kind: "dragonOrb",
           owner,
           profile: "big",
           source: { q: source.q, r: source.r },
-          target: hit ? { q: hit.q, r: hit.r } : { q: endCell.q, r: endCell.r },
-          pathCells: travelCells,
-          hasHit: Boolean(hit),
+          target: { q: endCell.q, r: endCell.r },
+          pathCells: path,
           visualType: attackVisualType(owner, "big"),
           createdAt: now,
-          impactAt: now + small.delay + travelCells.length * 90,
-          delay: small.delay + travelCells.length * 90,
+          impactAt: now + travelDelay,
+          delay: travelDelay,
           radius: small.radius,
           damage: small.damage,
           burstRadius: small.radius * 2,
           burstDamage: small.damage * 1.5,
           stunChance
         });
-        return small.delay + travelCells.length * 90;
+        hits.forEach(hit => {
+          projectiles.push({
+            kind: "dragonOrbBurst",
+            owner,
+            profile: "big",
+            source: { q: source.q, r: source.r },
+            target: { q: hit.cell.q, r: hit.cell.r },
+            visualType: attackVisualType(owner, "big"),
+            hidden: true,
+            createdAt: now,
+            impactAt: now + small.delay + (hit.index + 1) * 90,
+            delay: small.delay + (hit.index + 1) * 90,
+            radius: small.radius,
+            damage: small.damage,
+            burstRadius: small.radius * 2,
+            burstDamage: small.damage * 1.5,
+            stunChance
+          });
+        });
+        return travelDelay;
       }
 
       if (character.id === "moray") {
@@ -5931,6 +6150,7 @@
         });
       }
       setFighterPose(owner, "attack", Math.max(180, Math.min(poseDuration, 520)));
+      showAttackCallout(owner, profile);
       updateHud();
       return true;
     }
@@ -5945,7 +6165,7 @@
       const target = chooseAiAttackTarget("computer", profile, now);
       if (launchAttack("computer", target, now, profile)) {
         lastComputerAttackMs = now;
-        setStatus(profile === "small" ? "電腦施放小招。" : "電腦施放大招，2 秒後落地。");
+        setStatus(profile === "small" ? "P2 施放小招。" : "P2 施放大招，2 秒後落地。");
       }
     }
 
@@ -6076,7 +6296,8 @@
         let playerDamage = 0;
         let computerDamage = 0;
         if (projectile.kind === "dragonOrb") {
-          if (!projectile.hasHit) return;
+          return;
+        } else if (projectile.kind === "dragonOrbBurst") {
           const defenderOwner = projectile.owner === "player" ? "computer" : "player";
           const defenderSnake = defenderOwner === "player" ? snake : computerSnake;
           const orbDamage = damageSnake(defenderSnake, projectile.target, projectile.radius, projectile.damage);
@@ -6331,7 +6552,7 @@
 
       if (computerCollision) {
         const computerParalysisLimitReached = applyCollisionPenalty("computer", computerCollision);
-        setStatus("對手撞擊後麻痺並減速。");
+        setStatus("P2 撞擊後麻痺並減速。");
         updateHud();
         if (computerParalysisLimitReached) endGame(false, true);
         return;
@@ -6367,11 +6588,11 @@
         localStorage.setItem("hexSnakeBestTotalMs", String(Math.floor(bestTotalMs)));
       }
       updateHud();
-      let title = "玩家獲勝";
-      if (playerLost && !computerLost) title = "電腦獲勝";
+      let title = "P1 獲勝";
+      if (playerLost && !computerLost) title = "P2 獲勝";
       if (playerLost && computerLost) {
-        if (score > computerScore) title = "玩家獲勝";
-        else if (computerScore > score) title = "電腦獲勝";
+        if (score > computerScore) title = "P1 獲勝";
+        else if (computerScore > score) title = "P2 獲勝";
         else title = "平手";
       }
       setStatus(`對戰結束：${title}`);
@@ -6390,7 +6611,7 @@
       renderWinnerPortrait(winnerOwner, playerLost, computerLost);
       overlayText.textContent = computerBattleMode && relayMode
         ? `P1 ${score} 分，P2 ${computerScore} 分。接力賽：P1 ${relayPlayerWins} 勝，P2 ${relayComputerWins} 勝，平手 ${relayDraws}。`
-        : `玩家 ${score} 分，電腦 ${computerScore} 分。按開始再來一局。`;
+        : `P1 ${score} 分，P2 ${computerScore} 分。按開始再來一局。`;
       startButton.textContent = "重新開始";
       overlay.classList.add("show");
       if (computerBattleMode && relayMode) {
@@ -9070,7 +9291,7 @@
       targetStick.style.transform = "translate(0, 0)";
       if (targetActive && running && !paused && !gameOver) {
         if (launchAttack("player", targetCell || snake[0], performance.now())) {
-          setStatus("玩家施放炸彈，2 秒後落地。");
+          setStatus("P1 施放炸彈，2 秒後落地。");
         } else {
           setStatus(`大招需要 ${bigAttackBombCost} 枚炸彈，且四種庫存各至少 2。`);
         }
@@ -9231,6 +9452,11 @@
     });
 
     winnerPortrait.addEventListener("click", event => {
+      const resultPortrait = event.target.closest("[data-result-owner]");
+      if (resultPortrait) {
+        openGameOverCharacterSelect(resultPortrait.dataset.resultOwner);
+        return;
+      }
       const fullPortrait = event.target.closest("[data-full-portrait]");
       if (fullPortrait) {
         const owner = fullPortrait.dataset.fullPortrait === "computer" ? "computer" : "player";
@@ -9250,7 +9476,7 @@
       if (!introButton) return;
       selectedPortraitOwner = introButton.dataset.openIntro === "computer" ? "computer" : "player";
       overlayTitle.textContent = "角色選擇";
-      overlayText.textContent = "點擊玩家或對手立繪選擇要調整的角色，使用左右箭頭切換。";
+      overlayText.textContent = "點擊 P1 或 P2 立繪選擇要調整的角色，使用左右箭頭切換。";
       startButton.textContent = "開始";
       renderIntroPortraits(true);
     });
@@ -9334,7 +9560,7 @@
       resetGame();
       resize();
       overlayTitle.textContent = "難度已更新";
-      overlayText.textContent = `電腦難度設為 ${computerDifficultyInput.selectedOptions[0].textContent}。`;
+      overlayText.textContent = `P2 難度設為 ${computerDifficultyInput.selectedOptions[0].textContent}。`;
       startButton.textContent = "開始";
       renderIntroPortraits(true);
       overlay.classList.add("show");
@@ -9397,7 +9623,7 @@
         resetGame();
         resize();
         overlayTitle.textContent = "角色已更新";
-        overlayText.textContent = `玩家選擇 ${selectedCharacterFor("player")?.name || "隨機選擇"}，對手選擇 ${selectedCharacterFor("computer")?.name || "隨機選擇"}。`;
+        overlayText.textContent = `P1 選擇 ${selectedCharacterFor("player")?.name || "隨機選擇"}，P2 選擇 ${selectedCharacterFor("computer")?.name || "隨機選擇"}。`;
         startButton.textContent = "開始";
         renderIntroPortraits(true);
         overlay.classList.add("show");
@@ -9580,8 +9806,8 @@
         return;
       }
       if (gameOver && !canRestartAfterGameOver()) return;
-      overlayTitle.textContent = "電腦對弈";
-      overlayText.textContent = "雙方都交給電腦操作，右下角可調整對弈速度或暫停。";
+      overlayTitle.textContent = "自動對弈";
+      overlayText.textContent = "P1 / P2 皆自動操作，控制面板可調整對弈速度或暫停。";
       setOverlayChromeVisible(true);
       startGame({ computerBattle: true, resetRelayScore: true });
     });
@@ -9826,7 +10052,7 @@
           if (!autoStartGame()) return;
         }
         if (launchAttack("player", targetCell || snake[0], performance.now())) {
-          setStatus("玩家施放炸彈，2 秒後落地。");
+          setStatus("P1 施放炸彈，2 秒後落地。");
         } else {
           setStatus(`大招需要 ${bigAttackBombCost} 枚炸彈，且四種庫存各至少 2。`);
         }
