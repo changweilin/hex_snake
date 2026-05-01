@@ -22,6 +22,7 @@ const {
   createMatchState,
   createRng,
   damageSnake,
+  directionToward,
   emptyStock,
   hexDistance,
   loadBalance,
@@ -41,6 +42,10 @@ const {
   findWeakRows,
   parseDeadline
 } = require("./tune-balance");
+
+const {
+  runSearch
+} = require("./tune-ai-strategy");
 
 const root = path.resolve(__dirname, "..");
 const balance = loadBalance(root);
@@ -150,6 +155,7 @@ test("low difficulty can cast big attacks but still prefers small attacks", () =
   });
   const computer = state.fighters.computer;
   const player = state.fighters.player;
+  player.hp = 100;
   const choices = { small: 0, big: 0 };
   for (let index = 0; index < 200; index++) {
     const profile = chooseAttackProfile(state, computer, player, balance);
@@ -225,6 +231,86 @@ test("high difficulty character archetypes alter movement targets", () => {
     { q: 3, r: -1, types: ["fiber"] }
   ];
   assert.deepEqual(chooseFoodTarget(quetzalState, quetzalState.fighters.computer, quetzalState.fighters.player), quetzalState.foods[1]);
+});
+
+test("weighted movement avoids an immediate self-trapping path", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("dragon"),
+    computerCharacter: characterById.get("moray"),
+    seed: "safe-path-weight",
+    computerModel: {
+      aiDifficulty: "high",
+      pathPrecision: 1,
+      strategyWeights: {
+        movement: { safePath: 3, leastDamage: 1, fastestArrival: 3 }
+      }
+    }
+  });
+  const computer = state.fighters.computer;
+  const player = state.fighters.player;
+  computer.snake = [{ q: 0, r: 0 }, { q: 0, r: -1 }, { q: 1, r: -1 }];
+  computer.dir = 0;
+  player.snake = [{ q: 5, r: -5 }, { q: 4, r: -4 }];
+  assert.notEqual(directionToward(state, computer, player, { q: 0, r: -1 }), 0);
+});
+
+test("weighted food strategy can prefer arrival speed or character preference", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("dragon"),
+    computerCharacter: characterById.get("quetzal"),
+    seed: "food-weights",
+    computerModel: { aiDifficulty: "medium", pathPrecision: 1 }
+  });
+  state.fighters.computer.snake[0] = { q: 0, r: 0 };
+  state.fighters.player.snake[0] = { q: 5, r: -5 };
+  state.foods = [
+    { q: 1, r: 0, types: ["fat"] },
+    { q: 4, r: -1, types: ["fiber"] }
+  ];
+
+  state.fighters.computer.policy.strategyWeights.food = {
+    fastestArrival: 3,
+    ownDeficit: 0,
+    opponentDeficit: 0,
+    ownPreferred: 0,
+    opponentPreferred: 0
+  };
+  assert.deepEqual(chooseFoodTarget(state, state.fighters.computer, state.fighters.player), state.foods[0]);
+
+  state.fighters.computer.policy.strategyWeights.food = {
+    fastestArrival: 0,
+    ownDeficit: 0,
+    opponentDeficit: 0,
+    ownPreferred: 3,
+    opponentPreferred: 0
+  };
+  assert.deepEqual(chooseFoodTarget(state, state.fighters.computer, state.fighters.player), state.foods[1]);
+});
+
+test("lethal attack opportunity overrides small or big skill preferences", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("dragon"),
+    computerCharacter: characterById.get("moray"),
+    seed: "lethal-hard-rule",
+    initialBombs: balance.attack.bigAttackBombCost,
+    initialStock: Object.fromEntries(FOOD_TYPES.map(type => [type, 8])),
+    computerModel: {
+      aiDifficulty: "high",
+      skillStrategy: "spamSmall",
+      aimPrecision: 1,
+      strategyWeights: {
+        skillAllocation: { preferSmall: 3, preferBig: 0 },
+        castTiming: { lethal: 3 }
+      }
+    }
+  });
+  const computer = state.fighters.computer;
+  const player = state.fighters.player;
+  player.hp = 1;
+  assert.equal(chooseAttackProfile(state, computer, player, balance), "small");
 });
 
 test("auto battle attack decisions are owner-mirrored under equal conditions", () => {
@@ -453,6 +539,26 @@ test("balance tuner parses local time deadlines", () => {
   const deadline = parseDeadline("08:00", new Date("2026-05-01T01:00:00+08:00"));
   assert.equal(deadline.getHours(), 8);
   assert.equal(deadline.getMinutes(), 0);
+});
+
+test("AI strategy tuner produces one best strategy for each character", () => {
+  const result = runSearch({
+    balance,
+    characters,
+    seed: "ai-strategy-test",
+    durationHours: 0.000001,
+    mirrorRuns: 2,
+    populationSize: 3,
+    eliteCount: 1,
+    outputDir: path.join(root, "reports", "ai-strategy-test")
+  });
+  assert.equal(result.bestStrategies.length, characters.length);
+  characters.forEach(character => {
+    const row = result.bestStrategies.find(entry => entry.characterId === character.id);
+    assert.ok(row);
+    assert.ok(row.strategyWeights.movement.safePath >= 0);
+    assert.ok(row.strategyWeights.movement.safePath <= 3);
+  });
 });
 
 let failed = 0;

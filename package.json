@@ -12,6 +12,7 @@
     "simulate:run": "node tools/sim-scheduler.js run",
     "simulate:jobs": "node tools/sim-scheduler.js list",
     "tune:balance": "node tools/tune-balance.js",
+    "tune:ai-strategy": "node tools/tune-ai-strategy.js",
     "test": "node tools/run-tests.js"
   }
 }
