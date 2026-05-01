@@ -1568,8 +1568,22 @@
     }
 
     .resource-panel {
+      --resource-owner-color: var(--p1-color);
+      --resource-owner-line: #ffedd5;
       display: grid;
       gap: 8px;
+      min-width: 0;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid color-mix(in srgb, var(--resource-owner-color), transparent 48%);
+      background:
+        linear-gradient(180deg, color-mix(in srgb, var(--resource-owner-color), transparent 92%), rgba(15, 23, 36, 0.5)),
+        rgba(15, 23, 36, 0.42);
+    }
+
+    .resource-panel[data-owner="computer"] {
+      --resource-owner-color: var(--p2-color);
+      --resource-owner-line: #ede9fe;
     }
 
     .resource-title {
@@ -1577,6 +1591,9 @@
       justify-content: space-between;
       align-items: center;
       gap: 10px;
+      min-width: 0;
+      padding-bottom: 7px;
+      border-bottom: 1px solid color-mix(in srgb, var(--resource-owner-color), transparent 72%);
       font-weight: 800;
       color: var(--ink);
     }
@@ -2510,10 +2527,12 @@
         grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 4px;
         min-width: 0;
+        padding: 5px;
       }
 
       .resource-title {
         grid-column: 1 / -1;
+        padding-bottom: 4px;
         font-size: 0.68rem;
         gap: 4px;
       }
@@ -4034,6 +4053,7 @@
       ].forEach(group => {
         const panel = document.createElement("div");
         panel.className = "resource-panel";
+        panel.dataset.owner = group.owner;
         panel.innerHTML = `<div class="resource-title"><span class="resource-owner"><span class="owner-name ${group.owner === "player" ? "is-p1" : "is-p2"}">${group.title}</span></span><span class="resource-counters" data-total="${group.owner}"></span></div>`;
         foodTypes.forEach(type => {
           const row = document.createElement("div");
