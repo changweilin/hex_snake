@@ -181,19 +181,25 @@
     }
 
     .dialog-actions {
-      display: flex;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 10px;
       justify-content: center;
       align-items: stretch;
-      flex-wrap: wrap;
     }
 
     .dialog-actions button {
-      flex: 1 1 150px;
+      width: 100%;
+      min-width: 0;
+      padding-left: 10px;
+      padding-right: 10px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .dialog-actions button.secondary {
-      width: auto;
+      width: 100%;
     }
 
     .auto-battle-panel {
@@ -220,22 +226,22 @@
     }
 
     .replay-controls {
-      position: absolute;
-      left: 50%;
-      bottom: 1rem;
-      z-index: 8;
-      display: grid;
-      grid-template-columns: auto auto 1fr auto auto;
+      position: fixed;
+      right: max(10px, env(safe-area-inset-right));
+      top: max(10px, env(safe-area-inset-top));
+      z-index: 320;
+      display: flex;
       align-items: center;
-      gap: 0.5rem;
-      width: min(720px, calc(100% - 2rem));
-      padding: 0.62rem;
-      border: 1px solid rgba(255, 255, 255, 0.14);
+      justify-content: flex-end;
+      gap: 6px;
+      max-width: min(520px, calc(100% - 20px));
+      padding: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
       border-radius: 8px;
-      background: rgba(17, 24, 39, 0.9);
-      box-shadow: 0 16px 44px rgba(0, 0, 0, 0.36);
-      transform: translateX(-50%);
+      background: rgba(21, 27, 37, 0.58);
+      box-shadow: 0 14px 42px rgba(0, 0, 0, 0.28);
       backdrop-filter: blur(12px);
+      pointer-events: auto;
     }
 
     .replay-controls[hidden] {
@@ -244,17 +250,25 @@
 
     .replay-controls button,
     .replay-controls select {
-      min-height: 2.3rem;
+      min-height: 30px;
+      padding: 0 10px;
+      font-size: 0.86rem;
     }
 
     .replay-controls input[type="range"] {
-      width: 100%;
-      min-width: 0;
+      width: min(170px, 24vw);
+      min-width: 80px;
     }
 
     .replay-time {
       color: var(--muted);
-      font-size: 0.82rem;
+      font-size: 0.78rem;
+      white-space: nowrap;
+    }
+
+    .replay-controls label {
+      color: var(--muted);
+      font-size: 0.78rem;
       white-space: nowrap;
     }
 
@@ -674,16 +688,21 @@
     }
 
     .settings-actions {
-      display: flex;
-      justify-content: flex-end;
-      align-items: center;
-      gap: 8px;
+      display: grid;
+      grid-template-columns: repeat(5, minmax(42px, 1fr));
+      justify-self: end;
+      align-items: stretch;
+      gap: 6px;
       width: 100%;
     }
 
     .settings-toggle,
-    .replay-toggle {
-      width: 44px;
+    .replay-toggle,
+    .rules-toggle,
+    .gm-toggle,
+    .surrender-button {
+      width: 100%;
+      min-width: 0;
       min-height: 44px;
       padding: 0;
       display: inline-grid;
@@ -694,15 +713,7 @@
     }
 
     .gm-toggle {
-      width: auto;
-      min-width: 54px;
-      min-height: 44px;
-      padding: 0 12px;
-      display: inline-grid;
-      place-items: center;
-      background: #151b25;
-      color: var(--ink);
-      border: 1px solid var(--line);
+      padding: 0;
     }
 
     .gm-toggle.is-active {
@@ -717,16 +728,6 @@
       letter-spacing: 0;
     }
 
-    .rules-toggle {
-      width: auto;
-      min-width: 72px;
-      min-height: 44px;
-      padding: 0 12px;
-      background: #151b25;
-      color: var(--ink);
-      border: 1px solid var(--line);
-    }
-
     .settings-toggle:hover,
     .settings-toggle:focus-visible,
     .replay-toggle:hover,
@@ -734,7 +735,9 @@
     .gm-toggle:hover,
     .gm-toggle:focus-visible,
     .rules-toggle:hover,
-    .rules-toggle:focus-visible {
+    .rules-toggle:focus-visible,
+    .surrender-button:hover,
+    .surrender-button:focus-visible {
       border-color: var(--accent);
       outline: 2px solid rgba(245, 158, 11, 0.2);
       outline-offset: 2px;
@@ -753,7 +756,7 @@
     }
 
     .settings-action-icon {
-      display: none;
+      display: block;
     }
 
     .surrender-icon {
@@ -762,6 +765,7 @@
     }
 
     .settings-title,
+    .settings-action-label,
     .replay-toggle-label {
       position: absolute;
       width: 1px;
@@ -779,7 +783,7 @@
       top: calc(100% + 6px);
       right: 0;
       z-index: 261;
-      width: min(360px, calc(100vw - 36px));
+      width: min(520px, calc(100vw - 36px));
       max-height: min(72dvh, 560px);
       overflow-y: auto;
       display: grid;
@@ -797,7 +801,7 @@
 
     .gm-settings {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 10px;
       padding: 10px;
       border-radius: 8px;
@@ -826,6 +830,10 @@
 
     .gm-settings > button {
       grid-column: 1 / -1;
+    }
+
+    .settings-content > button.secondary {
+      width: 100%;
     }
 
     .field {
@@ -1611,29 +1619,6 @@
       transition: width 140ms ease;
     }
 
-    .keys {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 7px;
-    }
-
-    .key {
-      min-height: 52px;
-      border-radius: 8px;
-      display: grid;
-      place-items: center;
-      background: #151b25;
-      border: 1px solid var(--line);
-      color: var(--muted);
-      font-weight: 800;
-    }
-
-    .key.active {
-      border-color: var(--accent);
-      color: var(--ink);
-      box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.48);
-    }
-
     .control-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -2140,7 +2125,6 @@
         padding: 6px;
       }
 
-      .side .section:nth-of-type(3),
       .side .section:nth-of-type(5) {
         display: none;
       }
@@ -2288,6 +2272,10 @@
         box-shadow: 0 18px 60px rgba(0, 0, 0, 0.44);
       }
 
+      .side .settings-section .gm-settings {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
       .side .settings-section .field {
         gap: 5px;
       }
@@ -2403,12 +2391,12 @@
         line-height: 1;
       }
 
-      .side .section:nth-of-type(4) {
+      .side .section:nth-of-type(3) {
         order: 3;
         padding: 6px 8px;
       }
 
-      .side .section:nth-of-type(4) h2 {
+      .side .section:nth-of-type(3) h2 {
         display: none;
       }
 
@@ -2465,6 +2453,16 @@
         margin-bottom: 10px;
         font-size: 0.82rem;
         line-height: 1.25;
+      }
+
+      .dialog-actions {
+        gap: 6px;
+      }
+
+      .dialog-actions button {
+        min-height: 36px;
+        padding: 7px 5px;
+        font-size: clamp(0.68rem, 2.9vw, 0.82rem);
       }
 
       button {
@@ -2627,6 +2625,7 @@
           </div>
         </div>
         <div class="replay-controls" id="replayControls" hidden aria-label="重播控制">
+          <label for="replaySpeedSelect">重播</label>
           <button id="replayReverseButton" class="secondary" type="button">倒放</button>
           <button id="replayPlayButton" type="button">暫停</button>
           <input id="replayTimeline" type="range" min="0" max="0" step="1" value="0" aria-label="重播時間軸">
@@ -2661,17 +2660,9 @@
     <aside class="side" aria-label="控制面板">
       <section class="section settings-section">
         <div class="settings-actions">
-        <button class="surrender-button" id="surrenderButton" type="button" title="投降" aria-label="投降">
-          <svg class="settings-action-icon surrender-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h2v18H5V3Z"/><path d="M8 4h11l-2.2 4 2.2 4H8V4Z"/></svg>
-          <span class="settings-action-label">投降</span>
-        </button>
         <button class="rules-toggle" id="rulesButton" type="button" aria-haspopup="dialog" aria-controls="rulesModal" aria-expanded="false" title="規則" aria-label="規則">
           <svg class="settings-action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 0 4 22V5.5Z"/><path d="M8 7h8"/><path d="M8 11h8"/></svg>
           <span class="settings-action-label">規則</span>
-        </button>
-        <button class="gm-toggle" id="gmToggle" type="button" aria-expanded="false" aria-controls="gmContent" title="GM 設定" aria-label="GM 設定">
-          <span class="gm-letter" aria-hidden="true">G</span>
-          <span class="settings-action-label">GM</span>
         </button>
         <button class="replay-toggle" id="settingsReplayButton" type="button" title="重播紀錄" aria-label="重播紀錄">
           <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -2681,12 +2672,20 @@
           </svg>
           <span class="replay-toggle-label">重播紀錄</span>
         </button>
+        <button class="surrender-button" id="surrenderButton" type="button" title="投降" aria-label="投降">
+          <svg class="settings-action-icon surrender-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h2v18H5V3Z"/><path d="M8 4h11l-2.2 4 2.2 4H8V4Z"/></svg>
+          <span class="settings-action-label">投降</span>
+        </button>
         <button class="settings-toggle" id="settingsToggle" type="button" aria-expanded="false" aria-controls="settingsContent" title="開局設定">
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             <path d="M19.4 15a1.8 1.8 0 0 0 .36 1.98l.04.04a2.1 2.1 0 0 1-2.97 2.97l-.04-.04a1.8 1.8 0 0 0-1.98-.36 1.8 1.8 0 0 0-1.09 1.65V21.4a2.1 2.1 0 0 1-4.2 0v-.16a1.8 1.8 0 0 0-1.09-1.65 1.8 1.8 0 0 0-1.98.36l-.04.04a2.1 2.1 0 0 1-2.97-2.97l.04-.04A1.8 1.8 0 0 0 3.8 15a1.8 1.8 0 0 0-1.65-1.09H2a2.1 2.1 0 0 1 0-4.2h.16A1.8 1.8 0 0 0 3.8 8.62a1.8 1.8 0 0 0-.36-1.98l-.04-.04A2.1 2.1 0 0 1 6.37 3.63l.04.04a1.8 1.8 0 0 0 1.98.36A1.8 1.8 0 0 0 9.48 2.38V2.2a2.1 2.1 0 0 1 4.2 0v.18a1.8 1.8 0 0 0 1.09 1.65 1.8 1.8 0 0 0 1.98-.36l.04-.04A2.1 2.1 0 0 1 19.76 6.6l-.04.04a1.8 1.8 0 0 0-.36 1.98 1.8 1.8 0 0 0 1.65 1.09h.19a2.1 2.1 0 0 1 0 4.2h-.19A1.8 1.8 0 0 0 19.4 15Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
           <span class="settings-title">開局設定</span>
+        </button>
+        <button class="gm-toggle" id="gmToggle" type="button" aria-expanded="false" aria-controls="gmContent" title="GM 設定" aria-label="GM 設定">
+          <span class="gm-letter" aria-hidden="true">G</span>
+          <span class="settings-action-label">GM</span>
         </button>
         </div>
         <div class="settings-content" id="settingsContent" hidden>
@@ -2815,18 +2814,6 @@
       <section class="section">
         <h2>營養庫存</h2>
         <div class="resource-board" id="resourceBoard"></div>
-      </section>
-
-      <section class="section">
-        <h2>鍵盤方向</h2>
-        <div class="keys" id="keys">
-          <div class="key" data-dir="5">A</div>
-          <div class="key" data-dir="0">W</div>
-          <div class="key" data-dir="1">E</div>
-          <div class="key" data-dir="4">Z</div>
-          <div class="key" data-dir="3">X</div>
-          <div class="key" data-dir="2">D</div>
-        </div>
       </section>
 
       <section class="section control-section">
@@ -2998,6 +2985,7 @@
     let baseStepMs = 460;
     let blastDurationMs = 520;
     let baseBlastHexRadius = 2;
+    let proteinRangeBonusPerPoint = 0.05;
     let maxAttackSpeedBonus = 1;
     let maxMoveBonus = 0.8;
     let maxDamageBonus = 1.4;
@@ -3082,6 +3070,7 @@
       baseAttackDelayMs = config.attack?.baseAttackDelayMs ?? baseAttackDelayMs;
       baseAttackCooldownMs = config.attack?.baseAttackCooldownMs ?? baseAttackCooldownMs;
       baseBlastHexRadius = config.attack?.baseBlastHexRadius ?? baseBlastHexRadius;
+      proteinRangeBonusPerPoint = config.attack?.proteinRangeBonusPerPoint ?? proteinRangeBonusPerPoint;
       blastDurationMs = config.attack?.blastDurationMs ?? blastDurationMs;
       attackSpeedBonusPerPoint = config.attack?.attackSpeedBonusPerPoint ?? attackSpeedBonusPerPoint;
       maxAttackSpeedBonus = config.attack?.maxAttackSpeedBonus ?? maxAttackSpeedBonus;
@@ -3222,6 +3211,11 @@
     let projectiles = [];
     let blasts = [];
     let hazards = [];
+    let boardShakeUntil = 0;
+    let boardShakeStartedAt = 0;
+    let boardShakeStrength = 0;
+    let boardShakeFrequency = 1;
+    let boardShakeStyle = "impact";
     let dir;
     let nextDir;
     let computerDir;
@@ -3303,7 +3297,7 @@
     let lastReplaySnapshotAt = -Infinity;
     let replayMode = false;
     let replayPlayback = null;
-    let replayReturnOverlay = null;
+    let replayReturnState = null;
     let replayRafId = 0;
     let replaySurrendered = false;
 
@@ -3905,7 +3899,7 @@
     }
 
     function areaMultiplier(stock) {
-      return 1 + (stock.protein || 0) / maxFoodStock;
+      return 1 + foodBonus(stock, "protein", proteinRangeBonusPerPoint, 1);
     }
 
     function attackSpeedMultiplier(stock) {
@@ -4406,6 +4400,75 @@
       replayTime.textContent = `${formatTime(replayPlayback.time)} / ${formatTime(duration)}`;
     }
 
+    function captureReplayReturnState() {
+      return {
+        snapshot: snake && computerSnake ? createReplaySnapshot(performance.now(), true) : null,
+        overlayClassName: overlay.className,
+        overlayTitleHidden: overlayTitle.hidden,
+        overlayTextHidden: overlayText.hidden,
+        startButtonHidden: startButton.hidden,
+        computerBattleButtonHidden: computerBattleButton.hidden,
+        replayArchiveButtonHidden: replayArchiveButton.hidden,
+        introCloseButtonHidden: introCloseButton.hidden,
+        title: overlayTitle.textContent,
+        text: overlayText.textContent,
+        startText: startButton.textContent,
+        winnerPortraitHidden: winnerPortrait.hidden,
+        winnerPortraitHtml: winnerPortrait.innerHTML,
+        characterStageHidden: characterStage.hidden,
+        characterStageHtml: characterStage.innerHTML,
+        statusText: statusEl.textContent,
+        gameOver,
+        running,
+        paused,
+        computerBattleMode,
+        relayMode,
+        playerCharacterId,
+        computerCharacterId,
+        playerCharacterChoice,
+        computerCharacterChoice,
+        selectedPortraitOwner,
+        introDetailsOpen
+      };
+    }
+
+    function restoreReplayReturnState(state) {
+      if (!state) {
+        returnToStartScreen();
+        return;
+      }
+      playerCharacterId = state.playerCharacterId;
+      computerCharacterId = state.computerCharacterId;
+      playerCharacterChoice = state.playerCharacterChoice;
+      computerCharacterChoice = state.computerCharacterChoice;
+      selectedPortraitOwner = state.selectedPortraitOwner;
+      introDetailsOpen = state.introDetailsOpen;
+      running = state.running;
+      paused = state.paused;
+      gameOver = state.gameOver;
+      computerBattleMode = state.computerBattleMode;
+      relayMode = state.relayMode;
+      if (state.snapshot) applyReplaySnapshot(state.snapshot, state);
+      overlay.className = state.overlayClassName;
+      overlayTitle.hidden = state.overlayTitleHidden;
+      overlayText.hidden = state.overlayTextHidden;
+      startButton.hidden = state.startButtonHidden;
+      computerBattleButton.hidden = state.computerBattleButtonHidden;
+      replayArchiveButton.hidden = state.replayArchiveButtonHidden;
+      introCloseButton.hidden = state.introCloseButtonHidden;
+      overlayTitle.textContent = state.title;
+      overlayText.textContent = state.text;
+      startButton.textContent = state.startText;
+      winnerPortrait.hidden = state.winnerPortraitHidden;
+      winnerPortrait.innerHTML = state.winnerPortraitHtml;
+      characterStage.hidden = state.characterStageHidden;
+      characterStage.innerHTML = state.characterStageHtml;
+      setStatus(state.statusText);
+      updateHud();
+      updateAutoBattleControls();
+      draw();
+    }
+
     function renderReplayFrame() {
       if (!replayPlayback) return;
       const now = performance.now();
@@ -4433,13 +4496,7 @@
       closeReplayModal();
       cancelAnimationFrame(rafId);
       clearRelayRestartTimer();
-      replayReturnOverlay = {
-        shown: overlay.classList.contains("show"),
-        title: overlayTitle.textContent,
-        text: overlayText.textContent,
-        startText: startButton.textContent,
-        gameOver
-      };
+      replayReturnState = captureReplayReturnState();
       replayMode = true;
       running = false;
       paused = true;
@@ -4472,18 +4529,8 @@
       replayPlayback = null;
       replayControls.hidden = true;
       setSettingsLocked(false);
-      resetGame();
-      resize();
-      if (replayReturnOverlay?.shown) {
-        overlayTitle.textContent = replayReturnOverlay.title;
-        overlayText.textContent = replayReturnOverlay.text;
-        startButton.textContent = replayReturnOverlay.startText;
-        gameOver = Boolean(replayReturnOverlay.gameOver);
-        overlay.classList.add("show");
-      } else {
-        returnToStartScreen();
-      }
-      replayReturnOverlay = null;
+      restoreReplayReturnState(replayReturnState);
+      replayReturnState = null;
     }
 
     function normalizeKey(value, fallback) {
@@ -4785,6 +4832,13 @@
       return `${cell.q},${cell.r}`;
     }
 
+    function stableVariantIndex(cell, salt = 0, count = 1) {
+      const q = Math.imul(cell.q + 97, 73856093);
+      const r = Math.imul(cell.r - 53, 19349663);
+      const mixed = (q ^ r ^ Math.imul(salt + 31, 83492791)) >>> 0;
+      return mixed % Math.max(1, count);
+    }
+
     function isInside(cell) {
       const s = -cell.q - cell.r;
       return Math.max(Math.abs(cell.q), Math.abs(cell.r), Math.abs(s)) <= radius;
@@ -4901,6 +4955,9 @@
       projectiles = [];
       blasts = [];
       hazards = [];
+      boardShakeUntil = 0;
+      boardShakeStartedAt = 0;
+      boardShakeStrength = 0;
       targetCell = { ...snake[0] };
       targetActive = false;
       totalElapsedMs = 0;
@@ -5153,7 +5210,7 @@
     }
 
     function updateRelayControls() {
-      const visible = computerBattleMode && (running || gameOver);
+      const visible = computerBattleMode && !replayMode;
       relayPanel.hidden = !visible;
       relayModeInput.checked = relayMode;
       relayScore.textContent = `P1 ${relayPlayerWins} 勝 / P2 ${relayComputerWins} 勝 / 平手 ${relayDraws}`;
@@ -5623,13 +5680,37 @@
       return path;
     }
 
+    function dragonOrbPath(source, direction) {
+      return cellsForwardFrom(source, direction, false);
+    }
+
+    function dragonWrappedOrbPath(source, direction) {
+      const path = [];
+      let cursor = { q: source.q, r: source.r };
+      const maxSteps = Math.max(1, cells.length);
+      for (let step = 0; step < maxSteps; step += 1) {
+        cursor = nextWrappedCell(cursor, direction);
+        if (keyOf(cursor) === keyOf(source)) break;
+        path.push({ q: cursor.q, r: cursor.r });
+      }
+      return path;
+    }
+
+    function firstPathHit(path, targetSnake) {
+      const targetCells = cellKeySet(targetSnake);
+      return path.find(cell => targetCells.has(keyOf(cell))) || null;
+    }
+
     function cellKeySet(cellList = []) {
       return new Set(cellList.map(cell => keyOf(cell)));
     }
 
-    function cellsNearCells(effectCells, width, excludedCells = []) {
+    function cellsNearCells(effectCells, width, excludedCells = [], minDistance = 0) {
       const excluded = cellKeySet(excludedCells);
-      return cells.filter(cell => !excluded.has(keyOf(cell)) && effectCells.some(effectCell => hexDistance(cell, effectCell) <= width));
+      return cells.filter(cell => !excluded.has(keyOf(cell)) && effectCells.some(effectCell => {
+        const distance = hexDistance(cell, effectCell);
+        return distance >= minDistance && distance <= width;
+      }));
     }
 
     function attackVisualType(owner, profile = "big") {
@@ -5637,7 +5718,7 @@
       return `${character.id}-${profile}`;
     }
 
-    function pushCircleAttack({ owner, profile, source = null, target, createdAt, impactAt, delay, radius, damage, stunChance, hidden = false, flat = false, visualType = null }) {
+    function pushCircleAttack({ owner, profile, source = null, target, createdAt, impactAt, delay, radius, damage, stunChance, hidden = false, flat = false, visualType = null, ...extra }) {
       projectiles.push({
         kind: "circle",
         owner,
@@ -5652,7 +5733,8 @@
         damage,
         stunChance,
         hidden,
-        flat
+        flat,
+        ...extra
       });
     }
 
@@ -5662,21 +5744,29 @@
 
       if (character.id === "dragon") {
         const targetSnake = owner === "player" ? computerSnake : snake;
-        const path = dragonChargePath(source, direction, targetSnake);
-        path.forEach((cell, index) => {
-          pushCircleAttack({
-            owner,
-            profile: "big",
-            target: cell,
-            createdAt: now,
-            impactAt: now + small.delay + index * 140,
-            delay: small.delay + index * 140,
-            radius: small.radius * 2,
-            damage: small.damage * 2,
-            stunChance
-          });
+        const path = dragonWrappedOrbPath(source, ownerDirection(owner));
+        const hit = firstPathHit(path, targetSnake);
+        const travelCells = hit ? path.slice(0, path.findIndex(cell => keyOf(cell) === keyOf(hit)) + 1) : path;
+        const endCell = travelCells[travelCells.length - 1] || source;
+        projectiles.push({
+          kind: "dragonOrb",
+          owner,
+          profile: "big",
+          source: { q: source.q, r: source.r },
+          target: hit ? { q: hit.q, r: hit.r } : { q: endCell.q, r: endCell.r },
+          pathCells: travelCells,
+          hasHit: Boolean(hit),
+          visualType: attackVisualType(owner, "big"),
+          createdAt: now,
+          impactAt: now + small.delay + travelCells.length * 90,
+          delay: small.delay + travelCells.length * 90,
+          radius: small.radius,
+          damage: small.damage,
+          burstRadius: small.radius * 2,
+          burstDamage: small.damage * 1.5,
+          stunChance
         });
-        return small.delay + path.length * 140;
+        return small.delay + travelCells.length * 90;
       }
 
       if (character.id === "moray") {
@@ -5696,7 +5786,7 @@
             createdAt: now,
             impactAt: now + small.delay + index * 320,
             delay: small.delay + index * 320,
-            damage: small.damage * 0.75,
+            damage: small.damage * 0.6,
             stunChance,
             stackStun: true
           });
@@ -5707,12 +5797,15 @@
       if (character.id === "quetzal") {
         const trail = (owner === "player" ? snake : computerSnake).map(segment => ({ q: segment.q, r: segment.r }));
         const duration = 2500;
+        const outwardWidth = Math.max(1, bandDistanceFromTotalWidth(small.radius));
         hazards.push({
           kind: "swamp",
           owner,
           cells: trail,
-          excludedCells: trail,
-          width: bandDistanceFromTotalWidth(small.radius),
+          damageExcludedCells: trail,
+          visualExcludedCells: [],
+          width: outwardWidth,
+          minDistance: 1,
           visualType: attackVisualType(owner, "big"),
           damage: small.damage,
           stunChance,
@@ -5744,7 +5837,7 @@
           impactAt: now + delay,
           delay,
           radius: Math.max(0.5, small.radius * 0.5),
-          damage: small.damage * 4,
+          damage: small.damage * 3.5,
           stunChance,
           hidden: true,
           sandwormParalyzeOnHead: true
@@ -5753,19 +5846,29 @@
       }
 
       if (character.id === "lobster") {
-        pushCircleAttack({
-          owner,
-          profile: "big",
-          target: source,
-          createdAt: now,
-          impactAt: now + small.delay,
-          delay: small.delay,
-          radius: small.radius * 2.5,
-          damage: small.damage * 2,
-          stunChance,
-          flat: true
-        });
-        return small.delay;
+        const big = attackStats(stock, "big");
+        const lobsterUltimateRadiusScale = 3;
+        for (let index = 0; index < 2; index += 1) {
+          projectiles.push({
+            kind: "headCircle",
+            owner,
+            profile: "big",
+            source: { q: source.q, r: source.r },
+            target: { q: source.q, r: source.r },
+            createdAt: now,
+            impactAt: now + small.delay + index * 2000,
+            delay: small.delay + index * 2000,
+            radius: big.radius * lobsterUltimateRadiusScale,
+            damage: big.damage,
+            radiationDurationMs: 4000,
+            radiationTickMs: 500,
+            radiationTotalDamage: big.damage,
+            stunChance,
+            flat: true,
+            visualType: attackVisualType(owner, "big")
+          });
+        }
+        return small.delay + 2000;
       }
 
       if (character.id === "gu_king") {
@@ -5888,11 +5991,14 @@
       ), 0);
     }
 
-    function damageSnakeCells(parts, effectCells, width, damageScale, excludedCells = []) {
+    function damageSnakeCells(parts, effectCells, width, damageScale, excludedCells = [], minDistance = 0) {
       const excluded = cellKeySet(excludedCells);
       return parts.reduce((total, segment) => {
         if (excluded.has(keyOf(segment))) return total;
-        const hit = effectCells.some(cell => hexDistance(segment, cell) <= width);
+        const hit = effectCells.some(cell => {
+          const distance = hexDistance(segment, cell);
+          return distance >= minDistance && distance <= width;
+        });
         return hit ? total + damageScale : total;
       }, 0);
     }
@@ -5969,7 +6075,26 @@
       landed.forEach(projectile => {
         let playerDamage = 0;
         let computerDamage = 0;
-        if (projectile.kind === "line") {
+        if (projectile.kind === "dragonOrb") {
+          if (!projectile.hasHit) return;
+          const defenderOwner = projectile.owner === "player" ? "computer" : "player";
+          const defenderSnake = defenderOwner === "player" ? snake : computerSnake;
+          const orbDamage = damageSnake(defenderSnake, projectile.target, projectile.radius, projectile.damage);
+          if (defenderOwner === "player") playerDamage += orbDamage;
+          else computerDamage += orbDamage;
+          playerDamage += damageSnake(snake, projectile.target, projectile.burstRadius, projectile.burstDamage);
+          computerDamage += damageSnake(computerSnake, projectile.target, projectile.burstRadius, projectile.burstDamage);
+          blasts.push({
+            kind: "circle",
+            target: projectile.target,
+            owner: projectile.owner,
+            radius: projectile.burstRadius,
+            visualType: `${characterFor(projectile.owner).id}-burst`,
+            startedAt: now,
+            endAt: now + blastDurationMs * 1.25
+          });
+          triggerBoardShake(`${characterFor(projectile.owner).id}-burst`, now);
+        } else if (projectile.kind === "line") {
           playerDamage = damageSnakeCells(snake, projectile.lineCells, projectile.width, projectile.damage, projectile.excludedCells);
           computerDamage = damageSnakeCells(computerSnake, projectile.lineCells, projectile.width, projectile.damage, projectile.excludedCells);
           blasts.push({
@@ -5983,26 +6108,53 @@
             startedAt: now,
             endAt: now + blastDurationMs
           });
+          triggerBoardShake(projectile.visualType || attackVisualType(projectile.owner, projectile.profile), now);
         } else {
+          if (projectile.kind === "headCircle") {
+            const head = ownerHead(projectile.owner);
+            projectile.explosionTarget = { q: head.q, r: head.r };
+            projectile.target = { q: projectile.explosionTarget.q, r: projectile.explosionTarget.r };
+          }
+          const explosionTarget = projectile.explosionTarget || projectile.target;
           const radius = projectile.radius || baseBlastHexRadius;
           const damage = projectile.damage || 1;
           const damageFn = projectile.flat ? damageSnakeFlat : damageSnake;
-          playerDamage = damageFn(snake, projectile.target, radius, damage);
-          computerDamage = damageFn(computerSnake, projectile.target, radius, damage);
+          playerDamage = damageFn(snake, explosionTarget, radius, damage);
+          computerDamage = damageFn(computerSnake, explosionTarget, radius, damage);
           blasts.push({
             kind: "circle",
-            target: projectile.target,
+            target: explosionTarget,
             owner: projectile.owner,
             radius,
             visualType: projectile.visualType || attackVisualType(projectile.owner, projectile.profile),
             startedAt: now,
             endAt: now + blastDurationMs
           });
+          triggerBoardShake(projectile.visualType || attackVisualType(projectile.owner, projectile.profile), now);
+          if (projectile.kind === "headCircle" && projectile.radiationDurationMs) {
+            const ticks = Math.max(1, Math.ceil(projectile.radiationDurationMs / projectile.radiationTickMs));
+            hazards.push({
+              kind: "radiation",
+              owner: projectile.owner,
+              target: { q: explosionTarget.q, r: explosionTarget.r },
+              radius,
+              width: radius,
+              visualType: "lobster-radiation",
+              damage: projectile.radiationTotalDamage / ticks,
+              stunChance: projectile.stunChance,
+              startedAt: now,
+              nextTickAt: now + projectile.radiationTickMs,
+              tickMs: projectile.radiationTickMs,
+              endAt: now + projectile.radiationDurationMs
+            });
+          }
           if (projectile.sandwormParalyzeOnHead) {
             if (projectile.owner !== "player" && keyOf(projectile.target) === keyOf(snake[0])) applyCollisionParalysis("player", now);
             if (projectile.owner !== "computer" && keyOf(projectile.target) === keyOf(computerSnake[0])) applyCollisionParalysis("computer", now);
           }
         }
+        if (projectile.owner === "player") playerDamage = 0;
+        if (projectile.owner === "computer") computerDamage = 0;
         applyBlastDamage("player", playerDamage);
         applyBlastDamage("computer", computerDamage);
         if (projectile.owner !== "player" && playerDamage > 0) applyAttackStun("player", projectile.stunChance, now, { stack: projectile.stackStun });
@@ -6017,9 +6169,20 @@
       hazards = activeHazards;
       activeHazards.forEach(hazard => {
         if (now < hazard.startedAt || now < hazard.nextTickAt) return;
+        if (!hazard.shaken) {
+          triggerBoardShake(hazard.visualType || attackVisualType(hazard.owner, "big"), now);
+          hazard.shaken = true;
+        }
         hazard.nextTickAt = now + hazard.tickMs;
-        const playerDamage = damageSnakeCells(snake, hazard.cells, hazard.width, hazard.damage, hazard.excludedCells);
-        const computerDamage = damageSnakeCells(computerSnake, hazard.cells, hazard.width, hazard.damage, hazard.excludedCells);
+        const damageExcludedCells = hazard.damageExcludedCells || hazard.excludedCells || [];
+        let playerDamage = hazard.kind === "radiation"
+          ? damageSnake(snake, hazard.target, hazard.radius, hazard.damage)
+          : damageSnakeCells(snake, hazard.cells, hazard.width, hazard.damage, hazard.owner === "player" ? damageExcludedCells : [], hazard.minDistance || 0);
+        let computerDamage = hazard.kind === "radiation"
+          ? damageSnake(computerSnake, hazard.target, hazard.radius, hazard.damage)
+          : damageSnakeCells(computerSnake, hazard.cells, hazard.width, hazard.damage, hazard.owner === "computer" ? damageExcludedCells : [], hazard.minDistance || 0);
+        if (hazard.owner === "player") playerDamage = 0;
+        if (hazard.owner === "computer") computerDamage = 0;
         applyBlastDamage("player", playerDamage);
         applyBlastDamage("computer", computerDamage);
         if (hazard.owner !== "player" && playerDamage > 0) applyAttackStun("player", hazard.stunChance, now, { interrupt: false });
@@ -6290,6 +6453,9 @@
       ctx.clearRect(0, 0, rect.width, rect.height);
       ctx.fillStyle = "#111720";
       ctx.fillRect(0, 0, rect.width, rect.height);
+      const shake = boardShakeOffset(now);
+      ctx.save();
+      ctx.translate(shake.x, shake.y);
 
       cells.forEach(cell => {
         const { x, y } = axialToPixel(cell);
@@ -6311,6 +6477,7 @@
       drawProjectiles();
       drawTarget();
       drawHazards();
+      drawQuetzalBloomPreview(now);
       drawBlasts();
 
       if (computerSnake) {
@@ -6346,19 +6513,72 @@
       }
 
       drawStatusEffects(now);
+      ctx.restore();
     }
 
     function waveValue(progress, offset = 0) {
       return (Math.sin((progress + offset) * Math.PI * 2) + 1) / 2;
     }
 
+    function triggerBoardShake(visualType = "", now = performance.now()) {
+      if (!visualType.endsWith("-big") && !visualType.endsWith("-burst")) return;
+      const characterId = visualType.split("-")[0];
+      const presets = {
+        dragon: { strength: visualType.endsWith("-burst") ? 9.6 : 6.2, duration: visualType.endsWith("-burst") ? 760 : 520, frequency: 1.2, style: "impact" },
+        moray: { strength: 5.8, duration: 700, frequency: 5.6, style: "electric" },
+        lobster: { strength: 10.8, duration: 860, frequency: 1.05, style: "impact" },
+        gu_king: { strength: 6.2, duration: 860, frequency: 2.8, style: "vortex" },
+        sandworm: { strength: 8.8, duration: 820, frequency: 1.55, style: "rumble" },
+        quetzal: { strength: 5.4, duration: 820, frequency: 1.8, style: "growth" }
+      };
+      const preset = presets[characterId] || { strength: 4.6, duration: 520, frequency: 1.4, style: "impact" };
+      boardShakeStartedAt = now;
+      boardShakeUntil = Math.max(boardShakeUntil, now + preset.duration);
+      boardShakeStrength = Math.max(boardShakeStrength, preset.strength);
+      boardShakeFrequency = preset.frequency;
+      boardShakeStyle = preset.style;
+    }
+
+    function boardShakeOffset(now) {
+      if (now >= boardShakeUntil || !boardShakeStrength) {
+        boardShakeStrength = 0;
+        return { x: 0, y: 0 };
+      }
+      const duration = Math.max(1, boardShakeUntil - boardShakeStartedAt);
+      const progress = Math.min(1, Math.max(0, (now - boardShakeStartedAt) / duration));
+      const decay = Math.pow(1 - progress, boardShakeStyle === "electric" ? 0.62 : 1.15);
+      const t = now / 34 * boardShakeFrequency;
+      if (boardShakeStyle === "electric") {
+        return {
+          x: Math.sin(t * 3.1) * boardShakeStrength * decay,
+          y: Math.sign(Math.sin(t * 7.3)) * boardShakeStrength * 0.42 * decay
+        };
+      }
+      if (boardShakeStyle === "vortex") {
+        return {
+          x: Math.cos(t * 1.7 + progress * Math.PI * 4) * boardShakeStrength * decay,
+          y: Math.sin(t * 1.3 + progress * Math.PI * 4) * boardShakeStrength * 0.74 * decay
+        };
+      }
+      if (boardShakeStyle === "growth") {
+        return {
+          x: Math.sin(t * 1.4) * boardShakeStrength * 0.44 * decay,
+          y: -Math.abs(Math.cos(t * 1.8)) * boardShakeStrength * decay
+        };
+      }
+      return {
+        x: Math.sin(t * 2.4) * boardShakeStrength * decay,
+        y: Math.cos(t * 1.7) * boardShakeStrength * 0.72 * decay
+      };
+    }
+
     function elementColorsFor(character) {
-      if (character.id === "dragon") return { primary: "#e0f2fe", secondary: "#fbbf24", glow: "#bae6fd", hot: "#ffffff", deep: "#38bdf8", palette: ["#ffffff", "#e0f2fe", "#bae6fd", "#38bdf8", "#fbbf24"] };
-      if (character.id === "sandworm") return { primary: "#facc15", secondary: "#92400e", glow: "#fef08a", hot: "#fde68a", deep: "#78350f", palette: ["#fef08a", "#facc15", "#f59e0b", "#92400e", "#78350f"] };
-      if (character.id === "quetzal") return { primary: "#22c55e", secondary: "#67e8f9", glow: "#bbf7d0", hot: "#f0fdfa", deep: "#15803d", palette: ["#f0fdfa", "#bbf7d0", "#22c55e", "#67e8f9", "#15803d"] };
-      if (character.id === "moray") return { primary: "#38bdf8", secondary: "#f8fafc", glow: "#93c5fd", hot: "#ffffff", deep: "#1d4ed8", palette: ["#ffffff", "#bfdbfe", "#38bdf8", "#3b82f6", "#1d4ed8"] };
+      if (character.id === "dragon") return { primary: "#f8fafc", secondary: "#fbbf24", glow: "#fde68a", hot: "#ffffff", deep: "#bae6fd", palette: ["#ffffff", "#f8fafc", "#fef3c7", "#fbbf24", "#bae6fd"] };
+      if (character.id === "sandworm") return { primary: "#facc15", secondary: "#92400e", glow: "#fef08a", hot: "#fde68a", deep: "#78350f", dust: "#d6a35c", palette: ["#fef08a", "#facc15", "#d97706", "#92400e", "#4a2a12"] };
+      if (character.id === "quetzal") return { primary: "#22c55e", secondary: "#67e8f9", glow: "#bbf7d0", hot: "#f0fdfa", deep: "#15803d", mud: "#6b4423", palette: ["#f0fdfa", "#bbf7d0", "#22c55e", "#67e8f9", "#6b4423"] };
+      if (character.id === "moray") return { primary: "#1d4ed8", secondary: "#60a5fa", glow: "#bfdbfe", hot: "#ffffff", deep: "#172554", violet: "#8b5cf6", palette: ["#1d4ed8", "#2563eb", "#60a5fa", "#ffffff", "#93c5fd", "#8b5cf6", "#7c3aed"] };
       if (character.id === "lobster") return { primary: "#ef4444", secondary: "#f97316", glow: "#fecaca", hot: "#fff7ed", deep: "#7f1d1d", palette: ["#fff7ed", "#fecaca", "#f97316", "#ef4444", "#7f1d1d"] };
-      if (character.id === "gu_king") return { primary: "#a3e635", secondary: "#050505", glow: "#d9f99d", hot: "#f7fee7", deep: "#365314", palette: ["#f7fee7", "#d9f99d", "#a3e635", "#4d7c0f", "#111827"] };
+      if (character.id === "gu_king") return { primary: "#050505", secondary: "#7f1d1d", glow: "#064e3b", hot: "#6d28d9", deep: "#020617", bruise: "#312e81", palette: ["#050505", "#7f1d1d", "#064e3b", "#312e81", "#1f2937"] };
       return { primary: character.accent || character.color, secondary: character.line, glow: character.line, hot: "#ffffff", deep: character.color, palette: ["#ffffff", character.accent || character.color, character.line, character.color] };
     }
 
@@ -6659,37 +6879,1408 @@
       ctx.restore();
     }
 
-    function drawProjectileCore(x, y, projectile, progress, character) {
+    function drawEnergyBeamBurst(x, y, radiusPx, progress, character, alpha = 1) {
+      const element = elementColorsFor(character);
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      const pulse = 0.82 + waveValue(progress, 0.16) * 0.24;
+      const gradient = ctx.createRadialGradient(x, y, radiusPx * 0.04, x, y, radiusPx * 0.72 * pulse);
+      gradient.addColorStop(0, hexToRgba("#ffffff", 0.88 * alpha));
+      gradient.addColorStop(0.24, hexToRgba(element.glow, 0.58 * alpha));
+      gradient.addColorStop(0.62, hexToRgba(element.deep, 0.22 * alpha));
+      gradient.addColorStop(1, hexToRgba(element.primary, 0));
+      ctx.beginPath();
+      ctx.arc(x, y, radiusPx * 0.72 * pulse, 0, Math.PI * 2);
+      ctx.fillStyle = gradient;
+      ctx.fill();
+      for (let i = 0; i < 18; i += 1) {
+        const angle = i * Math.PI * 2 / 18 + progress * Math.PI * 1.8;
+        const inner = radiusPx * (0.2 + (i % 3) * 0.035);
+        const outer = radiusPx * (0.78 + waveValue(progress, i * 0.07) * 0.28);
+        drawLightningBetween(
+          { x: x + Math.cos(angle) * inner, y: y + Math.sin(angle) * inner },
+          { x: x + Math.cos(angle) * outer, y: y + Math.sin(angle) * outer },
+          progress + i * 0.05,
+          i % 2 ? element.glow : element.secondary,
+          1.5,
+          5
+        );
+      }
+      ctx.beginPath();
+      ctx.arc(x, y, radiusPx * (0.28 + progress * 0.54), 0, Math.PI * 2);
+      ctx.strokeStyle = hexToRgba("#ffffff", 0.86 * alpha * (1 - progress * 0.28));
+      ctx.lineWidth = Math.max(3, cellSize * 0.12);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawDragonBigBurst(x, y, radiusPx, progress, character, alpha = 1) {
+      const element = elementColorsFor(character);
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      const flash = Math.max(0, 1 - progress * 1.4);
+      const core = radiusPx * (0.3 + waveValue(progress, 0.2) * 0.2);
+      const halo = radiusPx * (0.54 + progress * 1.05);
+      const gradient = ctx.createRadialGradient(x, y, core * 0.12, x, y, halo);
+      gradient.addColorStop(0, hexToRgba("#ffffff", 0.96 * alpha));
+      gradient.addColorStop(0.28, hexToRgba("#fff7ed", 0.78 * alpha));
+      gradient.addColorStop(0.5, hexToRgba(element.secondary, 0.54 * alpha));
+      gradient.addColorStop(0.72, hexToRgba(element.glow, 0.22 * alpha));
+      gradient.addColorStop(1, hexToRgba(element.deep, 0));
+      ctx.beginPath();
+      ctx.arc(x, y, halo, 0, Math.PI * 2);
+      ctx.fillStyle = gradient;
+      ctx.fill();
+      for (let ring = 0; ring < 5; ring += 1) {
+        ctx.beginPath();
+        ctx.arc(x, y, radiusPx * (0.22 + progress * 1.08 + ring * 0.14), 0, Math.PI * 2);
+        ctx.strokeStyle = hexToRgba(ring % 2 ? element.secondary : "#ffffff", alpha * (0.94 - ring * 0.14) * (1 - progress * 0.28));
+        ctx.lineWidth = Math.max(2, cellSize * (0.19 - ring * 0.024));
+        ctx.stroke();
+      }
+      for (let i = 0; i < 34; i += 1) {
+        const angle = progress * Math.PI * 5.4 + i * Math.PI * 2 / 34;
+        const inner = radiusPx * (0.18 + (i % 4) * 0.035);
+        const outer = radiusPx * (0.82 + waveValue(progress, i * 0.05) * 0.5);
+        drawLightningBetween(
+          { x: x + Math.cos(angle) * inner, y: y + Math.sin(angle) * inner },
+          { x: x + Math.cos(angle) * outer, y: y + Math.sin(angle) * outer },
+          progress + i * 0.04,
+          i % 4 ? (i % 2 ? element.secondary : element.glow) : "#ffffff",
+          1.85,
+          6
+        );
+      }
+      for (let i = 0; i < 12; i += 1) {
+        const angle = i * Math.PI * 2 / 12 - progress * Math.PI;
+        drawElementShard(
+          x + Math.cos(angle) * radiusPx * (0.46 + progress * 0.24),
+          y + Math.sin(angle) * radiusPx * (0.34 + progress * 0.18),
+          cellSize * 0.34,
+          angle,
+          i % 2 ? element.secondary : "#ffffff",
+          alpha * (1 - progress * 0.24)
+        );
+      }
+      ctx.beginPath();
+      ctx.arc(x, y, core, 0, Math.PI * 2);
+      ctx.fillStyle = hexToRgba("#ffffff", (0.72 + flash * 0.24) * alpha);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawSuperBlackHole(x, y, radiusPx, progress, character, alpha = 1) {
+      const element = elementColorsFor(character);
+      ctx.save();
+      ctx.globalCompositeOperation = "source-over";
+      const pull = Math.max(0, Math.min(1, progress));
+      for (let ring = 0; ring < 5; ring += 1) {
+        ctx.beginPath();
+        ctx.ellipse(
+          x,
+          y,
+          radiusPx * (0.34 + ring * 0.14 - pull * 0.08),
+          radiusPx * (0.18 + ring * 0.08 - pull * 0.04),
+          -pull * Math.PI * 2 + ring * 0.48,
+          0,
+          Math.PI * 2
+        );
+        ctx.strokeStyle = hexToRgba(ring % 2 ? element.deep : "#020617", alpha * (0.78 - ring * 0.1));
+        ctx.lineWidth = Math.max(2, cellSize * (0.1 - ring * 0.01));
+        ctx.stroke();
+      }
+      ctx.globalCompositeOperation = "lighter";
+      for (let i = 0; i < 22; i += 1) {
+        const angle = i * Math.PI * 2 / 22 - pull * Math.PI * 3;
+        const outer = radiusPx * (0.9 - pull * 0.42 + (i % 3) * 0.06);
+        const inner = radiusPx * (0.2 + pull * 0.08);
+        drawLightningBetween(
+          { x: x + Math.cos(angle) * outer, y: y + Math.sin(angle) * outer * 0.72 },
+          { x: x + Math.cos(angle + 0.32) * inner, y: y + Math.sin(angle + 0.32) * inner * 0.72 },
+          progress + i * 0.07,
+          i % 2 ? element.secondary : element.glow,
+          0.72,
+          4
+        );
+      }
+      ctx.globalCompositeOperation = "source-over";
+      ctx.beginPath();
+      ctx.arc(x, y, radiusPx * (0.24 + pull * 0.08), 0, Math.PI * 2);
+      ctx.fillStyle = hexToRgba("#000000", 0.94 * alpha);
+      ctx.fill();
+      ctx.strokeStyle = hexToRgba(element.glow, 0.7 * alpha);
+      ctx.lineWidth = Math.max(2, cellSize * 0.08);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawSandBurial(x, y, radiusPx, progress, character, alpha = 1) {
+      const element = elementColorsFor(character);
+      ctx.save();
+      ctx.globalCompositeOperation = "source-over";
+      ctx.beginPath();
+      ctx.ellipse(x, y + radiusPx * 0.1, radiusPx * 1.18, radiusPx * 0.52, 0, 0, Math.PI * 2);
+      ctx.fillStyle = hexToRgba("#4a2a12", 0.34 * alpha);
+      ctx.fill();
+      drawDustCloud(x, y, radiusPx * 1.7, progress, element.dust || element.primary, element.deep);
+      for (let i = 0; i < 34; i += 1) {
+        const angle = i * Math.PI * 2 / 34 + progress * Math.PI * 0.85;
+        const spread = radiusPx * (0.22 + (i % 4) * 0.1);
+        const height = radiusPx * (0.55 + waveValue(progress, i * 0.09) * 0.95);
+        const baseX = x + Math.cos(angle) * spread;
+        const baseY = y + Math.sin(angle) * spread * 0.54;
+        ctx.beginPath();
+        ctx.moveTo(baseX - cellSize * 0.18, baseY + height * 0.24);
+        ctx.quadraticCurveTo(baseX - cellSize * 0.28, baseY - height * 0.35, baseX, baseY - height);
+        ctx.quadraticCurveTo(baseX + cellSize * 0.28, baseY - height * 0.35, baseX + cellSize * 0.18, baseY + height * 0.24);
+        ctx.closePath();
+        ctx.fillStyle = hexToRgba(i % 2 ? element.primary : element.secondary, 0.6 * alpha * (1 - progress * 0.1));
+        ctx.fill();
+        ctx.strokeStyle = hexToRgba(i % 3 ? element.glow : "#fff7ed", 0.52 * alpha);
+        ctx.lineWidth = Math.max(1.1, cellSize * 0.035);
+        ctx.stroke();
+      }
+      for (let i = 0; i < 26; i += 1) {
+        const angle = progress * Math.PI * 1.8 + i * Math.PI * 2 / 26;
+        const distance = radiusPx * (0.64 + (i % 5) * 0.12 + progress * 0.28);
+        ctx.beginPath();
+        ctx.arc(x + Math.cos(angle) * distance, y + Math.sin(angle) * distance * 0.66, cellSize * (0.11 + (i % 3) * 0.04), 0, Math.PI * 2);
+        ctx.fillStyle = hexToRgba(i % 2 ? element.dust || element.primary : "#7c2d12", 0.34 * alpha * (1 - progress * 0.32));
+        ctx.fill();
+      }
+      for (let ring = 0; ring < 4; ring += 1) {
+        ctx.beginPath();
+        ctx.ellipse(x, y + radiusPx * 0.08, radiusPx * (0.36 + ring * 0.22 + progress * 0.28), radiusPx * (0.18 + ring * 0.11), progress * Math.PI + ring * 0.4, 0, Math.PI * 2);
+        ctx.strokeStyle = hexToRgba(ring % 2 ? element.primary : element.glow, 0.52 * alpha * (1 - progress * 0.22));
+        ctx.lineWidth = Math.max(2, cellSize * 0.07);
+        ctx.stroke();
+      }
+      drawSandSpike(x, y, radiusPx * 1.35, progress, element.secondary, element.glow);
+      ctx.restore();
+    }
+
+    function drawQuetzalFlowerPatch(x, y, radiusPx, progress, character, alpha, kind) {
+      const element = elementColorsFor(character);
+      const flowerPalettes = [
+        ["#f472b6", "#fef3c7", "#22c55e"],
+        ["#fb7185", "#fde68a", "#16a34a"],
+        ["#facc15", "#f97316", "#15803d"],
+        ["#c084fc", "#f0abfc", "#22c55e"],
+        ["#60a5fa", "#bfdbfe", "#16a34a"],
+        ["#2dd4bf", "#a7f3d0", "#15803d"],
+        ["#f9a8d4", "#ffffff", "#22c55e"],
+        ["#fb923c", "#fed7aa", "#166534"]
+      ];
+      const palette = flowerPalettes[kind % flowerPalettes.length];
+      const blooms = 2 + (kind % 5);
+      const petals = 4 + (kind % 7);
+      const shape = Math.floor(kind / 4);
+      for (let bloom = 0; bloom < blooms; bloom += 1) {
+        const orbit = radiusPx * (0.08 + (bloom % 4) * 0.13);
+        const centerAngle = bloom * Math.PI * 2 / blooms + kind * 0.47 + progress * (shape === 3 ? 0.32 : 0.08);
+        const cx = x + Math.cos(centerAngle) * orbit;
+        const cy = y + Math.sin(centerAngle) * orbit * 0.58;
+        for (let petal = 0; petal < petals; petal += 1) {
+          const angle = petal * Math.PI * 2 / petals + progress * 0.42 + bloom * 0.2;
+          const petalSize = cellSize * (0.17 + (kind % 6) * 0.018 + (shape === 2 ? 0.08 : 0));
+          if (shape === 0 || shape === 3) {
+            drawFeatherShape(
+              cx + Math.cos(angle) * cellSize * 0.08,
+              cy + Math.sin(angle) * cellSize * 0.06,
+              petalSize,
+              angle + Math.PI / 2,
+              palette[petal % 2],
+              palette[2],
+              0.78 * alpha
+            );
+          } else if (shape === 1) {
+            ctx.beginPath();
+            ctx.ellipse(
+              cx + Math.cos(angle) * cellSize * 0.16,
+              cy + Math.sin(angle) * cellSize * 0.12,
+              petalSize * 0.46,
+              petalSize * 0.24,
+              angle,
+              0,
+              Math.PI * 2
+            );
+            ctx.fillStyle = hexToRgba(palette[petal % 2], 0.78 * alpha);
+            ctx.fill();
+            ctx.strokeStyle = hexToRgba(palette[2], 0.58 * alpha);
+            ctx.lineWidth = Math.max(1, cellSize * 0.024);
+            ctx.stroke();
+          } else {
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(cx + Math.cos(angle - 0.16) * petalSize, cy + Math.sin(angle - 0.16) * petalSize * 0.72);
+            ctx.lineTo(cx + Math.cos(angle + 0.16) * petalSize, cy + Math.sin(angle + 0.16) * petalSize * 0.72);
+            ctx.closePath();
+            ctx.fillStyle = hexToRgba(palette[petal % 2], 0.7 * alpha);
+            ctx.fill();
+          }
+        }
+        ctx.beginPath();
+        ctx.arc(cx, cy, cellSize * (0.06 + (kind % 4) * 0.014), 0, Math.PI * 2);
+        ctx.fillStyle = hexToRgba(kind % 2 ? "#fef08a" : "#ffffff", 0.88 * alpha);
+        ctx.fill();
+      }
+      drawQuetzalGrassPatch(x, y, radiusPx * 0.68, progress, character, alpha * 0.45, kind % 16);
+    }
+
+    function drawQuetzalGrassPatch(x, y, radiusPx, progress, character, alpha, kind) {
+      const element = elementColorsFor(character);
+      const blades = 8 + kind * 3;
+      const mode = Math.floor(kind / 4);
+      const greens = ["#14532d", "#15803d", "#16a34a", "#22c55e", "#65a30d", "#84cc16"];
+      for (let i = 0; i < blades; i += 1) {
+        const angle = i * Math.PI * 2 / blades + kind * 0.23;
+        const baseRadius = radiusPx * (0.1 + ((i * 5 + kind) % 9) * 0.055);
+        const baseX = x + Math.cos(angle) * baseRadius;
+        const baseY = y + Math.sin(angle) * baseRadius * 0.6 + radiusPx * 0.05;
+        const height = radiusPx * (0.18 + (kind % 6) * 0.04 + waveValue(progress, i * 0.07) * (mode === 2 ? 0.28 : 0.16));
+        const bend = mode === 0 ? 0.7 : mode === 1 ? -0.9 : mode === 2 ? Math.sin(i) * 1.4 : 0.1;
+        ctx.beginPath();
+        ctx.moveTo(baseX, baseY);
+        if (mode === 3) {
+          ctx.lineTo(baseX + Math.cos(angle - 0.16) * cellSize * 0.18, baseY - height * 0.52);
+          ctx.lineTo(baseX + Math.cos(angle + 0.12) * cellSize * 0.07, baseY - height);
+        } else {
+          ctx.quadraticCurveTo(
+            baseX + Math.cos(angle + bend) * cellSize * (0.1 + (kind % 4) * 0.04),
+            baseY - height * 0.58,
+            baseX + Math.cos(angle) * cellSize * (mode === 2 ? 0.32 : 0.18),
+            baseY - height
+          );
+        }
+        ctx.strokeStyle = hexToRgba(greens[(i + kind) % greens.length], 0.7 * alpha);
+        ctx.lineWidth = Math.max(1.2, cellSize * (0.035 + (i % 5) * 0.01));
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.stroke();
+        if (mode === 1 && i % 4 === 0) {
+          ctx.beginPath();
+          ctx.arc(baseX + Math.cos(angle) * cellSize * 0.14, baseY - height * 0.64, cellSize * 0.04, 0, Math.PI * 2);
+          ctx.fillStyle = hexToRgba(element.glow, 0.5 * alpha);
+          ctx.fill();
+        }
+      }
+    }
+
+    function drawQuetzalTreePatch(x, y, radiusPx, progress, character, alpha, kind) {
+      const element = elementColorsFor(character);
+      const treePalettes = [
+        { trunk: "#6b4423", leaves: ["#16a34a", "#22c55e", "#86efac"] },
+        { trunk: "#854d0e", leaves: ["#a3e635", "#ca8a04", "#facc15"] },
+        { trunk: "#78350f", leaves: ["#b91c1c", "#ef4444", "#f97316"] },
+        { trunk: "#4b2e18", leaves: ["#a8a29e", "#78716c", "#d6d3d1"] }
+      ];
+      const palette = treePalettes[Math.floor(kind / 4)];
+      const trees = 1 + (kind % 3);
+      for (let tree = 0; tree < trees; tree += 1) {
+        const angle = tree * Math.PI * 2 / trees + kind * 0.61;
+        const tx = x + Math.cos(angle) * radiusPx * (0.08 + tree * 0.12);
+        const ty = y + Math.sin(angle) * radiusPx * 0.28 + radiusPx * 0.18;
+        const height = radiusPx * (0.42 + (kind % 5) * 0.055 + tree * 0.08);
+        ctx.beginPath();
+        ctx.moveTo(tx, ty);
+        ctx.bezierCurveTo(tx - cellSize * 0.12, ty - height * 0.3, tx + cellSize * 0.14, ty - height * 0.7, tx, ty - height);
+        ctx.strokeStyle = hexToRgba(palette.trunk, 0.84 * alpha);
+        ctx.lineWidth = Math.max(2.4, cellSize * (0.07 + (kind % 3) * 0.014));
+        ctx.lineCap = "round";
+        ctx.stroke();
+        if (Math.floor(kind / 4) === 3) {
+          for (let branch = 0; branch < 5 + (kind % 4); branch += 1) {
+            const branchAngle = -Math.PI / 2 + (branch - 2) * 0.42 + progress * 0.05;
+            drawLightningBetween(
+              { x: tx, y: ty - height * (0.45 + branch * 0.07) },
+              { x: tx + Math.cos(branchAngle) * cellSize * (0.3 + branch * 0.05), y: ty - height + Math.sin(branchAngle) * cellSize * 0.28 },
+              progress + branch * 0.05,
+              palette.leaves[branch % palette.leaves.length],
+              0.3,
+              3
+            );
+          }
+        } else {
+          const canopy = 5 + (kind % 6);
+          for (let leaf = 0; leaf < canopy; leaf += 1) {
+            const leafAngle = leaf * Math.PI * 2 / canopy + progress * 0.34;
+            drawFeatherShape(
+              tx + Math.cos(leafAngle) * cellSize * (0.16 + (leaf % 2) * 0.08),
+              ty - height + Math.sin(leafAngle) * cellSize * 0.14,
+              cellSize * (0.26 + (kind % 4) * 0.024),
+              leafAngle + Math.PI / 2,
+              palette.leaves[leaf % palette.leaves.length],
+              element.glow,
+              0.78 * alpha
+            );
+          }
+        }
+      }
+    }
+
+    function drawQuetzalMushroomPatch(x, y, radiusPx, progress, character, alpha, kind) {
+      const glowPalettes = [
+        ["#7c2d12", "#22d3ee", "#a7f3d0"],
+        ["#78350f", "#f0abfc", "#c084fc"],
+        ["#5c2e0e", "#bef264", "#84cc16"],
+        ["#6b4423", "#fb7185", "#f9a8d4"],
+        ["#4b2e18", "#60a5fa", "#bfdbfe"],
+        ["#7f1d1d", "#facc15", "#fde68a"],
+        ["#3f2a1d", "#2dd4bf", "#99f6e4"],
+        ["#5f3b16", "#e879f9", "#f5d0fe"]
+      ];
+      const palette = glowPalettes[kind % glowPalettes.length];
+      const caps = 3 + (kind % 5);
+      ctx.save();
+      ctx.globalCompositeOperation = "source-over";
+      for (let cap = 0; cap < caps; cap += 1) {
+        const angle = cap * Math.PI * 2 / caps + kind * 0.39;
+        const mx = x + Math.cos(angle) * radiusPx * (0.08 + (cap % 3) * 0.13);
+        const my = y + Math.sin(angle) * radiusPx * 0.48 + radiusPx * 0.1;
+        const size = cellSize * (0.22 + (kind % 4) * 0.035 + cap * 0.01);
+        ctx.beginPath();
+        ctx.roundRect?.(mx - size * 0.15, my - size * 0.08, size * 0.3, size * 0.58, size * 0.12);
+        if (!ctx.roundRect) ctx.rect(mx - size * 0.15, my - size * 0.08, size * 0.3, size * 0.58);
+        ctx.fillStyle = hexToRgba("#b08968", 0.66 * alpha);
+        ctx.fill();
+        ctx.beginPath();
+        if (kind % 4 === 0) ctx.arc(mx, my - size * 0.12, size * 0.42, Math.PI, Math.PI * 2);
+        else if (kind % 4 === 1) ctx.ellipse(mx, my - size * 0.1, size * 0.52, size * 0.28, 0, Math.PI, Math.PI * 2);
+        else if (kind % 4 === 2) {
+          ctx.moveTo(mx - size * 0.48, my - size * 0.02);
+          ctx.quadraticCurveTo(mx, my - size * 0.68, mx + size * 0.48, my - size * 0.02);
+        } else {
+          ctx.moveTo(mx - size * 0.42, my - size * 0.02);
+          ctx.lineTo(mx, my - size * 0.58);
+          ctx.lineTo(mx + size * 0.42, my - size * 0.02);
+        }
+        ctx.closePath();
+        ctx.fillStyle = hexToRgba(palette[0], 0.82 * alpha);
+        ctx.fill();
+        ctx.strokeStyle = hexToRgba(palette[1], 0.72 * alpha);
+        ctx.lineWidth = Math.max(1.2, cellSize * 0.035);
+        ctx.stroke();
+        ctx.globalCompositeOperation = "lighter";
+        ctx.beginPath();
+        ctx.arc(mx, my - size * 0.18, size * (0.22 + waveValue(progress, cap * 0.13) * 0.1), 0, Math.PI * 2);
+        ctx.fillStyle = hexToRgba(palette[1 + (cap % 2)], 0.28 * alpha);
+        ctx.fill();
+        ctx.globalCompositeOperation = "source-over";
+      }
+      ctx.restore();
+    }
+
+    function drawSwampForestBloom(x, y, radiusPx, progress, character, alpha = 1, variant = 0) {
+      const element = elementColorsFor(character);
+      const normalizedVariant = Math.abs(Math.floor(variant)) % 64;
+      const category = Math.floor(normalizedVariant / 16);
+      const kind = normalizedVariant % 16;
+      ctx.save();
+      ctx.globalCompositeOperation = "source-over";
+      ctx.beginPath();
+      ctx.ellipse(x, y + radiusPx * 0.2, radiusPx * 0.95, radiusPx * 0.5, 0, 0, Math.PI * 2);
+      ctx.fillStyle = hexToRgba(category === 3 ? "#6b4423" : element.mud || "#6b4423", category === 3 ? 0.42 * alpha : 0.32 * alpha);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(x, y + radiusPx * 0.12, radiusPx * 0.78, radiusPx * 0.42, 0, 0, Math.PI * 2);
+      ctx.fillStyle = hexToRgba(category === 3 ? "#4b2e18" : element.deep, category === 3 ? 0.28 * alpha : 0.22 * alpha);
+      ctx.fill();
+      if (category === 0) drawQuetzalFlowerPatch(x, y, radiusPx, progress, character, alpha, kind);
+      else if (category === 1) drawQuetzalGrassPatch(x, y, radiusPx, progress, character, alpha, kind);
+      else if (category === 2) drawQuetzalTreePatch(x, y, radiusPx, progress, character, alpha, kind);
+      else drawQuetzalMushroomPatch(x, y, radiusPx, progress, character, alpha, kind);
+      ctx.beginPath();
+      ctx.arc(x, y, radiusPx * (0.55 + progress * 0.2), 0, Math.PI * 2);
+      ctx.fillStyle = hexToRgba(category === 3 ? "#7c2d12" : element.deep, 0.14 * alpha);
+      ctx.fill();
+      drawElementMotifs(x, y, radiusPx * 0.72, progress, character, 0.42 * alpha, 8);
+      ctx.restore();
+    }
+
+    const QUETZAL_BLOOM_VARIANTS = [
+      [
+        { name: "magnolia", silhouette: "bowl", palette: ["#fff7ed", "#fde68a", "#166534"], motion: "open" },
+        { name: "phalaenopsis", silhouette: "orchid", palette: ["#f0abfc", "#a855f7", "#fef3c7"], motion: "flutter" },
+        { name: "sunflower", silhouette: "sunhead", palette: ["#facc15", "#78350f", "#15803d"], motion: "rotate" },
+        { name: "passionflower", silhouette: "filament", palette: ["#c084fc", "#67e8f9", "#fef3c7"], motion: "spark" },
+        { name: "maize tassel", silhouette: "tassel", palette: ["#fbbf24", "#a16207", "#65a30d"], motion: "shake" },
+        { name: "rafflesia", silhouette: "giant", palette: ["#b91c1c", "#f97316", "#fef2f2"], motion: "pulse" },
+        { name: "dandelion", silhouette: "puff", palette: ["#f8fafc", "#fef3c7", "#84cc16"], motion: "scatter" },
+        { name: "daisy", silhouette: "daisy", palette: ["#ffffff", "#facc15", "#16a34a"], motion: "open" },
+        { name: "tulip", silhouette: "cup", palette: ["#fb7185", "#fda4af", "#15803d"], motion: "sway" },
+        { name: "rose", silhouette: "spiral", palette: ["#e11d48", "#fb7185", "#166534"], motion: "unfurl" },
+        { name: "lotus", silhouette: "lotus", palette: ["#f9a8d4", "#fef3c7", "#0f766e"], motion: "float" },
+        { name: "iris", silhouette: "iris", palette: ["#6366f1", "#facc15", "#14532d"], motion: "fan" },
+        { name: "hibiscus", silhouette: "hibiscus", palette: ["#ef4444", "#fef08a", "#166534"], motion: "flare" },
+        { name: "hydrangea", silhouette: "cluster", palette: ["#93c5fd", "#dbeafe", "#15803d"], motion: "bob" },
+        { name: "lily", silhouette: "starcup", palette: ["#fde68a", "#ffffff", "#16a34a"], motion: "open" },
+        { name: "poppy", silhouette: "poppy", palette: ["#dc2626", "#111827", "#65a30d"], motion: "ripple" }
+      ],
+      [
+        { name: "rice", silhouette: "drooping grain", palette: ["#84cc16", "#facc15", "#14532d"], motion: "bow" },
+        { name: "wheat", silhouette: "awn spike", palette: ["#d97706", "#fde68a", "#65a30d"], motion: "shake" },
+        { name: "maize", silhouette: "corn leaf", palette: ["#16a34a", "#facc15", "#166534"], motion: "fan" },
+        { name: "oat", silhouette: "open panicle", palette: ["#a3e635", "#fef3c7", "#4d7c0f"], motion: "bob" },
+        { name: "barley", silhouette: "long awn", palette: ["#ca8a04", "#fde68a", "#365314"], motion: "bristle" },
+        { name: "millet", silhouette: "bead panicle", palette: ["#65a30d", "#facc15", "#14532d"], motion: "bead" },
+        { name: "bamboo", silhouette: "joint cane", palette: ["#15803d", "#bbf7d0", "#14532d"], motion: "joint" },
+        { name: "reed", silhouette: "reed plume", palette: ["#84cc16", "#c4b5fd", "#365314"], motion: "plume" },
+        { name: "lawn", silhouette: "turf", palette: ["#22c55e", "#86efac", "#166534"], motion: "crawl" },
+        { name: "pasture", silhouette: "mixed blade", palette: ["#16a34a", "#bef264", "#14532d"], motion: "gust" },
+        { name: "foxtail", silhouette: "foxtail", palette: ["#65a30d", "#d9f99d", "#365314"], motion: "tail" },
+        { name: "silvergrass", silhouette: "arching plume", palette: ["#a8a29e", "#f5f5f4", "#365314"], motion: "arc" },
+        { name: "lemongrass", silhouette: "knife fan", palette: ["#a3e635", "#fef08a", "#3f6212"], motion: "slice" },
+        { name: "sugarcane", silhouette: "thick cane", palette: ["#16a34a", "#fbbf24", "#78350f"], motion: "node" },
+        { name: "tussock", silhouette: "mound", palette: ["#4d7c0f", "#a3e635", "#1f2937"], motion: "tuft" },
+        { name: "saltgrass", silhouette: "low runner", palette: ["#14b8a6", "#ccfbf1", "#155e75"], motion: "runner" }
+      ],
+      [
+        { name: "ash", silhouette: "compound crown", palette: ["#166534", "#86efac", "#6b4423"], motion: "leaf" },
+        { name: "larch", silhouette: "deciduous conifer", palette: ["#65a30d", "#facc15", "#78350f"], motion: "needle" },
+        { name: "pine", silhouette: "pine tier", palette: ["#14532d", "#22c55e", "#6b4423"], motion: "tier" },
+        { name: "fir", silhouette: "fir spire", palette: ["#064e3b", "#bbf7d0", "#4b2e18"], motion: "spire" },
+        { name: "oak", silhouette: "round crown", palette: ["#15803d", "#84cc16", "#78350f"], motion: "breath" },
+        { name: "maple", silhouette: "lobed leaf", palette: ["#ef4444", "#f97316", "#78350f"], motion: "spin" },
+        { name: "willow", silhouette: "weeping", palette: ["#84cc16", "#bbf7d0", "#6b4423"], motion: "drip" },
+        { name: "palm", silhouette: "palm", palette: ["#16a34a", "#bef264", "#854d0e"], motion: "fan" },
+        { name: "tree fern", silhouette: "fern crown", palette: ["#22c55e", "#a7f3d0", "#4b2e18"], motion: "frond" },
+        { name: "banana", silhouette: "banana leaf", palette: ["#65a30d", "#bef264", "#78350f"], motion: "fold" },
+        { name: "bamboo grove", silhouette: "grove", palette: ["#15803d", "#bbf7d0", "#14532d"], motion: "joint" },
+        { name: "mangrove", silhouette: "prop root", palette: ["#0f766e", "#67e8f9", "#6b4423"], motion: "root" },
+        { name: "baobab", silhouette: "bottle trunk", palette: ["#84cc16", "#d9f99d", "#7c2d12"], motion: "pulse" },
+        { name: "banyan", silhouette: "aerial root", palette: ["#166534", "#86efac", "#4b2e18"], motion: "drop" },
+        { name: "kapok", silhouette: "cotton pod", palette: ["#16a34a", "#f8fafc", "#854d0e"], motion: "seed" },
+        { name: "flame tree", silhouette: "flame crown", palette: ["#ef4444", "#f97316", "#78350f"], motion: "flare" }
+      ],
+      [
+        { name: "button mushroom", silhouette: "agaric", palette: ["#f5f5f4", "#a8a29e", "#7c2d12"], motion: "cap" },
+        { name: "fly agaric", silhouette: "spotted cap", palette: ["#dc2626", "#ffffff", "#7c2d12"], motion: "blink" },
+        { name: "shiitake", silhouette: "flat cap", palette: ["#78350f", "#d6d3d1", "#4b2e18"], motion: "cap" },
+        { name: "enoki", silhouette: "pin cluster", palette: ["#fef3c7", "#ffffff", "#854d0e"], motion: "sprout" },
+        { name: "oyster", silhouette: "shelf fan", palette: ["#d6d3d1", "#93c5fd", "#4b2e18"], motion: "fan" },
+        { name: "chanterelle", silhouette: "trumpet", palette: ["#f59e0b", "#fde68a", "#7c2d12"], motion: "flare" },
+        { name: "milk cap", silhouette: "ring cap", palette: ["#fb923c", "#fef3c7", "#7c2d12"], motion: "ring" },
+        { name: "russula", silhouette: "cracked cap", palette: ["#be123c", "#fecdd3", "#4b2e18"], motion: "crack" },
+        { name: "bolete", silhouette: "pore cap", palette: ["#92400e", "#facc15", "#4b2e18"], motion: "pore" },
+        { name: "morel", silhouette: "honeycomb", palette: ["#a16207", "#fde68a", "#4b2e18"], motion: "cell" },
+        { name: "puffball", silhouette: "puffball", palette: ["#f5f5f4", "#bef264", "#78716c"], motion: "spore" },
+        { name: "stinkhorn", silhouette: "stinkhorn", palette: ["#f97316", "#4b2e18", "#fef3c7"], motion: "rise" },
+        { name: "truffle", silhouette: "truffle", palette: ["#3f2a1d", "#a16207", "#facc15"], motion: "burrow" },
+        { name: "coral fungus", silhouette: "coral", palette: ["#fb7185", "#f9a8d4", "#7c2d12"], motion: "branch" },
+        { name: "bracket fungus", silhouette: "bracket", palette: ["#b45309", "#fef3c7", "#4b2e18"], motion: "shelf" },
+        { name: "jelly fungus", silhouette: "jelly", palette: ["#facc15", "#f0abfc", "#7c2d12"], motion: "wobble" }
+      ]
+    ];
+
+    let quetzalBloomPreviewUntil = 0;
+
+    function quetzalBloomVariant(category, kind) {
+      return QUETZAL_BLOOM_VARIANTS[category]?.[kind] || QUETZAL_BLOOM_VARIANTS[0][0];
+    }
+
+    function drawQuetzalGlowDust(x, y, radiusPx, progress, palette, alpha, count = 8) {
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      for (let i = 0; i < count; i += 1) {
+        const angle = progress * Math.PI * 2 + i * Math.PI * 2 / count;
+        const distance = radiusPx * (0.12 + ((i * 5) % 8) * 0.075);
+        ctx.beginPath();
+        ctx.arc(x + Math.cos(angle) * distance, y + Math.sin(angle) * distance * 0.68, cellSize * (0.035 + (i % 3) * 0.014), 0, Math.PI * 2);
+        ctx.fillStyle = hexToRgba(palette[i % palette.length], alpha * (0.5 + waveValue(progress, i * 0.09) * 0.28));
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function drawQuetzalPetal(cx, cy, size, angle, palette, alpha, style = "oval") {
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(angle);
+      ctx.beginPath();
+      if (style === "point") {
+        ctx.moveTo(0, -size);
+        ctx.lineTo(size * 0.34, size * 0.28);
+        ctx.lineTo(0, size * 0.82);
+        ctx.lineTo(-size * 0.34, size * 0.28);
+      } else if (style === "cup") {
+        ctx.moveTo(-size * 0.52, size * 0.2);
+        ctx.quadraticCurveTo(0, -size * 1.08, size * 0.52, size * 0.2);
+        ctx.quadraticCurveTo(0, size * 0.56, -size * 0.52, size * 0.2);
+      } else if (style === "ribbon") {
+        ctx.moveTo(0, -size);
+        ctx.bezierCurveTo(size * 0.64, -size * 0.5, size * 0.18, size * 0.45, 0, size);
+        ctx.bezierCurveTo(-size * 0.48, size * 0.28, -size * 0.38, -size * 0.42, 0, -size);
+      } else {
+        ctx.ellipse(0, 0, size * 0.36, size * 0.78, 0, 0, Math.PI * 2);
+      }
+      ctx.closePath();
+      ctx.fillStyle = hexToRgba(palette[0], 0.74 * alpha);
+      ctx.fill();
+      ctx.strokeStyle = hexToRgba(palette[1], 0.78 * alpha);
+      ctx.lineWidth = Math.max(1, cellSize * 0.025);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawQuetzalLeafBlade(x, y, length, angle, palette, alpha, width = 0.28) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angle);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.quadraticCurveTo(length * width, -length * 0.48, 0, -length);
+      ctx.quadraticCurveTo(-length * width * 0.72, -length * 0.4, 0, 0);
+      ctx.closePath();
+      ctx.fillStyle = hexToRgba(palette[0], 0.58 * alpha);
+      ctx.fill();
+      ctx.strokeStyle = hexToRgba(palette[1], 0.72 * alpha);
+      ctx.lineWidth = Math.max(1, cellSize * 0.028);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawQuetzalFlowerPatch(x, y, radiusPx, progress, character, alpha, kind) {
+      const variant = quetzalBloomVariant(0, kind);
+      const palette = variant.palette;
+      radiusPx *= 1.14;
+      const pulse = 0.88 + waveValue(progress, kind * 0.03) * 0.22;
+      ctx.save();
+      ctx.globalCompositeOperation = "source-over";
+      const centerY = y + radiusPx * 0.02;
+      if (variant.silhouette === "bowl" || variant.silhouette === "cup" || variant.silhouette === "starcup") {
+        const petals = variant.silhouette === "starcup" ? 6 : 5;
+        for (let i = 0; i < petals; i += 1) {
+          const angle = -Math.PI / 2 + (i - (petals - 1) / 2) * 0.36;
+          drawQuetzalPetal(x + Math.cos(angle) * radiusPx * 0.12, centerY + Math.sin(angle) * radiusPx * 0.08, radiusPx * 0.32 * pulse, angle + Math.PI / 2, palette, alpha, variant.silhouette === "starcup" ? "point" : "cup");
+        }
+      } else if (variant.silhouette === "orchid") {
+        [0, 1, 2, 3, 4].forEach(i => {
+          const angle = -Math.PI / 2 + i * Math.PI * 2 / 5 + progress * 0.12;
+          drawQuetzalPetal(x + Math.cos(angle) * radiusPx * 0.12, centerY + Math.sin(angle) * radiusPx * 0.08, radiusPx * (i === 2 ? 0.42 : 0.28), angle, palette, alpha, i === 2 ? "ribbon" : "oval");
+        });
+      } else if (variant.silhouette === "sunhead" || variant.silhouette === "daisy") {
+        const petals = variant.silhouette === "sunhead" ? 18 : 12;
+        for (let i = 0; i < petals; i += 1) {
+          const angle = i * Math.PI * 2 / petals + progress * 0.22;
+          drawQuetzalPetal(x + Math.cos(angle) * radiusPx * 0.28, centerY + Math.sin(angle) * radiusPx * 0.2, radiusPx * 0.18, angle + Math.PI / 2, palette, alpha, "oval");
+        }
+        ctx.beginPath();
+        ctx.arc(x, centerY, radiusPx * (variant.silhouette === "sunhead" ? 0.22 : 0.14), 0, Math.PI * 2);
+        ctx.fillStyle = hexToRgba(palette[1], 0.9 * alpha);
+        ctx.fill();
+      } else if (variant.silhouette === "filament") {
+        for (let i = 0; i < 24; i += 1) {
+          const angle = i * Math.PI * 2 / 24 + progress * 0.8;
+          ctx.beginPath();
+          ctx.moveTo(x, centerY);
+          ctx.quadraticCurveTo(x + Math.cos(angle) * radiusPx * 0.32, centerY + Math.sin(angle) * radiusPx * 0.22, x + Math.cos(angle) * radiusPx * 0.48, centerY + Math.sin(angle) * radiusPx * 0.34);
+          ctx.strokeStyle = hexToRgba(palette[i % 2], 0.64 * alpha);
+          ctx.lineWidth = Math.max(1, cellSize * 0.025);
+          ctx.stroke();
+        }
+      } else if (variant.silhouette === "tassel") {
+        for (let i = 0; i < 9; i += 1) {
+          const bx = x + (i - 4) * radiusPx * 0.07;
+          ctx.beginPath();
+          ctx.moveTo(bx, y + radiusPx * 0.28);
+          ctx.lineTo(bx + Math.sin(progress * 5 + i) * radiusPx * 0.06, y - radiusPx * (0.18 + (i % 3) * 0.08));
+          ctx.strokeStyle = hexToRgba(palette[i % 2], 0.72 * alpha);
+          ctx.lineWidth = Math.max(1.2, cellSize * 0.034);
+          ctx.stroke();
+        }
+      } else if (variant.silhouette === "giant") {
+        for (let i = 0; i < 5; i += 1) {
+          const angle = i * Math.PI * 2 / 5 + progress * 0.08;
+          drawQuetzalPetal(x + Math.cos(angle) * radiusPx * 0.2, centerY + Math.sin(angle) * radiusPx * 0.15, radiusPx * 0.44 * pulse, angle + Math.PI / 2, palette, alpha, "cup");
+        }
+        ctx.beginPath();
+        ctx.arc(x, centerY, radiusPx * 0.16, 0, Math.PI * 2);
+        ctx.fillStyle = hexToRgba("#3f1d1d", 0.88 * alpha);
+        ctx.fill();
+      } else if (variant.silhouette === "puff") {
+        for (let i = 0; i < 28; i += 1) {
+          const angle = i * Math.PI * 2 / 28;
+          drawLightningBetween({ x, y: centerY }, { x: x + Math.cos(angle) * radiusPx * 0.42, y: centerY + Math.sin(angle) * radiusPx * 0.32 }, progress + i * 0.03, palette[0], 0.18, 2);
+        }
+      } else if (variant.silhouette === "spiral") {
+        for (let i = 0; i < 13; i += 1) {
+          const angle = i * 0.72 + progress * 0.28;
+          const distance = radiusPx * (0.05 + i * 0.025);
+          drawQuetzalPetal(x + Math.cos(angle) * distance, centerY + Math.sin(angle) * distance * 0.72, radiusPx * (0.13 + i * 0.01), angle + Math.PI / 2, palette, alpha, "cup");
+        }
+      } else if (variant.silhouette === "lotus") {
+        for (let row = 0; row < 2; row += 1) {
+          for (let i = 0; i < 7 - row; i += 1) {
+            const angle = -Math.PI * 0.82 + i * Math.PI * 1.64 / (6 - row);
+            drawQuetzalPetal(x + Math.cos(angle) * radiusPx * (0.22 + row * 0.08), centerY + Math.sin(angle) * radiusPx * 0.14, radiusPx * (0.22 + row * 0.04), angle + Math.PI / 2, palette, alpha, "point");
+          }
+        }
+      } else if (variant.silhouette === "iris" || variant.silhouette === "hibiscus" || variant.silhouette === "poppy") {
+        const petals = variant.silhouette === "iris" ? 3 : 5;
+        for (let i = 0; i < petals; i += 1) {
+          const angle = i * Math.PI * 2 / petals - Math.PI / 2 + progress * 0.1;
+          drawQuetzalPetal(x + Math.cos(angle) * radiusPx * 0.12, centerY + Math.sin(angle) * radiusPx * 0.08, radiusPx * 0.38, angle + Math.PI / 2, palette, alpha, variant.silhouette === "iris" ? "ribbon" : "oval");
+        }
+        if (variant.silhouette === "hibiscus") drawLightningBetween({ x, y: centerY }, { x: x + radiusPx * 0.34, y: centerY - radiusPx * 0.08 }, progress, palette[1], 0.28, 4);
+      } else if (variant.silhouette === "cluster") {
+        for (let i = 0; i < 14; i += 1) {
+          const angle = i * Math.PI * 2 / 14;
+          const distance = radiusPx * (0.08 + (i % 4) * 0.07);
+          for (let p = 0; p < 4; p += 1) drawQuetzalPetal(x + Math.cos(angle) * distance, centerY + Math.sin(angle) * distance * 0.68, radiusPx * 0.07, p * Math.PI / 2 + progress, palette, alpha, "oval");
+        }
+      }
+      ctx.beginPath();
+      ctx.arc(x, centerY, radiusPx * 0.055, 0, Math.PI * 2);
+      ctx.fillStyle = hexToRgba(palette[1], 0.9 * alpha);
+      ctx.fill();
+      drawQuetzalGlowDust(x, y, radiusPx, progress, palette, alpha, variant.motion === "scatter" ? 22 : 12);
+      ctx.restore();
+      drawQuetzalGrassPatch(x, y + radiusPx * 0.19, radiusPx * 0.64, progress, character, alpha * 0.42, 8 + (kind % 4));
+    }
+
+    function drawQuetzalGrassPatch(x, y, radiusPx, progress, character, alpha, kind) {
+      const variant = quetzalBloomVariant(1, kind);
+      const palette = variant.palette;
+      radiusPx *= 1.12;
+      const sway = Math.sin(progress * Math.PI * 2 + kind) * radiusPx * 0.08;
+      const drawBlade = (baseX, baseY, height, angle, width = 1) => {
+        ctx.beginPath();
+        ctx.moveTo(baseX, baseY);
+        ctx.quadraticCurveTo(baseX + Math.cos(angle) * radiusPx * 0.18 + sway, baseY - height * 0.54, baseX + Math.cos(angle) * radiusPx * 0.28 + sway, baseY - height);
+        ctx.strokeStyle = hexToRgba(palette[0], 0.72 * alpha);
+        ctx.lineWidth = Math.max(1.1, cellSize * 0.028 * width);
+        ctx.lineCap = "round";
+        ctx.stroke();
+      };
+      ctx.save();
+      ctx.globalCompositeOperation = "source-over";
+      if (variant.silhouette === "joint cane" || variant.silhouette === "thick cane") {
+        const canes = variant.silhouette === "thick cane" ? 4 : 7;
+        for (let c = 0; c < canes; c += 1) {
+          const bx = x + (c - (canes - 1) / 2) * radiusPx * 0.16;
+          const top = y - radiusPx * (0.48 + (c % 2) * 0.14);
+          ctx.beginPath();
+          ctx.moveTo(bx, y + radiusPx * 0.34);
+          ctx.lineTo(bx + sway * 0.4, top);
+          ctx.strokeStyle = hexToRgba(palette[0], 0.82 * alpha);
+          ctx.lineWidth = Math.max(2, cellSize * (variant.silhouette === "thick cane" ? 0.072 : 0.046));
+          ctx.stroke();
+          for (let n = 0; n < 4; n += 1) {
+            const ny = y + radiusPx * 0.2 - n * radiusPx * 0.18;
+            ctx.beginPath();
+            ctx.arc(bx + sway * 0.12, ny, cellSize * 0.025, 0, Math.PI * 2);
+            ctx.fillStyle = hexToRgba(palette[1], 0.64 * alpha);
+            ctx.fill();
+          }
+        }
+      } else if (variant.silhouette.includes("spike") || variant.silhouette.includes("grain") || variant.silhouette.includes("awn")) {
+        ctx.beginPath();
+        ctx.moveTo(x, y + radiusPx * 0.36);
+        ctx.lineTo(x + sway, y - radiusPx * 0.5);
+        ctx.strokeStyle = hexToRgba(palette[2], 0.78 * alpha);
+        ctx.lineWidth = Math.max(1.4, cellSize * 0.035);
+        ctx.stroke();
+        const grains = variant.silhouette === "long awn" ? 12 : 10;
+        for (let i = 0; i < grains; i += 1) {
+          const gy = y + radiusPx * 0.18 - i * radiusPx * 0.095;
+          const side = i % 2 ? 1 : -1;
+          drawQuetzalPetal(x + sway + side * radiusPx * 0.07, gy, radiusPx * 0.075, side * 0.85, palette, alpha, "point");
+          if (variant.silhouette === "long awn" || variant.silhouette === "awn spike") drawLightningBetween({ x: x + sway, y: gy }, { x: x + sway + side * radiusPx * 0.32, y: gy - radiusPx * 0.18 }, progress + i * 0.04, palette[1], 0.16, 2);
+        }
+      } else if (variant.silhouette.includes("panicle") || variant.silhouette === "bead panicle") {
+        for (let branch = 0; branch < 11; branch += 1) {
+          const angle = -Math.PI / 2 + (branch - 5) * 0.18;
+          drawLightningBetween({ x, y: y + radiusPx * 0.24 }, { x: x + Math.cos(angle) * radiusPx * 0.48 + sway, y: y + Math.sin(angle) * radiusPx * 0.56 }, progress + branch * 0.05, palette[0], 0.24, 3);
+          if (variant.silhouette === "bead panicle") {
+            ctx.beginPath();
+            ctx.arc(x + Math.cos(angle) * radiusPx * 0.42 + sway, y + Math.sin(angle) * radiusPx * 0.5, cellSize * 0.045, 0, Math.PI * 2);
+            ctx.fillStyle = hexToRgba(palette[1], 0.78 * alpha);
+            ctx.fill();
+          }
+        }
+      } else if (variant.silhouette.includes("plume") || variant.silhouette === "foxtail" || variant.silhouette === "arching plume") {
+        const stemTop = { x: x + sway, y: y - radiusPx * 0.45 };
+        drawBlade(x, y + radiusPx * 0.32, radiusPx * 0.75, -Math.PI / 2, 1.4);
+        for (let i = 0; i < 24; i += 1) {
+          const angle = -Math.PI / 2 + (i - 8) * 0.12;
+          ctx.beginPath();
+          ctx.ellipse(stemTop.x + Math.cos(angle) * radiusPx * 0.12, stemTop.y + Math.sin(angle) * radiusPx * 0.16, cellSize * 0.035, cellSize * 0.09, angle, 0, Math.PI * 2);
+          ctx.fillStyle = hexToRgba(i % 2 ? palette[1] : palette[0], 0.58 * alpha);
+          ctx.fill();
+        }
+      } else if (variant.silhouette === "low runner") {
+        for (let i = 0; i < 8; i += 1) {
+          const sx = x - radiusPx * 0.56 + i * radiusPx * 0.16;
+          drawLightningBetween({ x: sx, y: y + radiusPx * 0.2 }, { x: sx + radiusPx * 0.22, y: y + radiusPx * 0.16 + Math.sin(progress * 6 + i) * radiusPx * 0.03 }, progress + i * 0.04, palette[0], 0.2, 3);
+          drawBlade(sx + radiusPx * 0.1, y + radiusPx * 0.22, radiusPx * 0.28, -Math.PI / 2 + (i % 2 ? 0.4 : -0.4));
+        }
+      } else {
+        const blades = variant.silhouette === "turf" ? 38 : variant.silhouette === "mound" ? 34 : 22;
+        for (let i = 0; i < blades; i += 1) {
+          const angle = -Math.PI / 2 + (i / Math.max(1, blades - 1) - 0.5) * (variant.silhouette === "knife fan" ? 1.8 : 2.8);
+          const bx = x + Math.cos(i * 2.7) * radiusPx * (variant.silhouette === "mound" ? 0.22 : 0.36);
+          const by = y + radiusPx * (0.32 - (i % 4) * 0.02);
+          drawBlade(bx, by, radiusPx * (0.28 + (i % 5) * 0.05), angle, variant.silhouette === "knife fan" ? 1.6 : 1);
+        }
+      }
+      drawQuetzalGlowDust(x, y, radiusPx, progress, palette, alpha * 0.82, 10);
+      ctx.restore();
+    }
+
+    function drawQuetzalTreePatch(x, y, radiusPx, progress, character, alpha, kind) {
+      const variant = quetzalBloomVariant(2, kind);
+      const palette = variant.palette;
+      radiusPx *= 1.1;
+      const sway = Math.sin(progress * Math.PI * 2 + kind) * radiusPx * 0.035;
+      const trunkHeight = radiusPx * (variant.silhouette === "bottle trunk" ? 0.76 : 0.6);
+      ctx.save();
+      ctx.globalCompositeOperation = "source-over";
+      ctx.beginPath();
+      if (variant.silhouette === "bottle trunk") {
+        ctx.moveTo(x - radiusPx * 0.18, y + radiusPx * 0.35);
+        ctx.quadraticCurveTo(x - radiusPx * 0.32, y - radiusPx * 0.04, x - radiusPx * 0.08, y - trunkHeight);
+        ctx.lineTo(x + radiusPx * 0.08, y - trunkHeight);
+        ctx.quadraticCurveTo(x + radiusPx * 0.32, y - radiusPx * 0.04, x + radiusPx * 0.18, y + radiusPx * 0.35);
+      } else {
+        ctx.moveTo(x, y + radiusPx * 0.35);
+        ctx.bezierCurveTo(x - radiusPx * 0.08, y, x + radiusPx * 0.08 + sway, y - radiusPx * 0.28, x + sway, y - trunkHeight);
+      }
+      ctx.strokeStyle = hexToRgba(palette[2], 0.86 * alpha);
+      ctx.lineWidth = Math.max(2.2, cellSize * (variant.silhouette === "bottle trunk" ? 0.12 : 0.07));
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.stroke();
+      const crownY = y - trunkHeight;
+      if (variant.silhouette.includes("conifer") || variant.silhouette.includes("pine") || variant.silhouette.includes("fir")) {
+        const tiers = variant.silhouette === "fir spire" ? 6 : 5;
+        for (let t = 0; t < tiers; t += 1) {
+          const cy = crownY + t * radiusPx * 0.14;
+          ctx.beginPath();
+          ctx.moveTo(x + sway, cy - radiusPx * 0.18);
+          ctx.lineTo(x - radiusPx * (0.34 - t * 0.035), cy + radiusPx * 0.12);
+          ctx.lineTo(x + radiusPx * (0.34 - t * 0.035), cy + radiusPx * 0.12);
+          ctx.closePath();
+          ctx.fillStyle = hexToRgba(palette[t % 2], 0.66 * alpha);
+          ctx.fill();
+          ctx.strokeStyle = hexToRgba(palette[1], 0.48 * alpha);
+          ctx.stroke();
+        }
+      } else if (variant.silhouette === "palm" || variant.silhouette === "fern crown" || variant.silhouette === "banana leaf") {
+        const fronds = variant.silhouette === "banana leaf" ? 9 : 12;
+        for (let i = 0; i < fronds; i += 1) {
+          const angle = -Math.PI / 2 + (i - (fronds - 1) / 2) * (variant.silhouette === "banana leaf" ? 0.34 : 0.26);
+          drawQuetzalLeafBlade(x + sway, crownY, radiusPx * (variant.silhouette === "banana leaf" ? 0.52 : 0.46), angle, palette, alpha, variant.silhouette === "banana leaf" ? 0.48 : 0.22);
+        }
+      } else if (variant.silhouette === "weeping") {
+        for (let i = 0; i < 20; i += 1) {
+          const angle = i * Math.PI * 2 / 20;
+          drawLightningBetween({ x: x + Math.cos(angle) * radiusPx * 0.2, y: crownY + Math.sin(angle) * radiusPx * 0.12 }, { x: x + Math.cos(angle) * radiusPx * 0.36, y: crownY + radiusPx * (0.42 + (i % 3) * 0.06) }, progress + i * 0.04, palette[0], 0.18, 3);
+        }
+      } else if (variant.silhouette === "prop root" || variant.silhouette === "aerial root") {
+        for (let i = 0; i < 11; i += 1) {
+          const side = i - 5;
+          drawLightningBetween({ x: x + side * radiusPx * 0.04, y: y - radiusPx * 0.15 }, { x: x + side * radiusPx * 0.12, y: y + radiusPx * 0.38 }, progress + i * 0.04, palette[2], 0.28, 3);
+        }
+        for (let i = 0; i < 14; i += 1) drawQuetzalLeafBlade(x + Math.cos(i) * radiusPx * 0.24, crownY + Math.sin(i) * radiusPx * 0.13, radiusPx * 0.24, i, palette, alpha, 0.34);
+      } else if (variant.silhouette === "grove") {
+        for (let c = 0; c < 8; c += 1) {
+          const bx = x + (c - 3.5) * radiusPx * 0.09;
+          ctx.beginPath();
+          ctx.moveTo(bx, y + radiusPx * 0.34);
+          ctx.lineTo(bx + sway, y - radiusPx * (0.42 + (c % 2) * 0.12));
+          ctx.strokeStyle = hexToRgba(palette[0], 0.74 * alpha);
+          ctx.lineWidth = Math.max(1.4, cellSize * 0.04);
+          ctx.stroke();
+        }
+      } else {
+        const leaves = variant.silhouette === "flame crown" ? 24 : 18;
+        for (let i = 0; i < leaves; i += 1) {
+          const angle = i * Math.PI * 2 / leaves + progress * (variant.silhouette === "lobed leaf" ? 0.4 : 0.1);
+          if (variant.silhouette === "lobed leaf") drawElementShard(x + Math.cos(angle) * radiusPx * 0.28, crownY + Math.sin(angle) * radiusPx * 0.18, radiusPx * 0.12, angle, palette[i % 2], alpha);
+          else drawQuetzalLeafBlade(x + Math.cos(angle) * radiusPx * 0.24, crownY + Math.sin(angle) * radiusPx * 0.16, radiusPx * 0.18, angle + Math.PI / 2, palette, alpha, 0.42);
+        }
+      }
+      drawQuetzalGlowDust(x, crownY, radiusPx * 0.9, progress, palette, alpha, variant.motion === "seed" ? 18 : 9);
+      ctx.restore();
+    }
+
+    function drawQuetzalMushroomPatch(x, y, radiusPx, progress, character, alpha, kind) {
+      const variant = quetzalBloomVariant(3, kind);
+      const palette = variant.palette;
+      radiusPx *= 1.14;
+      const pulse = 0.92 + waveValue(progress, kind * 0.05) * 0.18;
+      const drawStem = (mx, my, height, width = 0.16) => {
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(mx - radiusPx * width * 0.5, my - height, radiusPx * width, height, radiusPx * width * 0.5);
+        else ctx.rect(mx - radiusPx * width * 0.5, my - height, radiusPx * width, height);
+        ctx.fillStyle = hexToRgba("#d6d3d1", 0.62 * alpha);
+        ctx.fill();
+      };
+      const drawCap = (mx, my, width, height, style = "dome") => {
+        ctx.beginPath();
+        if (style === "cone") {
+          ctx.moveTo(mx - width * 0.5, my);
+          ctx.lineTo(mx, my - height);
+          ctx.lineTo(mx + width * 0.5, my);
+        } else if (style === "flat") {
+          ctx.ellipse(mx, my - height * 0.35, width * 0.52, height * 0.28, 0, Math.PI, Math.PI * 2);
+          ctx.lineTo(mx + width * 0.46, my);
+          ctx.lineTo(mx - width * 0.46, my);
+        } else {
+          ctx.ellipse(mx, my, width * 0.5, height * 0.42, 0, Math.PI, Math.PI * 2);
+          ctx.lineTo(mx + width * 0.5, my);
+          ctx.lineTo(mx - width * 0.5, my);
+        }
+        ctx.closePath();
+        ctx.fillStyle = hexToRgba(palette[0], 0.82 * alpha);
+        ctx.fill();
+        ctx.strokeStyle = hexToRgba(palette[1], 0.7 * alpha);
+        ctx.lineWidth = Math.max(1.1, cellSize * 0.03);
+        ctx.stroke();
+      };
+      ctx.save();
+      ctx.globalCompositeOperation = "source-over";
+      if (variant.silhouette === "puffball") {
+        for (let i = 0; i < 7; i += 1) {
+          const mx = x + Math.cos(i * 1.8) * radiusPx * 0.2;
+          const my = y + Math.sin(i * 1.8) * radiusPx * 0.12;
+          ctx.beginPath();
+          ctx.arc(mx, my, radiusPx * (0.16 + i * 0.025) * pulse, 0, Math.PI * 2);
+          ctx.fillStyle = hexToRgba(palette[0], 0.74 * alpha);
+          ctx.fill();
+          ctx.strokeStyle = hexToRgba(palette[1], 0.46 * alpha);
+          ctx.stroke();
+        }
+        drawQuetzalGlowDust(x, y, radiusPx, progress, palette, alpha, 24);
+      } else if (variant.silhouette === "honeycomb") {
+        drawStem(x, y + radiusPx * 0.34, radiusPx * 0.45, 0.18);
+        ctx.beginPath();
+        ctx.ellipse(x, y - radiusPx * 0.2, radiusPx * 0.26, radiusPx * 0.46, 0, 0, Math.PI * 2);
+        ctx.fillStyle = hexToRgba(palette[0], 0.82 * alpha);
+        ctx.fill();
+        for (let i = 0; i < 12; i += 1) {
+          ctx.beginPath();
+          ctx.arc(x + ((i % 3) - 1) * radiusPx * 0.1, y - radiusPx * (0.48 - Math.floor(i / 3) * 0.16), cellSize * 0.035, 0, Math.PI * 2);
+          ctx.strokeStyle = hexToRgba(palette[1], 0.64 * alpha);
+          ctx.stroke();
+        }
+      } else if (variant.silhouette === "stinkhorn") {
+        drawStem(x, y + radiusPx * 0.34, radiusPx * 0.78 * pulse, 0.18);
+        drawCap(x, y - radiusPx * 0.44, radiusPx * 0.28, radiusPx * 0.42, "cone");
+      } else if (variant.silhouette === "truffle") {
+        for (let i = 0; i < 8; i += 1) {
+          ctx.beginPath();
+          ctx.ellipse(x + Math.cos(i) * radiusPx * 0.14, y + Math.sin(i * 1.7) * radiusPx * 0.12, radiusPx * 0.2, radiusPx * 0.14, i, 0, Math.PI * 2);
+          ctx.fillStyle = hexToRgba(i % 2 ? palette[0] : palette[1], 0.66 * alpha);
+          ctx.fill();
+        }
+      } else if (variant.silhouette === "coral") {
+        for (let b = 0; b < 18; b += 1) {
+          const angle = -Math.PI / 2 + (b - 8.5) * 0.12;
+          drawLightningBetween({ x, y: y + radiusPx * 0.32 }, { x: x + Math.cos(angle) * radiusPx * (0.34 + (b % 3) * 0.05), y: y + Math.sin(angle) * radiusPx * 0.78 }, progress + b * 0.03, palette[b % 2], 0.34, 4);
+        }
+      } else if (variant.silhouette === "bracket" || variant.silhouette === "shelf fan") {
+        for (let s = 0; s < 6; s += 1) {
+          ctx.beginPath();
+          ctx.ellipse(x - radiusPx * 0.12 + s * radiusPx * 0.08, y - radiusPx * (0.14 - s * 0.08), radiusPx * (0.35 - s * 0.035), radiusPx * 0.13, -0.12, Math.PI, Math.PI * 2);
+          ctx.fillStyle = hexToRgba(s % 2 ? palette[1] : palette[0], 0.72 * alpha);
+          ctx.fill();
+          ctx.strokeStyle = hexToRgba(palette[2], 0.54 * alpha);
+          ctx.stroke();
+        }
+      } else if (variant.silhouette === "jelly") {
+        for (let j = 0; j < 8; j += 1) {
+          ctx.beginPath();
+          ctx.ellipse(x + Math.cos(j * 1.6) * radiusPx * 0.18, y + Math.sin(j) * radiusPx * 0.1, radiusPx * 0.18 * pulse, radiusPx * 0.12, progress + j, 0, Math.PI * 2);
+          ctx.fillStyle = hexToRgba(j % 2 ? palette[1] : palette[0], 0.52 * alpha);
+          ctx.fill();
+        }
+      } else {
+        const count = variant.silhouette === "pin cluster" ? 14 : 5 + (kind % 4);
+        for (let i = 0; i < count; i += 1) {
+          const angle = i * Math.PI * 2 / count + kind * 0.21;
+          const mx = x + Math.cos(angle) * radiusPx * (variant.silhouette === "pin cluster" ? 0.28 : 0.16);
+          const my = y + Math.sin(angle) * radiusPx * 0.22 + radiusPx * 0.24;
+          const height = radiusPx * (variant.silhouette === "pin cluster" ? 0.44 + (i % 3) * 0.08 : 0.34);
+          drawStem(mx, my, height, variant.silhouette === "pin cluster" ? 0.08 : 0.15);
+          const capStyle = variant.silhouette === "spotted cap" || variant.silhouette === "trumpet" ? "cone" : variant.silhouette === "flat cap" || variant.silhouette === "pore cap" ? "flat" : "dome";
+          drawCap(mx, my - height, radiusPx * (variant.silhouette === "pin cluster" ? 0.14 : 0.32) * pulse, radiusPx * 0.2, capStyle);
+          if (variant.silhouette === "spotted cap" || variant.silhouette === "pore cap" || variant.silhouette === "cracked cap") {
+            for (let dot = 0; dot < 5; dot += 1) {
+              ctx.beginPath();
+              ctx.arc(mx + Math.cos(dot * 1.7) * radiusPx * 0.08, my - height - radiusPx * 0.05 + Math.sin(dot) * radiusPx * 0.04, cellSize * 0.025, 0, Math.PI * 2);
+              ctx.fillStyle = hexToRgba(palette[1], 0.8 * alpha);
+              ctx.fill();
+            }
+          }
+        }
+        drawQuetzalGlowDust(x, y, radiusPx, progress, palette, alpha, variant.motion === "pore" ? 18 : 12);
+      }
+      ctx.restore();
+    }
+
+    function drawSwampForestBloom(x, y, radiusPx, progress, character, alpha = 1, variant = 0) {
+      const element = elementColorsFor(character);
+      const normalizedVariant = Math.abs(Math.floor(variant)) % 64;
+      const category = Math.floor(normalizedVariant / 16);
+      const kind = normalizedVariant % 16;
+      ctx.save();
+      ctx.globalCompositeOperation = "source-over";
+      ctx.beginPath();
+      ctx.ellipse(x, y + radiusPx * 0.18, radiusPx * 1.08, radiusPx * 0.58, 0, 0, Math.PI * 2);
+      ctx.fillStyle = hexToRgba(category === 3 ? "#6b4423" : element.mud || "#6b4423", category === 3 ? 0.48 * alpha : 0.36 * alpha);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(x, y + radiusPx * 0.1, radiusPx * 0.88, radiusPx * 0.48, 0, 0, Math.PI * 2);
+      ctx.fillStyle = hexToRgba(category === 3 ? "#4b2e18" : element.deep, category === 3 ? 0.34 * alpha : 0.24 * alpha);
+      ctx.fill();
+      const groundPalette = category === 3 ? ["#7c2d12", "#facc15", "#4b2e18"] : [element.primary, element.glow, element.deep];
+      for (let sprig = 0; sprig < 12; sprig += 1) {
+        const angle = sprig * Math.PI * 2 / 12 + normalizedVariant * 0.19;
+        const sx = x + Math.cos(angle) * radiusPx * (0.36 + (sprig % 3) * 0.1);
+        const sy = y + Math.sin(angle) * radiusPx * 0.28 + radiusPx * 0.22;
+        drawQuetzalLeafBlade(sx, sy, radiusPx * (0.13 + (sprig % 4) * 0.025), angle - Math.PI / 2, groundPalette, alpha * 0.42, 0.32);
+      }
+      if (category === 0) drawQuetzalFlowerPatch(x, y, radiusPx, progress, character, alpha, kind);
+      else if (category === 1) drawQuetzalGrassPatch(x, y, radiusPx, progress, character, alpha, kind);
+      else if (category === 2) drawQuetzalTreePatch(x, y, radiusPx, progress, character, alpha, kind);
+      else drawQuetzalMushroomPatch(x, y, radiusPx, progress, character, alpha, kind);
+      ctx.globalCompositeOperation = "lighter";
+      ctx.beginPath();
+      ctx.arc(x, y, radiusPx * (0.44 + waveValue(progress, normalizedVariant * 0.01) * 0.18), 0, Math.PI * 2);
+      ctx.fillStyle = hexToRgba(category === 3 ? "#7c2d12" : element.glow, 0.08 * alpha);
+      ctx.fill();
+      drawElementMotifs(x, y, radiusPx * 0.74, progress, character, 0.3 * alpha, 6);
+      ctx.restore();
+    }
+
+    function drawQuetzalBloomPreview(now) {
+      if (!quetzalBloomPreviewUntil || now > quetzalBloomPreviewUntil) return;
+      const previewCharacter = characters.find(character => character.id === "quetzal") || characterFor("player");
+      const rect = playArea.getBoundingClientRect();
+      const cols = 8;
+      const rows = 8;
+      const gapX = rect.width / (cols + 1);
+      const gapY = rect.height / (rows + 1);
+      const previewSize = Math.min(gapX, gapY) * 0.38;
+      ctx.save();
+      ctx.globalCompositeOperation = "source-over";
+      ctx.fillStyle = "rgba(2, 6, 23, 0.62)";
+      ctx.fillRect(0, 0, rect.width, rect.height);
+      for (let index = 0; index < 64; index += 1) {
+        const col = index % cols;
+        const row = Math.floor(index / cols);
+        const px = gapX * (col + 1);
+        const py = gapY * (row + 1);
+        drawSwampForestBloom(px, py, previewSize, (now / 2200 + index * 0.013) % 1, previewCharacter, 0.96, index);
+      }
+      ctx.restore();
+    }
+
+    window.previewQuetzalBloomVariants = function previewQuetzalBloomVariants(durationMs = 8000) {
+      quetzalBloomPreviewUntil = performance.now() + Math.max(1000, Number(durationMs) || 8000);
+      draw();
+    };
+
+    function drawRailgunLine(blast, progress, alpha, character) {
+      const element = elementColorsFor(character);
+      const cells = blast.lineCells || [];
+      if (!cells.length) return;
+      const start = axialToPixel(cells[0]);
+      const end = axialToPixel(cells[cells.length - 1]);
+      const dx = end.x - start.x;
+      const dy = end.y - start.y;
+      const length = Math.hypot(dx, dy) || 1;
+      const nx = -dy / length;
+      const ny = dx / length;
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      for (let band = 0; band < 7; band += 1) {
+        const offset = (band - 3) * cellSize * 0.2;
+        ctx.beginPath();
+        ctx.moveTo(start.x + nx * offset, start.y + ny * offset);
+        ctx.lineTo(end.x + nx * offset, end.y + ny * offset);
+        ctx.strokeStyle = hexToRgba(band === 3 ? element.primary : paletteColor(character, band), alpha * (band === 3 ? 0.98 : 0.48));
+        ctx.lineWidth = Math.max(2, cellSize * (band === 3 ? 0.22 : 0.075));
+        ctx.lineCap = "round";
+        ctx.stroke();
+      }
+      ctx.beginPath();
+      ctx.moveTo(start.x, start.y);
+      ctx.lineTo(end.x, end.y);
+      ctx.strokeStyle = hexToRgba("#ffffff", alpha * 0.74);
+      ctx.lineWidth = Math.max(1.6, cellSize * 0.07);
+      ctx.lineCap = "round";
+      ctx.stroke();
+      cells.forEach((cell, index) => {
+        const point = axialToPixel(cell);
+        if (index % 2 === 0) drawPulseRing(point.x, point.y, cellSize * (0.78 + progress * 0.55), progress, element.deep, element.glow, 0.9);
+        drawLightningBetween(
+          { x: point.x - nx * cellSize * 0.62, y: point.y - ny * cellSize * 0.62 },
+          { x: point.x + nx * cellSize * 0.62, y: point.y + ny * cellSize * 0.62 },
+          progress + index * 0.12,
+          index % 4 === 0 ? "#ffffff" : index % 2 ? element.violet || element.secondary : element.primary,
+          1.18,
+          5
+        );
+      });
+      for (let i = 0; i < 26; i += 1) {
+        const t = (i + waveValue(progress, i * 0.03)) / 26;
+        const point = { x: start.x + dx * t, y: start.y + dy * t };
+        const side = i % 2 ? 1 : -1;
+        const reach = cellSize * (0.62 + (i % 4) * 0.18);
+        drawLightningBetween(
+          { x: point.x + nx * reach * side, y: point.y + ny * reach * side },
+          { x: point.x - nx * reach * side * 0.55, y: point.y - ny * reach * side * 0.55 },
+          progress + i * 0.13,
+          i % 5 === 0 ? "#ffffff" : i % 2 ? element.violet || element.secondary : element.primary,
+          0.98,
+          6
+        );
+      }
+      ctx.restore();
+    }
+
+    function drawNuclearBloom(x, y, radiusPx, progress, character, alpha = 1) {
+      const element = elementColorsFor(character);
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      const flash = Math.max(0, 1 - progress * 1.5);
+      ctx.beginPath();
+      ctx.arc(x, y, radiusPx * (0.34 + progress * 1.08), 0, Math.PI * 2);
+      ctx.fillStyle = hexToRgba("#ffffff", 0.46 * flash * alpha);
+      ctx.fill();
+      for (let ring = 0; ring < 7; ring += 1) {
+        ctx.beginPath();
+        ctx.arc(x, y, radiusPx * (0.14 + progress * 0.9 + ring * 0.075), 0, Math.PI * 2);
+        ctx.strokeStyle = hexToRgba(ring % 2 ? element.secondary : element.primary, alpha * (0.78 - ring * 0.085) * (1 - progress * 0.18));
+        ctx.lineWidth = Math.max(2, cellSize * (0.15 - ring * 0.012));
+        ctx.stroke();
+      }
+      ctx.globalCompositeOperation = "source-over";
+      const stemHeight = radiusPx * (0.5 + progress * 0.3);
+      ctx.beginPath();
+      ctx.ellipse(x, y - stemHeight * 0.45, radiusPx * (0.22 + progress * 0.18), radiusPx * (0.18 + progress * 0.14), 0, 0, Math.PI * 2);
+      ctx.fillStyle = hexToRgba(element.secondary, 0.34 * alpha);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.roundRect?.(x - radiusPx * 0.16, y - stemHeight * 0.42, radiusPx * 0.32, stemHeight * 0.78, cellSize * 0.18);
+      if (!ctx.roundRect) ctx.rect(x - radiusPx * 0.16, y - stemHeight * 0.42, radiusPx * 0.32, stemHeight * 0.78);
+      ctx.fillStyle = hexToRgba(element.primary, 0.28 * alpha);
+      ctx.fill();
+      for (let i = 0; i < 34; i += 1) {
+        const angle = i * Math.PI * 2 / 34;
+        drawFlameTongue(
+          x + Math.cos(angle) * radiusPx * (0.24 + progress * 0.5),
+          y + Math.sin(angle) * radiusPx * (0.24 + progress * 0.34),
+          cellSize * 0.42,
+          angle,
+          i % 2 ? element.primary : element.secondary,
+          element.glow,
+          0.76 * alpha
+        );
+      }
+      ctx.restore();
+    }
+
+    function drawRadiationDust(x, y, radiusPx, progress, character, alpha = 1) {
+      const element = elementColorsFor(character);
+      ctx.save();
+      ctx.globalCompositeOperation = "source-over";
+      const fade = Math.max(0, 1 - progress);
+      const dirty = ctx.createRadialGradient(x, y, radiusPx * 0.08, x, y, radiusPx * (0.95 + progress * 0.16));
+      dirty.addColorStop(0, hexToRgba(element.secondary, 0.28 * alpha * fade));
+      dirty.addColorStop(0.38, hexToRgba("#7f1d1d", 0.24 * alpha * fade));
+      dirty.addColorStop(0.72, hexToRgba("#111827", 0.34 * alpha * fade));
+      dirty.addColorStop(1, hexToRgba("#020617", 0));
+      ctx.beginPath();
+      ctx.arc(x, y, radiusPx * (0.96 + progress * 0.18), 0, Math.PI * 2);
+      ctx.fillStyle = dirty;
+      ctx.fill();
+      for (let ring = 0; ring < 4; ring += 1) {
+        ctx.beginPath();
+        ctx.arc(x, y, radiusPx * (0.28 + ring * 0.18 + progress * 0.12), 0, Math.PI * 2);
+        ctx.strokeStyle = hexToRgba(ring % 2 ? "#27272a" : element.secondary, alpha * fade * (0.46 - ring * 0.06));
+        ctx.lineWidth = Math.max(1.5, cellSize * (0.08 - ring * 0.008));
+        ctx.stroke();
+      }
+      ctx.globalCompositeOperation = "lighter";
+      for (let i = 0; i < 42; i += 1) {
+        const angle = i * Math.PI * 2 / 42 + progress * Math.PI * (i % 2 ? 0.8 : -0.6);
+        const distance = radiusPx * (0.16 + ((i * 7) % 13) * 0.055 + progress * 0.2);
+        ctx.beginPath();
+        ctx.arc(x + Math.cos(angle) * distance, y + Math.sin(angle) * distance * 0.72, cellSize * (0.045 + (i % 4) * 0.022), 0, Math.PI * 2);
+        ctx.fillStyle = hexToRgba(i % 3 ? element.secondary : "#fef3c7", alpha * fade * 0.72);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function drawPoisonVortex(x, y, radiusPx, progress, character, alpha = 1) {
+      const element = elementColorsFor(character);
+      ctx.save();
+      ctx.globalCompositeOperation = "source-over";
+      const murk = ctx.createRadialGradient(x, y, radiusPx * 0.04, x, y, radiusPx * 1.18);
+      murk.addColorStop(0, hexToRgba("#020617", 0.86 * alpha));
+      murk.addColorStop(0.36, hexToRgba(element.primary, 0.64 * alpha));
+      murk.addColorStop(0.68, hexToRgba(element.bruise || "#312e81", 0.34 * alpha));
+      murk.addColorStop(1, hexToRgba("#020617", 0));
+      ctx.beginPath();
+      ctx.arc(x, y, radiusPx * 1.18, 0, Math.PI * 2);
+      ctx.fillStyle = murk;
+      ctx.fill();
+      ctx.globalCompositeOperation = "lighter";
+      for (let arm = 0; arm < 10; arm += 1) {
+        ctx.beginPath();
+        for (let step = 0; step < 48; step += 1) {
+          const t = step / 47;
+          const angle = progress * Math.PI * 6.2 + arm * Math.PI * 2 / 10 + t * Math.PI * 3.5;
+          const radius = radiusPx * (0.08 + t * 0.95);
+          const px = x + Math.cos(angle) * radius;
+          const py = y + Math.sin(angle) * radius * 0.72;
+          if (step === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.strokeStyle = hexToRgba(arm % 3 === 0 ? element.secondary : arm % 3 === 1 ? element.glow : element.hot, alpha * 0.62);
+        ctx.lineWidth = Math.max(2.2, cellSize * 0.13);
+        ctx.lineCap = "round";
+        ctx.stroke();
+      }
+      for (let i = 0; i < 48; i += 1) {
+        const angle = progress * Math.PI * 7 + i * Math.PI * 2 / 48;
+        const distance = radiusPx * (0.14 + ((i * 5) % 11) * 0.068);
+        const px = x + Math.cos(angle) * distance;
+        const py = y + Math.sin(angle) * distance * 0.7;
+        ctx.beginPath();
+        ctx.arc(px, py, cellSize * (0.09 + (i % 4) * 0.035), 0, Math.PI * 2);
+        ctx.fillStyle = hexToRgba(i % 4 === 0 ? element.secondary : i % 4 === 1 ? element.glow : i % 4 === 2 ? element.hot : "#020617", alpha * 0.72);
+        ctx.fill();
+      }
+      drawHexBurst(x, y, radiusPx * 0.9, progress, "#020617", element.secondary);
+      ctx.restore();
+    }
+
+    function drawSmallProjectileHead(x, y, projectile, progress, character, angle = 0) {
+      const element = elementColorsFor(character);
+      const projectileScale = projectile.kind === "dragonOrb" ? 1.45 : 1;
+      const size = cellSize * Math.max(0.48, Math.min(0.86, 0.42 + (projectile.radius || 1) * 0.08)) * projectileScale;
+      const pulse = 0.9 + waveValue(progress, 0.2) * 0.16;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angle);
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+      ctx.shadowColor = hexToRgba(element.glow, 0.72);
+      ctx.shadowBlur = cellSize * 0.22;
+
+      if (character.id === "dragon") {
+        if (projectile.kind === "dragonOrb") {
+          ctx.beginPath();
+          ctx.arc(0, 0, size * 0.48 * pulse, 0, Math.PI * 2);
+          ctx.fillStyle = hexToRgba("#ffffff", 0.94);
+          ctx.fill();
+          ctx.strokeStyle = hexToRgba(element.secondary, 0.96);
+          ctx.lineWidth = Math.max(2, cellSize * 0.07);
+          ctx.stroke();
+          for (let ring = 0; ring < 2; ring += 1) {
+            ctx.beginPath();
+            ctx.arc(0, 0, size * (0.72 + ring * 0.22 + progress * 0.12), 0, Math.PI * 2);
+            ctx.strokeStyle = hexToRgba(ring ? element.glow : element.secondary, 0.72 - ring * 0.2);
+            ctx.lineWidth = Math.max(1.6, cellSize * 0.045);
+            ctx.stroke();
+          }
+          for (let i = 0; i < 6; i += 1) {
+            const sparkAngle = i * Math.PI * 2 / 6 + progress * Math.PI * 2;
+            drawElementShard(
+              Math.cos(sparkAngle) * size * 0.7,
+              Math.sin(sparkAngle) * size * 0.48,
+              size * 0.18,
+              sparkAngle,
+              i % 2 ? element.secondary : "#ffffff",
+              0.82
+            );
+          }
+          ctx.restore();
+          return;
+        }
+        ctx.beginPath();
+        ctx.moveTo(size * 0.78, 0);
+        ctx.lineTo(-size * 0.22, -size * 0.28);
+        ctx.lineTo(-size * 0.06, 0);
+        ctx.lineTo(-size * 0.22, size * 0.28);
+        ctx.closePath();
+        ctx.fillStyle = hexToRgba(element.hot, 0.92);
+        ctx.fill();
+        ctx.strokeStyle = hexToRgba(element.deep, 0.95);
+        ctx.lineWidth = Math.max(1.5, cellSize * 0.055);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(-size * 0.62, -size * 0.18);
+        ctx.lineTo(-size * 0.3, 0);
+        ctx.lineTo(-size * 0.62, size * 0.18);
+        ctx.strokeStyle = hexToRgba(element.secondary, 0.88);
+        ctx.stroke();
+      } else if (character.id === "sandworm") {
+        ctx.beginPath();
+        ctx.moveTo(size * 0.72, 0);
+        ctx.lineTo(size * 0.18, -size * 0.34);
+        ctx.lineTo(-size * 0.48, -size * 0.24);
+        ctx.lineTo(-size * 0.66, 0);
+        ctx.lineTo(-size * 0.48, size * 0.24);
+        ctx.lineTo(size * 0.18, size * 0.34);
+        ctx.closePath();
+        ctx.fillStyle = hexToRgba(element.primary, 0.9);
+        ctx.fill();
+        ctx.strokeStyle = hexToRgba(element.deep, 0.96);
+        ctx.lineWidth = Math.max(1.6, cellSize * 0.06);
+        ctx.stroke();
+        [-0.22, 0, 0.22].forEach(offset => {
+          ctx.beginPath();
+          ctx.moveTo(size * (0.38 - Math.abs(offset)), size * offset);
+          ctx.lineTo(size * 0.7, 0);
+          ctx.strokeStyle = hexToRgba(element.glow, 0.68);
+          ctx.stroke();
+        });
+      } else if (character.id === "quetzal") {
+        ctx.beginPath();
+        ctx.moveTo(size * 0.78, 0);
+        ctx.lineTo(-size * 0.46, -size * 0.12);
+        ctx.lineTo(-size * 0.28, 0);
+        ctx.lineTo(-size * 0.46, size * 0.12);
+        ctx.closePath();
+        ctx.fillStyle = hexToRgba(element.secondary, 0.9);
+        ctx.fill();
+        ctx.strokeStyle = hexToRgba(element.deep, 0.9);
+        ctx.lineWidth = Math.max(1.4, cellSize * 0.05);
+        ctx.stroke();
+        [-1, 1].forEach(mirror => {
+          ctx.beginPath();
+          ctx.moveTo(-size * 0.2, 0);
+          ctx.quadraticCurveTo(-size * 0.54, mirror * size * 0.34, -size * 0.86, mirror * size * 0.16);
+          ctx.quadraticCurveTo(-size * 0.54, mirror * size * 0.08, -size * 0.2, 0);
+          ctx.fillStyle = hexToRgba(element.primary, 0.74);
+          ctx.fill();
+          ctx.strokeStyle = hexToRgba(element.glow, 0.84);
+          ctx.stroke();
+        });
+      } else if (character.id === "moray") {
+        ctx.beginPath();
+        ctx.ellipse(0, 0, size * 0.5 * pulse, size * 0.34 * pulse, 0, 0, Math.PI * 2);
+        ctx.fillStyle = hexToRgba(element.deep, 0.88);
+        ctx.fill();
+        ctx.strokeStyle = hexToRgba(element.hot, 0.92);
+        ctx.lineWidth = Math.max(1.8, cellSize * 0.065);
+        ctx.stroke();
+        for (let i = 0; i < 3; i += 1) {
+          ctx.beginPath();
+          const offset = -0.28 + i * 0.28;
+          ctx.moveTo(-size * 0.12, size * offset);
+          ctx.lineTo(size * 0.1, size * (offset - 0.16));
+          ctx.lineTo(size * 0.32, size * offset);
+          ctx.strokeStyle = hexToRgba(i % 2 ? element.secondary : element.glow, 0.92);
+          ctx.lineWidth = Math.max(1.2, cellSize * 0.044);
+          ctx.stroke();
+        }
+      } else if (character.id === "lobster") {
+        ctx.beginPath();
+        ctx.moveTo(size * 0.7, 0);
+        ctx.lineTo(size * 0.18, -size * 0.3);
+        ctx.lineTo(-size * 0.44, -size * 0.22);
+        ctx.lineTo(-size * 0.62, 0);
+        ctx.lineTo(-size * 0.44, size * 0.22);
+        ctx.lineTo(size * 0.18, size * 0.3);
+        ctx.closePath();
+        ctx.fillStyle = hexToRgba(element.primary, 0.92);
+        ctx.fill();
+        ctx.strokeStyle = hexToRgba(element.deep, 0.98);
+        ctx.lineWidth = Math.max(1.6, cellSize * 0.06);
+        ctx.stroke();
+        [-1, 1].forEach(mirror => {
+          ctx.beginPath();
+          ctx.moveTo(size * 0.36, mirror * size * 0.08);
+          ctx.quadraticCurveTo(size * 0.62, mirror * size * 0.38, size * 0.86, mirror * size * 0.18);
+          ctx.strokeStyle = hexToRgba(element.secondary, 0.95);
+          ctx.lineWidth = Math.max(1.8, cellSize * 0.07);
+          ctx.stroke();
+        });
+        drawFlameTongue(-size * 0.76, 0, size * 0.3, -Math.PI / 2, element.secondary, element.glow, 0.78);
+      } else if (character.id === "gu_king") {
+        ctx.beginPath();
+        ctx.arc(0, 0, size * 0.42 * pulse, 0, Math.PI * 2);
+        ctx.fillStyle = hexToRgba("#111827", 0.96);
+        ctx.fill();
+        ctx.strokeStyle = hexToRgba(element.primary, 0.95);
+        ctx.lineWidth = Math.max(1.7, cellSize * 0.062);
+        ctx.stroke();
+        for (let i = 0; i < 6; i += 1) {
+          const legAngle = i * Math.PI / 3 + progress * Math.PI;
+          ctx.beginPath();
+          ctx.moveTo(Math.cos(legAngle) * size * 0.24, Math.sin(legAngle) * size * 0.24);
+          ctx.lineTo(Math.cos(legAngle) * size * 0.62, Math.sin(legAngle) * size * 0.48);
+          ctx.strokeStyle = hexToRgba(i % 2 ? element.glow : element.primary, 0.82);
+          ctx.lineWidth = Math.max(1.1, cellSize * 0.038);
+          ctx.stroke();
+        }
+        ctx.beginPath();
+        ctx.arc(size * 0.18, -size * 0.1, size * 0.08, 0, Math.PI * 2);
+        ctx.arc(size * 0.18, size * 0.1, size * 0.08, 0, Math.PI * 2);
+        ctx.fillStyle = hexToRgba(element.hot, 0.92);
+        ctx.fill();
+      } else {
+        ctx.beginPath();
+        ctx.arc(0, 0, size * 0.38 * pulse, 0, Math.PI * 2);
+        ctx.fillStyle = hexToRgba(element.primary, 0.9);
+        ctx.fill();
+        ctx.strokeStyle = hexToRgba(element.glow, 0.95);
+        ctx.lineWidth = Math.max(1.5, cellSize * 0.055);
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
+    function drawProjectileCore(x, y, projectile, progress, character, travelAngle = 0) {
       const radiusPx = cellSize * Math.max(0.7, projectile.radius || 1);
       const type = projectile.visualType || attackVisualType(projectile.owner, projectile.profile);
       const isBig = projectile.profile === "big";
+      const element = elementColorsFor(character);
       ctx.save();
-      drawElementAura(x, y, radiusPx * (isBig ? 1.05 : 0.82), progress, character, isBig ? 0.72 : 0.5);
-      drawElementMotifs(x, y, radiusPx * (isBig ? 1.08 : 0.92), progress, character, isBig ? 0.95 : 0.82, isBig ? 16 : 10);
+      drawElementAura(x, y, radiusPx * (isBig ? 1.05 : 0.72), progress, character, isBig ? 0.72 : 0.34);
+      if (type.startsWith("dragon") && projectile.kind === "dragonOrb") {
+        drawElementAura(x, y, radiusPx * 0.86, progress, character, 0.46);
+        drawSmallProjectileHead(x, y, projectile, progress, character, travelAngle);
+        ctx.restore();
+        return;
+      }
+      if (!isBig) {
+        drawSmallProjectileHead(x, y, projectile, progress, character, travelAngle);
+        ctx.restore();
+        return;
+      }
+      drawElementMotifs(x, y, radiusPx * 1.08, progress, character, 0.95, 16);
       if (type.startsWith("dragon")) {
-        ctx.beginPath();
-        ctx.ellipse(x, y, cellSize * (isBig ? 0.52 : 0.42), cellSize * (isBig ? 0.2 : 0.16), progress * Math.PI, 0, Math.PI * 2);
-        ctx.fillStyle = hexToRgba(elementColorsFor(character).hot, 0.78);
-        ctx.fill();
-        drawLightningBetween({ x: x - cellSize * 0.42, y }, { x: x + cellSize * 0.42, y }, progress, character.accent, 1.05, 5);
+        drawEnergyBeamBurst(x, y, radiusPx * 0.78, progress, character, 0.82);
       } else if (type.startsWith("sandworm")) {
-        drawDustCloud(x, y, radiusPx * 0.95, progress, character.color, character.line);
+        drawSandBurial(x, y, radiusPx * 0.94, progress, character, 0.72);
       } else if (type.startsWith("quetzal")) {
-        for (let i = 0; i < 5; i += 1) {
-          drawFeatherShape(x, y, cellSize * (isBig ? 0.46 : 0.38), progress * Math.PI * 4 + i * Math.PI * 2 / 5, paletteColor(character, i), character.line, 1);
-        }
+        drawSwampForestBloom(x, y, radiusPx * 0.72, progress, character, 0.72);
       } else if (type.startsWith("moray")) {
-        ctx.beginPath();
-        ctx.arc(x, y, Math.max(5, cellSize * (isBig ? 0.22 : 0.18)), 0, Math.PI * 2);
-        ctx.fillStyle = hexToRgba(elementColorsFor(character).hot, 0.82);
-        ctx.fill();
-        drawPulseRing(x, y, cellSize * (isBig ? 0.7 : 0.54), progress, character.color, character.line, 0.95);
+        drawPulseRing(x, y, radiusPx * 0.82, progress, character.color, character.line, 1.28);
+        for (let i = 0; i < 8; i += 1) {
+          const angle = progress * Math.PI * 6 + i * Math.PI * 2 / 8;
+          drawLightningBetween(
+            { x: x + Math.cos(angle) * radiusPx * 0.16, y: y + Math.sin(angle) * radiusPx * 0.16 },
+            { x: x + Math.cos(angle) * radiusPx * 0.64, y: y + Math.sin(angle) * radiusPx * 0.64 },
+            progress + i * 0.09,
+            paletteColor(character, i),
+            1.24,
+            5
+          );
+        }
       } else if (type.startsWith("lobster")) {
-        drawClawArc(x, y, radiusPx, progress, character.color, character.line, 1);
-        drawClawArc(x, y, radiusPx, progress, character.accent, character.line, -1);
+        drawNuclearBloom(x, y, radiusPx * 0.74, progress, character, 0.68);
       } else if (type.startsWith("gu_king")) {
-        drawBugSwarm(x, y, radiusPx, progress, character.accent, character.line);
-        drawHexBurst(x, y, radiusPx * 0.9, progress, character.color, character.accent);
+        drawPoisonVortex(x, y, radiusPx * 0.82, progress, character, 0.76);
       } else {
         ctx.beginPath();
         ctx.arc(x, y, Math.max(5, cellSize * 0.16), 0, Math.PI * 2);
@@ -6705,15 +8296,39 @@
         const blastCharacter = characterFor(projectile.owner);
         if (projectile.hidden) {
           const progress = Math.min(1, Math.max(0, (now - projectile.createdAt) / (projectile.delay || baseAttackDelayMs)));
+          const timeToImpact = projectile.impactAt - now;
           const target = axialToPixel(projectile.target);
-          drawElementAura(target.x, target.y, cellSize * Math.max(1, projectile.radius || 1) * 1.24, progress, blastCharacter, 0.58);
-          drawDustCloud(target.x, target.y, cellSize * Math.max(1, projectile.radius || 1) * 1.52, progress, blastCharacter.color, blastCharacter.line);
-          drawSandSpike(target.x, target.y, cellSize * Math.max(1, projectile.radius || 1) * 1.52, progress, blastCharacter.accent, blastCharacter.line);
-          drawElementMotifs(target.x, target.y, cellSize * Math.max(1, projectile.radius || 1) * 1.12, progress, blastCharacter, 0.86, 12);
+          if ((projectile.visualType || "").startsWith("sandworm") && timeToImpact <= 200) {
+            drawSuperBlackHole(target.x, target.y, cellSize * Math.max(1.45, (projectile.radius || 1) * 2.75), Math.max(0, 1 - timeToImpact / 200), blastCharacter, 1);
+          }
+          return;
+        }
+        if (projectile.kind === "dragonOrb") {
+          const progress = Math.min(1, Math.max(0, (now - projectile.createdAt) / (projectile.delay || baseAttackDelayMs)));
+          const start = axialToPixel(projectile.source || projectile.target);
+          const end = axialToPixel(projectile.target);
+          const x = start.x + (end.x - start.x) * progress;
+          const y = start.y + (end.y - start.y) * progress;
+          const travelAngle = Math.atan2(end.y - start.y, end.x - start.x);
+          drawProjectileCore(x, y, projectile, progress, blastCharacter, travelAngle);
           return;
         }
         if (projectile.kind === "line") {
           const progress = Math.min(1, Math.max(0, (now - projectile.createdAt) / (projectile.delay || baseAttackDelayMs)));
+          if ((projectile.visualType || "").startsWith("moray")) {
+            drawRailgunLine(projectile, progress, 0.64 + progress * 0.28, blastCharacter);
+            return;
+          }
+          if ((projectile.visualType || "").startsWith("dragon")) {
+            const start = axialToPixel(projectile.source || projectile.lineCells[0]);
+            const end = axialToPixel(projectile.target || projectile.lineCells[projectile.lineCells.length - 1]);
+            const x = start.x + (end.x - start.x) * progress;
+            const y = start.y + (end.y - start.y) * progress;
+            const radiusPx = cellSize * Math.max(1.25, (projectile.width || 1) + 1.05);
+            drawEnergyBeamBurst(x, y, radiusPx, progress, blastCharacter, 0.94);
+            drawPulseRing(x, y, radiusPx * 0.78, progress, blastCharacter.color, blastCharacter.line, 1.2);
+            return;
+          }
           const alpha = 0.3 + progress * 0.48;
           cellsNearCells(projectile.lineCells, projectile.width, projectile.excludedCells).forEach(cell => {
             const { x, y } = axialToPixel(cell);
@@ -6732,15 +8347,27 @@
           }
           return;
         }
+        if (projectile.kind === "headCircle") {
+          const progress = Math.min(1, Math.max(0, (now - projectile.createdAt) / (projectile.delay || baseAttackDelayMs)));
+          const head = axialToPixel(ownerHead(projectile.owner));
+          drawNuclearBloom(head.x, head.y, cellSize * Math.max(1.2, projectile.radius || 1) * 0.96, progress, blastCharacter, 0.36 + progress * 0.32);
+          drawPulseRing(head.x, head.y, cellSize * Math.max(1.2, projectile.radius || 1) * (0.72 + progress * 0.5), progress, blastCharacter.color, blastCharacter.line, 1.08);
+          return;
+        }
         const start = axialToPixel(projectile.source || projectile.target);
         const end = axialToPixel(projectile.target);
         const progress = Math.min(1, Math.max(0, (now - projectile.createdAt) / (projectile.delay || baseAttackDelayMs)));
         const x = start.x + (end.x - start.x) * progress;
         const y = start.y + (end.y - start.y) * progress;
-        const arcHeight = Math.sin(progress * Math.PI) * cellSize * 1.5;
-        drawLightningBetween(start, { x, y: y - arcHeight }, progress, blastCharacter.line, 0.85, 5);
-        drawElementWake(start, { x, y: y - arcHeight }, progress, blastCharacter);
-        drawProjectileCore(x, y - arcHeight, projectile, progress, blastCharacter);
+        const isSmallProjectile = projectile.profile === "small";
+        const arcHeight = isSmallProjectile ? 0 : Math.sin(progress * Math.PI) * cellSize * 1.5;
+        const projectilePoint = { x, y: y - arcHeight };
+        const travelAngle = Math.atan2(end.y - start.y, end.x - start.x);
+        if (!isSmallProjectile) {
+          drawLightningBetween(start, projectilePoint, progress, blastCharacter.line, 0.85, 5);
+          drawElementWake(start, projectilePoint, progress, blastCharacter);
+        }
+        drawProjectileCore(projectilePoint.x, projectilePoint.y, projectile, progress, blastCharacter, travelAngle);
         ctx.beginPath();
         ctx.arc(end.x, end.y, cellSize * Math.max(0.52, (projectile.radius || 1) * 0.32), 0, Math.PI * 2);
         ctx.strokeStyle = hexToRgba(blastCharacter.line, 0.56);
@@ -6778,8 +8405,18 @@
         const progress = (now - hazard.startedAt) / Math.max(1, hazard.endAt - hazard.startedAt);
         const alpha = 0.24 * (1 - progress * 0.55);
         const blastCharacter = characterFor(hazard.owner);
-        cellsNearCells(hazard.cells, hazard.width, hazard.excludedCells).forEach(cell => {
+        if (hazard.kind === "radiation") {
+          const { x, y } = axialToPixel(hazard.target);
+          drawRadiationDust(x, y, cellSize * Math.max(1, hazard.radius || hazard.width || 1) * 1.52, progress, blastCharacter, 0.92);
+          return;
+        }
+        cellsNearCells(hazard.cells, hazard.width, hazard.visualExcludedCells || [], hazard.minDistance || 0).forEach(cell => {
           const { x, y } = axialToPixel(cell);
+          if ((hazard.visualType || "").startsWith("quetzal")) {
+            const variant = stableVariantIndex(cell, hazard.startedAt || 0, 64);
+            drawSwampForestBloom(x, y, cellSize * 1.34, progress + (cell.q + cell.r) * 0.035, blastCharacter, 0.94 * (1 - progress * 0.08), variant);
+            return;
+          }
           drawElementAura(x, y, cellSize * 0.86, progress + (cell.q - cell.r) * 0.03, blastCharacter, 0.24);
           hexPath(x, y, cellSize * 0.9);
           ctx.fillStyle = hexToRgba(blastCharacter.accent || blastCharacter.color, alpha + 0.08);
@@ -6787,31 +8424,28 @@
           ctx.strokeStyle = hexToRgba(blastCharacter.line, alpha + 0.34);
           ctx.lineWidth = Math.max(1.5, cellSize * 0.045);
           ctx.stroke();
-          if ((hazard.visualType || "").startsWith("quetzal")) {
-            drawElementMotifs(x, y, cellSize * 0.78, progress + (cell.q + cell.r) * 0.04, blastCharacter, 0.72, 8);
-            drawFeatherShape(
-              x,
-              y,
-              cellSize * 0.38,
-              progress * Math.PI * 2 + (cell.q - cell.r) * 0.42,
-              blastCharacter.accent,
-              blastCharacter.line,
-              0.88 * (1 - progress * 0.2)
-            );
-            ctx.save();
-            ctx.beginPath();
-            ctx.moveTo(x - cellSize * 0.34, y + cellSize * 0.2);
-            ctx.quadraticCurveTo(x, y - cellSize * 0.36, x + cellSize * 0.34, y + cellSize * 0.12);
-            ctx.strokeStyle = hexToRgba(blastCharacter.line, 0.72 * (1 - progress * 0.24));
-            ctx.lineWidth = Math.max(1.3, cellSize * 0.05);
-            ctx.stroke();
-            ctx.restore();
-          }
         });
       });
     }
 
     function drawLineBlast(blast, progress, alpha, character) {
+      if ((blast.visualType || "").startsWith("moray")) {
+        drawRailgunLine(blast, progress, alpha, character);
+        return;
+      }
+      if ((blast.visualType || "").startsWith("dragon")) {
+        const cells = blast.lineCells || [];
+        cells.forEach((cell, index) => {
+          const { x, y } = axialToPixel(cell);
+          drawElementAura(x, y, cellSize * 1.04, progress + index * 0.04, character, 0.36 * alpha);
+          if (index % 2 === 0) drawPulseRing(x, y, cellSize * 0.84, progress, character.color, character.line, 0.86);
+        });
+        if (cells.length) {
+          const head = axialToPixel(cells[Math.min(cells.length - 1, Math.floor(cells.length * (0.58 + progress * 0.42)))]);
+          drawEnergyBeamBurst(head.x, head.y, cellSize * Math.max(1.9, (blast.width || 1) + 1.2), progress, character, alpha);
+        }
+        return;
+      }
       cellsNearCells(blast.lineCells, blast.width, blast.excludedCells).forEach(cell => {
         const { x, y } = axialToPixel(cell);
         drawElementAura(x, y, cellSize * 0.86, progress + cell.r * 0.04, character, 0.32 * alpha);
@@ -6821,18 +8455,7 @@
         ctx.strokeStyle = hexToRgba("#ffffff", 0.82 * alpha);
         ctx.lineWidth = Math.max(2, cellSize * 0.06);
         ctx.stroke();
-        if ((blast.visualType || "").startsWith("moray")) {
-          drawPulseRing(x, y, cellSize * 0.92, progress, character.color, character.line, 0.72);
-        }
-        if ((blast.visualType || "").startsWith("moray")) {
-          drawElementMotifs(x, y, cellSize * 0.76, progress + cell.q * 0.03, character, 0.78, 8);
-        }
       });
-      if ((blast.visualType || "").startsWith("moray")) {
-        for (let i = 1; i < blast.lineCells.length; i += 1) {
-          drawLightningBetween(axialToPixel(blast.lineCells[i - 1]), axialToPixel(blast.lineCells[i]), progress + i * 0.11, character.accent, 1.55, 6);
-        }
-      }
     }
 
     function drawCircleBlast(blast, progress, alpha, character) {
@@ -6840,57 +8463,38 @@
       const radiusPx = cellSize * (blast.radius || baseBlastHexRadius) * 1.52;
       const type = blast.visualType || attackVisualType(blast.owner, "big");
       const isBig = type.endsWith("-big");
+      const element = elementColorsFor(character);
       drawElementAura(x, y, radiusPx * (isBig ? 1.04 : 0.86), progress, character, (isBig ? 0.92 : 0.68) * alpha);
       drawPulseRing(x, y, radiusPx, progress, character.color, character.line, isBig ? 1.35 : 1);
       drawElementMotifs(x, y, radiusPx * (isBig ? 0.94 : 0.82), progress, character, (isBig ? 1.05 : 0.84) * alpha, isBig ? 22 : 14);
-      if (type.startsWith("dragon")) {
-        drawHexBurst(x, y, radiusPx, progress, character.line, character.accent);
-        for (let i = 0; i < 8; i += 1) {
-          const angle = progress * Math.PI * 2 + i * Math.PI * 2 / 8;
+      if (type.startsWith("dragon") && type.includes("burst")) {
+        drawDragonBigBurst(x, y, radiusPx * 1.15, progress, character, alpha);
+      } else if (type.startsWith("dragon")) {
+        drawEnergyBeamBurst(x, y, radiusPx * 1.08, progress, character, alpha);
+      } else if (type.startsWith("sandworm")) {
+        drawSandBurial(x, y, radiusPx * 1.7, progress, character, alpha);
+      } else if (type.startsWith("quetzal")) {
+        drawSwampForestBloom(x, y, radiusPx * 1.02, progress, character, alpha);
+      } else if (type.startsWith("moray")) {
+        drawEnergyBeamBurst(x, y, radiusPx * 1.02, progress, character, alpha);
+      } else if (type.startsWith("lobster")) {
+        drawNuclearBloom(x, y, radiusPx, progress, character, alpha);
+      } else if (type.startsWith("gu_king")) {
+        drawPoisonVortex(x, y, radiusPx * 1.34, progress, character, alpha);
+        drawPulseRing(x, y, radiusPx * (0.72 + progress * 0.42), progress * 1.4, "#020617", element.secondary, 1.5);
+        for (let i = 0; i < 16; i += 1) {
+          const angle = progress * Math.PI * 5 + i * Math.PI * 2 / 16;
+          const inner = radiusPx * 0.34;
+          const outer = radiusPx * (1.06 + (i % 3) * 0.08);
           drawLightningBetween(
-            { x, y },
-            { x: x + Math.cos(angle) * radiusPx * 0.78, y: y + Math.sin(angle) * radiusPx * 0.78 },
-            progress + i * 0.1,
-            paletteColor(character, i),
-            1.18,
+            { x: x + Math.cos(angle) * inner, y: y + Math.sin(angle) * inner * 0.72 },
+            { x: x + Math.cos(angle + 0.42) * outer, y: y + Math.sin(angle + 0.42) * outer * 0.72 },
+            progress + i * 0.08,
+            i % 3 === 0 ? element.secondary : i % 3 === 1 ? element.glow : element.hot,
+            0.96,
             5
           );
         }
-      } else if (type.startsWith("sandworm")) {
-        drawDustCloud(x, y, radiusPx, progress, character.color, character.line);
-        drawSandSpike(x, y, radiusPx, progress, character.accent, character.line);
-      } else if (type.startsWith("quetzal")) {
-        for (let i = 0; i < 12; i += 1) {
-          const angle = progress * Math.PI * 2 + i * Math.PI * 2 / 12;
-          drawFeatherShape(
-            x + Math.cos(angle) * radiusPx * 0.42,
-            y + Math.sin(angle) * radiusPx * 0.42,
-            cellSize * 0.46,
-            angle + Math.PI / 2,
-            paletteColor(character, i),
-            paletteColor(character, i + 1),
-            alpha
-          );
-        }
-      } else if (type.startsWith("moray")) {
-        for (let i = 0; i < 10; i += 1) {
-          const angle = i * Math.PI * 2 / 10 + progress;
-          drawLightningBetween(
-            { x: x + Math.cos(angle) * radiusPx * 0.18, y: y + Math.sin(angle) * radiusPx * 0.18 },
-            { x: x + Math.cos(angle) * radiusPx * 0.86, y: y + Math.sin(angle) * radiusPx * 0.86 },
-            progress + i * 0.08,
-            paletteColor(character, i),
-            1.25,
-            6
-          );
-        }
-      } else if (type.startsWith("lobster")) {
-        drawClawArc(x, y, radiusPx, progress, character.color, character.line, 1);
-        drawClawArc(x, y, radiusPx, progress, character.accent, character.line, -1);
-        drawPulseRing(x, y, radiusPx * 0.7, progress, character.accent, character.line, 1.15);
-      } else if (type.startsWith("gu_king")) {
-        drawBugSwarm(x, y, radiusPx, progress, character.accent, character.line);
-        drawHexBurst(x, y, radiusPx, progress, character.color, character.accent);
       }
     }
 

@@ -13,6 +13,7 @@ const {
 const root = path.resolve(__dirname, "..");
 const reportsDir = path.join(root, "reports");
 const jobsDir = path.join(reportsDir, "jobs");
+const docsDir = path.join(root, "doc");
 const difficulties = ["low", "medium", "high"];
 const difficultyPresets = {
   low: { pathPrecision: 0.48, aimPrecision: 0.45, skillStrategy: "spamSmall", foodStrategy: "preferredFood" },
@@ -53,6 +54,7 @@ function stringArg(args, key, fallback) {
 
 function ensureDirs() {
   fs.mkdirSync(jobsDir, { recursive: true });
+  fs.mkdirSync(docsDir, { recursive: true });
 }
 
 function jobPath(jobId) {
@@ -76,6 +78,109 @@ function csvEscape(value) {
 function writeCsv(filePath, rows) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, `${rows.map(row => row.map(csvEscape).join(",")).join("\n")}\n`, "utf8");
+}
+
+function markdownTable(headers, rows) {
+  const escapeCell = value => String(value ?? "").replace(/\|/g, "\\|").replace(/\n/g, " ");
+  return [
+    `| ${headers.map(escapeCell).join(" | ")} |`,
+    `| ${headers.map(() => "---").join(" | ")} |`,
+    ...rows.map(row => `| ${row.map(escapeCell).join(" | ")} |`)
+  ].join("\n");
+}
+
+function formatNumber(value) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return value;
+  return Number.isInteger(value) ? String(value) : String(Number(value.toFixed(6)));
+}
+
+function formatPercent(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? `${(number * 100).toFixed(2)}%` : "0.00%";
+}
+
+function flattenObject(object, prefix = []) {
+  return Object.entries(object || {}).flatMap(([key, value]) => {
+    const pathParts = [...prefix, key];
+    if (value && typeof value === "object" && !Array.isArray(value)) return flattenObject(value, pathParts);
+    return [{ key: pathParts.join("."), value }];
+  });
+}
+
+function buildBalanceDoc({ job, balance, characters, summary }) {
+  const characterRows = characters.map(character => [
+    character.id,
+    character.name,
+    character.foodPreference || "balanced",
+    character.specialFood || "",
+    character.smallMove || "",
+    character.bigMove || ""
+  ]);
+  const difficultyRows = Object.entries(difficultyPresets).map(([difficulty, preset]) => [
+    difficulty,
+    preset.pathPrecision,
+    preset.aimPrecision,
+    preset.skillStrategy,
+    preset.foodStrategy
+  ]);
+  const settingRows = flattenObject(balance)
+    .filter(row => !row.key.startsWith("defaults.initialStock."))
+    .map(row => [row.key, formatNumber(row.value)]);
+  const stockRows = Object.entries(balance.defaults?.initialStock || {}).map(([type, value]) => [type, formatNumber(value)]);
+  const characterSummaryRows = [...(summary?.characterDifficulty || [])]
+    .sort((left, right) => left.difficulty.localeCompare(right.difficulty) || left.characterId.localeCompare(right.characterId))
+    .map(row => [
+      row.difficulty,
+      row.characterId,
+      row.runs,
+      row.wins,
+      row.losses,
+      row.draws,
+      formatPercent(row.winRate),
+      formatPercent(row.drawRate),
+      Math.round(row.averageDurationMs)
+    ]);
+
+  return [
+    "# Hex Snake Balance Snapshot",
+    "",
+    "format_version: 1",
+    `job_id: ${job.id}`,
+    `generated_at: ${new Date().toISOString()}`,
+    `status: ${job.status}`,
+    `cycles: ${job.config.cycles}`,
+    `seed: ${job.config.seed}`,
+    `matches: ${job.progress.completedMatches}/${job.progress.totalMatches}`,
+    "source_balance: data/balance.json",
+    "",
+    "## Core Balance Values",
+    "",
+    markdownTable(["key", "value"], settingRows),
+    "",
+    "## Initial Stock Defaults",
+    "",
+    markdownTable(["foodType", "value"], stockRows),
+    "",
+    "## AI Difficulty Presets",
+    "",
+    markdownTable(["difficulty", "pathPrecision", "aimPrecision", "skillStrategy", "foodStrategy"], difficultyRows),
+    "",
+    "## Character Values",
+    "",
+    markdownTable(["id", "name", "foodPreference", "specialFood", "smallMove", "bigMove"], characterRows),
+    "",
+    "## Character Result Summary",
+    "",
+    markdownTable(["difficulty", "characterId", "runs", "wins", "losses", "draws", "winRate", "drawRate", "averageDurationMs"], characterSummaryRows),
+    ""
+  ].join("\n");
+}
+
+function writeBalanceDoc(job, balance, characters, summary) {
+  const content = buildBalanceDoc({ job, balance, characters, summary });
+  const currentPath = path.join(docsDir, "current-balance.md");
+  fs.writeFileSync(currentPath, content, "utf8");
+  return { currentBalanceDoc: currentPath };
 }
 
 function createUnorderedPairs(characters) {
@@ -561,6 +666,7 @@ function runJob(jobId) {
   job.progress.completedMatches = matches.length;
   job.progress.percent = schedule.length ? matches.length / schedule.length : 1;
   job.outputs = outputs;
+  Object.assign(job.outputs, writeBalanceDoc(job, balance, characters, summary));
   writeJson(filePath, job);
   return { job, matches, summary };
 }
@@ -642,6 +748,7 @@ module.exports = {
   createSchedule,
   summarizeMatches,
   summarizeMatchupStats,
+  buildBalanceDoc,
   runJob,
   runInline,
   startJob

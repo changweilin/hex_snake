@@ -137,7 +137,8 @@ function damageMultiplier(stock, balance) {
 }
 
 function areaMultiplier(stock, balance) {
-  return 1 + ((stock.protein || 0) / balance.resources.maxFoodStock);
+  const perPoint = balance.attack.proteinRangeBonusPerPoint ?? (1 / balance.resources.maxFoodStock);
+  return 1 + foodBonus(stock, "protein", perPoint, balance.attack.maxProteinRangeBonus ?? 1);
 }
 
 function attackSpeedMultiplier(stock, balance) {
@@ -269,11 +270,14 @@ function damageSnakeFlat(parts, target, radius, damageScale) {
   return parts.reduce((total, segment) => hexDistance(segment, target) <= radius ? total + damageScale : total, 0);
 }
 
-function damageSnakeCells(parts, effectCells, width, damageScale, excludedCells = []) {
+function damageSnakeCells(parts, effectCells, width, damageScale, excludedCells = [], minDistance = 0) {
   const excluded = cellKeySet(excludedCells);
   return parts.reduce((total, segment) => {
     if (excluded.has(keyOf(segment))) return total;
-    return effectCells.some(cell => hexDistance(segment, cell) <= width) ? total + damageScale : total;
+    return effectCells.some(cell => {
+      const distance = hexDistance(segment, cell);
+      return distance >= minDistance && distance <= width;
+    }) ? total + damageScale : total;
   }, 0);
 }
 
@@ -572,6 +576,27 @@ function dragonChargePath(state, source, direction, targetSnake) {
   return path;
 }
 
+function dragonOrbPath(state, source, direction) {
+  return cellsForwardFrom(state, source, direction, false);
+}
+
+function dragonWrappedOrbPath(state, source, direction) {
+  const path = [];
+  let cursor = { ...source };
+  const maxSteps = Math.max(1, state.cells.length);
+  for (let step = 0; step < maxSteps; step += 1) {
+    cursor = nextWrappedCell(cursor, direction, state.radius);
+    if (keyOf(cursor) === keyOf(source)) break;
+    path.push({ ...cursor });
+  }
+  return path;
+}
+
+function firstPathHit(path, targetSnake) {
+  const targetCells = cellKeySet(targetSnake);
+  return path.find(cell => targetCells.has(keyOf(cell))) || null;
+}
+
 function pushCircleAttack(state, attack) {
   state.projectiles.push({ kind: "circle", ...attack });
 }
@@ -582,16 +607,24 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
   const direction = directionFromSourceToTarget(source, target, attacker.dir);
   const characterId = attacker.character.id;
   if (characterId === "dragon") {
-    const path = dragonChargePath(state, source, direction, defender.snake);
-    path.forEach((cell, index) => pushCircleAttack(state, {
+    const path = dragonWrappedOrbPath(state, source, attacker.dir);
+    const hit = firstPathHit(path, defender.snake);
+    const hitIndex = hit ? path.findIndex(cell => keyOf(cell) === keyOf(hit)) : -1;
+    const travelCells = hit ? path.slice(0, hitIndex + 1) : path;
+    const endCell = travelCells[travelCells.length - 1] || source;
+    state.projectiles.push({
+      kind: "dragonOrb",
       owner: attacker.owner,
       profile: "big",
-      target: cell,
-      impactAt: now + small.delay + index * 140,
-      radius: small.radius * 2,
-      damage: small.damage * 2,
+      target: hit ? { ...hit } : { ...endCell },
+      hasHit: Boolean(hit),
+      impactAt: now + small.delay + travelCells.length * 90,
+      radius: small.radius,
+      damage: small.damage,
+      burstRadius: small.radius * 2,
+      burstDamage: small.damage * 1.5,
       stunChance
-    }));
+    });
     return;
   }
   if (characterId === "moray") {
@@ -607,7 +640,7 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
         excludedCells,
         width: bandDistanceFromTotalWidth(small.radius),
         impactAt: now + small.delay + index * 320,
-        damage: small.damage * 0.75,
+        damage: small.damage * 0.6,
         stunChance,
         stackStun: true
       });
@@ -616,12 +649,14 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
   }
   if (characterId === "quetzal") {
     const trail = attacker.snake.map(segment => ({ ...segment }));
+    const outwardWidth = Math.max(1, bandDistanceFromTotalWidth(small.radius));
     state.hazards.push({
       kind: "swamp",
       owner: attacker.owner,
       cells: trail,
-      excludedCells: trail,
-      width: bandDistanceFromTotalWidth(small.radius),
+      damageExcludedCells: trail,
+      width: outwardWidth,
+      minDistance: 1,
       damage: small.damage,
       profile: "big",
       stunChance,
@@ -642,23 +677,31 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
       target,
       impactAt: now + delay,
       radius: Math.max(0.5, small.radius * 0.5),
-      damage: small.damage * 4,
+      damage: small.damage * 3.5,
       stunChance,
       sandwormParalyzeOnHead: true
     });
     return;
   }
   if (characterId === "lobster") {
-    pushCircleAttack(state, {
-      owner: attacker.owner,
-      profile: "big",
-      target: source,
-      impactAt: now + small.delay,
-      radius: small.radius * 2.5,
-      damage: small.damage * 2,
-      stunChance,
-      flat: true
-    });
+    const big = attackStats(attacker.stock, "big", balance);
+    const lobsterUltimateRadiusScale = 3;
+    for (let index = 0; index < 2; index += 1) {
+      state.projectiles.push({
+        kind: "headCircle",
+        owner: attacker.owner,
+        profile: "big",
+        target: { ...source },
+        impactAt: now + small.delay + index * 2000,
+        radius: big.radius * lobsterUltimateRadiusScale,
+        damage: big.damage,
+        radiationDurationMs: 4000,
+        radiationTickMs: 500,
+        radiationTotalDamage: big.damage,
+        stunChance,
+        flat: true
+      });
+    }
     return;
   }
   if (characterId === "gu_king") {
@@ -746,18 +789,48 @@ function resolveProjectiles(state, now, balance) {
     const computer = state.fighters.computer;
     let playerDamage = 0;
     let computerDamage = 0;
-    if (projectile.kind === "line") {
+    if (projectile.kind === "dragonOrb") {
+      if (!projectile.hasHit) continue;
+      const defenderDamage = damageSnake(defender.snake, projectile.target, projectile.radius, projectile.damage, balance);
+      if (defenderOwner === "player") playerDamage += defenderDamage;
+      else computerDamage += defenderDamage;
+      playerDamage += damageSnake(player.snake, projectile.target, projectile.burstRadius, projectile.burstDamage, balance);
+      computerDamage += damageSnake(computer.snake, projectile.target, projectile.burstRadius, projectile.burstDamage, balance);
+    } else if (projectile.kind === "line") {
       playerDamage = damageSnakeCells(player.snake, projectile.lineCells, projectile.width, projectile.damage, projectile.excludedCells);
       computerDamage = damageSnakeCells(computer.snake, projectile.lineCells, projectile.width, projectile.damage, projectile.excludedCells);
     } else {
+      if (projectile.kind === "headCircle") {
+        projectile.explosionTarget = { ...attacker.snake[0] };
+        projectile.target = { ...projectile.explosionTarget };
+      }
+      const explosionTarget = projectile.explosionTarget || projectile.target;
       const damageFn = projectile.flat ? damageSnakeFlat : damageSnake;
-      playerDamage = damageFn(player.snake, projectile.target, projectile.radius, projectile.damage, balance);
-      computerDamage = damageFn(computer.snake, projectile.target, projectile.radius, projectile.damage, balance);
+      playerDamage = damageFn(player.snake, explosionTarget, projectile.radius, projectile.damage, balance);
+      computerDamage = damageFn(computer.snake, explosionTarget, projectile.radius, projectile.damage, balance);
+      if (projectile.kind === "headCircle" && projectile.radiationDurationMs) {
+        const ticks = Math.max(1, Math.ceil(projectile.radiationDurationMs / projectile.radiationTickMs));
+        state.hazards.push({
+          kind: "radiation",
+          owner: projectile.owner,
+          target: { ...explosionTarget },
+          radius: projectile.radius,
+          damage: projectile.radiationTotalDamage / ticks,
+          profile: "big",
+          stunChance: projectile.stunChance,
+          startedAt: now,
+          nextTickAt: now + projectile.radiationTickMs,
+          tickMs: projectile.radiationTickMs,
+          endAt: now + projectile.radiationDurationMs
+        });
+      }
       if (projectile.sandwormParalyzeOnHead) {
         if (projectile.owner !== "player" && keyOf(projectile.target) === keyOf(player.snake[0])) applyCollisionParalysis(player, now, balance);
         if (projectile.owner !== "computer" && keyOf(projectile.target) === keyOf(computer.snake[0])) applyCollisionParalysis(computer, now, balance);
       }
     }
+    if (projectile.owner === "player") playerDamage = 0;
+    if (projectile.owner === "computer") computerDamage = 0;
     applyDamage(state, player, playerDamage, projectile.profile || "big", now);
     applyDamage(state, computer, computerDamage, projectile.profile || "big", now);
     attacker.stats.damageDealt += projectile.owner === "player" ? computerDamage : playerDamage;
@@ -773,8 +846,15 @@ function resolveHazards(state, now, balance) {
     if (now < hazard.startedAt || now < hazard.nextTickAt) continue;
     hazard.nextTickAt = now + hazard.tickMs;
     const attacker = state.fighters[hazard.owner];
-    const playerDamage = damageSnakeCells(state.fighters.player.snake, hazard.cells, hazard.width, hazard.damage, hazard.excludedCells);
-    const computerDamage = damageSnakeCells(state.fighters.computer.snake, hazard.cells, hazard.width, hazard.damage, hazard.excludedCells);
+    const damageExcludedCells = hazard.damageExcludedCells || hazard.excludedCells || [];
+    let playerDamage = hazard.kind === "radiation"
+      ? damageSnake(state.fighters.player.snake, hazard.target, hazard.radius, hazard.damage, balance)
+      : damageSnakeCells(state.fighters.player.snake, hazard.cells, hazard.width, hazard.damage, hazard.owner === "player" ? damageExcludedCells : [], hazard.minDistance || 0);
+    let computerDamage = hazard.kind === "radiation"
+      ? damageSnake(state.fighters.computer.snake, hazard.target, hazard.radius, hazard.damage, balance)
+      : damageSnakeCells(state.fighters.computer.snake, hazard.cells, hazard.width, hazard.damage, hazard.owner === "computer" ? damageExcludedCells : [], hazard.minDistance || 0);
+    if (hazard.owner === "player") playerDamage = 0;
+    if (hazard.owner === "computer") computerDamage = 0;
     applyDamage(state, state.fighters.player, playerDamage, hazard.profile || "big", now);
     applyDamage(state, state.fighters.computer, computerDamage, hazard.profile || "big", now);
     attacker.stats.damageDealt += hazard.owner === "player" ? computerDamage : playerDamage;
@@ -1074,6 +1154,8 @@ module.exports = {
   perceivedSnakeFor,
   isUnderground,
   updateVisibleMemory,
+  resolveProjectiles,
+  resolveHazards,
   simulateMatch,
   runSeries
 };

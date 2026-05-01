@@ -11,6 +11,7 @@
     "simulate:scheduled": "node tools/sim-scheduler.js start",
     "simulate:run": "node tools/sim-scheduler.js run",
     "simulate:jobs": "node tools/sim-scheduler.js list",
+    "tune:balance": "node tools/tune-balance.js",
     "test": "node tools/run-tests.js"
   }
 }

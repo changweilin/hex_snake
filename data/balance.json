@@ -43,6 +43,7 @@
     "baseAttackDelayMs": 2000,
     "baseAttackCooldownMs": 2400,
     "baseBlastHexRadius": 2,
+    "proteinRangeBonusPerPoint": 0.05,
     "blastDurationMs": 520,
     "attackSpeedBonusPerPoint": 0.05,
     "maxAttackSpeedBonus": 1,

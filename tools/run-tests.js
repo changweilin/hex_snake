@@ -29,9 +29,18 @@ const {
   nextWrappedCell,
   perceivedSnakeFor,
   randomFoodTypeIdsForCharacter,
+  resolveHazards,
+  resolveProjectiles,
   runSeries,
   simulateMatch
 } = require("./sim-core");
+
+const {
+  applyAdjustments,
+  clampCandidate,
+  findWeakRows,
+  parseDeadline
+} = require("./tune-balance");
 
 const root = path.resolve(__dirname, "..");
 const balance = loadBalance(root);
@@ -83,6 +92,50 @@ test("attack costs and damage calculations match core rules", () => {
   const stats = attackStats(fighter.stock, "small", balance);
   const damage = damageSnake([{ q: 0, r: 0 }, { q: 1, r: 0 }], { q: 0, r: 0 }, stats.radius, stats.damage, balance);
   assert.ok(damage > 0);
+});
+
+test("player-owned attacks and hazards do not damage the player", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("lobster"),
+    computerCharacter: characterById.get("dragon"),
+    seed: "no-self-damage"
+  });
+  const player = state.fighters.player;
+  const computer = state.fighters.computer;
+  player.snake = [{ q: 0, r: 0 }, { q: 1, r: 0 }];
+  computer.snake = [{ q: 4, r: -4 }, { q: 4, r: -3 }];
+  player.hp = 10;
+  computer.hp = 10;
+
+  state.projectiles.push({
+    kind: "circle",
+    owner: "player",
+    profile: "big",
+    target: { q: 0, r: 0 },
+    impactAt: 0,
+    radius: 3,
+    damage: 99,
+    stunChance: 1
+  });
+  resolveProjectiles(state, 0, balance);
+  assert.equal(player.hp, 10);
+
+  state.hazards.push({
+    kind: "radiation",
+    owner: "player",
+    target: { q: 0, r: 0 },
+    radius: 3,
+    damage: 99,
+    profile: "big",
+    stunChance: 1,
+    startedAt: 0,
+    nextTickAt: 0,
+    tickMs: 500,
+    endAt: 1000
+  });
+  resolveHazards(state, 0, balance);
+  assert.equal(player.hp, 10);
 });
 
 test("low difficulty can cast big attacks but still prefers small attacks", () => {
@@ -198,6 +251,13 @@ test("protein fractional radius deals proportional outer-ring damage", () => {
   assert.equal(stats.radius, 2.5);
   const damage = damageSnake([{ q: 3, r: 0 }], { q: 0, r: 0 }, stats.radius, stats.damage, balance);
   assert.equal(damage, stats.damage * 0.5);
+});
+
+test("protein range growth can be configured without changing default behavior", () => {
+  const tuned = JSON.parse(JSON.stringify(balance));
+  tuned.attack.proteinRangeBonusPerPoint = 0.025;
+  const stats = attackStats({ protein: 10, fat: 0, fiber: 0, carb: 0 }, "big", tuned);
+  assert.equal(stats.radius, 2.5);
 });
 
 test("same seed produces same series result", () => {
@@ -352,6 +412,47 @@ test("scheduled matchup stats include 45 rows with averages, standard deviations
   assert.equal(row.characterAHpAverage, 4);
   assert.equal(row.characterAHpStandardDeviation, 2);
   assert.equal(row.characterAHpMedian, 4);
+});
+
+test("balance tuner detects weak rows and clamps values to original bounds", () => {
+  const weakRows = findWeakRows([
+    { difficulty: "low", characterId: "dragon", runs: 10, winRate: 0.39 },
+    { difficulty: "high", characterId: "moray", runs: 10, winRate: 0.4 }
+  ]);
+  assert.equal(weakRows.length, 1);
+  assert.equal(clampCandidate(10, 4), 6);
+  assert.equal(clampCandidate(1, 4), 2);
+});
+
+test("balance tuner adjustment keeps candidate values within plus/minus 50 percent", () => {
+  const candidate = JSON.parse(JSON.stringify(balance));
+  const summary = {
+    characterDifficulty: difficulties.flatMap(difficulty => characters.map(character => ({
+      difficulty,
+      characterId: character.id,
+      runs: 10,
+      winRate: character.id === "lobster" && difficulty === "high" ? 0.25 : 0.55
+    })))
+  };
+  const bounds = new Map([
+    ["attack.baseBlastHexRadius", { path: ["attack", "baseBlastHexRadius"], direction: "higher-is-stronger", original: balance.attack.baseBlastHexRadius }],
+    ["attack.damageBonusPerPoint", { path: ["attack", "damageBonusPerPoint"], direction: "higher-is-stronger", original: balance.attack.damageBonusPerPoint }],
+    ["attack.proteinRangeBonusPerPoint", { path: ["attack", "proteinRangeBonusPerPoint"], direction: "higher-is-stronger", original: balance.attack.proteinRangeBonusPerPoint }],
+    ["movement.moveBonusPerPoint", { path: ["movement", "moveBonusPerPoint"], direction: "higher-is-stronger", original: balance.movement.moveBonusPerPoint }],
+    ["attack.attackSpeedBonusPerPoint", { path: ["attack", "attackSpeedBonusPerPoint"], direction: "higher-is-stronger", original: balance.attack.attackSpeedBonusPerPoint }],
+    ["attack.baseAttackDelayMs", { path: ["attack", "baseAttackDelayMs"], direction: "lower-is-stronger", original: balance.attack.baseAttackDelayMs }],
+    ["attack.baseAttackCooldownMs", { path: ["attack", "baseAttackCooldownMs"], direction: "lower-is-stronger", original: balance.attack.baseAttackCooldownMs }]
+  ]);
+  const result = applyAdjustments(candidate, balance, bounds, summary);
+  const proteinChange = result.changes.find(change => change.path === "attack.proteinRangeBonusPerPoint");
+  assert.ok(proteinChange);
+  assert.ok(result.nextBalance.attack.proteinRangeBonusPerPoint <= balance.attack.proteinRangeBonusPerPoint * 1.5);
+});
+
+test("balance tuner parses local time deadlines", () => {
+  const deadline = parseDeadline("08:00", new Date("2026-05-01T01:00:00+08:00"));
+  assert.equal(deadline.getHours(), 8);
+  assert.equal(deadline.getMinutes(), 0);
 });
 
 let failed = 0;
