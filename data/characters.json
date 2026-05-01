@@ -7,12 +7,36 @@
     "appearance": "曾墜入低谷的雲海白龍，銀白鱗片、淡藍潮痕與金色角冠交錯，姿態像重新破浪的古老王者。",
     "avatar": "assets/portraits/sm/white_dragon_chibi.png",
     "portraits": {
-      "opening": { "full": "assets/portraits/white_dragon_intro.png", "md": "assets/portraits/md/white_dragon_intro.png", "sm": "assets/portraits/sm/white_dragon_intro.png" },
-      "intro": { "full": "assets/portraits/white_dragon_idle.png", "md": "assets/portraits/md/white_dragon_idle.png", "sm": "assets/portraits/sm/white_dragon_idle.png" },
-      "small": { "full": "assets/portraits/white_dragon_attack.png", "md": "assets/portraits/md/white_dragon_attack.png", "sm": "assets/portraits/sm/white_dragon_attack.png" },
-      "big": { "full": "assets/portraits/white_dragon_attack.png", "md": "assets/portraits/md/white_dragon_attack.png", "sm": "assets/portraits/sm/white_dragon_attack.png" },
-      "victory": { "full": "assets/portraits/white_dragon_victory.png", "md": "assets/portraits/md/white_dragon_victory.png", "sm": "assets/portraits/sm/white_dragon_victory.png" },
-      "defeat": { "full": "assets/portraits/white_dragon_defeat.png", "md": "assets/portraits/md/white_dragon_defeat.png", "sm": "assets/portraits/sm/white_dragon_defeat.png" }
+      "opening": {
+        "full": "assets/portraits/white_dragon_chibi.png",
+        "md": "assets/portraits/md/white_dragon_chibi.png",
+        "sm": "assets/portraits/sm/white_dragon_chibi.png"
+      },
+      "intro": {
+        "full": "assets/portraits/white_dragon_chibi.png",
+        "md": "assets/portraits/md/white_dragon_chibi.png",
+        "sm": "assets/portraits/sm/white_dragon_chibi.png"
+      },
+      "small": {
+        "full": "assets/portraits/white_dragon_chibi.png",
+        "md": "assets/portraits/md/white_dragon_chibi.png",
+        "sm": "assets/portraits/sm/white_dragon_chibi.png"
+      },
+      "big": {
+        "full": "assets/portraits/white_dragon_chibi.png",
+        "md": "assets/portraits/md/white_dragon_chibi.png",
+        "sm": "assets/portraits/sm/white_dragon_chibi.png"
+      },
+      "victory": {
+        "full": "assets/portraits/white_dragon_chibi.png",
+        "md": "assets/portraits/md/white_dragon_chibi.png",
+        "sm": "assets/portraits/sm/white_dragon_chibi.png"
+      },
+      "defeat": {
+        "full": "assets/portraits/white_dragon_chibi.png",
+        "md": "assets/portraits/md/white_dragon_chibi.png",
+        "sm": "assets/portraits/sm/white_dragon_chibi.png"
+      }
     },
     "foodEffect": "均衡型角色；白龍吃食後補出的新食物有 50% 機率為雙色，提供更彈性的資源路線。",
     "story": [
@@ -22,8 +46,44 @@
     "motto": "墜落不是終點，破浪才是回聲。",
     "smallMove": "潮鱗回旋",
     "bigMove": "破浪龍息",
-    "colors": { "body": "#cbd5e1", "line": "#bae6fd", "accent": "#fbbf24" },
-    "foodPreference": "balanced"
+    "colors": {
+      "body": "#cbd5e1",
+      "line": "#bae6fd",
+      "accent": "#fbbf24"
+    },
+    "foodPreference": "balanced",
+    "archivedPortraits": {
+      "opening": {
+        "full": "assets/portraits/white_dragon_intro.png",
+        "md": "assets/portraits/md/white_dragon_intro.png",
+        "sm": "assets/portraits/sm/white_dragon_intro.png"
+      },
+      "intro": {
+        "full": "assets/portraits/white_dragon_idle.png",
+        "md": "assets/portraits/md/white_dragon_idle.png",
+        "sm": "assets/portraits/sm/white_dragon_idle.png"
+      },
+      "small": {
+        "full": "assets/portraits/white_dragon_attack.png",
+        "md": "assets/portraits/md/white_dragon_attack.png",
+        "sm": "assets/portraits/sm/white_dragon_attack.png"
+      },
+      "big": {
+        "full": "assets/portraits/white_dragon_attack.png",
+        "md": "assets/portraits/md/white_dragon_attack.png",
+        "sm": "assets/portraits/sm/white_dragon_attack.png"
+      },
+      "victory": {
+        "full": "assets/portraits/white_dragon_victory.png",
+        "md": "assets/portraits/md/white_dragon_victory.png",
+        "sm": "assets/portraits/sm/white_dragon_victory.png"
+      },
+      "defeat": {
+        "full": "assets/portraits/white_dragon_defeat.png",
+        "md": "assets/portraits/md/white_dragon_defeat.png",
+        "sm": "assets/portraits/sm/white_dragon_defeat.png"
+      }
+    }
   },
   {
     "id": "sandworm",
@@ -33,12 +93,36 @@
     "appearance": "伏在貧瘠沙層下的巨蟲，金黃甲節、褐色利齒與沙暴般的輪廓充滿翻身的壓迫感。",
     "avatar": "assets/portraits/sm/sandworm_chibi.png",
     "portraits": {
-      "opening": { "full": "assets/portraits/sandworm_intro.png", "md": "assets/portraits/md/sandworm_intro.png", "sm": "assets/portraits/sm/sandworm_intro.png" },
-      "intro": { "full": "assets/portraits/sandworm_idle.png", "md": "assets/portraits/md/sandworm_idle.png", "sm": "assets/portraits/sm/sandworm_idle.png" },
-      "small": { "full": "assets/portraits/sandworm_attack.png", "md": "assets/portraits/md/sandworm_attack.png", "sm": "assets/portraits/sm/sandworm_attack.png" },
-      "big": { "full": "assets/portraits/sandworm_attack.png", "md": "assets/portraits/md/sandworm_attack.png", "sm": "assets/portraits/sm/sandworm_attack.png" },
-      "victory": { "full": "assets/portraits/sandworm_victory.png", "md": "assets/portraits/md/sandworm_victory.png", "sm": "assets/portraits/sm/sandworm_victory.png" },
-      "defeat": { "full": "assets/portraits/sandworm_defeat.png", "md": "assets/portraits/md/sandworm_defeat.png", "sm": "assets/portraits/sm/sandworm_defeat.png" }
+      "opening": {
+        "full": "assets/portraits/sandworm_chibi.png",
+        "md": "assets/portraits/md/sandworm_chibi.png",
+        "sm": "assets/portraits/sm/sandworm_chibi.png"
+      },
+      "intro": {
+        "full": "assets/portraits/sandworm_chibi.png",
+        "md": "assets/portraits/md/sandworm_chibi.png",
+        "sm": "assets/portraits/sm/sandworm_chibi.png"
+      },
+      "small": {
+        "full": "assets/portraits/sandworm_chibi.png",
+        "md": "assets/portraits/md/sandworm_chibi.png",
+        "sm": "assets/portraits/sm/sandworm_chibi.png"
+      },
+      "big": {
+        "full": "assets/portraits/sandworm_chibi.png",
+        "md": "assets/portraits/md/sandworm_chibi.png",
+        "sm": "assets/portraits/sm/sandworm_chibi.png"
+      },
+      "victory": {
+        "full": "assets/portraits/sandworm_chibi.png",
+        "md": "assets/portraits/md/sandworm_chibi.png",
+        "sm": "assets/portraits/sm/sandworm_chibi.png"
+      },
+      "defeat": {
+        "full": "assets/portraits/sandworm_chibi.png",
+        "md": "assets/portraits/md/sandworm_chibi.png",
+        "sm": "assets/portraits/sm/sandworm_chibi.png"
+      }
     },
     "foodEffect": "偏好黃色脂肪；食物生成較容易偏向黃色，但吃食收益與其他角色相同。",
     "story": [
@@ -48,8 +132,44 @@
     "motto": "在最低的沙裡，也藏著翻天的牙。",
     "smallMove": "潛沙突咬",
     "bigMove": "貧土潛襲",
-    "colors": { "body": "#ca8a04", "line": "#fef08a", "accent": "#92400e" },
-    "foodPreference": "fat"
+    "colors": {
+      "body": "#ca8a04",
+      "line": "#fef08a",
+      "accent": "#92400e"
+    },
+    "foodPreference": "fat",
+    "archivedPortraits": {
+      "opening": {
+        "full": "assets/portraits/sandworm_intro.png",
+        "md": "assets/portraits/md/sandworm_intro.png",
+        "sm": "assets/portraits/sm/sandworm_intro.png"
+      },
+      "intro": {
+        "full": "assets/portraits/sandworm_idle.png",
+        "md": "assets/portraits/md/sandworm_idle.png",
+        "sm": "assets/portraits/sm/sandworm_idle.png"
+      },
+      "small": {
+        "full": "assets/portraits/sandworm_attack.png",
+        "md": "assets/portraits/md/sandworm_attack.png",
+        "sm": "assets/portraits/sm/sandworm_attack.png"
+      },
+      "big": {
+        "full": "assets/portraits/sandworm_attack.png",
+        "md": "assets/portraits/md/sandworm_attack.png",
+        "sm": "assets/portraits/sm/sandworm_attack.png"
+      },
+      "victory": {
+        "full": "assets/portraits/sandworm_victory.png",
+        "md": "assets/portraits/md/sandworm_victory.png",
+        "sm": "assets/portraits/sm/sandworm_victory.png"
+      },
+      "defeat": {
+        "full": "assets/portraits/sandworm_defeat.png",
+        "md": "assets/portraits/md/sandworm_defeat.png",
+        "sm": "assets/portraits/sm/sandworm_defeat.png"
+      }
+    }
   },
   {
     "id": "quetzal",
@@ -59,12 +179,36 @@
     "appearance": "翠羽與蛇身交織的古老羽蛇，羽冠像風中祭旗，青綠光芒守住不願消失的祖語。",
     "avatar": "assets/portraits/sm/quetzalcoatl_chibi.png",
     "portraits": {
-      "opening": { "full": "assets/portraits/quetzalcoatl_intro.png", "md": "assets/portraits/md/quetzalcoatl_intro.png", "sm": "assets/portraits/sm/quetzalcoatl_intro.png" },
-      "intro": { "full": "assets/portraits/quetzalcoatl_idle.png", "md": "assets/portraits/md/quetzalcoatl_idle.png", "sm": "assets/portraits/sm/quetzalcoatl_idle.png" },
-      "small": { "full": "assets/portraits/quetzalcoatl_attack.png", "md": "assets/portraits/md/quetzalcoatl_attack.png", "sm": "assets/portraits/sm/quetzalcoatl_attack.png" },
-      "big": { "full": "assets/portraits/quetzalcoatl_attack.png", "md": "assets/portraits/md/quetzalcoatl_attack.png", "sm": "assets/portraits/sm/quetzalcoatl_attack.png" },
-      "victory": { "full": "assets/portraits/quetzalcoatl_victory.png", "md": "assets/portraits/md/quetzalcoatl_victory.png", "sm": "assets/portraits/sm/quetzalcoatl_victory.png" },
-      "defeat": { "full": "assets/portraits/quetzalcoatl_defeat.png", "md": "assets/portraits/md/quetzalcoatl_defeat.png", "sm": "assets/portraits/sm/quetzalcoatl_defeat.png" }
+      "opening": {
+        "full": "assets/portraits/quetzalcoatl_chibi.png",
+        "md": "assets/portraits/md/quetzalcoatl_chibi.png",
+        "sm": "assets/portraits/sm/quetzalcoatl_chibi.png"
+      },
+      "intro": {
+        "full": "assets/portraits/quetzalcoatl_chibi.png",
+        "md": "assets/portraits/md/quetzalcoatl_chibi.png",
+        "sm": "assets/portraits/sm/quetzalcoatl_chibi.png"
+      },
+      "small": {
+        "full": "assets/portraits/quetzalcoatl_chibi.png",
+        "md": "assets/portraits/md/quetzalcoatl_chibi.png",
+        "sm": "assets/portraits/sm/quetzalcoatl_chibi.png"
+      },
+      "big": {
+        "full": "assets/portraits/quetzalcoatl_chibi.png",
+        "md": "assets/portraits/md/quetzalcoatl_chibi.png",
+        "sm": "assets/portraits/sm/quetzalcoatl_chibi.png"
+      },
+      "victory": {
+        "full": "assets/portraits/quetzalcoatl_chibi.png",
+        "md": "assets/portraits/md/quetzalcoatl_chibi.png",
+        "sm": "assets/portraits/sm/quetzalcoatl_chibi.png"
+      },
+      "defeat": {
+        "full": "assets/portraits/quetzalcoatl_chibi.png",
+        "md": "assets/portraits/md/quetzalcoatl_chibi.png",
+        "sm": "assets/portraits/sm/quetzalcoatl_chibi.png"
+      }
     },
     "foodEffect": "偏好綠色纖維；食物生成較容易偏向綠色，但吃食收益與其他角色相同。",
     "story": [
@@ -74,8 +218,44 @@
     "motto": "名字不滅，羽翼就不會折。",
     "smallMove": "祖語翠羽",
     "bigMove": "祖語沼界",
-    "colors": { "body": "#15803d", "line": "#bbf7d0", "accent": "#67e8f9" },
-    "foodPreference": "fiber"
+    "colors": {
+      "body": "#15803d",
+      "line": "#bbf7d0",
+      "accent": "#67e8f9"
+    },
+    "foodPreference": "fiber",
+    "archivedPortraits": {
+      "opening": {
+        "full": "assets/portraits/quetzalcoatl_intro.png",
+        "md": "assets/portraits/md/quetzalcoatl_intro.png",
+        "sm": "assets/portraits/sm/quetzalcoatl_intro.png"
+      },
+      "intro": {
+        "full": "assets/portraits/quetzalcoatl_idle.png",
+        "md": "assets/portraits/md/quetzalcoatl_idle.png",
+        "sm": "assets/portraits/sm/quetzalcoatl_idle.png"
+      },
+      "small": {
+        "full": "assets/portraits/quetzalcoatl_attack.png",
+        "md": "assets/portraits/md/quetzalcoatl_attack.png",
+        "sm": "assets/portraits/sm/quetzalcoatl_attack.png"
+      },
+      "big": {
+        "full": "assets/portraits/quetzalcoatl_attack.png",
+        "md": "assets/portraits/md/quetzalcoatl_attack.png",
+        "sm": "assets/portraits/sm/quetzalcoatl_attack.png"
+      },
+      "victory": {
+        "full": "assets/portraits/quetzalcoatl_victory.png",
+        "md": "assets/portraits/md/quetzalcoatl_victory.png",
+        "sm": "assets/portraits/sm/quetzalcoatl_victory.png"
+      },
+      "defeat": {
+        "full": "assets/portraits/quetzalcoatl_defeat.png",
+        "md": "assets/portraits/md/quetzalcoatl_defeat.png",
+        "sm": "assets/portraits/sm/quetzalcoatl_defeat.png"
+      }
+    }
   },
   {
     "id": "moray",
@@ -85,12 +265,36 @@
     "appearance": "暗潮中竄出的藍色電鰻，電光沿背脊閃爍，眼神像正等待鉤索落水的逆浪。",
     "avatar": "assets/portraits/sm/moray_eel_chibi.png",
     "portraits": {
-      "opening": { "full": "assets/portraits/moray_eel_intro.png", "md": "assets/portraits/md/moray_eel_intro.png", "sm": "assets/portraits/sm/moray_eel_intro.png" },
-      "intro": { "full": "assets/portraits/moray_eel_idle.png", "md": "assets/portraits/md/moray_eel_idle.png", "sm": "assets/portraits/sm/moray_eel_idle.png" },
-      "small": { "full": "assets/portraits/moray_eel_attack.png", "md": "assets/portraits/md/moray_eel_attack.png", "sm": "assets/portraits/sm/moray_eel_attack.png" },
-      "big": { "full": "assets/portraits/moray_eel_attack.png", "md": "assets/portraits/md/moray_eel_attack.png", "sm": "assets/portraits/sm/moray_eel_attack.png" },
-      "victory": { "full": "assets/portraits/moray_eel_victory.png", "md": "assets/portraits/md/moray_eel_victory.png", "sm": "assets/portraits/sm/moray_eel_victory.png" },
-      "defeat": { "full": "assets/portraits/moray_eel_defeat.png", "md": "assets/portraits/md/moray_eel_defeat.png", "sm": "assets/portraits/sm/moray_eel_defeat.png" }
+      "opening": {
+        "full": "assets/portraits/moray_eel_chibi.png",
+        "md": "assets/portraits/md/moray_eel_chibi.png",
+        "sm": "assets/portraits/sm/moray_eel_chibi.png"
+      },
+      "intro": {
+        "full": "assets/portraits/moray_eel_chibi.png",
+        "md": "assets/portraits/md/moray_eel_chibi.png",
+        "sm": "assets/portraits/sm/moray_eel_chibi.png"
+      },
+      "small": {
+        "full": "assets/portraits/moray_eel_chibi.png",
+        "md": "assets/portraits/md/moray_eel_chibi.png",
+        "sm": "assets/portraits/sm/moray_eel_chibi.png"
+      },
+      "big": {
+        "full": "assets/portraits/moray_eel_chibi.png",
+        "md": "assets/portraits/md/moray_eel_chibi.png",
+        "sm": "assets/portraits/sm/moray_eel_chibi.png"
+      },
+      "victory": {
+        "full": "assets/portraits/moray_eel_chibi.png",
+        "md": "assets/portraits/md/moray_eel_chibi.png",
+        "sm": "assets/portraits/sm/moray_eel_chibi.png"
+      },
+      "defeat": {
+        "full": "assets/portraits/moray_eel_chibi.png",
+        "md": "assets/portraits/md/moray_eel_chibi.png",
+        "sm": "assets/portraits/sm/moray_eel_chibi.png"
+      }
     },
     "foodEffect": "偏好藍色碳水；食物生成較容易偏向藍色，但吃食收益與其他角色相同。",
     "story": [
@@ -100,8 +304,44 @@
     "motto": "讓垂鉤者，先學會窒息。",
     "smallMove": "暗潮電咬",
     "bigMove": "逆潮電磁砲",
-    "colors": { "body": "#1d4ed8", "line": "#bfdbfe", "accent": "#93c5fd" },
-    "foodPreference": "carb"
+    "colors": {
+      "body": "#1d4ed8",
+      "line": "#bfdbfe",
+      "accent": "#93c5fd"
+    },
+    "foodPreference": "carb",
+    "archivedPortraits": {
+      "opening": {
+        "full": "assets/portraits/moray_eel_intro.png",
+        "md": "assets/portraits/md/moray_eel_intro.png",
+        "sm": "assets/portraits/sm/moray_eel_intro.png"
+      },
+      "intro": {
+        "full": "assets/portraits/moray_eel_idle.png",
+        "md": "assets/portraits/md/moray_eel_idle.png",
+        "sm": "assets/portraits/sm/moray_eel_idle.png"
+      },
+      "small": {
+        "full": "assets/portraits/moray_eel_attack.png",
+        "md": "assets/portraits/md/moray_eel_attack.png",
+        "sm": "assets/portraits/sm/moray_eel_attack.png"
+      },
+      "big": {
+        "full": "assets/portraits/moray_eel_attack.png",
+        "md": "assets/portraits/md/moray_eel_attack.png",
+        "sm": "assets/portraits/sm/moray_eel_attack.png"
+      },
+      "victory": {
+        "full": "assets/portraits/moray_eel_victory.png",
+        "md": "assets/portraits/md/moray_eel_victory.png",
+        "sm": "assets/portraits/sm/moray_eel_victory.png"
+      },
+      "defeat": {
+        "full": "assets/portraits/moray_eel_defeat.png",
+        "md": "assets/portraits/md/moray_eel_defeat.png",
+        "sm": "assets/portraits/sm/moray_eel_defeat.png"
+      }
+    }
   },
   {
     "id": "lobster",
@@ -111,12 +351,36 @@
     "appearance": "深海裂縫裡醒來的赤螯智蝦，紅甲厚重、古螯發亮，像渾沌終於長出節奏。",
     "avatar": "assets/portraits/sm/ghost_lobster_chibi.png",
     "portraits": {
-      "opening": { "full": "assets/portraits/ghost_lobster_intro.png", "md": "assets/portraits/md/ghost_lobster_intro.png", "sm": "assets/portraits/sm/ghost_lobster_intro.png" },
-      "intro": { "full": "assets/portraits/ghost_lobster_idle.png", "md": "assets/portraits/md/ghost_lobster_idle.png", "sm": "assets/portraits/sm/ghost_lobster_idle.png" },
-      "small": { "full": "assets/portraits/ghost_lobster_attack.png", "md": "assets/portraits/md/ghost_lobster_attack.png", "sm": "assets/portraits/sm/ghost_lobster_attack.png" },
-      "big": { "full": "assets/portraits/ghost_lobster_attack.png", "md": "assets/portraits/md/ghost_lobster_attack.png", "sm": "assets/portraits/sm/ghost_lobster_attack.png" },
-      "victory": { "full": "assets/portraits/ghost_lobster_victory.png", "md": "assets/portraits/md/ghost_lobster_victory.png", "sm": "assets/portraits/sm/ghost_lobster_victory.png" },
-      "defeat": { "full": "assets/portraits/ghost_lobster_defeat.png", "md": "assets/portraits/md/ghost_lobster_defeat.png", "sm": "assets/portraits/sm/ghost_lobster_defeat.png" }
+      "opening": {
+        "full": "assets/portraits/ghost_lobster_chibi.png",
+        "md": "assets/portraits/md/ghost_lobster_chibi.png",
+        "sm": "assets/portraits/sm/ghost_lobster_chibi.png"
+      },
+      "intro": {
+        "full": "assets/portraits/ghost_lobster_chibi.png",
+        "md": "assets/portraits/md/ghost_lobster_chibi.png",
+        "sm": "assets/portraits/sm/ghost_lobster_chibi.png"
+      },
+      "small": {
+        "full": "assets/portraits/ghost_lobster_chibi.png",
+        "md": "assets/portraits/md/ghost_lobster_chibi.png",
+        "sm": "assets/portraits/sm/ghost_lobster_chibi.png"
+      },
+      "big": {
+        "full": "assets/portraits/ghost_lobster_chibi.png",
+        "md": "assets/portraits/md/ghost_lobster_chibi.png",
+        "sm": "assets/portraits/sm/ghost_lobster_chibi.png"
+      },
+      "victory": {
+        "full": "assets/portraits/ghost_lobster_chibi.png",
+        "md": "assets/portraits/md/ghost_lobster_chibi.png",
+        "sm": "assets/portraits/sm/ghost_lobster_chibi.png"
+      },
+      "defeat": {
+        "full": "assets/portraits/ghost_lobster_chibi.png",
+        "md": "assets/portraits/md/ghost_lobster_chibi.png",
+        "sm": "assets/portraits/sm/ghost_lobster_chibi.png"
+      }
     },
     "foodEffect": "偏好紅色蛋白質；食物生成較容易偏向紅色，但吃食收益與其他角色相同。",
     "story": [
@@ -126,8 +390,44 @@
     "motto": "混沌若有節奏，沉默也會成王。",
     "smallMove": "古螯斷浪",
     "bigMove": "混沌爆螯",
-    "colors": { "body": "#b91c1c", "line": "#fecaca", "accent": "#f97316" },
-    "foodPreference": "protein"
+    "colors": {
+      "body": "#b91c1c",
+      "line": "#fecaca",
+      "accent": "#f97316"
+    },
+    "foodPreference": "protein",
+    "archivedPortraits": {
+      "opening": {
+        "full": "assets/portraits/ghost_lobster_intro.png",
+        "md": "assets/portraits/md/ghost_lobster_intro.png",
+        "sm": "assets/portraits/sm/ghost_lobster_intro.png"
+      },
+      "intro": {
+        "full": "assets/portraits/ghost_lobster_idle.png",
+        "md": "assets/portraits/md/ghost_lobster_idle.png",
+        "sm": "assets/portraits/sm/ghost_lobster_idle.png"
+      },
+      "small": {
+        "full": "assets/portraits/ghost_lobster_attack.png",
+        "md": "assets/portraits/md/ghost_lobster_attack.png",
+        "sm": "assets/portraits/sm/ghost_lobster_attack.png"
+      },
+      "big": {
+        "full": "assets/portraits/ghost_lobster_attack.png",
+        "md": "assets/portraits/md/ghost_lobster_attack.png",
+        "sm": "assets/portraits/sm/ghost_lobster_attack.png"
+      },
+      "victory": {
+        "full": "assets/portraits/ghost_lobster_victory.png",
+        "md": "assets/portraits/md/ghost_lobster_victory.png",
+        "sm": "assets/portraits/sm/ghost_lobster_victory.png"
+      },
+      "defeat": {
+        "full": "assets/portraits/ghost_lobster_defeat.png",
+        "md": "assets/portraits/md/ghost_lobster_defeat.png",
+        "sm": "assets/portraits/sm/ghost_lobster_defeat.png"
+      }
+    }
   },
   {
     "id": "gu_king",
@@ -137,12 +437,36 @@
     "appearance": "不見天日的黑色蜈蚣，甲節如冷鐵相扣，毒足密布，像從地底王座爬出的先手暴君。",
     "avatar": "assets/portraits/sm/gu_king_chibi.png",
     "portraits": {
-      "opening": { "full": "assets/portraits/gu_king_intro.png", "md": "assets/portraits/md/gu_king_intro.png", "sm": "assets/portraits/sm/gu_king_intro.png" },
-      "intro": { "full": "assets/portraits/gu_king_idle.png", "md": "assets/portraits/md/gu_king_idle.png", "sm": "assets/portraits/sm/gu_king_idle.png" },
-      "small": { "full": "assets/portraits/gu_king_attack.png", "md": "assets/portraits/md/gu_king_attack.png", "sm": "assets/portraits/sm/gu_king_attack.png" },
-      "big": { "full": "assets/portraits/gu_king_attack.png", "md": "assets/portraits/md/gu_king_attack.png", "sm": "assets/portraits/sm/gu_king_attack.png" },
-      "victory": { "full": "assets/portraits/gu_king_victory.png", "md": "assets/portraits/md/gu_king_victory.png", "sm": "assets/portraits/sm/gu_king_victory.png" },
-      "defeat": { "full": "assets/portraits/gu_king_defeat.png", "md": "assets/portraits/md/gu_king_defeat.png", "sm": "assets/portraits/sm/gu_king_defeat.png" }
+      "opening": {
+        "full": "assets/portraits/gu_king_chibi.png",
+        "md": "assets/portraits/md/gu_king_chibi.png",
+        "sm": "assets/portraits/sm/gu_king_chibi.png"
+      },
+      "intro": {
+        "full": "assets/portraits/gu_king_chibi.png",
+        "md": "assets/portraits/md/gu_king_chibi.png",
+        "sm": "assets/portraits/sm/gu_king_chibi.png"
+      },
+      "small": {
+        "full": "assets/portraits/gu_king_chibi.png",
+        "md": "assets/portraits/md/gu_king_chibi.png",
+        "sm": "assets/portraits/sm/gu_king_chibi.png"
+      },
+      "big": {
+        "full": "assets/portraits/gu_king_chibi.png",
+        "md": "assets/portraits/md/gu_king_chibi.png",
+        "sm": "assets/portraits/sm/gu_king_chibi.png"
+      },
+      "victory": {
+        "full": "assets/portraits/gu_king_chibi.png",
+        "md": "assets/portraits/md/gu_king_chibi.png",
+        "sm": "assets/portraits/sm/gu_king_chibi.png"
+      },
+      "defeat": {
+        "full": "assets/portraits/gu_king_chibi.png",
+        "md": "assets/portraits/md/gu_king_chibi.png",
+        "sm": "assets/portraits/sm/gu_king_chibi.png"
+      }
     },
     "foodEffect": "黑色蜈蚣的食補能力；蠱王吃食後補出的新食物有 1/3 機率成為黑色食物。黑色食物不會自然產出，吃下後紅黃綠藍隨機一種庫存 +1，並獲得 3 點能量。",
     "story": [
@@ -152,8 +476,44 @@
     "motto": "先手不是選擇，是活下去的本能。",
     "smallMove": "毒足先斬",
     "bigMove": "甕底毒煙令",
-    "colors": { "body": "#111827", "line": "#9ca3af", "accent": "#a3e635" },
+    "colors": {
+      "body": "#111827",
+      "line": "#9ca3af",
+      "accent": "#a3e635"
+    },
     "foodPreference": "black",
-    "specialFood": "black"
+    "specialFood": "black",
+    "archivedPortraits": {
+      "opening": {
+        "full": "assets/portraits/gu_king_intro.png",
+        "md": "assets/portraits/md/gu_king_intro.png",
+        "sm": "assets/portraits/sm/gu_king_intro.png"
+      },
+      "intro": {
+        "full": "assets/portraits/gu_king_idle.png",
+        "md": "assets/portraits/md/gu_king_idle.png",
+        "sm": "assets/portraits/sm/gu_king_idle.png"
+      },
+      "small": {
+        "full": "assets/portraits/gu_king_attack.png",
+        "md": "assets/portraits/md/gu_king_attack.png",
+        "sm": "assets/portraits/sm/gu_king_attack.png"
+      },
+      "big": {
+        "full": "assets/portraits/gu_king_attack.png",
+        "md": "assets/portraits/md/gu_king_attack.png",
+        "sm": "assets/portraits/sm/gu_king_attack.png"
+      },
+      "victory": {
+        "full": "assets/portraits/gu_king_victory.png",
+        "md": "assets/portraits/md/gu_king_victory.png",
+        "sm": "assets/portraits/sm/gu_king_victory.png"
+      },
+      "defeat": {
+        "full": "assets/portraits/gu_king_defeat.png",
+        "md": "assets/portraits/md/gu_king_defeat.png",
+        "sm": "assets/portraits/sm/gu_king_defeat.png"
+      }
+    }
   }
 ]
