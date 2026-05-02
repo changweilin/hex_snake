@@ -54,7 +54,27 @@
     "maxAttackStunChanceBonus": 0.2,
     "attackStunMs": 500,
     "attackSlowMs": 500,
-    "rangeDamageFalloffEnabled": false
+    "rangeDamageFalloffEnabled": false,
+    "ultimates": {
+      "dragon": {
+        "orbStepMs": 45
+      },
+      "lobster": {
+        "radiusMultiplier": 2.5
+      },
+      "sandworm": {
+        "damageMultiplier": 1
+      },
+      "quetzal": {
+        "damageMultiplier": 1
+      },
+      "moray": {
+        "damageMultiplier": 1
+      },
+      "gu_king": {
+        "damageMultiplier": 1
+      }
+    }
   },
   "collision": {
     "collisionStunMs": 2000,

@@ -312,6 +312,15 @@ function makePolicy(overrides = {}) {
   };
 }
 
+function ultimateSetting(balance, characterId, key, fallback) {
+  const value = balance.attack?.ultimates?.[characterId]?.[key];
+  return Number.isFinite(value) ? value : fallback;
+}
+
+function ultimateDamageMultiplier(balance, characterId) {
+  return ultimateSetting(balance, characterId, "damageMultiplier", 1);
+}
+
 function normalizeStrategyWeights(overrides = {}) {
   const provided = overrides.strategyWeights || {};
   const foodStrategy = overrides.foodStrategy || "balanced";
@@ -836,13 +845,14 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
     const path = dragonTrackingOrbPath(state, source, attacker.dir, defender.snake);
     const hits = pathHits(path, defender.snake);
     const endCell = path[path.length - 1] || source;
+    const orbStepMs = ultimateSetting(balance, characterId, "orbStepMs", DRAGON_ORB_STEP_MS);
     state.projectiles.push({
       kind: "dragonOrb",
       owner: attacker.owner,
       profile: "big",
       target: { ...endCell },
       pathCells: path,
-      impactAt: now + small.delay + path.length * DRAGON_ORB_STEP_MS,
+      impactAt: now + small.delay + path.length * orbStepMs,
       radius: small.radius,
       damage: small.damage,
       burstRadius: small.radius * 2,
@@ -855,7 +865,7 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
         owner: attacker.owner,
         profile: "big",
         target: { ...hit.cell },
-        impactAt: now + small.delay + (hit.index + 1) * DRAGON_ORB_STEP_MS,
+        impactAt: now + small.delay + (hit.index + 1) * orbStepMs,
         radius: small.radius,
         damage: small.damage,
         burstRadius: small.radius * 2,
@@ -878,7 +888,7 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
         excludedCells,
         width: bandDistanceFromTotalWidth(small.radius),
         impactAt: now + small.delay + index * 320,
-        damage: small.damage * 0.6,
+        damage: small.damage * 0.6 * ultimateDamageMultiplier(balance, characterId),
         stunChance,
         stackStun: true
       });
@@ -895,7 +905,7 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
       damageExcludedCells: trail,
       width: outwardWidth,
       minDistance: 1,
-      damage: small.damage,
+      damage: small.damage * ultimateDamageMultiplier(balance, characterId),
       profile: "big",
       stunChance,
       startedAt: now + small.delay,
@@ -915,7 +925,7 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
       target,
       impactAt: now + delay,
       radius: Math.max(0.5, small.radius * 0.5),
-      damage: small.damage * 3.5,
+      damage: small.damage * 3.5 * ultimateDamageMultiplier(balance, characterId),
       stunChance,
       sandwormParalyzeOnHead: true
     });
@@ -923,7 +933,7 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
   }
   if (characterId === "lobster") {
     const big = attackStats(attacker.stock, "big", balance);
-    const lobsterUltimateRadius = small.radius * 2.5;
+    const lobsterUltimateRadius = small.radius * ultimateSetting(balance, characterId, "radiusMultiplier", 2.5);
     for (let index = 0; index < 2; index += 1) {
       state.projectiles.push({
         kind: "headCircle",
@@ -950,14 +960,14 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
         target,
         impactAt: now + small.delay + index * 360,
         radius: small.radius,
-        damage: small.damage * 0.9,
+        damage: small.damage * 0.9 * ultimateDamageMultiplier(balance, characterId),
         stunChance
       });
     }
     return;
   }
   const big = attackStats(attacker.stock, "big", balance);
-  pushCircleAttack(state, { owner: attacker.owner, profile: "big", target, impactAt: now + big.delay, radius: big.radius, damage: big.damage, stunChance });
+  pushCircleAttack(state, { owner: attacker.owner, profile: "big", target, impactAt: now + big.delay, radius: big.radius, damage: big.damage * ultimateDamageMultiplier(balance, characterId), stunChance });
 }
 
 function launchAttack(state, attacker, defender, profile, now, balance) {

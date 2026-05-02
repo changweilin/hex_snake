@@ -541,12 +541,12 @@ test("balance tuner detects weak rows and clamps values to original bounds", () 
     { difficulty: "low", characterId: "dragon", runs: 10, winRate: 0.39 },
     { difficulty: "high", characterId: "moray", runs: 10, winRate: 0.4 }
   ]);
-  assert.equal(weakRows.length, 1);
-  assert.equal(clampCandidate(10, 4), 6);
-  assert.equal(clampCandidate(1, 4), 2);
+  assert.equal(weakRows.length, 2);
+  assert.equal(clampCandidate(50, 4), 40);
+  assert.equal(clampCandidate(0.1, 4), 0.4);
 });
 
-test("balance tuner adjustment keeps candidate values within plus/minus 50 percent", () => {
+test("balance tuner adjustment keeps candidate values within ultimate bounds", () => {
   const candidate = JSON.parse(JSON.stringify(balance));
   const summary = {
     characterDifficulty: difficulties.flatMap(difficulty => characters.map(character => ({
@@ -557,18 +557,17 @@ test("balance tuner adjustment keeps candidate values within plus/minus 50 perce
     })))
   };
   const bounds = new Map([
-    ["attack.baseBlastHexRadius", { path: ["attack", "baseBlastHexRadius"], direction: "higher-is-stronger", original: balance.attack.baseBlastHexRadius }],
-    ["attack.damageBonusPerPoint", { path: ["attack", "damageBonusPerPoint"], direction: "higher-is-stronger", original: balance.attack.damageBonusPerPoint }],
-    ["attack.proteinRangeBonusPerPoint", { path: ["attack", "proteinRangeBonusPerPoint"], direction: "higher-is-stronger", original: balance.attack.proteinRangeBonusPerPoint }],
-    ["movement.moveBonusPerPoint", { path: ["movement", "moveBonusPerPoint"], direction: "higher-is-stronger", original: balance.movement.moveBonusPerPoint }],
-    ["attack.attackSpeedBonusPerPoint", { path: ["attack", "attackSpeedBonusPerPoint"], direction: "higher-is-stronger", original: balance.attack.attackSpeedBonusPerPoint }],
-    ["attack.baseAttackDelayMs", { path: ["attack", "baseAttackDelayMs"], direction: "lower-is-stronger", original: balance.attack.baseAttackDelayMs }],
-    ["attack.baseAttackCooldownMs", { path: ["attack", "baseAttackCooldownMs"], direction: "lower-is-stronger", original: balance.attack.baseAttackCooldownMs }]
+    ["attack.ultimates.dragon.orbStepMs", { path: ["attack", "ultimates", "dragon", "orbStepMs"], direction: "lower-is-stronger", original: balance.attack.ultimates.dragon.orbStepMs }],
+    ["attack.ultimates.lobster.radiusMultiplier", { path: ["attack", "ultimates", "lobster", "radiusMultiplier"], direction: "higher-is-stronger", original: balance.attack.ultimates.lobster.radiusMultiplier }],
+    ["attack.ultimates.sandworm.damageMultiplier", { path: ["attack", "ultimates", "sandworm", "damageMultiplier"], direction: "higher-is-stronger", original: balance.attack.ultimates.sandworm.damageMultiplier }],
+    ["attack.ultimates.quetzal.damageMultiplier", { path: ["attack", "ultimates", "quetzal", "damageMultiplier"], direction: "higher-is-stronger", original: balance.attack.ultimates.quetzal.damageMultiplier }],
+    ["attack.ultimates.moray.damageMultiplier", { path: ["attack", "ultimates", "moray", "damageMultiplier"], direction: "higher-is-stronger", original: balance.attack.ultimates.moray.damageMultiplier }],
+    ["attack.ultimates.gu_king.damageMultiplier", { path: ["attack", "ultimates", "gu_king", "damageMultiplier"], direction: "higher-is-stronger", original: balance.attack.ultimates.gu_king.damageMultiplier }]
   ]);
   const result = applyAdjustments(candidate, balance, bounds, summary);
-  const proteinChange = result.changes.find(change => change.path === "attack.proteinRangeBonusPerPoint");
-  assert.ok(proteinChange);
-  assert.ok(result.nextBalance.attack.proteinRangeBonusPerPoint <= balance.attack.proteinRangeBonusPerPoint * 1.5);
+  const lobsterChange = result.changes.find(change => change.path === "attack.ultimates.lobster.radiusMultiplier");
+  assert.ok(lobsterChange);
+  assert.ok(result.nextBalance.attack.ultimates.lobster.radiusMultiplier <= balance.attack.ultimates.lobster.radiusMultiplier * 10);
 });
 
 test("balance tuner parses local time deadlines", () => {

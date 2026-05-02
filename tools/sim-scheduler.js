@@ -298,6 +298,7 @@ function makeEmptyCharacterRow(difficulty, characterId) {
     draws: 0,
     winRate: 0,
     drawRate: 0,
+    decisiveWinRate: 0,
     averageDurationMs: 0,
     totalDurationMs: 0
   };
@@ -314,6 +315,8 @@ function makeEmptyMatchupRow(difficulty, characterA, characterB) {
     draws: 0,
     characterAWinRate: 0,
     characterBWinRate: 0,
+    characterADecisiveWinRate: 0,
+    characterBDecisiveWinRate: 0,
     fatalSmallLosses: 0,
     fatalBigLosses: 0,
     fatalCollisionParalysisLosses: 0,
@@ -350,6 +353,9 @@ function summarizeMatchupStats(matches, characters) {
       row.characterAWinRate = row.runs ? roundMetric(row.characterAWins / row.runs) : 0;
       row.characterBWinRate = row.runs ? roundMetric(row.characterBWins / row.runs) : 0;
       row.drawRate = row.runs ? roundMetric(row.draws / row.runs) : 0;
+      const decisiveRuns = row.characterAWins + row.characterBWins;
+      row.characterADecisiveWinRate = decisiveRuns ? roundMetric(row.characterAWins / decisiveRuns) : 0;
+      row.characterBDecisiveWinRate = decisiveRuns ? roundMetric(row.characterBWins / decisiveRuns) : 0;
       const duration = statTriplet(group.map(match => match.durationMs));
       row.durationMsAverage = duration.average;
       row.durationMsStandardDeviation = duration.standardDeviation;
@@ -426,6 +432,7 @@ function summarizeMatches(matches, characters) {
     draws: row.draws,
     winRate: row.runs ? row.wins / row.runs : 0,
     drawRate: row.runs ? row.draws / row.runs : 0,
+    decisiveWinRate: row.wins + row.losses ? row.wins / (row.wins + row.losses) : 0,
     averageDurationMs: row.runs ? row.totalDurationMs / row.runs : 0
   }));
 
@@ -439,6 +446,8 @@ function summarizeMatches(matches, characters) {
     draws: row.draws,
     characterAWinRate: row.runs ? row.characterAWins / row.runs : 0,
     characterBWinRate: row.runs ? row.characterBWins / row.runs : 0,
+    characterADecisiveWinRate: row.characterAWins + row.characterBWins ? row.characterAWins / (row.characterAWins + row.characterBWins) : 0,
+    characterBDecisiveWinRate: row.characterAWins + row.characterBWins ? row.characterBWins / (row.characterAWins + row.characterBWins) : 0,
     fatalSmallLosses: row.fatalSmallLosses,
     fatalBigLosses: row.fatalBigLosses,
     fatalCollisionParalysisLosses: row.fatalCollisionParalysisLosses,
@@ -455,7 +464,7 @@ function summarizeMatches(matches, characters) {
 }
 
 function characterRowsToCsv(rows) {
-  const header = ["difficulty", "characterId", "runs", "wins", "losses", "draws", "winRate", "drawRate", "averageDurationMs"];
+  const header = ["difficulty", "characterId", "runs", "wins", "losses", "draws", "winRate", "drawRate", "decisiveWinRate", "averageDurationMs"];
   return [header, ...rows.map(row => header.map(key => row[key]))];
 }
 
@@ -470,6 +479,8 @@ function matchupRowsToCsv(rows) {
     "draws",
     "characterAWinRate",
     "characterBWinRate",
+    "characterADecisiveWinRate",
+    "characterBDecisiveWinRate",
     "fatalSmallLosses",
     "fatalBigLosses",
     "fatalCollisionParalysisLosses",

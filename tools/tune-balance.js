@@ -17,33 +17,25 @@ const {
 
 const root = path.resolve(__dirname, "..");
 const reportsDir = path.join(root, "reports");
-const TARGET_MIN_WIN_RATE = 0.4;
+const TARGET_MIN_WIN_RATE = 0.48;
+const TARGET_MAX_WIN_RATE = 0.52;
 
 const tunables = [
-  { path: ["attack", "baseBlastHexRadius"], direction: "higher-is-stronger" },
-  { path: ["attack", "damageBonusPerPoint"], direction: "higher-is-stronger" },
-  { path: ["attack", "proteinRangeBonusPerPoint"], direction: "higher-is-stronger" },
-  { path: ["movement", "moveBonusPerPoint"], direction: "higher-is-stronger" },
-  { path: ["attack", "attackSpeedBonusPerPoint"], direction: "higher-is-stronger" },
-  { path: ["attack", "baseAttackDelayMs"], direction: "lower-is-stronger" },
-  { path: ["attack", "baseAttackCooldownMs"], direction: "lower-is-stronger" }
+  { path: ["attack", "ultimates", "dragon", "orbStepMs"], direction: "lower-is-stronger" },
+  { path: ["attack", "ultimates", "lobster", "radiusMultiplier"], direction: "higher-is-stronger" },
+  { path: ["attack", "ultimates", "sandworm", "damageMultiplier"], direction: "higher-is-stronger" },
+  { path: ["attack", "ultimates", "quetzal", "damageMultiplier"], direction: "higher-is-stronger" },
+  { path: ["attack", "ultimates", "moray", "damageMultiplier"], direction: "higher-is-stronger" },
+  { path: ["attack", "ultimates", "gu_king", "damageMultiplier"], direction: "higher-is-stronger" }
 ];
 
 const characterPrimaryTunables = {
-  dragon: [
-    ["attack", "baseBlastHexRadius"],
-    ["attack", "baseAttackCooldownMs"],
-    ["attack", "damageBonusPerPoint"]
-  ],
-  sandworm: [["attack", "damageBonusPerPoint"], ["attack", "baseAttackDelayMs"]],
-  quetzal: [["movement", "moveBonusPerPoint"]],
-  moray: [["attack", "attackSpeedBonusPerPoint"], ["attack", "baseAttackCooldownMs"]],
-  lobster: [["attack", "proteinRangeBonusPerPoint"], ["attack", "baseBlastHexRadius"]],
-  gu_king: [
-    ["attack", "baseAttackCooldownMs"],
-    ["attack", "baseBlastHexRadius"],
-    ["attack", "damageBonusPerPoint"]
-  ]
+  dragon: [["attack", "ultimates", "dragon", "orbStepMs"]],
+  lobster: [["attack", "ultimates", "lobster", "radiusMultiplier"]],
+  sandworm: [["attack", "ultimates", "sandworm", "damageMultiplier"]],
+  quetzal: [["attack", "ultimates", "quetzal", "damageMultiplier"]],
+  moray: [["attack", "ultimates", "moray", "damageMultiplier"]],
+  gu_king: [["attack", "ultimates", "gu_king", "damageMultiplier"]]
 };
 
 function parseArgs(argv) {
@@ -101,8 +93,8 @@ function roundValue(value, original) {
 }
 
 function clampCandidate(value, original) {
-  const low = original * 0.5;
-  const high = original * 1.5;
+  const low = Math.max(0.01, original * 0.1);
+  const high = original * 10;
   return Math.min(Math.max(value, Math.min(low, high)), Math.max(low, high));
 }
 
@@ -155,9 +147,21 @@ function normalizeMatchRecord(entry, match) {
   };
 }
 
-function runBatch({ balance, characters, cycles, seed, batch }) {
+function parseDifficulties(value) {
+  const selected = String(value || "medium")
+    .split(",")
+    .map(entry => entry.trim())
+    .filter(Boolean);
+  selected.forEach(difficulty => {
+    if (!difficulties.includes(difficulty)) throw new Error(`Unknown difficulty "${difficulty}". Available: ${difficulties.join(", ")}`);
+  });
+  return selected.length ? selected : ["medium"];
+}
+
+function runBatch({ balance, characters, cycles, seed, batch, selectedDifficulties = difficulties }) {
   const characterById = buildCharacterMap(characters);
-  const schedule = createSchedule(characters, cycles);
+  const schedule = createSchedule(characters, cycles)
+    .filter(entry => selectedDifficulties.includes(entry.difficulty));
   const matches = [];
   schedule.forEach((entry, index) => {
     const policy = difficultyPresets[entry.difficulty];
@@ -175,49 +179,75 @@ function runBatch({ balance, characters, cycles, seed, batch }) {
   return { matches, summary, scheduleLength: schedule.length };
 }
 
-function findWeakRows(characterDifficulty) {
-  return characterDifficulty
-    .filter(row => row.runs > 0 && row.winRate < TARGET_MIN_WIN_RATE)
-    .sort((a, b) => a.winRate - b.winRate);
+function rowBalanceRate(row) {
+  if (Number.isFinite(row.decisiveWinRate) && row.wins + row.losses > 0) return row.decisiveWinRate;
+  if (Number.isFinite(row.winRate)) return row.winRate;
+  return 0;
 }
 
-function findStrongRows(characterDifficulty) {
-  return characterDifficulty
-    .filter(row => row.runs > 0 && row.winRate > 0.6)
-    .sort((a, b) => b.winRate - a.winRate);
+function summarizeCharacterBalanceRows(summary) {
+  const rows = new Map();
+  summary.characterDifficulty.forEach(row => {
+    if (!rows.has(row.characterId)) {
+      rows.set(row.characterId, { characterId: row.characterId, runs: 0, wins: 0, losses: 0, draws: 0, winRate: 0, drawRate: 0, decisiveWinRate: 0 });
+    }
+    const target = rows.get(row.characterId);
+    target.runs += row.runs || 0;
+    target.wins += row.wins || 0;
+    target.losses += row.losses || 0;
+    target.draws += row.draws || 0;
+  });
+  return [...rows.values()].map(row => ({
+    ...row,
+    winRate: row.runs ? row.wins / row.runs : 0,
+    drawRate: row.runs ? row.draws / row.runs : 0,
+    decisiveWinRate: row.wins + row.losses ? row.wins / (row.wins + row.losses) : 0
+  }));
+}
+
+function findWeakRows(characterRows) {
+  return characterRows
+    .filter(row => row.runs > 0 && rowBalanceRate(row) < TARGET_MIN_WIN_RATE)
+    .sort((a, b) => rowBalanceRate(a) - rowBalanceRate(b));
+}
+
+function findStrongRows(characterRows) {
+  return characterRows
+    .filter(row => row.runs > 0 && rowBalanceRate(row) > TARGET_MAX_WIN_RATE)
+    .sort((a, b) => rowBalanceRate(b) - rowBalanceRate(a));
 }
 
 function metricAverage(rows, characterId) {
-  const characterRows = rows.filter(row => row.characterId === characterId);
-  if (!characterRows.length) return 0;
-  return characterRows.reduce((sum, row) => sum + row.winRate, 0) / characterRows.length;
+  const row = rows.find(entry => entry.characterId === characterId);
+  return row ? rowBalanceRate(row) : 0;
 }
 
 function chooseAdjustmentPaths(summary) {
-  const weakRows = findWeakRows(summary.characterDifficulty);
-  const strongRows = findStrongRows(summary.characterDifficulty);
+  const characterRows = summarizeCharacterBalanceRows(summary);
+  const weakRows = findWeakRows(characterRows);
+  const strongRows = findStrongRows(characterRows);
   const weakCharacterIds = new Set(weakRows.map(row => row.characterId));
   const paths = [];
 
   weakRows.forEach(row => {
     const preferred = characterPrimaryTunables[row.characterId] || [];
-    preferred.forEach(pathParts => paths.push({ path: pathParts, reason: `${row.characterId}/${row.difficulty} weak ${row.winRate.toFixed(3)}`, intent: "buff" }));
+    preferred.forEach(pathParts => paths.push({ path: pathParts, reason: `${row.characterId} weak ${rowBalanceRate(row).toFixed(3)} decisive`, intent: "buff" }));
   });
 
-  const strongestWithoutWeakDifficulty = strongRows.find(row => !weakCharacterIds.has(row.characterId));
-  if (weakRows.length >= 2 && strongestWithoutWeakDifficulty) {
-    const strongest = strongestWithoutWeakDifficulty;
+  strongRows
+    .filter(row => !weakCharacterIds.has(row.characterId))
+    .forEach(strongest => {
     const preferred = characterPrimaryTunables[strongest.characterId] || [];
-    preferred.slice(0, 2).forEach(pathParts => {
-      paths.push({ path: pathParts, reason: `${strongest.characterId}/${strongest.difficulty} strong ${strongest.winRate.toFixed(3)}`, intent: "nerf" });
+      preferred.forEach(pathParts => {
+        paths.push({ path: pathParts, reason: `${strongest.characterId} strong ${rowBalanceRate(strongest).toFixed(3)} decisive`, intent: "nerf" });
+      });
     });
-  }
 
   return paths;
 }
 
 function adjustValue(current, bound, intent, pressure) {
-  const step = Math.min(0.04, Math.max(0.01, pressure * 0.08));
+  const step = Math.min(0.12, Math.max(0.015, pressure * 0.35));
   const strongerFactor = bound.direction === "lower-is-stronger" ? 1 - step : 1 + step;
   const weakerFactor = bound.direction === "lower-is-stronger" ? 1 + step : 1 - step;
   const factor = intent === "buff" ? strongerFactor : weakerFactor;
@@ -229,8 +259,9 @@ function applyAdjustments(balance, originalBalance, bounds, summary) {
   const candidates = chooseAdjustmentPaths(summary);
   const changes = [];
   const seenThisRound = new Set();
-  const worstWinRate = Math.min(...summary.characterDifficulty.filter(row => row.runs > 0).map(row => row.winRate));
-  const pressure = Math.max(0.01, TARGET_MIN_WIN_RATE - worstWinRate);
+  const characterRows = summarizeCharacterBalanceRows(summary).filter(row => row.runs > 0);
+  const worstDistance = Math.max(...characterRows.map(row => Math.abs(rowBalanceRate(row) - 0.5)));
+  const pressure = Math.max(0.01, worstDistance);
 
   candidates.forEach(candidate => {
     const key = pathKey(candidate.path);
@@ -248,8 +279,8 @@ function applyAdjustments(balance, originalBalance, bounds, summary) {
       before,
       after,
       original: readValue(originalBalance, candidate.path),
-      min: bound.original * 0.5,
-      max: bound.original * 1.5,
+      min: Math.max(0.01, bound.original * 0.1),
+      max: bound.original * 10,
       reason: candidate.reason
     });
   });
@@ -284,15 +315,19 @@ function createRunId(seed) {
   return `tune-${stamp()}${safeSeed ? `-${safeSeed}` : ""}`;
 }
 
-function buildManifest({ runId, status, cyclesPerBatch, characters, deadline, seed, candidatePath, outputDir, finalSummary, history }) {
+function buildManifest({ runId, status, cyclesPerBatch, characters, deadline, seed, selectedDifficulties, candidatePath, outputDir, finalSummary, history }) {
+  const finalCharacterBalance = finalSummary ? summarizeCharacterBalanceRows(finalSummary) : [];
   return {
     id: runId,
     status,
     generatedAt: new Date().toISOString(),
     config: {
       cyclesPerBatch,
-      matchesPerBatch: cyclesPerBatch * createSchedule(characters, 1).length,
+      difficulties: selectedDifficulties,
+      matchesPerBatch: cyclesPerBatch * createSchedule(characters, 1).filter(entry => selectedDifficulties.includes(entry.difficulty)).length,
       targetMinWinRate: TARGET_MIN_WIN_RATE,
+      targetMaxWinRate: TARGET_MAX_WIN_RATE,
+      winRateExcludesDraws: true,
       deadline: deadline.toISOString(),
       seed
     },
@@ -300,7 +335,9 @@ function buildManifest({ runId, status, cyclesPerBatch, characters, deadline, se
       candidate: candidatePath,
       directory: outputDir
     },
-    finalWeakRows: finalSummary ? findWeakRows(finalSummary.characterDifficulty) : [],
+    finalCharacterBalance,
+    finalWeakRows: finalSummary ? findWeakRows(finalCharacterBalance) : [],
+    finalStrongRows: finalSummary ? findStrongRows(finalCharacterBalance) : [],
     history
   };
 }
@@ -313,6 +350,7 @@ function main() {
   const cyclesPerBatch = Math.max(1, Math.floor(numberArg(args, "cycles", 100)));
   const maxBatches = Math.max(1, Math.floor(numberArg(args, "max-batches", Number.MAX_SAFE_INTEGER)));
   const seed = stringArg(args, "seed", `tune-${stamp()}`);
+  const selectedDifficulties = parseDifficulties(stringArg(args, "difficulties", "medium"));
   const deadline = parseDeadline(stringArg(args, "deadline", "08:00"));
   const runId = stringArg(args, "run-id", createRunId(seed));
   const outputDir = path.join(reportsDir, runId);
@@ -332,17 +370,20 @@ function main() {
   while (batch < maxBatches && Date.now() < deadline.getTime()) {
     batch += 1;
     const startedAt = new Date();
-    const result = runBatch({ balance, characters, cycles: cyclesPerBatch, seed, batch });
+    const result = runBatch({ balance, characters, cycles: cyclesPerBatch, seed, batch, selectedDifficulties });
     finalSummary = result.summary;
-    const weakRows = findWeakRows(result.summary.characterDifficulty);
-    const strongRows = findStrongRows(result.summary.characterDifficulty);
+    const characterBalanceRows = summarizeCharacterBalanceRows(result.summary);
+    const weakRows = findWeakRows(characterBalanceRows);
+    const strongRows = findStrongRows(characterBalanceRows);
     const averages = characters.map(character => ({
       characterId: character.id,
-      averageWinRate: Number(metricAverage(result.summary.characterDifficulty, character.id).toFixed(6))
+      decisiveWinRate: Number(metricAverage(characterBalanceRows, character.id).toFixed(6))
     }));
 
     writeJson(path.join(outputDir, `batch-${batch}-character-difficulty.json`), result.summary.characterDifficulty);
     writeCsv(path.join(outputDir, `batch-${batch}-character-difficulty.csv`), result.summary.characterDifficulty);
+    writeJson(path.join(outputDir, `batch-${batch}-character-balance.json`), characterBalanceRows);
+    writeCsv(path.join(outputDir, `batch-${batch}-character-balance.csv`), characterBalanceRows);
     writeJson(path.join(outputDir, `batch-${batch}-matches.json`), result.matches);
 
     const completedAt = new Date();
@@ -353,19 +394,19 @@ function main() {
       startedAt: startedAt.toISOString(),
       completedAt: completedAt.toISOString(),
       deadline: deadline.toISOString(),
-      pass: weakRows.length === 0,
+      pass: weakRows.length === 0 && strongRows.length === 0,
       weakRows,
       strongRows,
       averages,
       changes: []
     };
 
-    if (weakRows.length === 0) {
+    if (weakRows.length === 0 && strongRows.length === 0) {
       status = "passed";
       history.push(historyEntry);
       writeJson(candidatePath, balance);
       writeJson(historyPath, history);
-      writeJson(manifestPath, buildManifest({ runId, status, cyclesPerBatch, characters, deadline, seed, candidatePath, outputDir, finalSummary, history }));
+      writeJson(manifestPath, buildManifest({ runId, status, cyclesPerBatch, characters, deadline, seed, selectedDifficulties, candidatePath, outputDir, finalSummary, history }));
       if (!quiet) console.log(`Batch ${batch}: passed (${result.matches.length} matches).`);
       break;
     }
@@ -376,10 +417,11 @@ function main() {
     history.push(historyEntry);
     writeJson(candidatePath, balance);
     writeJson(historyPath, history);
-    writeJson(manifestPath, buildManifest({ runId, status, cyclesPerBatch, characters, deadline, seed, candidatePath, outputDir, finalSummary, history }));
+    writeJson(manifestPath, buildManifest({ runId, status, cyclesPerBatch, characters, deadline, seed, selectedDifficulties, candidatePath, outputDir, finalSummary, history }));
     if (!quiet) {
-      const worst = weakRows[0];
-      console.log(`Batch ${batch}: worst ${worst.characterId}/${worst.difficulty} ${(worst.winRate * 100).toFixed(1)}%, changes ${adjustment.changes.length}.`);
+      const row = weakRows[0] || strongRows[0];
+      const label = weakRows.length ? "worst" : "strongest";
+      console.log(`Batch ${batch}: ${label} ${row.characterId} ${(rowBalanceRate(row) * 100).toFixed(1)}% decisive, changes ${adjustment.changes.length}.`);
     }
     if (!adjustment.changes.length) {
       status = "stalled";
@@ -391,7 +433,7 @@ function main() {
     status = Date.now() >= deadline.getTime() ? "deadline" : "max-batches";
   }
 
-  const manifest = buildManifest({ runId, status, cyclesPerBatch, characters, deadline, seed, candidatePath, outputDir, finalSummary, history });
+  const manifest = buildManifest({ runId, status, cyclesPerBatch, characters, deadline, seed, selectedDifficulties, candidatePath, outputDir, finalSummary, history });
 
   writeJson(candidatePath, balance);
   writeJson(manifestPath, manifest);
@@ -415,10 +457,13 @@ if (require.main === module) {
 
 module.exports = {
   TARGET_MIN_WIN_RATE,
+  TARGET_MAX_WIN_RATE,
   adjustValue,
   applyAdjustments,
   clampCandidate,
   findWeakRows,
+  findStrongRows,
   parseDeadline,
-  runBatch
+  runBatch,
+  summarizeCharacterBalanceRows
 };

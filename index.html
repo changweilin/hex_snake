@@ -873,10 +873,45 @@
       background: rgba(32, 38, 51, 0.98);
       border: 1px solid rgba(255, 255, 255, 0.12);
       box-shadow: 0 18px 60px rgba(0, 0, 0, 0.44);
+      overscroll-behavior: contain;
+      scrollbar-gutter: stable;
+      -webkit-overflow-scrolling: touch;
     }
 
     .settings-content[hidden] {
       display: none;
+    }
+
+    .settings-panel-header {
+      position: sticky;
+      top: 0;
+      z-index: 4;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin: -10px -10px 0;
+      padding: 10px;
+      border-radius: 8px 8px 0 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(32, 38, 51, 0.98);
+    }
+
+    .settings-panel-header strong {
+      min-width: 0;
+      color: var(--ink);
+      font-size: 0.95rem;
+      line-height: 1.1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    button.secondary.settings-panel-close {
+      width: 38px;
+      height: 38px;
+      min-height: 38px;
+      flex-basis: 38px;
     }
 
     .gm-settings {
@@ -2001,7 +2036,9 @@
       font-size: 1.2rem;
     }
 
-    button.secondary.rules-close {
+    button.secondary.rules-close,
+    button.secondary.replay-close,
+    button.secondary.settings-panel-close {
       width: 42px;
       height: 42px;
       min-height: 42px;
@@ -2010,6 +2047,8 @@
       flex: 0 0 42px;
       place-items: center;
       line-height: 1;
+      font-size: 1.45rem;
+      font-weight: 900;
     }
 
     .rules-content {
@@ -2433,23 +2472,52 @@
       }
 
       .side .settings-section .settings-content {
-        position: absolute;
+        position: fixed;
         top: auto;
-        right: 0;
-        bottom: calc(100% + 6px);
+        left: max(8px, env(safe-area-inset-left));
+        right: max(8px, env(safe-area-inset-right));
+        bottom: calc(54px + max(8px, env(safe-area-inset-bottom)));
         z-index: 261;
-        width: min(360px, calc(100vw - 12px));
-        max-height: min(70dvh, 420px);
+        width: auto;
+        max-height: calc(100dvh - 74px - max(8px, env(safe-area-inset-top)) - max(8px, env(safe-area-inset-bottom)));
         overflow-y: auto;
         padding: 10px;
         border-radius: 8px;
         background: rgba(32, 38, 51, 0.98);
         border: 1px solid rgba(255, 255, 255, 0.12);
         box-shadow: 0 18px 60px rgba(0, 0, 0, 0.44);
+        transform: none;
+        align-content: start;
+      }
+
+      .side .settings-section .settings-panel-header {
+        margin: -10px -10px 0;
+      }
+
+      .side .settings-section #settingsContent > .field:first-of-type {
+        position: sticky;
+        top: 50px;
+        z-index: 3;
+        margin: -2px -2px 0;
+        padding: 8px;
+        border-radius: 8px;
+        border: 1px solid rgba(245, 158, 11, 0.42);
+        background: rgba(21, 27, 37, 0.98);
+        box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28);
       }
 
       .side .settings-section .gm-settings {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .side .settings-section .character-picks {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .side .settings-section .keybind-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px;
       }
 
       .side .settings-section .field {
@@ -2863,8 +2931,12 @@
         </button>
         </div>
         <div class="settings-content" id="settingsContent" hidden>
+        <div class="settings-panel-header">
+          <strong>開局設定</strong>
+          <button class="secondary settings-panel-close" id="settingsCloseButton" type="button" aria-label="關閉開局設定">&times;</button>
+        </div>
         <div class="field">
-          <label for="computerDifficulty"><span class="owner-name is-p2">P2</span> 難度</label>
+          <label for="computerDifficulty">電腦難度</label>
           <select id="computerDifficulty">
             <option value="novice">新手</option>
             <option value="low">低</option>
@@ -2932,6 +3004,10 @@
         <button id="resetSettingsButton" class="secondary" type="button">回到預設值</button>
         </div>
         <div class="settings-content" id="gmContent" hidden>
+        <div class="settings-panel-header">
+          <strong>GM 設定</strong>
+          <button class="secondary settings-panel-close" id="gmCloseButton" type="button" aria-label="關閉 GM 設定">&times;</button>
+        </div>
         <div class="gm-settings" id="gmSettings">
           <div class="field">
             <label for="gridSize">棋盤半徑</label>
@@ -3055,7 +3131,7 @@
     <div class="replay-dialog">
       <div class="replay-header">
         <h2 id="replayTitle">重播紀錄</h2>
-        <button id="replayModalClose" class="secondary" type="button">關閉</button>
+        <button id="replayModalClose" class="secondary replay-close" type="button" aria-label="關閉重播紀錄">&times;</button>
       </div>
       <div id="replayMessage" class="replay-message"></div>
       <div class="replay-list-header">
@@ -3151,8 +3227,10 @@
     const lateGameModeButton = document.querySelector("#lateGameModeButton");
     const gmToggle = document.querySelector("#gmToggle");
     const gmContent = document.querySelector("#gmContent");
+    const gmCloseButton = document.querySelector("#gmCloseButton");
     const settingsToggle = document.querySelector("#settingsToggle");
     const settingsContent = document.querySelector("#settingsContent");
+    const settingsCloseButton = document.querySelector("#settingsCloseButton");
     const characterStage = document.querySelector("#characterStage");
     const resourceBoard = document.querySelector("#resourceBoard");
     const keyEls = [...document.querySelectorAll(".key")];
@@ -3198,6 +3276,7 @@
     let baseAttackStunChance = 0.3;
     let attackStunChanceBonusPerPoint = 0.01;
     let maxAttackStunChanceBonus = 0.2;
+    let attackUltimateBalance = {};
     let maxCollisionParalysisMs = 8000;
     let rangeDamageFalloffEnabled = false;
     let targetMaxHex = 6;
@@ -3272,6 +3351,7 @@
       attackStunMs = config.attack?.attackStunMs ?? attackStunMs;
       attackSlowMs = config.attack?.attackSlowMs ?? attackSlowMs;
       rangeDamageFalloffEnabled = config.attack?.rangeDamageFalloffEnabled ?? rangeDamageFalloffEnabled;
+      attackUltimateBalance = config.attack?.ultimates || attackUltimateBalance;
       collisionStunMs = config.collision?.collisionStunMs ?? collisionStunMs;
       collisionSlowMs = config.collision?.collisionSlowMs ?? collisionSlowMs;
       maxCollisionParalysisMs = config.collision?.maxCollisionParalysisMs ?? maxCollisionParalysisMs;
@@ -5563,6 +5643,15 @@
     };
     const dragonOrbStepMs = 45;
 
+    function ultimateSetting(characterId, key, fallback) {
+      const value = attackUltimateBalance?.[characterId]?.[key];
+      return Number.isFinite(value) ? value : fallback;
+    }
+
+    function ultimateDamageMultiplier(characterId) {
+      return ultimateSetting(characterId, "damageMultiplier", 1);
+    }
+
     function defaultAiStrategyWeights() {
       return {
         movement: {
@@ -6216,7 +6305,8 @@
           : dragonWrappedOrbPath(source, ownerDirection(owner));
         const hits = pathHits(path, targetSnake);
         const endCell = path[path.length - 1] || source;
-        const travelDelay = small.delay + path.length * dragonOrbStepMs;
+        const orbStepMs = ultimateSetting(character.id, "orbStepMs", dragonOrbStepMs);
+        const travelDelay = small.delay + path.length * orbStepMs;
         projectiles.push({
           kind: "dragonOrb",
           owner,
@@ -6244,8 +6334,8 @@
             visualType: attackVisualType(owner, "big"),
             hidden: true,
             createdAt: now,
-            impactAt: now + small.delay + (hit.index + 1) * dragonOrbStepMs,
-            delay: small.delay + (hit.index + 1) * dragonOrbStepMs,
+            impactAt: now + small.delay + (hit.index + 1) * orbStepMs,
+            delay: small.delay + (hit.index + 1) * orbStepMs,
             radius: small.radius,
             damage: small.damage,
             burstRadius: small.radius * 2,
@@ -6273,7 +6363,7 @@
             createdAt: now,
             impactAt: now + small.delay + index * 320,
             delay: small.delay + index * 320,
-            damage: small.damage * 0.6,
+            damage: small.damage * 0.6 * ultimateDamageMultiplier(character.id),
             stunChance,
             stackStun: true
           });
@@ -6294,7 +6384,7 @@
           width: outwardWidth,
           minDistance: 1,
           visualType: attackVisualType(owner, "big"),
-          damage: small.damage,
+          damage: small.damage * ultimateDamageMultiplier(character.id),
           stunChance,
           startedAt: now + small.delay,
           nextTickAt: now + small.delay,
@@ -6324,7 +6414,7 @@
           impactAt: now + delay,
           delay,
           radius: Math.max(0.5, small.radius * 0.5),
-          damage: small.damage * 3.5,
+          damage: small.damage * 3.5 * ultimateDamageMultiplier(character.id),
           stunChance,
           hidden: true,
           sandwormParalyzeOnHead: true
@@ -6334,7 +6424,7 @@
 
       if (character.id === "lobster") {
         const big = attackStats(stock, "big");
-        const lobsterUltimateRadius = small.radius * 2.5;
+        const lobsterUltimateRadius = small.radius * ultimateSetting(character.id, "radiusMultiplier", 2.5);
         for (let index = 0; index < 2; index += 1) {
           projectiles.push({
             kind: "headCircle",
@@ -6368,7 +6458,7 @@
             impactAt: now + small.delay + index * 360,
             delay: small.delay + index * 360,
             radius: small.radius,
-            damage: small.damage * 0.9,
+            damage: small.damage * 0.9 * ultimateDamageMultiplier(character.id),
             stunChance
           });
         }
@@ -6376,7 +6466,7 @@
       }
 
       const big = attackStats(stock, "big");
-      pushCircleAttack({ owner, profile: "big", target, createdAt: now, impactAt: now + big.delay, delay: big.delay, radius: big.radius, damage: big.damage, stunChance });
+      pushCircleAttack({ owner, profile: "big", target, createdAt: now, impactAt: now + big.delay, delay: big.delay, radius: big.radius, damage: big.damage * ultimateDamageMultiplier(character.id), stunChance });
       return big.delay;
     }
 
@@ -9680,6 +9770,8 @@
 
     settingsToggle.addEventListener("click", toggleSettings);
     gmToggle.addEventListener("click", toggleGmSettings);
+    settingsCloseButton.addEventListener("click", () => setSettingsOpen(false));
+    gmCloseButton.addEventListener("click", () => setGmOpen(false));
 
     settingsToggle.addEventListener("pointerdown", event => {
       event.stopPropagation();
@@ -9828,7 +9920,7 @@
       resetGame();
       resize();
       overlayTitle.textContent = "難度已更新";
-      overlayText.textContent = `P2 難度設為 ${computerDifficultyInput.selectedOptions[0].textContent}。`;
+      overlayText.textContent = `電腦難度設為 ${computerDifficultyInput.selectedOptions[0].textContent}。`;
       startButton.textContent = "開始";
       renderIntroPortraits(true);
       overlay.classList.add("show");
@@ -10245,6 +10337,17 @@
       }
       if (!rulesModal.hidden) {
         if (event.key === "Escape" || event.key === "Esc") closeRulesModal();
+        return;
+      }
+      if (!replayModal.hidden) {
+        if (event.key === "Escape" || event.key === "Esc") closeReplayModal();
+        return;
+      }
+      if (!settingsContent.hidden || !gmContent.hidden) {
+        if (event.key === "Escape" || event.key === "Esc") {
+          setSettingsOpen(false);
+          setGmOpen(false);
+        }
         return;
       }
       if (!portraitLightbox.hidden) {
