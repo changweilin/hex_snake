@@ -923,7 +923,7 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
   }
   if (characterId === "lobster") {
     const big = attackStats(attacker.stock, "big", balance);
-    const lobsterUltimateRadiusScale = 3;
+    const lobsterUltimateRadius = small.radius * 2.5;
     for (let index = 0; index < 2; index += 1) {
       state.projectiles.push({
         kind: "headCircle",
@@ -931,7 +931,7 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
         profile: "big",
         target: { ...source },
         impactAt: now + small.delay + index * 2000,
-        radius: big.radius * lobsterUltimateRadiusScale,
+        radius: lobsterUltimateRadius,
         damage: big.damage,
         radiationDurationMs: 4000,
         radiationTickMs: 500,

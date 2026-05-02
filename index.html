@@ -5549,10 +5549,10 @@
         castTiming: { lethal: 3, nearFullEnergy: 2.1596, opponentDebuffed: 0.5061, opponentAlmostReady: 2.8184, nearOpponent: 0, farOpponent: 0.7832 }
       },
       lobster: {
-        movement: { safePath: 1.1689, leastDamage: 0.9879, fastestArrival: 0.4771 },
-        food: { fastestArrival: 2.0643, ownDeficit: 1.6463, opponentDeficit: 0.4067, ownPreferred: 1.7044, opponentPreferred: 0.5885 },
-        skillAllocation: { preferSmall: 0.7621, preferBig: 1.7676 },
-        castTiming: { lethal: 3, nearFullEnergy: 0.6052, opponentDebuffed: 0.2413, opponentAlmostReady: 1.8753, nearOpponent: 0.9745, farOpponent: 0 }
+        movement: { safePath: 2.05, leastDamage: 1.7, fastestArrival: 0.25 },
+        food: { fastestArrival: 2.25, ownDeficit: 2, opponentDeficit: 0.15, ownPreferred: 1.95, opponentPreferred: 0.15 },
+        skillAllocation: { preferSmall: 0.9, preferBig: 1.45 },
+        castTiming: { lethal: 3, nearFullEnergy: 1.55, opponentDebuffed: 0.55, opponentAlmostReady: 1.35, nearOpponent: 0.95, farOpponent: 0 }
       },
       gu_king: {
         movement: { safePath: 1.1123, leastDamage: 1.7447, fastestArrival: 0.3172 },
@@ -6334,7 +6334,7 @@
 
       if (character.id === "lobster") {
         const big = attackStats(stock, "big");
-        const lobsterUltimateRadiusScale = 3;
+        const lobsterUltimateRadius = small.radius * 2.5;
         for (let index = 0; index < 2; index += 1) {
           projectiles.push({
             kind: "headCircle",
@@ -6345,7 +6345,7 @@
             createdAt: now,
             impactAt: now + small.delay + index * 2000,
             delay: small.delay + index * 2000,
-            radius: big.radius * lobsterUltimateRadiusScale,
+            radius: lobsterUltimateRadius,
             damage: big.damage,
             radiationDurationMs: 4000,
             radiationTickMs: 500,
