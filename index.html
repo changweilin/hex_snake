@@ -914,6 +914,21 @@
       flex-basis: 38px;
     }
 
+    .settings-quick-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(132px, 0.78fr);
+      align-items: end;
+      gap: 10px;
+    }
+
+    .settings-quick-row .toggle-field {
+      min-height: 42px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: #151b25;
+    }
+
     .gm-settings {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2494,7 +2509,7 @@
         margin: -10px -10px 0;
       }
 
-      .side .settings-section #settingsContent > .field:first-of-type {
+      .side .settings-section .settings-quick-row {
         position: sticky;
         top: 50px;
         z-index: 3;
@@ -2504,6 +2519,11 @@
         border: 1px solid rgba(245, 158, 11, 0.42);
         background: rgba(21, 27, 37, 0.98);
         box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28);
+      }
+
+      .side .settings-section .settings-quick-row .toggle-field {
+        min-height: 36px;
+        padding: 6px 8px;
       }
 
       .side .settings-section .gm-settings {
@@ -2935,14 +2955,20 @@
           <strong>開局設定</strong>
           <button class="secondary settings-panel-close" id="settingsCloseButton" type="button" aria-label="關閉開局設定">&times;</button>
         </div>
-        <div class="field">
-          <label for="computerDifficulty">電腦難度</label>
-          <select id="computerDifficulty">
-            <option value="novice">新手</option>
-            <option value="low">低</option>
-            <option value="medium" selected>中</option>
-            <option value="high">高</option>
-          </select>
+        <div class="settings-quick-row">
+          <div class="field">
+            <label for="computerDifficulty">電腦難度</label>
+            <select id="computerDifficulty">
+              <option value="novice">新手</option>
+              <option value="low">低</option>
+              <option value="medium" selected>中</option>
+              <option value="high">高</option>
+            </select>
+          </div>
+          <label class="field toggle-field">
+            <input id="leftHandMode" type="checkbox">
+            <span>左手模式</span>
+          </label>
         </div>
         <div class="character-picks" hidden>
           <div class="field">
@@ -2954,10 +2980,6 @@
             <select id="computerCharacter"></select>
           </div>
         </div>
-        <label class="field toggle-field">
-          <input id="leftHandMode" type="checkbox">
-          <span>左手模式</span>
-        </label>
         <div class="keybind-grid" aria-label="鍵盤快捷鍵設定">
           <div class="field">
             <label for="smallAttackKey">小招鍵</label>
