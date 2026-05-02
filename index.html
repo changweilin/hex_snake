@@ -1040,6 +1040,50 @@
       text-transform: uppercase;
     }
 
+    .settings-direction-bindings {
+      display: grid;
+      gap: 8px;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(21, 27, 37, 0.52);
+    }
+
+    .settings-direction-title {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 900;
+    }
+
+    .settings-dir-pad {
+      justify-self: center;
+      width: min(148px, 58vw);
+      touch-action: manipulation;
+    }
+
+    .settings-dir-pad .hex-dir-button {
+      cursor: pointer;
+    }
+
+    .settings-dir-pad .hex-dir-button.is-awaiting-key,
+    .settings-dir-pad .hex-dir-button:focus-visible {
+      background: rgba(245, 158, 11, 0.94);
+      color: #171006;
+      border-color: rgba(255, 255, 255, 0.78);
+      outline: 3px solid rgba(245, 158, 11, 0.28);
+      outline-offset: 2px;
+      box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.16);
+    }
+
+    .settings-dir-hint {
+      min-height: 1.2em;
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-align: center;
+    }
+
     .resource-board {
       display: grid;
       gap: 12px;
@@ -2540,6 +2584,14 @@
         gap: 6px;
       }
 
+      .side .settings-section .settings-direction-bindings {
+        padding: 8px;
+      }
+
+      .side .settings-section .settings-dir-pad {
+        width: min(132px, 48vw);
+      }
+
       .side .settings-section .field {
         gap: 5px;
       }
@@ -2997,30 +3049,24 @@
             <label for="surrenderKey">投降鍵</label>
             <input id="surrenderKey" type="text" value="T" maxlength="1" inputmode="text">
           </div>
-          <div class="field">
-            <label for="dirKey0">左上攻擊</label>
-            <input id="dirKey0" data-keybind-dir="0" type="text" value="W" maxlength="1" inputmode="text">
+        </div>
+        <div class="settings-direction-bindings" aria-label="方向快捷鍵設定">
+          <p class="settings-direction-title">六角方向鍵</p>
+          <div class="joystick settings-dir-pad" id="settingsDirPad">
+            <button class="hex-dir-button" type="button" data-settings-dir-button="0" data-dir="0" aria-label="設定左上快捷鍵"><span>W</span></button>
+            <button class="hex-dir-button" type="button" data-settings-dir-button="1" data-dir="1" aria-label="設定右上快捷鍵"><span>E</span></button>
+            <button class="hex-dir-button" type="button" data-settings-dir-button="2" data-dir="2" aria-label="設定右方快捷鍵"><span>D</span></button>
+            <button class="hex-dir-button" type="button" data-settings-dir-button="3" data-dir="3" aria-label="設定右下快捷鍵"><span>X</span></button>
+            <button class="hex-dir-button" type="button" data-settings-dir-button="4" data-dir="4" aria-label="設定左下快捷鍵"><span>Z</span></button>
+            <button class="hex-dir-button" type="button" data-settings-dir-button="5" data-dir="5" aria-label="設定左方快捷鍵"><span>A</span></button>
           </div>
-          <div class="field">
-            <label for="dirKey1">右上攻擊</label>
-            <input id="dirKey1" data-keybind-dir="1" type="text" value="E" maxlength="1" inputmode="text">
-          </div>
-          <div class="field">
-            <label for="dirKey2">右方攻擊</label>
-            <input id="dirKey2" data-keybind-dir="2" type="text" value="D" maxlength="1" inputmode="text">
-          </div>
-          <div class="field">
-            <label for="dirKey3">右下攻擊</label>
-            <input id="dirKey3" data-keybind-dir="3" type="text" value="X" maxlength="1" inputmode="text">
-          </div>
-          <div class="field">
-            <label for="dirKey4">左下攻擊</label>
-            <input id="dirKey4" data-keybind-dir="4" type="text" value="Z" maxlength="1" inputmode="text">
-          </div>
-          <div class="field">
-            <label for="dirKey5">左方攻擊</label>
-            <input id="dirKey5" data-keybind-dir="5" type="text" value="A" maxlength="1" inputmode="text">
-          </div>
+          <div class="settings-dir-hint" id="settingsDirHint">點一個方向後按鍵盤設定快捷鍵</div>
+          <input id="dirKey0" data-keybind-dir="0" type="hidden" value="W">
+          <input id="dirKey1" data-keybind-dir="1" type="hidden" value="E">
+          <input id="dirKey2" data-keybind-dir="2" type="hidden" value="D">
+          <input id="dirKey3" data-keybind-dir="3" type="hidden" value="X">
+          <input id="dirKey4" data-keybind-dir="4" type="hidden" value="Z">
+          <input id="dirKey5" data-keybind-dir="5" type="hidden" value="A">
         </div>
         <button id="resetBestTimeButton" class="secondary" type="button">重設最久存活</button>
         <button id="resetSettingsButton" class="secondary" type="button">回到預設值</button>
@@ -3229,6 +3275,8 @@
     const rulesContent = document.querySelector("#rulesContent");
     const rulesCloseButton = document.querySelector("#rulesCloseButton");
     const hexDirButtons = [...document.querySelectorAll("[data-dir-button]")];
+    const settingsDirButtons = [...document.querySelectorAll("[data-settings-dir-button]")];
+    const settingsDirHint = document.querySelector("#settingsDirHint");
     const gridSizeInput = document.querySelector("#gridSize");
     const foodCountInput = document.querySelector("#foodCount");
     const computerDifficultyInput = document.querySelector("#computerDifficulty");
@@ -3336,6 +3384,7 @@
     let computerCharacterId = "moray";
     let playerCharacterChoice = "dragon";
     let computerCharacterChoice = "moray";
+    let pendingDirectionKeybind = null;
     function applyBalanceConfig(config) {
       if (!config || typeof config !== "object") return;
       minGridSize = config.limits?.gridSize?.min ?? minGridSize;
@@ -3430,12 +3479,12 @@
     }
 
     const directions = [
-      { q: 0, r: -1, angle: -90, key: "w" },
-      { q: 1, r: -1, angle: -30, key: "e" },
-      { q: 1, r: 0, angle: 30, key: "d" },
-      { q: 0, r: 1, angle: 90, key: "x" },
-      { q: -1, r: 1, angle: 150, key: "z" },
-      { q: -1, r: 0, angle: -150, key: "a" }
+      { q: 0, r: -1, angle: -90, key: "w", label: "左上" },
+      { q: 1, r: -1, angle: -30, key: "e", label: "右上" },
+      { q: 1, r: 0, angle: 30, key: "d", label: "右方" },
+      { q: 0, r: 1, angle: 90, key: "x", label: "右下" },
+      { q: -1, r: 1, angle: 150, key: "z", label: "左下" },
+      { q: -1, r: 0, angle: -150, key: "a", label: "左方" }
     ];
     const foodTypes = [
       { id: "protein", label: "蛋白", name: "蛋白質", foodName: "紅色食物", effect: "爆炸半徑由 2 連續成長到 4，小數部分會讓最外圈承受對應比例傷害", color: "#ef4444", line: "#fecaca" },
@@ -4923,6 +4972,13 @@
         const label = button.querySelector("span") || button;
         if (direction) label.textContent = keyLabel(direction.key);
       });
+      settingsDirButtons.forEach(button => {
+        const direction = directions[Number(button.dataset.dir)];
+        const label = button.querySelector("span") || button;
+        if (direction) label.textContent = keyLabel(direction.key);
+        button.classList.toggle("is-awaiting-key", Number(button.dataset.dir) === pendingDirectionKeybind);
+        button.setAttribute("aria-pressed", String(Number(button.dataset.dir) === pendingDirectionKeybind));
+      });
       document.querySelector("#smallAttackKey").value = keyLabel(keybinds.smallAttack);
       document.querySelector("#bigAttackKey").value = keyLabel(keybinds.bigAttack);
       document.querySelector("#pauseKey").value = keyLabel(keybinds.pause);
@@ -4930,6 +4986,22 @@
       document.querySelectorAll("[data-keybind-dir]").forEach(input => {
         input.value = keyLabel(keybinds.directions[Number(input.dataset.keybindDir)]);
       });
+    }
+
+    function setPendingDirectionKeybind(direction) {
+      pendingDirectionKeybind = Number.isInteger(direction) && direction >= 0 && direction < directions.length ? direction : null;
+      settingsDirHint.textContent = pendingDirectionKeybind === null
+        ? "點一個方向後按鍵盤設定快捷鍵"
+        : `按鍵盤設定 ${directions[pendingDirectionKeybind].label} 快捷鍵`;
+      applyKeybinds();
+    }
+
+    function commitPendingDirectionKeybind(key) {
+      if (pendingDirectionKeybind === null) return false;
+      keybinds.directions[pendingDirectionKeybind] = normalizeKey(key, keybinds.directions[pendingDirectionKeybind]);
+      saveKeybinds();
+      setPendingDirectionKeybind(null);
+      return true;
     }
 
     function updateAttackButtons() {
@@ -9768,6 +9840,7 @@
     function setSettingsOpen(open) {
       settingsToggle.setAttribute("aria-expanded", String(open));
       settingsContent.hidden = !open;
+      if (!open) setPendingDirectionKeybind(null);
       if (open) setGmOpen(false);
       settingsToggle.closest(".settings-section").classList.toggle("open", open || !gmContent.hidden);
     }
@@ -10147,6 +10220,13 @@
       });
     });
 
+    settingsDirButtons.forEach(button => {
+      button.addEventListener("click", () => {
+        setPendingDirectionKeybind(Number(button.dataset.dir));
+        button.focus();
+      });
+    });
+
     introCloseButton.addEventListener("click", () => {
       renderIntroPortraits(false);
       overlay.classList.add("show");
@@ -10347,6 +10427,13 @@
     });
 
     window.addEventListener("keydown", event => {
+      if (pendingDirectionKeybind !== null) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (event.key === "Escape" || event.key === "Esc") setPendingDirectionKeybind(null);
+        else commitPendingDirectionKeybind(event.key === " " ? " " : event.key);
+        return;
+      }
       if (replayMode) {
         if (event.key === "Escape" || event.key === "Esc") exitReplayPlayback();
         if (event.key === " " && replayPlayback) {
