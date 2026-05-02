@@ -10,6 +10,7 @@ const {
 } = require("./sim-scheduler");
 
 const {
+  DIRECTIONS,
   FOOD_TYPES,
   attackStats,
   buildCharacterMap,
@@ -22,6 +23,7 @@ const {
   createMatchState,
   createRng,
   damageSnake,
+  dragonTrackingOrbPath,
   directionToward,
   emptyStock,
   hexDistance,
@@ -331,6 +333,40 @@ test("auto battle attack decisions are owner-mirrored under equal conditions", (
   assert.equal(chooseAttackProfile(state, state.fighters.computer, state.fighters.player, balance), "big");
 });
 
+test("dragon tracking orb has limited curvature and board-width range", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("dragon"),
+    computerCharacter: characterById.get("moray"),
+    seed: "dragon-tracking-path"
+  });
+  const source = { q: -3, r: 1 };
+  const targetSnake = [{ q: 3, r: -2 }, { q: 2, r: -1 }];
+  const path = dragonTrackingOrbPath(state, source, 0, targetSnake);
+  assert.ok(path.length <= state.radius * 2 + 1);
+  let cursor = source;
+  let direction = 0;
+  path.forEach(cell => {
+    const stepDirection = DIRECTIONS.findIndex(delta => (
+      cell.q === cursor.q + delta.q && cell.r === cursor.r + delta.r
+    ));
+    const wrappedDirection = stepDirection >= 0
+      ? stepDirection
+      : DIRECTIONS.findIndex((_, index) => {
+        const wrapped = nextWrappedCell(cursor, index, state.radius);
+        return wrapped.q === cell.q && wrapped.r === cell.r;
+      });
+    assert.ok(wrappedDirection >= 0);
+    const turn = Math.min(
+      (wrappedDirection - direction + DIRECTIONS.length) % DIRECTIONS.length,
+      (direction - wrappedDirection + DIRECTIONS.length) % DIRECTIONS.length
+    );
+    assert.ok(turn <= 2);
+    direction = wrappedDirection;
+    cursor = cell;
+  });
+});
+
 test("protein fractional radius deals proportional outer-ring damage", () => {
   const stock = { protein: 5, fat: 0, fiber: 0, carb: 0 };
   const stats = attackStats(stock, "big", balance);
@@ -541,7 +577,7 @@ test("balance tuner parses local time deadlines", () => {
   assert.equal(deadline.getMinutes(), 0);
 });
 
-test("AI strategy tuner produces one best strategy for each character", () => {
+test("AI strategy tuner produces character and universal best strategies", () => {
   const result = runSearch({
     balance,
     characters,
@@ -552,13 +588,17 @@ test("AI strategy tuner produces one best strategy for each character", () => {
     eliteCount: 1,
     outputDir: path.join(root, "reports", "ai-strategy-test")
   });
-  assert.equal(result.bestStrategies.length, characters.length);
+  assert.equal(result.bestStrategies.length, characters.length + 1);
   characters.forEach(character => {
     const row = result.bestStrategies.find(entry => entry.characterId === character.id);
     assert.ok(row);
     assert.ok(row.strategyWeights.movement.safePath >= 0);
     assert.ok(row.strategyWeights.movement.safePath <= 3);
   });
+  const universal = result.bestStrategies.find(entry => entry.characterId === "universal");
+  assert.ok(universal);
+  assert.ok(universal.strategyWeights.movement.safePath >= 0);
+  assert.ok(universal.strategyWeights.movement.safePath <= 3);
 });
 
 let failed = 0;

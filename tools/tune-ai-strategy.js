@@ -17,6 +17,9 @@ const WEIGHT_MIN = 0;
 const WEIGHT_MAX = 3;
 const DEFAULT_POPULATION_SIZE = 8;
 const DEFAULT_ELITE_COUNT = 3;
+const DEFAULT_ALGORITHM = "ga";
+const CMA_INITIAL_SIGMA = 0.45;
+const CMA_MIN_SIGMA = 0.025;
 
 const weightShape = {
   movement: ["safePath", "leastDamage", "fastestArrival"],
@@ -51,6 +54,12 @@ function numberArg(args, key, fallback) {
 
 function stringArg(args, key, fallback) {
   return args[key] === undefined ? fallback : String(args[key]);
+}
+
+function algorithmArg(args) {
+  const value = stringArg(args, "algorithm", DEFAULT_ALGORITHM).toLowerCase();
+  if (!["ga", "cma-es"].includes(value)) throw new Error("--algorithm must be either ga or cma-es.");
+  return value;
 }
 
 function stamp(date = new Date()) {
@@ -97,6 +106,31 @@ function defaultStrategyWeights() {
   };
 }
 
+function tunedWeightKeys() {
+  return Object.entries(weightShape).flatMap(([group, keys]) =>
+    keys.filter(key => !(group === "castTiming" && key === "lethal")).map(key => ({ group, key }))
+  );
+}
+
+const tunedKeys = tunedWeightKeys();
+
+function weightsToVector(weights) {
+  return tunedKeys.map(({ group, key }) => Number(weights[group]?.[key] ?? defaultStrategyWeights()[group][key]));
+}
+
+function vectorToWeights(vector) {
+  const weights = defaultStrategyWeights();
+  tunedKeys.forEach(({ group, key }, index) => {
+    weights[group][key] = round(clampWeight(vector[index]), 4);
+  });
+  weights.castTiming.lethal = 3;
+  return weights;
+}
+
+function characterBaseWeights(character) {
+  return seedPopulation(character, createRng(`base:${character.id}`), 1)[0].strategyWeights;
+}
+
 function makePolicyFromWeights(strategy, characterId) {
   const preferBig = strategy.strategyWeights.skillAllocation.preferBig;
   const preferSmall = strategy.strategyWeights.skillAllocation.preferSmall;
@@ -118,6 +152,10 @@ function randomBetween(rng, min, max) {
 
 function makeStrategy(id, weights) {
   return { id, strategyWeights: weights };
+}
+
+function makeVectorStrategy(id, weights) {
+  return { id, vector: weightsToVector(weights), strategyWeights: weights };
 }
 
 function randomStrategy(id, rng, base = defaultStrategyWeights(), spread = 0.75) {
@@ -182,23 +220,68 @@ function emptyScore(strategy) {
     draws: 0,
     score: 0,
     winRate: 0,
+    outcomeScore: 0,
+    outcomeWinRate: 0,
+    advantageScore: 0,
+    averageScoreDiff: 0,
+    averageHpDiff: 0,
+    averageDamageDiff: 0,
+    averageFoodDiff: 0,
     averageDurationMs: 0,
-    totalDurationMs: 0
+    totalDurationMs: 0,
+    totalScoreDiff: 0,
+    totalHpDiff: 0,
+    totalDamageDiff: 0,
+    totalFoodDiff: 0
   };
 }
 
-function recordResult(scores, strategy, result, durationMs) {
+function boundedAdvantage(metrics = {}) {
+  const score = clampMetric(metrics.scoreDiff, 4) * 0.07;
+  const hp = clampMetric(metrics.hpDiff, 8) * 0.04;
+  const damage = clampMetric(metrics.damageDiff, 20) * 0.03;
+  const food = clampMetric(metrics.foodDiff, 6) * 0.01;
+  return clampValue(score + hp + damage + food, -0.15, 0.15);
+}
+
+function clampMetric(value, scale) {
+  const number = Number(value) || 0;
+  return clampValue(number / scale, -1, 1);
+}
+
+function clampValue(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function metricsFor(fighter, opponent) {
+  return {
+    scoreDiff: fighter.scoreDiff,
+    hpDiff: fighter.hpDiff,
+    damageDiff: fighter.damageDealt - opponent.damageDealt,
+    foodDiff: fighter.foodCollected - opponent.foodCollected
+  };
+}
+
+function recordResult(scores, strategy, result, durationMs, metrics = {}) {
   const row = scores.get(strategy.id);
   row.games += 1;
   row.totalDurationMs += durationMs;
+  row.totalScoreDiff += metrics.scoreDiff || 0;
+  row.totalHpDiff += metrics.hpDiff || 0;
+  row.totalDamageDiff += metrics.damageDiff || 0;
+  row.totalFoodDiff += metrics.foodDiff || 0;
+  const advantage = boundedAdvantage(metrics);
+  row.advantageScore += advantage;
   if (result === "win") {
     row.wins += 1;
     row.score += 1;
+    row.outcomeScore += 1;
   } else if (result === "loss") {
     row.losses += 1;
   } else {
     row.draws += 1;
-    row.score += 0.5;
+    row.score += 0.5 + advantage;
+    row.outcomeScore += 0.5;
   }
 }
 
@@ -207,9 +290,25 @@ function finalizeScores(scores) {
     .map(row => ({
       ...row,
       winRate: row.games ? round(row.score / row.games) : 0,
+      outcomeWinRate: row.games ? round(row.outcomeScore / row.games) : 0,
+      advantageScore: round(row.advantageScore),
+      averageScoreDiff: row.games ? round(row.totalScoreDiff / row.games) : 0,
+      averageHpDiff: row.games ? round(row.totalHpDiff / row.games) : 0,
+      averageDamageDiff: row.games ? round(row.totalDamageDiff / row.games) : 0,
+      averageFoodDiff: row.games ? round(row.totalFoodDiff / row.games) : 0,
       averageDurationMs: row.games ? round(row.totalDurationMs / row.games, 2) : 0
     }))
-    .sort((a, b) => b.winRate - a.winRate || b.wins - a.wins || a.losses - b.losses);
+    .sort(compareRankRows);
+}
+
+function compareRankRows(a, b) {
+  return b.winRate - a.winRate
+    || b.outcomeWinRate - a.outcomeWinRate
+    || b.wins - a.wins
+    || a.losses - b.losses
+    || b.averageHpDiff - a.averageHpDiff
+    || b.averageDamageDiff - a.averageDamageDiff
+    || b.averageScoreDiff - a.averageScoreDiff;
 }
 
 function evaluateCharacterRound({ balance, character, population, mirrorRuns, seed, round }) {
@@ -231,14 +330,14 @@ function evaluateCharacterRound({ balance, character, population, mirrorRuns, se
       seed: `${seed}:${character.id}:round-${round}:match-${index}`
     });
     if (!match.winner) {
-      recordResult(scores, playerStrategy, "draw", match.durationMs);
-      recordResult(scores, computerStrategy, "draw", match.durationMs);
+      recordResult(scores, playerStrategy, "draw", match.durationMs, metricsFor(match.player, match.computer));
+      recordResult(scores, computerStrategy, "draw", match.durationMs, metricsFor(match.computer, match.player));
     } else if (match.winner === "player") {
-      recordResult(scores, playerStrategy, "win", match.durationMs);
-      recordResult(scores, computerStrategy, "loss", match.durationMs);
+      recordResult(scores, playerStrategy, "win", match.durationMs, metricsFor(match.player, match.computer));
+      recordResult(scores, computerStrategy, "loss", match.durationMs, metricsFor(match.computer, match.player));
     } else {
-      recordResult(scores, playerStrategy, "loss", match.durationMs);
-      recordResult(scores, computerStrategy, "win", match.durationMs);
+      recordResult(scores, playerStrategy, "loss", match.durationMs, metricsFor(match.player, match.computer));
+      recordResult(scores, computerStrategy, "win", match.durationMs, metricsFor(match.computer, match.player));
     }
   }
   return finalizeScores(scores);
@@ -255,8 +354,263 @@ function nextPopulation(character, ranked, rng, size = DEFAULT_POPULATION_SIZE, 
   return next;
 }
 
+function zeros(length) {
+  return Array.from({ length }, () => 0);
+}
+
+function identity(size) {
+  return Array.from({ length: size }, (_, row) => Array.from({ length: size }, (_, col) => row === col ? 1 : 0));
+}
+
+function gaussian(rng) {
+  const u1 = Math.max(Number.EPSILON, rng.next());
+  const u2 = Math.max(Number.EPSILON, rng.next());
+  return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+}
+
+function cholesky(matrix) {
+  const size = matrix.length;
+  const lower = Array.from({ length: size }, () => zeros(size));
+  for (let row = 0; row < size; row += 1) {
+    for (let col = 0; col <= row; col += 1) {
+      let sum = matrix[row][col];
+      for (let k = 0; k < col; k += 1) sum -= lower[row][k] * lower[col][k];
+      if (row === col) lower[row][col] = Math.sqrt(Math.max(sum, 1e-8));
+      else lower[row][col] = sum / Math.max(lower[col][col], 1e-8);
+    }
+  }
+  return lower;
+}
+
+function multiplyLower(lower, vector) {
+  return lower.map((row, rowIndex) => {
+    let sum = 0;
+    for (let col = 0; col <= rowIndex; col += 1) sum += row[col] * vector[col];
+    return sum;
+  });
+}
+
+function addVectors(left, right) {
+  return left.map((value, index) => value + right[index]);
+}
+
+function scaleVector(vector, scale) {
+  return vector.map(value => value * scale);
+}
+
+function clampVector(vector) {
+  return vector.map(clampWeight);
+}
+
+function makeCmaState(centerWeights, populationSize, rng) {
+  const dimension = tunedKeys.length;
+  const lambda = Math.max(4, populationSize);
+  const mu = Math.max(2, Math.floor(lambda / 2));
+  const weights = Array.from({ length: mu }, (_, index) => Math.log(mu + 0.5) - Math.log(index + 1));
+  const weightTotal = weights.reduce((sum, value) => sum + value, 0);
+  const recombinationWeights = weights.map(value => value / weightTotal);
+  return {
+    mean: weightsToVector(centerWeights),
+    covariance: identity(dimension),
+    sigma: CMA_INITIAL_SIGMA,
+    lambda,
+    mu,
+    recombinationWeights,
+    generation: 0,
+    rng
+  };
+}
+
+function sampleCmaPopulation(state, prefix) {
+  const lower = cholesky(state.covariance);
+  return Array.from({ length: state.lambda }, (_, index) => {
+    const z = zeros(state.mean.length).map(() => gaussian(state.rng));
+    const step = multiplyLower(lower, z);
+    const vector = clampVector(addVectors(state.mean, scaleVector(step, state.sigma)));
+    return {
+      id: `${prefix}-g${state.generation}-c${index}`,
+      vector,
+      step,
+      strategyWeights: vectorToWeights(vector)
+    };
+  });
+}
+
+function updateCmaState(state, ranked) {
+  const selected = ranked.slice(0, state.mu);
+  const previousMean = state.mean;
+  const nextMean = zeros(previousMean.length);
+  selected.forEach((candidate, index) => {
+    const weight = state.recombinationWeights[index];
+    candidate.vector.forEach((value, vectorIndex) => {
+      nextMean[vectorIndex] += value * weight;
+    });
+  });
+
+  const covariance = Array.from({ length: previousMean.length }, () => zeros(previousMean.length));
+  selected.forEach((candidate, index) => {
+    const weight = state.recombinationWeights[index];
+    const diff = candidate.vector.map((value, vectorIndex) => (value - previousMean[vectorIndex]) / Math.max(state.sigma, 1e-8));
+    for (let row = 0; row < diff.length; row += 1) {
+      for (let col = 0; col < diff.length; col += 1) covariance[row][col] += weight * diff[row] * diff[col];
+    }
+  });
+
+  const inertia = 0.72;
+  const learningRate = 0.28;
+  state.covariance = state.covariance.map((row, rowIndex) => row.map((value, colIndex) => {
+    const diagonalJitter = rowIndex === colIndex ? 1e-5 : 0;
+    return inertia * value + learningRate * covariance[rowIndex][colIndex] + diagonalJitter;
+  }));
+  state.mean = clampVector(nextMean);
+  const best = selected[0];
+  const middle = ranked[Math.min(ranked.length - 1, Math.floor(ranked.length / 2))];
+  const improving = best && middle && compareRankRows(best, middle) < 0;
+  state.sigma = Math.max(CMA_MIN_SIGMA, Math.min(0.9, state.sigma * (improving ? 1.03 : 0.86)));
+  state.generation += 1;
+}
+
+function baselineHighStrategy(character) {
+  return makeStrategy("baseline-high", characterBaseWeights(character));
+}
+
+function evaluateCandidateAgainstBaseline({ balance, character, candidate, baseline, runs, seed, round, phase }) {
+  const scores = new Map([[candidate.id, emptyScore(candidate)]]);
+  for (let index = 0; index < runs; index += 1) {
+    const candidateIsPlayer = index % 2 === 0;
+    const match = simulateMatch({
+      balance,
+      playerCharacter: character,
+      computerCharacter: character,
+      playerModel: makePolicyFromWeights(candidateIsPlayer ? candidate : baseline, character.id),
+      computerModel: makePolicyFromWeights(candidateIsPlayer ? baseline : candidate, character.id),
+      seed: `${seed}:${character.id}:round-${round}:${phase}:candidate-${candidate.id}:match-${index}`
+    });
+    const candidateFighter = candidateIsPlayer ? match.player : match.computer;
+    const baselineFighter = candidateIsPlayer ? match.computer : match.player;
+    if (!match.winner) {
+      recordResult(scores, candidate, "draw", match.durationMs, metricsFor(candidateFighter, baselineFighter));
+    } else {
+      const candidateWon = candidateIsPlayer ? match.winner === "player" : match.winner === "computer";
+      recordResult(scores, candidate, candidateWon ? "win" : "loss", match.durationMs, metricsFor(candidateFighter, baselineFighter));
+    }
+  }
+  return finalizeScores(scores)[0];
+}
+
+function mergeScoreRows(primary, extra) {
+  const strategy = makeStrategy(primary.id, primary.strategyWeights);
+  const scores = new Map([[primary.id, emptyScore(strategy)]]);
+  const target = scores.get(primary.id);
+  [primary, extra].forEach(row => {
+    target.games += row.games;
+    target.wins += row.wins;
+    target.losses += row.losses;
+    target.draws += row.draws;
+    target.score += row.score;
+    target.outcomeScore += row.outcomeScore;
+    target.advantageScore += row.advantageScore;
+    target.totalDurationMs += row.totalDurationMs;
+    target.totalScoreDiff += row.totalScoreDiff;
+    target.totalHpDiff += row.totalHpDiff;
+    target.totalDamageDiff += row.totalDamageDiff;
+    target.totalFoodDiff += row.totalFoodDiff;
+  });
+  return finalizeScores(scores)[0];
+}
+
+function evaluateCmaCharacterRound({ balance, character, candidates, mirrorRuns, seed, round, playoffCount }) {
+  const baseline = baselineHighStrategy(character);
+  const quickRuns = Math.max(2, Math.floor(mirrorRuns * 0.35));
+  const playoffRuns = Math.max(0, mirrorRuns - quickRuns);
+  const quickRanked = candidates.map(candidate => ({
+    ...evaluateCandidateAgainstBaseline({ balance, character, candidate, baseline, runs: quickRuns, seed, round, phase: "quick" }),
+    id: candidate.id,
+    vector: candidate.vector,
+    strategyWeights: candidate.strategyWeights
+  })).sort(compareRankRows);
+  const finalists = new Set(quickRanked.slice(0, Math.max(1, playoffCount)).map(row => row.id));
+  return quickRanked.map(row => {
+    if (!finalists.has(row.id) || playoffRuns <= 0) return { ...row, phase: "quick" };
+    const candidate = candidates.find(item => item.id === row.id);
+    const extra = evaluateCandidateAgainstBaseline({ balance, character, candidate, baseline, runs: playoffRuns, seed, round, phase: "playoff" });
+    return { ...mergeScoreRows(row, extra), id: row.id, vector: row.vector, strategyWeights: row.strategyWeights, phase: "playoff" };
+  }).sort(compareRankRows);
+}
+
+function averageWeights(rows) {
+  const vector = zeros(tunedKeys.length);
+  rows.forEach(row => {
+    weightsToVector(row.strategyWeights).forEach((value, index) => {
+      vector[index] += value / rows.length;
+    });
+  });
+  return vectorToWeights(vector);
+}
+
+function evaluateUniversalStrategy({ balance, characters, strategy, mirrorRuns, seed }) {
+  const rows = characters.map(character => {
+    const candidate = makeStrategy(`universal:${strategy.id}`, strategy.strategyWeights);
+    const baseline = baselineHighStrategy(character);
+    return {
+      ...evaluateCandidateAgainstBaseline({
+        balance,
+        character,
+        candidate,
+        baseline,
+        runs: mirrorRuns,
+        seed,
+        round: "final",
+        phase: "universal"
+      }),
+      characterId: character.id,
+      characterName: character.name
+    };
+  });
+  const totals = rows.reduce((acc, row) => {
+    acc.games += row.games;
+    acc.wins += row.wins;
+    acc.losses += row.losses;
+    acc.draws += row.draws;
+    acc.score += row.score;
+    acc.outcomeScore += row.outcomeScore;
+    acc.advantageScore += row.advantageScore;
+    acc.totalDurationMs += row.totalDurationMs;
+    acc.totalScoreDiff += row.totalScoreDiff;
+    acc.totalHpDiff += row.totalHpDiff;
+    acc.totalDamageDiff += row.totalDamageDiff;
+    acc.totalFoodDiff += row.totalFoodDiff;
+    return acc;
+  }, emptyScore(strategy));
+  totals.id = strategy.id;
+  totals.strategyWeights = strategy.strategyWeights;
+  return {
+    ...finalizeScores(new Map([[strategy.id, totals]]))[0],
+    characterId: "universal",
+    characterName: "Universal high AI",
+    perCharacter: rows
+  };
+}
+
 function rankRowsToCsv(rows) {
-  const header = ["rank", "characterId", "strategyId", "games", "wins", "losses", "draws", "winRate", "averageDurationMs", "strategyWeights"];
+  const header = [
+    "rank",
+    "characterId",
+    "strategyId",
+    "games",
+    "wins",
+    "losses",
+    "draws",
+    "winRate",
+    "outcomeWinRate",
+    "advantageScore",
+    "averageScoreDiff",
+    "averageHpDiff",
+    "averageDamageDiff",
+    "averageFoodDiff",
+    "averageDurationMs",
+    "strategyWeights"
+  ];
   return [
     header,
     ...rows.map((row, index) => [
@@ -268,6 +622,12 @@ function rankRowsToCsv(rows) {
       row.losses,
       row.draws,
       row.winRate,
+      row.outcomeWinRate,
+      row.advantageScore,
+      row.averageScoreDiff,
+      row.averageHpDiff,
+      row.averageDamageDiff,
+      row.averageFoodDiff,
       row.averageDurationMs,
       JSON.stringify(row.strategyWeights)
     ])
@@ -283,16 +643,19 @@ function runSearch(options = {}) {
   const balance = options.balance || loadBalance(root);
   const characters = options.characters || loadCharacters(root);
   const seed = String(options.seed || `ai-strategy-${stamp()}`);
+  const algorithm = options.algorithm || DEFAULT_ALGORITHM;
   const durationHours = Number(options.durationHours ?? 6);
   const mirrorRuns = Math.max(1, Math.floor(Number(options.mirrorRuns ?? 1000)));
-  const populationSize = Math.max(2, Math.floor(Number(options.populationSize ?? DEFAULT_POPULATION_SIZE)));
+  const populationSize = Math.max(algorithm === "cma-es" ? 4 : 2, Math.floor(Number(options.populationSize ?? DEFAULT_POPULATION_SIZE)));
   const eliteCount = Math.max(1, Math.min(populationSize, Math.floor(Number(options.eliteCount ?? DEFAULT_ELITE_COUNT))));
   const outputDir = options.outputDir || path.join(reportsDir, buildRunId(seed));
   const rng = createRng(seed);
   const deadlineMs = Date.now() + durationHours * 60 * 60 * 1000;
   const populations = new Map(characters.map(character => [character.id, seedPopulation(character, rng, populationSize)]));
+  const cmaStates = new Map(characters.map(character => [character.id, makeCmaState(characterBaseWeights(character), populationSize, createRng(`${seed}:cma:${character.id}`))]));
   const history = [];
   const bestByCharacter = new Map();
+  const playoffCount = Math.max(1, Math.min(eliteCount, Math.floor(populationSize / 2)));
   let round = 0;
 
   ensureDir(outputDir);
@@ -301,18 +664,41 @@ function runSearch(options = {}) {
     round += 1;
     for (const character of characters) {
       if (Date.now() >= deadlineMs && round > 1) break;
-      const ranked = evaluateCharacterRound({
-        balance,
-        character,
-        population: populations.get(character.id),
-        mirrorRuns,
-        seed,
-        round
-      }).map(row => ({ ...row, characterId: character.id, round }));
+      let ranked;
+      if (algorithm === "cma-es") {
+        const state = cmaStates.get(character.id);
+        const warmStart = round === 1
+          ? [
+            makeVectorStrategy(`${character.id}-baseline`, characterBaseWeights(character)),
+            makeVectorStrategy(`${character.id}-warm-1`, randomStrategy(`${character.id}-warm-1`, rng, characterBaseWeights(character), 0.25).strategyWeights)
+          ]
+          : [];
+        const sampled = sampleCmaPopulation(state, character.id);
+        const candidates = [...warmStart, ...sampled].slice(0, populationSize);
+        ranked = evaluateCmaCharacterRound({
+          balance,
+          character,
+          candidates,
+          mirrorRuns,
+          seed,
+          round,
+          playoffCount
+        }).map(row => ({ ...row, characterId: character.id, characterName: character.name, round }));
+        updateCmaState(state, ranked.filter(row => row.vector));
+      } else {
+        ranked = evaluateCharacterRound({
+          balance,
+          character,
+          population: populations.get(character.id),
+          mirrorRuns,
+          seed,
+          round
+        }).map(row => ({ ...row, characterId: character.id, characterName: character.name, round }));
+      }
       writeJson(path.join(outputDir, `${character.id}-round-${round}-ranking.json`), ranked);
       writeCsv(path.join(outputDir, `${character.id}-round-${round}-ranking.csv`), rankRowsToCsv(ranked));
       const currentBest = bestByCharacter.get(character.id);
-      if (!currentBest || ranked[0].winRate > currentBest.winRate || ranked[0].wins > currentBest.wins) {
+      if (!currentBest || compareRankRows(ranked[0], currentBest) < 0) {
         bestByCharacter.set(character.id, ranked[0]);
       }
       history.push({
@@ -322,7 +708,7 @@ function runSearch(options = {}) {
         best: ranked[0],
         completedAt: new Date().toISOString()
       });
-      populations.set(character.id, nextPopulation(character, ranked, rng, populationSize, eliteCount));
+      if (algorithm === "ga") populations.set(character.id, nextPopulation(character, ranked, rng, populationSize, eliteCount));
     }
     writeJson(path.join(outputDir, "history.json"), history);
   } while (Date.now() < deadlineMs);
@@ -334,6 +720,12 @@ function runSearch(options = {}) {
       characterName: character.name,
       strategyId: best.id,
       winRate: best.winRate,
+      outcomeWinRate: best.outcomeWinRate,
+      advantageScore: best.advantageScore,
+      averageScoreDiff: best.averageScoreDiff,
+      averageHpDiff: best.averageHpDiff,
+      averageDamageDiff: best.averageDamageDiff,
+      averageFoodDiff: best.averageFoodDiff,
       games: best.games,
       wins: best.wins,
       losses: best.losses,
@@ -341,14 +733,41 @@ function runSearch(options = {}) {
       strategyWeights: best.strategyWeights
     };
   });
+  const universalBest = evaluateUniversalStrategy({
+    balance,
+    characters,
+    strategy: makeStrategy("universal-average", averageWeights(bestStrategies)),
+    mirrorRuns,
+    seed
+  });
+  bestStrategies.push({
+    characterId: universalBest.characterId,
+    characterName: universalBest.characterName,
+    strategyId: universalBest.id,
+    winRate: universalBest.winRate,
+    outcomeWinRate: universalBest.outcomeWinRate,
+    advantageScore: universalBest.advantageScore,
+    averageScoreDiff: universalBest.averageScoreDiff,
+    averageHpDiff: universalBest.averageHpDiff,
+    averageDamageDiff: universalBest.averageDamageDiff,
+    averageFoodDiff: universalBest.averageFoodDiff,
+    games: universalBest.games,
+    wins: universalBest.wins,
+    losses: universalBest.losses,
+    draws: universalBest.draws,
+    strategyWeights: universalBest.strategyWeights,
+    perCharacter: universalBest.perCharacter
+  });
   const manifest = {
     id: path.basename(outputDir),
     status: "completed",
     seed,
+    algorithm,
     durationHours,
     mirrorRuns,
     populationSize,
     eliteCount,
+    playoffCount,
     rounds: round,
     generatedAt: new Date().toISOString(),
     outputs: {
@@ -366,6 +785,7 @@ function runSearch(options = {}) {
 function main() {
   const args = parseArgs(process.argv.slice(2));
   const result = runSearch({
+    algorithm: algorithmArg(args),
     seed: stringArg(args, "seed", `ai-strategy-${stamp()}`),
     durationHours: numberArg(args, "duration-hours", 6),
     mirrorRuns: numberArg(args, "mirror-runs", 1000),
@@ -393,6 +813,7 @@ module.exports = {
   crossoverStrategy,
   defaultStrategyWeights,
   evaluateCharacterRound,
+  evaluateCmaCharacterRound,
   runSearch,
   seedPopulation
 };

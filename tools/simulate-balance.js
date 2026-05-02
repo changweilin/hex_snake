@@ -53,6 +53,44 @@ function policyFromArgs(args, prefix, fallback) {
   };
 }
 
+function readJsonIfPresent(filePath) {
+  if (!filePath) return null;
+  const resolved = path.resolve(root, filePath);
+  return JSON.parse(fs.readFileSync(resolved, "utf8"));
+}
+
+function modelFromStrategyWeights(row) {
+  const strategyWeights = row.strategyWeights || row;
+  const preferBig = strategyWeights.skillAllocation?.preferBig ?? 1;
+  const preferSmall = strategyWeights.skillAllocation?.preferSmall ?? 1;
+  return {
+    aiDifficulty: "high",
+    pathPrecision: 1,
+    aimPrecision: 1,
+    skillStrategy: preferBig > preferSmall * 1.2 ? "preferBig" : preferSmall > preferBig * 1.2 ? "spamSmall" : "balanced",
+    foodStrategy: "balanced",
+    strategyId: row.strategyId || row.id || "external-strategy",
+    strategyWeights
+  };
+}
+
+function strategyRowForCharacter(strategyFile, characterId) {
+  if (!strategyFile) return null;
+  const rows = Array.isArray(strategyFile) ? strategyFile : strategyFile.bestStrategies || strategyFile.strategies || [];
+  return rows.find(row => row.characterId === characterId)
+    || rows.find(row => row.characterId === "universal")
+    || rows[0]
+    || null;
+}
+
+function modelFromArgs(args, prefix, fallback, characterId, strategyFiles = {}) {
+  const strategyPath = args[`${prefix}-model`];
+  const strategyFile = strategyPath ? strategyFiles[strategyPath] : null;
+  const strategyRow = strategyRowForCharacter(strategyFile, characterId);
+  if (strategyRow) return modelFromStrategyWeights(strategyRow);
+  return policyFromArgs(args, prefix, fallback);
+}
+
 function toPercent(value) {
   return `${(value * 100).toFixed(1)}%`;
 }
@@ -131,7 +169,7 @@ function buildWarnings(results, balance) {
   return warnings;
 }
 
-function createRunOptions(args, balance, playerCharacter, computerCharacter) {
+function createRunOptions(args, balance, playerCharacter, computerCharacter, strategyFiles = {}) {
   return {
     balance,
     playerCharacter,
@@ -145,8 +183,8 @@ function createRunOptions(args, balance, playerCharacter, computerCharacter) {
     initialEnergy: numberArg(args, "initialEnergy", balance.defaults.initialEnergy),
     initialBombs: numberArg(args, "initialBombs", balance.defaults.initialBombs),
     initialStock: parseInitialStock(args, balance.defaults.initialStock),
-    playerModel: policyFromArgs(args, "player", balance.playerModel),
-    computerModel: policyFromArgs(args, "computer", balance.playerModel)
+    playerModel: modelFromArgs(args, "player", balance.playerModel, playerCharacter.id, strategyFiles),
+    computerModel: modelFromArgs(args, "computer", balance.playerModel, computerCharacter.id, strategyFiles)
   };
 }
 
@@ -176,6 +214,10 @@ function main() {
   const computerId = stringArg(args, "computer", balance.defaults.computerCharacterId);
   const selectedPlayers = args.matrix ? characters : [characterById.get(playerId)];
   const selectedComputers = args.matrix ? characters : [characterById.get(computerId)];
+  const strategyFiles = {};
+  ["player-model", "computer-model"].forEach(key => {
+    if (args[key]) strategyFiles[args[key]] = readJsonIfPresent(args[key]);
+  });
   if (selectedPlayers.some(Boolean) === false || selectedComputers.some(Boolean) === false) {
     throw new Error(`Unknown character. Available ids: ${characters.map(character => character.id).join(", ")}`);
   }
@@ -183,7 +225,7 @@ function main() {
   selectedPlayers.filter(Boolean).forEach(playerCharacter => {
     selectedComputers.filter(Boolean).forEach(computerCharacter => {
       if (args.skipMirror && playerCharacter.id === computerCharacter.id) return;
-      results.push(runSeries(createRunOptions(args, balance, playerCharacter, computerCharacter)));
+      results.push(runSeries(createRunOptions(args, balance, playerCharacter, computerCharacter, strategyFiles)));
     });
   });
   const report = {
@@ -192,8 +234,8 @@ function main() {
       runs: numberArg(args, "runs", balance.simulation.defaultRuns),
       seed: stringArg(args, "seed", "42"),
       matrix: Boolean(args.matrix),
-      playerModel: policyFromArgs(args, "player", balance.playerModel),
-      computerModel: policyFromArgs(args, "computer", balance.playerModel)
+      playerModel: args["player-model"] ? args["player-model"] : policyFromArgs(args, "player", balance.playerModel),
+      computerModel: args["computer-model"] ? args["computer-model"] : policyFromArgs(args, "computer", balance.playerModel)
     },
     warnings: buildWarnings(results, balance),
     results

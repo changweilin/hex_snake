@@ -2,6 +2,7 @@ const fs = require("fs");
 const path = require("path");
 
 const FOOD_TYPES = ["protein", "fat", "fiber", "carb"];
+const DRAGON_ORB_STEP_MS = 45;
 const DIRECTIONS = [
   { q: 0, r: -1 },
   { q: 1, r: -1 },
@@ -712,6 +713,44 @@ function directionFromSourceToTarget(source, target, fallbackDirection = 0) {
   return bestDirection;
 }
 
+function turnDistance(left, right) {
+  const clockwise = (right - left + DIRECTIONS.length) % DIRECTIONS.length;
+  return Math.min(clockwise, DIRECTIONS.length - clockwise);
+}
+
+function nearestDragonOrbTarget(cursor, targetSnake) {
+  if (!targetSnake.length) return null;
+  return targetSnake.reduce((best, segment, index) => {
+    const distance = hexDistance(cursor, segment);
+    if (!best || distance < best.distance || (distance === best.distance && index < best.index)) {
+      return { cell: segment, distance, index };
+    }
+    return best;
+  }, null).cell;
+}
+
+function dragonTrackingDirection(state, cursor, direction, targetSnake, visited) {
+  const target = nearestDragonOrbTarget(cursor, targetSnake);
+  if (!target) return direction;
+  const idealDirection = directionFromSourceToTarget(cursor, target, direction);
+  const candidates = [
+    direction,
+    (direction + 1) % DIRECTIONS.length,
+    (direction + 5) % DIRECTIONS.length,
+    (direction + 2) % DIRECTIONS.length,
+    (direction + 4) % DIRECTIONS.length
+  ];
+  candidates.sort((a, b) => {
+    const nextA = nextWrappedCell(cursor, a, state.radius);
+    const nextB = nextWrappedCell(cursor, b, state.radius);
+    const distanceA = hexDistance(nextA, target) + (visited.has(keyOf(nextA)) ? 0.35 : 0);
+    const distanceB = hexDistance(nextB, target) + (visited.has(keyOf(nextB)) ? 0.35 : 0);
+    if (distanceA !== distanceB) return distanceA - distanceB;
+    return turnDistance(a, idealDirection) - turnDistance(b, idealDirection);
+  });
+  return candidates[0];
+}
+
 function cellsForwardFrom(state, source, direction, includeSource = true) {
   const path = includeSource ? [{ ...source }] : [];
   let cursor = source;
@@ -761,6 +800,22 @@ function dragonWrappedOrbPath(state, source, direction) {
   return path;
 }
 
+function dragonTrackingOrbPath(state, source, direction, targetSnake) {
+  const path = [];
+  const visited = new Set([keyOf(source)]);
+  let cursor = { ...source };
+  let currentDirection = direction;
+  const maxSteps = Math.max(1, state.radius * 2 + 1);
+  for (let step = 0; step < maxSteps; step += 1) {
+    currentDirection = dragonTrackingDirection(state, cursor, currentDirection, targetSnake, visited);
+    cursor = nextWrappedCell(cursor, currentDirection, state.radius);
+    if (keyOf(cursor) === keyOf(source)) break;
+    path.push({ ...cursor });
+    visited.add(keyOf(cursor));
+  }
+  return path;
+}
+
 function pathHits(path, targetSnake) {
   const targetCells = cellKeySet(targetSnake);
   return path
@@ -778,7 +833,7 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
   const direction = directionFromSourceToTarget(source, target, attacker.dir);
   const characterId = attacker.character.id;
   if (characterId === "dragon") {
-    const path = dragonWrappedOrbPath(state, source, attacker.dir);
+    const path = dragonTrackingOrbPath(state, source, attacker.dir, defender.snake);
     const hits = pathHits(path, defender.snake);
     const endCell = path[path.length - 1] || source;
     state.projectiles.push({
@@ -787,7 +842,7 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
       profile: "big",
       target: { ...endCell },
       pathCells: path,
-      impactAt: now + small.delay + path.length * 90,
+      impactAt: now + small.delay + path.length * DRAGON_ORB_STEP_MS,
       radius: small.radius,
       damage: small.damage,
       burstRadius: small.radius * 2,
@@ -800,7 +855,7 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
         owner: attacker.owner,
         profile: "big",
         target: { ...hit.cell },
-        impactAt: now + small.delay + (hit.index + 1) * 90,
+        impactAt: now + small.delay + (hit.index + 1) * DRAGON_ORB_STEP_MS,
         radius: small.radius,
         damage: small.damage,
         burstRadius: small.radius * 2,
@@ -1322,6 +1377,7 @@ module.exports = {
   createBoard,
   nextWrappedCell,
   createStartingSnake,
+  dragonTrackingOrbPath,
   emptyStock,
   collectFood,
   randomFoodTypeIdsForCharacter,

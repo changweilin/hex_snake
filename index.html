@@ -5523,9 +5523,83 @@
       gu_king: { role: "burst", preferredFood: "black" }
     };
 
+    const highAiStrategyWeightsByCharacter = {
+      dragon: {
+        movement: { safePath: 1.2, leastDamage: 0.8, fastestArrival: 0.6 },
+        food: { fastestArrival: 1.25, ownDeficit: 1.25, opponentDeficit: 0.35, ownPreferred: 1, opponentPreferred: 0.25 },
+        skillAllocation: { preferSmall: 0.55, preferBig: 2.35 },
+        castTiming: { lethal: 3, nearFullEnergy: 1.7, opponentDebuffed: 1, opponentAlmostReady: 1.25, nearOpponent: 1.45, farOpponent: 0.15 }
+      },
+      sandworm: {
+        movement: { safePath: 1.7349, leastDamage: 0.3693, fastestArrival: 0.2742 },
+        food: { fastestArrival: 1.9534, ownDeficit: 1.7082, opponentDeficit: 0, ownPreferred: 0.5031, opponentPreferred: 0 },
+        skillAllocation: { preferSmall: 0.506, preferBig: 0 },
+        castTiming: { lethal: 3, nearFullEnergy: 0.1005, opponentDebuffed: 0.8462, opponentAlmostReady: 0.2791, nearOpponent: 0.2991, farOpponent: 1.0259 }
+      },
+      quetzal: {
+        movement: { safePath: 1.6795, leastDamage: 0.9114, fastestArrival: 0.933 },
+        food: { fastestArrival: 1.7059, ownDeficit: 1.7704, opponentDeficit: 0, ownPreferred: 0.6432, opponentPreferred: 0.2007 },
+        skillAllocation: { preferSmall: 0.8558, preferBig: 0.2691 },
+        castTiming: { lethal: 3, nearFullEnergy: 0.4639, opponentDebuffed: 1.4567, opponentAlmostReady: 1.1895, nearOpponent: 1.1931, farOpponent: 0 }
+      },
+      moray: {
+        movement: { safePath: 1.0943, leastDamage: 0.619, fastestArrival: 0.9009 },
+        food: { fastestArrival: 3, ownDeficit: 0.8156, opponentDeficit: 0.7993, ownPreferred: 0.1164, opponentPreferred: 0.2638 },
+        skillAllocation: { preferSmall: 1.4587, preferBig: 1.0056 },
+        castTiming: { lethal: 3, nearFullEnergy: 2.1596, opponentDebuffed: 0.5061, opponentAlmostReady: 2.8184, nearOpponent: 0, farOpponent: 0.7832 }
+      },
+      lobster: {
+        movement: { safePath: 1.1689, leastDamage: 0.9879, fastestArrival: 0.4771 },
+        food: { fastestArrival: 2.0643, ownDeficit: 1.6463, opponentDeficit: 0.4067, ownPreferred: 1.7044, opponentPreferred: 0.5885 },
+        skillAllocation: { preferSmall: 0.7621, preferBig: 1.7676 },
+        castTiming: { lethal: 3, nearFullEnergy: 0.6052, opponentDebuffed: 0.2413, opponentAlmostReady: 1.8753, nearOpponent: 0.9745, farOpponent: 0 }
+      },
+      gu_king: {
+        movement: { safePath: 1.1123, leastDamage: 1.7447, fastestArrival: 0.3172 },
+        food: { fastestArrival: 1.8958, ownDeficit: 1.2623, opponentDeficit: 0.1173, ownPreferred: 1.9483, opponentPreferred: 0.447 },
+        skillAllocation: { preferSmall: 1.9188, preferBig: 1.5043 },
+        castTiming: { lethal: 3, nearFullEnergy: 0.3379, opponentDebuffed: 0.8041, opponentAlmostReady: 1.5866, nearOpponent: 1.1018, farOpponent: 0.4405 }
+      }
+    };
+    const dragonOrbStepMs = 45;
+
+    function defaultAiStrategyWeights() {
+      return {
+        movement: {
+          safePath: computerDifficulty === "high" ? 1.6 : computerDifficulty === "low" ? 0.9 : 1.2,
+          leastDamage: computerDifficulty === "high" ? 1.3 : 1,
+          fastestArrival: computerDifficulty === "low" ? 1.3 : 1
+        },
+        food: {
+          fastestArrival: 1,
+          ownDeficit: 0.8,
+          opponentDeficit: computerDifficulty === "high" ? 1.5 : 0.45,
+          ownPreferred: computerDifficulty === "high" ? 1.1 : 0.75,
+          opponentPreferred: computerDifficulty === "high" ? 1.4 : 0.35
+        },
+        skillAllocation: {
+          preferSmall: computerDifficulty === "low" ? 2.1 : computerDifficulty === "high" ? 0.45 : 1,
+          preferBig: computerDifficulty === "high" ? 2.1 : computerDifficulty === "low" ? 0.45 : 1
+        },
+        castTiming: {
+          lethal: 3,
+          nearFullEnergy: 0.75,
+          opponentDebuffed: computerDifficulty === "low" ? 0.4 : 1.25,
+          opponentAlmostReady: computerDifficulty === "high" ? 1.2 : 0.65,
+          nearOpponent: computerDifficulty === "high" ? 1.15 : 0.85,
+          farOpponent: computerDifficulty === "high" ? 0.75 : 0.35
+        }
+      };
+    }
+
     function aiProfileFor(owner) {
       const character = characterFor(owner);
       return aiProfiles[character.id] || { role: "balanced", preferredFood: character.foodPreference };
+    }
+
+    function aiStrategyWeightsFor(owner) {
+      if (computerDifficulty !== "high") return defaultAiStrategyWeights();
+      return highAiStrategyWeightsByCharacter[characterFor(owner).id] || defaultAiStrategyWeights();
     }
 
     function ownerSnake(owner) {
@@ -5666,8 +5740,60 @@
       return false;
     }
 
+    function isLethalAttack(owner, profile, now) {
+      return canAttack(owner, profile) && strongestVisibleDamage(owner, profile, now) >= ownerHp(opponentOf(owner));
+    }
+
+    function attackResourceCost(profile = "big") {
+      return attackFoodCost(profile) * foodTypes.length + attackBombCost(profile) * foodTypes.length;
+    }
+
+    function opponentAlmostReady(owner) {
+      const opponent = opponentOf(owner);
+      const stock = ownerStock(opponent);
+      if (canAttack(opponent, "small") || canAttack(opponent, "big")) return true;
+      const stockClose = foodTypes.every(type => stock[type.id] >= Math.max(0, attackFoodCost("small") - 1));
+      const ammoClose = ammoFor(opponent) >= bigAttackBombCost - 1 || ammoChargeFor(opponent) >= attackNeedTotal - 1;
+      return stockClose || ammoClose;
+    }
+
+    function castTimingScore(owner, profile, now) {
+      const weights = aiStrategyWeightsFor(owner).castTiming;
+      const opponent = opponentOf(owner);
+      const distance = hexDistance(ownerHead(owner), perceivedSnakeFor(owner, opponent, now)[0]);
+      let score = 0;
+      if (isLethalAttack(owner, profile, now)) score += weights.lethal * 3;
+      if (ammoFor(owner) >= maxAmmo || ammoChargeFor(owner) >= attackNeedTotal - 1) score += weights.nearFullEnergy;
+      if (hasOpponentDebuff(owner, now)) score += weights.opponentDebuffed;
+      if (opponentAlmostReady(owner)) score += weights.opponentAlmostReady;
+      if (distance <= 3) score += weights.nearOpponent * (4 - distance) / 3;
+      if (distance >= 5) score += weights.farOpponent * Math.min(1, (distance - 4) / 4);
+      return score;
+    }
+
     function chooseAiAttackProfile(owner, now) {
       if (isNoviceComputer()) return null;
+      const lethal = ["small", "big"]
+        .filter(profile => isLethalAttack(owner, profile, now))
+        .sort((a, b) => attackResourceCost(a) - attackResourceCost(b))[0];
+      if (lethal) return lethal;
+      if (computerDifficulty === "low" && shouldUseBigAttack(owner, now)) return "big";
+
+      if (computerDifficulty === "high") {
+        const available = ["small", "big"].filter(profile => canAttack(owner, profile));
+        if (!available.length) return null;
+        const allocation = aiStrategyWeightsFor(owner).skillAllocation;
+        const scored = available.map(profile => {
+          const allocationScore = profile === "small" ? allocation.preferSmall : allocation.preferBig;
+          const timingScore = castTimingScore(owner, profile, now);
+          const legacyBoost = profile === "big" && shouldUseBigAttack(owner, now) ? 1.25 : 0;
+          return { profile, score: allocationScore + timingScore + legacyBoost };
+        }).sort((a, b) => b.score - a.score);
+        const best = scored[0];
+        if (best.profile === "big") return best.score >= 1.8 ? "big" : canAttack(owner, "small") ? "small" : null;
+        return best.score >= 0.9 ? best.profile : null;
+      }
+
       if (shouldUseBigAttack(owner, now)) return "big";
       if (canAttack(owner, "small")) return "small";
       if (computerDifficulty === "low" && canAttack(owner, "big")) return "big";
@@ -5734,14 +5860,73 @@
       return Number.POSITIVE_INFINITY;
     }
 
+    function reachableSpace(start, occupied, maxCells = 10) {
+      if (occupied.has(keyOf(start))) return 0;
+      const visited = new Set([keyOf(start)]);
+      const queue = [start];
+      for (let index = 0; index < queue.length && visited.size < maxCells; index += 1) {
+        const current = queue[index];
+        directions.forEach((_, direction) => {
+          const next = nextWrappedCell(current, direction);
+          const nextKey = keyOf(next);
+          if (visited.has(nextKey) || occupied.has(nextKey)) return;
+          visited.add(nextKey);
+          queue.push(next);
+        });
+      }
+      return visited.size;
+    }
+
+    function expectedDamageAt(owner, cell, now) {
+      const opponent = opponentOf(owner);
+      let damage = 0;
+      projectiles.forEach(projectile => {
+        if (projectile.owner !== opponent) return;
+        if (projectile.kind === "line") {
+          if (projectile.lineCells?.some(lineCell => hexDistance(lineCell, cell) <= projectile.width)) damage += projectile.damage || 0;
+          return;
+        }
+        const target = projectile.explosionTarget || projectile.target;
+        if (target && hexDistance(cell, target) <= (projectile.radius || 0)) damage += projectile.damage || 0;
+      });
+      hazards.forEach(hazard => {
+        if (hazard.owner !== opponent || now > hazard.endAt) return;
+        if (hazard.kind === "radiation" && hexDistance(cell, hazard.target) <= hazard.radius) damage += hazard.damage || 0;
+        if (hazard.cells?.some(hazardCell => hexDistance(hazardCell, cell) <= hazard.width)) damage += hazard.damage || 0;
+      });
+      return damage;
+    }
+
     function foodValueFor(owner, opponent, food, now) {
       const ownDistance = hexDistance(ownerHead(owner), food);
       const opponentHead = perceivedSnakeFor(owner, opponent, now)[0];
       const opponentDistance = hexDistance(opponentHead, food);
       const profile = aiProfileFor(owner);
+      const opponentProfile = aiProfileFor(opponent);
       const types = food.types || [];
-      const preferred = profile.preferredFood === "balanced" ? types.some(type => foodTypes.some(foodType => foodType.id === type)) : types.includes(profile.preferredFood);
-      const roleBonus = computerDifficulty === "high" && preferred ? 1.5 : 0;
+      const weights = aiStrategyWeightsFor(owner).food;
+      const normalizedTypes = types.includes("black") ? foodTypes.map(type => type.id) : types.filter(type => foodTypes.some(foodType => foodType.id === type));
+      const ownStock = ownerStock(owner);
+      const opponentStock = ownerStock(opponent);
+      const ownDeficit = normalizedTypes.reduce((sum, type) => sum + maxFoodStock - (ownStock[type] || 0), 0) / Math.max(1, normalizedTypes.length);
+      const opponentDeficit = normalizedTypes.reduce((sum, type) => sum + maxFoodStock - (opponentStock[type] || 0), 0) / Math.max(1, normalizedTypes.length);
+      const preferred = profile.preferredFood === "balanced"
+        ? normalizedTypes.length > 0
+        : profile.preferredFood === "black" ? types.includes("black") : types.includes(profile.preferredFood);
+      const opponentPreferred = opponentProfile.preferredFood === "balanced"
+        ? normalizedTypes.length > 0
+        : opponentProfile.preferredFood === "black" ? types.includes("black") : types.includes(opponentProfile.preferredFood);
+      if (computerDifficulty === "high") {
+        return (
+          weights.fastestArrival * (1 / (1 + ownDistance)) * 10 +
+          weights.ownDeficit * ownDeficit / 5 +
+          weights.opponentDeficit * opponentDeficit / 6 +
+          weights.ownPreferred * (preferred ? 2.5 : 0) +
+          weights.opponentPreferred * (opponentPreferred ? 2 : 0) +
+          (opponentDistance <= ownDistance ? weights.opponentDeficit * 0.35 : 0)
+        );
+      }
+      const roleBonus = preferred ? 1.5 : 0;
       return -ownDistance + roleBonus + (opponentDistance <= ownDistance ? 0.4 : 0);
     }
 
@@ -5788,10 +5973,16 @@
         const targetDistance = hexDistance(next, target);
         const role = aiProfileFor(owner).role;
         const pressureBias = computerDifficulty === "high" && (role === "rush" || role === "melee") ? targetDistance : 0;
+        const expectedDamage = expectedDamageAt(owner, next, now);
+        const trapRisk = Math.max(0, 5 - reachableSpace(next, occupied, 10));
+        const weights = aiStrategyWeightsFor(owner).movement;
+        const risk = danger + trapRisk * 4 + expectedDamage;
         options.push({
           direction: candidate,
           pathValue: Number.isFinite(pathDistance) ? pathDistance : nearestFoodDistance(next),
-          tacticalValue: (Number.isFinite(pathDistance) ? pathDistance : nearestFoodDistance(next)) + targetDistance * 0.45 + pressureBias * 0.3 + danger - wallPressure * 0.08,
+          tacticalValue: computerDifficulty === "high"
+            ? weights.fastestArrival * targetDistance + weights.safePath * risk + weights.leastDamage * expectedDamage - wallPressure * 0.04 + pressureBias * 0.3
+            : (Number.isFinite(pathDistance) ? pathDistance : nearestFoodDistance(next)) + targetDistance * 0.45 + pressureBias * 0.3 + danger - wallPressure * 0.08,
           fallbackValue: nearestFoodDistance(next) + targetDistance * 0.45 + danger - wallPressure * 0.08
         });
       });
@@ -5864,6 +6055,44 @@
       return bestDirection;
     }
 
+    function turnDistance(left, right) {
+      const clockwise = (right - left + directions.length) % directions.length;
+      return Math.min(clockwise, directions.length - clockwise);
+    }
+
+    function nearestDragonOrbTarget(cursor, targetSnake) {
+      if (!targetSnake.length) return null;
+      return targetSnake.reduce((best, segment, index) => {
+        const distance = hexDistance(cursor, segment);
+        if (!best || distance < best.distance || (distance === best.distance && index < best.index)) {
+          return { cell: segment, distance, index };
+        }
+        return best;
+      }, null).cell;
+    }
+
+    function dragonTrackingDirection(cursor, direction, targetSnake, visited) {
+      const target = nearestDragonOrbTarget(cursor, targetSnake);
+      if (!target) return direction;
+      const idealDirection = directionFromSourceToTarget(cursor, target, direction);
+      const candidates = [
+        direction,
+        (direction + 1) % directions.length,
+        (direction + 5) % directions.length,
+        (direction + 2) % directions.length,
+        (direction + 4) % directions.length
+      ];
+      candidates.sort((a, b) => {
+        const nextA = nextWrappedCell(cursor, a);
+        const nextB = nextWrappedCell(cursor, b);
+        const distanceA = hexDistance(nextA, target) + (visited.has(keyOf(nextA)) ? 0.35 : 0);
+        const distanceB = hexDistance(nextB, target) + (visited.has(keyOf(nextB)) ? 0.35 : 0);
+        if (distanceA !== distanceB) return distanceA - distanceB;
+        return turnDistance(a, idealDirection) - turnDistance(b, idealDirection);
+      });
+      return candidates[0];
+    }
+
     function cellsForwardFrom(source, direction, includeSource = true) {
       const path = includeSource ? [{ q: source.q, r: source.r }] : [];
       let cursor = source;
@@ -5911,6 +6140,22 @@
         cursor = nextWrappedCell(cursor, direction);
         if (keyOf(cursor) === keyOf(source)) break;
         path.push({ q: cursor.q, r: cursor.r });
+      }
+      return path;
+    }
+
+    function dragonTrackingOrbPath(source, direction, targetSnake) {
+      const path = [];
+      const visited = new Set([keyOf(source)]);
+      let cursor = { q: source.q, r: source.r };
+      let currentDirection = direction;
+      const maxSteps = Math.max(1, radius * 2 + 1);
+      for (let step = 0; step < maxSteps; step += 1) {
+        currentDirection = dragonTrackingDirection(cursor, currentDirection, targetSnake, visited);
+        cursor = nextWrappedCell(cursor, currentDirection);
+        if (keyOf(cursor) === keyOf(source)) break;
+        path.push({ q: cursor.q, r: cursor.r });
+        visited.add(keyOf(cursor));
       }
       return path;
     }
@@ -5965,10 +6210,13 @@
 
       if (character.id === "dragon") {
         const targetSnake = owner === "player" ? computerSnake : snake;
-        const path = dragonWrappedOrbPath(source, ownerDirection(owner));
+        const useTracking = computerBattleMode || owner === "computer";
+        const path = useTracking
+          ? dragonTrackingOrbPath(source, ownerDirection(owner), targetSnake)
+          : dragonWrappedOrbPath(source, ownerDirection(owner));
         const hits = pathHits(path, targetSnake);
         const endCell = path[path.length - 1] || source;
-        const travelDelay = small.delay + path.length * 90;
+        const travelDelay = small.delay + path.length * dragonOrbStepMs;
         projectiles.push({
           kind: "dragonOrb",
           owner,
@@ -5996,8 +6244,8 @@
             visualType: attackVisualType(owner, "big"),
             hidden: true,
             createdAt: now,
-            impactAt: now + small.delay + (hit.index + 1) * 90,
-            delay: small.delay + (hit.index + 1) * 90,
+            impactAt: now + small.delay + (hit.index + 1) * dragonOrbStepMs,
+            delay: small.delay + (hit.index + 1) * dragonOrbStepMs,
             radius: small.radius,
             damage: small.damage,
             burstRadius: small.radius * 2,
