@@ -852,39 +852,44 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
   const abilityId = bigAttackAbilityId(characterId);
   if (abilityId === "dragon") {
     const curveMultiplier = ultimateSetting(balance, abilityId, "orbCurveMultiplier", DRAGON_ORB_CURVE_MULTIPLIER);
-    const path = dragonTrackingOrbPath(state, source, attacker.dir, defender.snake, curveMultiplier);
+    const path = dragonTrackingOrbPath(state, source, direction, defender.snake, curveMultiplier);
     const hits = pathHits(path, defender.snake);
     const endCell = path[path.length - 1] || source;
     const orbStepMs = ultimateSetting(balance, abilityId, "orbStepMs", DRAGON_ORB_STEP_MS);
     const orbRadius = small.radius * ultimateSetting(balance, abilityId, "orbRadiusMultiplier", DRAGON_ORB_RADIUS_MULTIPLIER);
     const burstRadius = small.radius * ultimateSetting(balance, abilityId, "burstRadiusMultiplier", DRAGON_BURST_RADIUS_MULTIPLIER);
     const burstDamage = small.damage * ultimateSetting(balance, abilityId, "burstDamageMultiplier", DRAGON_BURST_DAMAGE_MULTIPLIER);
-    state.projectiles.push({
-      kind: "dragonOrb",
-      owner: attacker.owner,
-      profile: "big",
-      target: { ...endCell },
-      pathCells: path,
-      impactAt: now + small.delay + path.length * orbStepMs,
-      radius: orbRadius,
-      damage: small.damage,
-      burstRadius,
-      burstDamage,
-      stunChance
-    });
-    for (const hit of hits) {
+    const volleys = characterId === "lobster" ? 2 : 1;
+    const damageScale = characterId === "lobster" ? 0.75 : 1;
+    for (let volley = 0; volley < volleys; volley += 1) {
+      const volleyDelay = volley * 500;
       state.projectiles.push({
-        kind: "dragonOrbBurst",
+        kind: "dragonOrb",
         owner: attacker.owner,
         profile: "big",
-        target: { ...hit.cell },
-        impactAt: now + small.delay + (hit.index + 1) * orbStepMs,
+        target: { ...endCell },
+        pathCells: path,
+        impactAt: now + volleyDelay + small.delay + path.length * orbStepMs,
         radius: orbRadius,
-        damage: small.damage,
+        damage: small.damage * damageScale,
         burstRadius,
-        burstDamage,
+        burstDamage: burstDamage * damageScale,
         stunChance
       });
+      for (const hit of hits) {
+        state.projectiles.push({
+          kind: "dragonOrbBurst",
+          owner: attacker.owner,
+          profile: "big",
+          target: { ...hit.cell },
+          impactAt: now + volleyDelay + small.delay + (hit.index + 1) * orbStepMs,
+          radius: orbRadius,
+          damage: small.damage * damageScale,
+          burstRadius,
+          burstDamage: burstDamage * damageScale,
+          stunChance
+        });
+      }
     }
     return;
   }
@@ -947,18 +952,20 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
   if (abilityId === "lobster") {
     const big = attackStats(attacker.stock, "big", balance);
     const lobsterUltimateRadius = small.radius * ultimateSetting(balance, abilityId, "radiusMultiplier", 2.5);
-    for (let index = 0; index < 2; index += 1) {
+    const volleys = characterId === "dragon" ? 1 : 2;
+    const damageScale = characterId === "dragon" ? 1.5 : 1;
+    for (let index = 0; index < volleys; index += 1) {
       state.projectiles.push({
         kind: "headCircle",
         owner: attacker.owner,
         profile: "big",
-        target: { ...source },
+        target: { ...target },
         impactAt: now + small.delay + index * 2000,
         radius: lobsterUltimateRadius,
-        damage: big.damage,
+        damage: big.damage * damageScale,
         radiationDurationMs: 4000,
         radiationTickMs: 500,
-        radiationTotalDamage: big.damage,
+        radiationTotalDamage: big.damage * damageScale,
         stunChance,
         flat: true
       });
@@ -1062,7 +1069,7 @@ function resolveProjectiles(state, now, balance) {
       playerDamage = damageSnakeCells(player.snake, projectile.lineCells, projectile.width, projectile.damage, projectile.excludedCells);
       computerDamage = damageSnakeCells(computer.snake, projectile.lineCells, projectile.width, projectile.damage, projectile.excludedCells);
     } else {
-      if (projectile.kind === "headCircle") {
+      if (projectile.kind === "headCircle" && projectile.followHead) {
         projectile.explosionTarget = { ...attacker.snake[0] };
         projectile.target = { ...projectile.explosionTarget };
       }
