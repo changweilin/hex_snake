@@ -5795,11 +5795,11 @@
       if (gameOver && !canRestartAfterGameOver()) return false;
       clearRelayRestartTimer();
       computerBattleMode = Boolean(options.computerBattle);
-      playerAutoMode = false;
+      playerAutoMode = Boolean(options.playerAuto) && !computerBattleMode;
       computerBattleManualOverride = false;
-      if (computerBattleMode) setRelayMode(relayModePreference, Boolean(options.resetRelayScore), false);
-      if (!computerBattleMode) setRelayMode(false, false, false);
-      if (computerBattleMode) setComputerBattleSpeed(localStorage.getItem("hexSnakeAutoBattleSpeed"), false);
+      if (computerBattleMode || playerAutoMode) setRelayMode(relayModePreference, Boolean(options.resetRelayScore), false);
+      if (!computerBattleMode && !playerAutoMode) setRelayMode(false, false, false);
+      if (computerBattleMode || playerAutoMode) setComputerBattleSpeed(localStorage.getItem("hexSnakeAutoBattleSpeed"), false);
       setFoodCount(foodCountInput.value);
       setComputerDifficulty(computerDifficultyInput.value);
       setInitialSpeed(initialSpeedInput.value);
@@ -6005,6 +6005,10 @@
       return (computerBattleMode && !computerBattleManualOverride) || playerAutoMode;
     }
 
+    function isRelayModeAvailable() {
+      return computerBattleMode ? !computerBattleManualOverride : playerAutoMode;
+    }
+
     function clearRelayRestartTimer() {
       if (!relayRestartTimer) return;
       clearTimeout(relayRestartTimer);
@@ -6020,7 +6024,7 @@
     function setRelayMode(enabled, resetScore = false, persist = true) {
       if (persist) relayModePreference = Boolean(enabled);
       const requestedRelayMode = persist ? relayModePreference : Boolean(enabled);
-      relayMode = requestedRelayMode && computerBattleMode;
+      relayMode = requestedRelayMode && isRelayModeAvailable();
       relayModeInput.checked = relayMode;
       if (persist) localStorage.setItem("hexSnakeRelayMode", relayModePreference ? "1" : "0");
       if (resetScore) resetRelayScore();
@@ -6029,7 +6033,7 @@
     }
 
     function updateRelayControls() {
-      const visible = computerBattleMode && !replayMode;
+      const visible = !replayMode && (relayMode || (running && !gameOver && isRelayModeAvailable()));
       relayPanel.hidden = !visible;
       relayModeInput.checked = relayMode;
       relayScore.innerHTML = `<span class="owner-name is-p1">P1</span> ${relayPlayerWins} 勝 / <span class="owner-name is-p2">P2</span> ${relayComputerWins} 勝 / 平手 ${relayDraws}`;
@@ -6055,9 +6059,11 @@
       playerAutoMode = nextActive;
       if (playerAutoMode) {
         setComputerBattleSpeed(localStorage.getItem("hexSnakeAutoBattleSpeed"), false);
+        setRelayMode(relayModePreference, false, false);
         resetAutoBattleStepTimers();
         if (announce) setStatus("Auto 已開啟，電腦接手 P1 操作。");
       } else {
+        setRelayMode(false, false, false);
         setAutoSpeedMenuOpen(false);
         if (announce) setStatus("Auto 已關閉，回到玩家操作。");
       }
@@ -6071,9 +6077,11 @@
       computerBattleManualOverride = Boolean(active);
       if (!computerBattleManualOverride) {
         setComputerBattleSpeed(localStorage.getItem("hexSnakeAutoBattleSpeed"), false);
+        setRelayMode(relayModePreference, false, false);
         resetAutoBattleStepTimers();
         setStatus("Auto 已開啟，電腦接手 P1 操作。");
       } else {
+        setRelayMode(false, false, false);
         setAutoSpeedMenuOpen(false);
         setStatus("Auto 已關閉，回到玩家操作。");
       }
@@ -7531,6 +7539,10 @@
 
     function endGame(playerLost = true, computerLost = false) {
       if (gameOver) return;
+      const shouldContinueRelay = relayMode && (computerBattleMode || playerAutoMode);
+      const nextRelayStartOptions = computerBattleMode
+        ? { computerBattle: true }
+        : { playerAuto: true };
       finishReplayRecording(playerLost, computerLost);
       running = false;
       playerAutoMode = false;
@@ -7558,23 +7570,23 @@
         : (playerLost && !computerLost) || (playerLost && computerLost && computerScore > score)
           ? "computer"
           : null;
-      if (computerBattleMode && relayMode) {
+      if (shouldContinueRelay) {
         if (winnerOwner === "player") relayPlayerWins += 1;
         else if (winnerOwner === "computer") relayComputerWins += 1;
         else relayDraws += 1;
         updateRelayControls();
       }
       renderWinnerPortrait(winnerOwner, playerLost, computerLost);
-      overlayText.textContent = computerBattleMode && relayMode
+      overlayText.textContent = shouldContinueRelay
         ? `P1 ${score} 分，P2 ${computerScore} 分。接力賽：P1 ${relayPlayerWins} 勝，P2 ${relayComputerWins} 勝，平手 ${relayDraws}。`
         : `P1 ${score} 分，P2 ${computerScore} 分。按開始再來一局。`;
       startButton.textContent = "重新開始";
       overlay.classList.add("show");
-      if (computerBattleMode && relayMode) {
+      if (shouldContinueRelay) {
         relayRestartTimer = setTimeout(() => {
           relayRestartTimer = null;
-          if (!relayMode || !computerBattleMode) return;
-          startGame({ computerBattle: true });
+          if (!relayMode) return;
+          startGame(nextRelayStartOptions);
         }, Math.max(900, gameOverRestartDelayMs + 80));
       }
     }
@@ -11331,7 +11343,7 @@
 
     relayModeInput.addEventListener("change", event => {
       event.stopPropagation();
-      if (!computerBattleMode) {
+      if (!isRelayModeAvailable()) {
         relayModeInput.checked = false;
         return;
       }
