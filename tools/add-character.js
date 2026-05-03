@@ -104,7 +104,7 @@ function foodEffect(food, name) {
   if (food === "balanced") {
     return `均衡型角色；${name}吃食後補出的新食物有 50% 機率為雙色，提供更彈性的資源路線。`;
   }
-  return `偏好${foods[food]}；食物生成較容易偏向${foods[food]}，但吃食收益與其他角色相同。`;
+  return `偏好${foods[food]}；食物生成傾向${foods[food]}。`;
 }
 
 function buildPrompt(character, pose) {

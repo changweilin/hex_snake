@@ -325,6 +325,12 @@ function ultimateDamageMultiplier(balance, characterId) {
   return ultimateSetting(balance, characterId, "damageMultiplier", 1);
 }
 
+function bigAttackAbilityId(characterId) {
+  if (characterId === "dragon") return "lobster";
+  if (characterId === "lobster") return "dragon";
+  return characterId;
+}
+
 function normalizeStrategyWeights(overrides = {}) {
   const provided = overrides.strategyWeights || {};
   const foodStrategy = overrides.foodStrategy || "balanced";
@@ -843,15 +849,16 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
   const source = attacker.snake[0];
   const direction = directionFromSourceToTarget(source, target, attacker.dir);
   const characterId = attacker.character.id;
-  if (characterId === "dragon") {
-    const curveMultiplier = ultimateSetting(balance, characterId, "orbCurveMultiplier", DRAGON_ORB_CURVE_MULTIPLIER);
+  const abilityId = bigAttackAbilityId(characterId);
+  if (abilityId === "dragon") {
+    const curveMultiplier = ultimateSetting(balance, abilityId, "orbCurveMultiplier", DRAGON_ORB_CURVE_MULTIPLIER);
     const path = dragonTrackingOrbPath(state, source, attacker.dir, defender.snake, curveMultiplier);
     const hits = pathHits(path, defender.snake);
     const endCell = path[path.length - 1] || source;
-    const orbStepMs = ultimateSetting(balance, characterId, "orbStepMs", DRAGON_ORB_STEP_MS);
-    const orbRadius = small.radius * ultimateSetting(balance, characterId, "orbRadiusMultiplier", DRAGON_ORB_RADIUS_MULTIPLIER);
-    const burstRadius = small.radius * ultimateSetting(balance, characterId, "burstRadiusMultiplier", DRAGON_BURST_RADIUS_MULTIPLIER);
-    const burstDamage = small.damage * ultimateSetting(balance, characterId, "burstDamageMultiplier", DRAGON_BURST_DAMAGE_MULTIPLIER);
+    const orbStepMs = ultimateSetting(balance, abilityId, "orbStepMs", DRAGON_ORB_STEP_MS);
+    const orbRadius = small.radius * ultimateSetting(balance, abilityId, "orbRadiusMultiplier", DRAGON_ORB_RADIUS_MULTIPLIER);
+    const burstRadius = small.radius * ultimateSetting(balance, abilityId, "burstRadiusMultiplier", DRAGON_BURST_RADIUS_MULTIPLIER);
+    const burstDamage = small.damage * ultimateSetting(balance, abilityId, "burstDamageMultiplier", DRAGON_BURST_DAMAGE_MULTIPLIER);
     state.projectiles.push({
       kind: "dragonOrb",
       owner: attacker.owner,
@@ -937,9 +944,9 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
     });
     return;
   }
-  if (characterId === "lobster") {
+  if (abilityId === "lobster") {
     const big = attackStats(attacker.stock, "big", balance);
-    const lobsterUltimateRadius = small.radius * ultimateSetting(balance, characterId, "radiusMultiplier", 2.5);
+    const lobsterUltimateRadius = small.radius * ultimateSetting(balance, abilityId, "radiusMultiplier", 2.5);
     for (let index = 0; index < 2; index += 1) {
       state.projectiles.push({
         kind: "headCircle",

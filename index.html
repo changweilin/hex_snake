@@ -5882,6 +5882,12 @@
       return ultimateSetting(characterId, "damageMultiplier", 1);
     }
 
+    function bigAttackAbilityId(characterId) {
+      if (characterId === "dragon") return "lobster";
+      if (characterId === "lobster") return "dragon";
+      return characterId;
+    }
+
     function defaultAiStrategyWeights() {
       return {
         movement: {
@@ -6498,9 +6504,19 @@
       }));
     }
 
-    function attackVisualType(owner, profile = "big") {
+    function attackVisualType(owner, profile = "big", characterId = null) {
       const character = characterFor(owner);
-      return `${character.id}-${profile}`;
+      return `${characterId || character.id}-${profile}`;
+    }
+
+    function characterForVisualType(owner, visualType = null) {
+      const visualCharacterId = typeof visualType === "string" ? visualType.split("-")[0] : null;
+      return characterById.get(visualCharacterId) || characterFor(owner);
+    }
+
+    function burstVisualType(projectile) {
+      const type = projectile.visualType || attackVisualType(projectile.owner, projectile.profile);
+      return type.endsWith("-big") ? type.replace(/-big$/, "-burst") : type;
     }
 
     function pushCircleAttack({ owner, profile, source = null, target, createdAt, impactAt, delay, radius, damage, stunChance, hidden = false, flat = false, visualType = null, ...extra }) {
@@ -6526,8 +6542,9 @@
     function scheduleCharacterBigAttack(owner, character, source, target, now, stock, stunChance) {
       const small = attackStats(stock, "small");
       const direction = directionFromSourceToTarget(source, target, ownerDirection(owner));
+      const abilityId = bigAttackAbilityId(character.id);
 
-      if (character.id === "dragon") {
+      if (abilityId === "dragon") {
         const targetSnake = owner === "player" ? computerSnake : snake;
         const useTracking = isPlayerAutoControlActive() || owner === "computer";
         const path = useTracking
@@ -6535,7 +6552,7 @@
           : dragonWrappedOrbPath(source, ownerDirection(owner));
         const hits = pathHits(path, targetSnake);
         const endCell = path[path.length - 1] || source;
-        const orbStepMs = ultimateSetting(character.id, "orbStepMs", dragonOrbStepMs);
+        const orbStepMs = ultimateSetting(abilityId, "orbStepMs", dragonOrbStepMs);
         const travelDelay = small.delay + path.length * orbStepMs;
         projectiles.push({
           kind: "dragonOrb",
@@ -6544,7 +6561,7 @@
           source: { q: source.q, r: source.r },
           target: { q: endCell.q, r: endCell.r },
           pathCells: path,
-          visualType: attackVisualType(owner, "big"),
+          visualType: attackVisualType(owner, "big", abilityId),
           createdAt: now,
           impactAt: now + travelDelay,
           delay: travelDelay,
@@ -6561,7 +6578,7 @@
             profile: "big",
             source: { q: source.q, r: source.r },
             target: { q: hit.cell.q, r: hit.cell.r },
-            visualType: attackVisualType(owner, "big"),
+            visualType: attackVisualType(owner, "big", abilityId),
             hidden: true,
             createdAt: now,
             impactAt: now + small.delay + (hit.index + 1) * orbStepMs,
@@ -6652,9 +6669,9 @@
         return delay;
       }
 
-      if (character.id === "lobster") {
+      if (abilityId === "lobster") {
         const big = attackStats(stock, "big");
-        const lobsterUltimateRadius = small.radius * ultimateSetting(character.id, "radiusMultiplier", 2.5);
+        const lobsterUltimateRadius = small.radius * ultimateSetting(abilityId, "radiusMultiplier", 2.5);
         for (let index = 0; index < 2; index += 1) {
           projectiles.push({
             kind: "headCircle",
@@ -6672,7 +6689,7 @@
             radiationTotalDamage: big.damage,
             stunChance,
             flat: true,
-            visualType: attackVisualType(owner, "big")
+            visualType: attackVisualType(owner, "big", abilityId)
           });
         }
         return small.delay + 2000;
@@ -6898,11 +6915,11 @@
             target: projectile.target,
             owner: projectile.owner,
             radius: projectile.burstRadius,
-            visualType: `${characterFor(projectile.owner).id}-burst`,
+            visualType: burstVisualType(projectile),
             startedAt: now,
             endAt: now + blastDurationMs * 1.25
           });
-          triggerBoardShake(`${characterFor(projectile.owner).id}-burst`, now);
+          triggerBoardShake(burstVisualType(projectile), now);
         } else if (projectile.kind === "line") {
           playerDamage = damageSnakeCells(snake, projectile.lineCells, projectile.width, projectile.damage, projectile.excludedCells);
           computerDamage = damageSnakeCells(computerSnake, projectile.lineCells, projectile.width, projectile.damage, projectile.excludedCells);
@@ -9104,7 +9121,7 @@
     function drawProjectiles() {
       const now = performance.now();
       projectiles.forEach(projectile => {
-        const blastCharacter = characterFor(projectile.owner);
+        const blastCharacter = characterForVisualType(projectile.owner, projectile.visualType);
         if (projectile.hidden) {
           const progress = Math.min(1, Math.max(0, (now - projectile.createdAt) / (projectile.delay || baseAttackDelayMs)));
           const timeToImpact = projectile.impactAt - now;
@@ -9215,7 +9232,7 @@
         if (now < hazard.startedAt || now > hazard.endAt) return;
         const progress = (now - hazard.startedAt) / Math.max(1, hazard.endAt - hazard.startedAt);
         const alpha = 0.24 * (1 - progress * 0.55);
-        const blastCharacter = characterFor(hazard.owner);
+        const blastCharacter = characterForVisualType(hazard.owner, hazard.visualType);
         if (hazard.kind === "radiation") {
           const { x, y } = axialToPixel(hazard.target);
           drawRadiationDust(x, y, cellSize * Math.max(1, hazard.radius || hazard.width || 1) * 1.52, progress, blastCharacter, 0.92);
@@ -9314,7 +9331,7 @@
       blasts.forEach(blast => {
         const progress = Math.min(1, (now - blast.startedAt) / blastDurationMs);
         const alpha = 1 - progress;
-        const blastCharacter = characterFor(blast.owner);
+        const blastCharacter = characterForVisualType(blast.owner, blast.visualType);
         if (blast.kind === "line") {
           drawLineBlast(blast, progress, alpha, blastCharacter);
           return;
