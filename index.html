@@ -633,9 +633,13 @@
       inset: 0;
       z-index: 1000;
       display: grid;
-      grid-template-rows: minmax(0, 1fr) auto;
+      grid-template-rows: minmax(0, 1fr);
       gap: 12px;
-      padding: max(14px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+      padding:
+        calc(max(14px, env(safe-area-inset-top)) + 48px)
+        max(14px, env(safe-area-inset-right))
+        calc(max(14px, env(safe-area-inset-bottom)) + 54px)
+        max(14px, env(safe-area-inset-left));
       background: rgba(7, 10, 16, 0.92);
       place-items: center;
       isolation: isolate;
@@ -654,6 +658,7 @@
       width: min(92vw, 680px);
       height: 100%;
       display: grid;
+      grid-template-rows: minmax(0, 1fr) auto;
       place-items: center;
       margin: 0;
     }
@@ -661,15 +666,17 @@
     .portrait-lightbox-image {
       width: 100%;
       height: 100%;
+      min-height: 0;
       object-fit: contain;
       filter: drop-shadow(0 24px 54px rgba(0, 0, 0, 0.58));
       pointer-events: none;
     }
 
     .portrait-lightbox-caption {
-      margin-top: 8px;
+      margin: 8px 0 0;
       color: var(--ink);
       font-weight: 900;
+      line-height: 1.25;
       text-align: center;
     }
 
@@ -930,49 +937,57 @@
     }
 
     .settings-content {
-      position: absolute;
-      top: calc(100% + 6px);
-      right: 0;
-      z-index: 261;
-      width: min(520px, calc(100vw - 36px));
-      max-height: min(72dvh, 560px);
-      overflow-y: auto;
+      position: fixed;
+      inset: 0;
+      z-index: 140;
       display: grid;
-      gap: 10px;
-      padding: 10px;
-      border-radius: 8px;
-      background: rgba(32, 38, 51, 0.98);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      box-shadow: 0 18px 60px rgba(0, 0, 0, 0.44);
-      overscroll-behavior: contain;
-      scrollbar-gutter: stable;
-      -webkit-overflow-scrolling: touch;
+      place-items: center;
+      padding: max(14px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+      background: rgba(7, 10, 16, 0.78);
     }
 
     .settings-content[hidden] {
       display: none;
     }
 
+    .settings-dialog {
+      width: min(760px, 100%);
+      max-height: min(86dvh, 760px);
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      overflow: hidden;
+      border-radius: 8px;
+      background: rgba(32, 38, 51, 0.98);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      box-shadow: 0 28px 90px rgba(0, 0, 0, 0.5);
+    }
+
+    .settings-modal-body {
+      overflow-y: auto;
+      padding: 16px;
+      display: grid;
+      gap: 16px;
+      color: var(--muted);
+      line-height: 1.45;
+      overscroll-behavior: contain;
+      scrollbar-gutter: stable;
+      -webkit-overflow-scrolling: touch;
+    }
+
     .settings-panel-header {
-      position: sticky;
-      top: 0;
-      z-index: 4;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 8px;
-      margin: -8px -8px 0;
-      padding: 6px 8px;
-      border-radius: 8px 8px 0 0;
+      gap: 12px;
+      padding: 14px 16px;
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-      background: rgba(32, 38, 51, 0.98);
     }
 
     .settings-panel-header strong {
       min-width: 0;
       color: var(--ink);
-      font-size: 0.95rem;
-      line-height: 1.1;
+      font-size: 1.2rem;
+      line-height: normal;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -1118,6 +1133,17 @@
       opacity: 0.58;
     }
 
+    .settings-toggle-control input[type="checkbox"] {
+      width: 18px;
+      min-width: 18px;
+      height: 18px;
+      min-height: 18px;
+      padding: 0;
+      margin: 0;
+      justify-self: start;
+      flex: 0 0 auto;
+    }
+
     .toggle-field {
       grid-template-columns: auto 1fr;
       align-items: center;
@@ -1174,8 +1200,15 @@
       grid-row: 1 / span 2;
       grid-column: 2;
       justify-self: end;
-      width: min(104px, 32vw);
+      width: min(118px, 32vw);
       touch-action: manipulation;
+    }
+
+    .settings-dir-pad.joystick {
+      width: min(118px, 32vw);
+      min-width: 96px;
+      aspect-ratio: 1;
+      flex: 0 0 auto;
     }
 
     .settings-dir-pad .hex-dir-button {
@@ -2720,34 +2753,43 @@
 
       .side .settings-section .settings-content {
         position: fixed;
-        top: auto;
-        left: max(8px, env(safe-area-inset-left));
-        right: max(8px, env(safe-area-inset-right));
-        bottom: calc(54px + max(8px, env(safe-area-inset-bottom)));
-        z-index: 261;
+        inset: 0;
+        z-index: 140;
+        display: grid;
+        place-items: center;
         width: auto;
-        max-height: calc(100dvh - 74px - max(8px, env(safe-area-inset-top)) - max(8px, env(safe-area-inset-bottom)));
-        overflow-y: auto;
-        padding: 8px;
-        border-radius: 8px;
-        background: rgba(32, 38, 51, 0.98);
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        box-shadow: 0 14px 40px rgba(0, 0, 0, 0.38);
+        max-height: none;
+        overflow: hidden;
+        padding: max(14px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+        border-radius: 0;
+        background: rgba(7, 10, 16, 0.78);
+        border: 0;
+        box-shadow: none;
         transform: none;
-        align-content: start;
+      }
+
+      .side .settings-section .settings-content[hidden] {
+        display: none;
+      }
+
+      .side .settings-section .settings-dialog {
+        width: min(760px, 100%);
+        max-height: min(86dvh, 760px);
+      }
+
+      .side .settings-section .settings-modal-body {
+        padding: 16px;
       }
 
       .side .settings-section .settings-panel-header {
-        margin: -8px -8px 0;
+        margin: 0;
       }
 
       .side .settings-section .settings-quick-row {
-        position: sticky;
-        top: 42px;
-        z-index: 3;
-        margin: -1px 0 0;
-        padding: 5px 0;
-        background: rgba(32, 38, 51, 0.98);
+        position: static;
+        margin: 0;
+        padding: 0;
+        background: transparent;
       }
 
       .side .settings-section .gm-settings {
@@ -3055,7 +3097,11 @@
 
       .portrait-lightbox {
         gap: 8px;
-        padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+        padding:
+          calc(max(8px, env(safe-area-inset-top)) + 44px)
+          max(8px, env(safe-area-inset-right))
+          calc(max(8px, env(safe-area-inset-bottom)) + 50px)
+          max(8px, env(safe-area-inset-left));
       }
 
       .portrait-lightbox-figure {
@@ -3195,11 +3241,13 @@
           <span class="settings-action-label">GM</span>
         </button>
         </div>
-        <div class="settings-content" id="settingsContent" hidden>
+        <div class="settings-content" id="settingsContent" hidden aria-modal="true" role="dialog" aria-label="開局設定">
+        <div class="settings-dialog">
         <div class="settings-panel-header">
           <strong>開局設定</strong>
           <button class="secondary settings-panel-close" id="settingsCloseButton" type="button" aria-label="關閉開局設定">&times;</button>
         </div>
+        <div class="settings-modal-body">
         <div class="settings-quick-row">
           <div class="field">
             <label for="computerDifficulty">電腦難度</label>
@@ -3267,11 +3315,15 @@
         <button id="resetBestTimeButton" class="secondary" type="button">重設最久存活</button>
         <button id="resetSettingsButton" class="secondary" type="button">回到預設值</button>
         </div>
-        <div class="settings-content" id="gmContent" hidden>
+        </div>
+        </div>
+        <div class="settings-content" id="gmContent" hidden aria-modal="true" role="dialog" aria-label="GM 設定">
+        <div class="settings-dialog">
         <div class="settings-panel-header">
           <strong>GM 設定</strong>
           <button class="secondary settings-panel-close" id="gmCloseButton" type="button" aria-label="關閉 GM 設定">&times;</button>
         </div>
+        <div class="settings-modal-body">
         <div class="gm-settings" id="gmSettings">
           <div class="field">
             <label for="gridSize">棋盤半徑</label>
@@ -3321,6 +3373,8 @@
             <button id="midGameModeButton" class="secondary" type="button">中期模式</button>
             <button id="lateGameModeButton" class="secondary" type="button">後期模式</button>
           </div>
+        </div>
+        </div>
         </div>
         </div>
       </section>
@@ -3511,6 +3565,8 @@
     const resourceBoard = document.querySelector("#resourceBoard");
     const keyEls = [...document.querySelectorAll(".key")];
     const mobileInputQuery = window.matchMedia("(hover: none), (pointer: coarse), (max-width: 900px)");
+
+    document.body.append(settingsContent, gmContent);
 
     let minGridSize = 6;
     let maxGridSize = 12;
@@ -4184,6 +4240,8 @@
     }
 
     function openRulesModal() {
+      setSettingsOpen(false);
+      setGmOpen(false);
       rulesModal.hidden = false;
       rulesButton.setAttribute("aria-expanded", "true");
       rulesCloseButton.focus();
@@ -6831,8 +6889,10 @@
         const travelDelay = small.delay + path.length * orbStepMs;
         const volleys = character.id === "lobster" ? 2 : 1;
         const damageScale = character.id === "lobster" ? 0.75 : 1;
+        const visualType = character.id === "lobster" ? "lobster-palm-big" : attackVisualType(owner, "big", abilityId);
         for (let volley = 0; volley < volleys; volley += 1) {
           const volleyDelay = volley * 500;
+          const hand = volley % 2 === 0 ? "right" : "left";
           projectiles.push({
             kind: "dragonOrb",
             owner,
@@ -6840,7 +6900,8 @@
             source: { q: source.q, r: source.r },
             target: { q: endCell.q, r: endCell.r },
             pathCells: path,
-            visualType: attackVisualType(owner, "big", abilityId),
+            visualType,
+            hand,
             createdAt: now + volleyDelay,
             impactAt: now + volleyDelay + travelDelay,
             delay: travelDelay,
@@ -6857,7 +6918,8 @@
               profile: "big",
               source: { q: source.q, r: source.r },
               target: { q: hit.cell.q, r: hit.cell.r },
-              visualType: attackVisualType(owner, "big", abilityId),
+              visualType,
+              hand,
               hidden: true,
               createdAt: now + volleyDelay,
               impactAt: now + volleyDelay + small.delay + (hit.index + 1) * orbStepMs,
@@ -6955,6 +7017,7 @@
         const lobsterUltimateRadius = small.radius * ultimateSetting(abilityId, "radiusMultiplier", 2.5);
         const volleys = character.id === "dragon" ? 1 : 2;
         const damageScale = character.id === "dragon" ? 1.5 : 1;
+        const visualType = character.id === "dragon" ? "dragon-spirit-big" : attackVisualType(owner, "big", abilityId);
         for (let index = 0; index < volleys; index += 1) {
           projectiles.push({
             kind: "headCircle",
@@ -6972,7 +7035,7 @@
             radiationTotalDamage: big.damage * damageScale,
             stunChance,
             flat: true,
-            visualType: attackVisualType(owner, "big", abilityId)
+            visualType
           });
         }
         return small.delay + (volleys - 1) * 2000;
@@ -7200,6 +7263,7 @@
             owner: projectile.owner,
             radius: projectile.burstRadius,
             visualType: burstVisualType(projectile),
+            hand: projectile.hand,
             startedAt: now,
             endAt: now + blastDurationMs * 1.25
           });
@@ -7237,6 +7301,7 @@
             owner: projectile.owner,
             radius,
             visualType: projectile.visualType || attackVisualType(projectile.owner, projectile.profile),
+            hand: projectile.hand,
             startedAt: now,
             endAt: now + blastDurationMs
           });
@@ -7249,7 +7314,7 @@
               target: { q: explosionTarget.q, r: explosionTarget.r },
               radius,
               width: radius,
-              visualType: "lobster-radiation",
+              visualType: projectile.visualType === "dragon-spirit-big" ? "dragon-spirit-radiation" : "lobster-radiation",
               damage: projectile.radiationTotalDamage / ticks,
               stunChance: projectile.stunChance,
               startedAt: now,
@@ -9128,6 +9193,224 @@
       ctx.restore();
     }
 
+    function drawSpellGlyphRing(x, y, radiusPx, progress, alpha = 1) {
+      const glyphs = ["KA", "RA", "LUX", "SOL", "OR", "AUM", "VE", "ZEN", "YU", "HA"];
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(progress * Math.PI * 1.6);
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.font = `${Math.max(9, cellSize * 0.24)}px serif`;
+      for (let i = 0; i < glyphs.length; i += 1) {
+        const angle = i * Math.PI * 2 / glyphs.length;
+        const gx = Math.cos(angle) * radiusPx;
+        const gy = Math.sin(angle) * radiusPx * 0.72;
+        ctx.save();
+        ctx.translate(gx, gy);
+        ctx.rotate(angle + Math.PI / 2);
+        ctx.fillStyle = hexToRgba(i % 2 ? "#fef3c7" : "#ffffff", alpha * (0.58 + waveValue(progress, i * 0.08) * 0.22));
+        ctx.fillText(glyphs[i], 0, 0);
+        ctx.restore();
+      }
+      ctx.restore();
+    }
+
+    function drawWhiteGoldMagicCircle(x, y, radiusPx, progress, character, alpha = 1) {
+      const element = elementColorsFor(character);
+      const fade = Math.max(0, 1 - progress * 0.45);
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      for (let ring = 0; ring < 5; ring += 1) {
+        ctx.beginPath();
+        ctx.ellipse(
+          x,
+          y,
+          radiusPx * (0.34 + ring * 0.16 + waveValue(progress, ring * 0.09) * 0.025),
+          radiusPx * (0.24 + ring * 0.105),
+          progress * Math.PI * (ring % 2 ? -0.85 : 0.85),
+          0,
+          Math.PI * 2
+        );
+        ctx.strokeStyle = hexToRgba(ring % 2 ? "#fbbf24" : "#ffffff", alpha * fade * (0.7 - ring * 0.08));
+        ctx.lineWidth = Math.max(1.4, cellSize * (0.07 - ring * 0.006));
+        ctx.stroke();
+      }
+      for (let i = 0; i < 18; i += 1) {
+        const angle = i * Math.PI * 2 / 18 + progress * Math.PI * 2.2;
+        const inner = radiusPx * 0.24;
+        const outer = radiusPx * (0.88 + waveValue(progress, i * 0.06) * 0.1);
+        drawLightningBetween(
+          { x: x + Math.cos(angle) * inner, y: y + Math.sin(angle) * inner * 0.64 },
+          { x: x + Math.cos(angle) * outer, y: y + Math.sin(angle) * outer * 0.64 },
+          progress + i * 0.04,
+          i % 3 ? "#fef3c7" : element.hot,
+          0.42,
+          3
+        );
+      }
+      drawSpellGlyphRing(x, y, radiusPx * 0.78, progress, alpha * fade);
+      drawSpellGlyphRing(x, y, radiusPx * 1.03, 1 - progress, alpha * fade * 0.72);
+      ctx.restore();
+    }
+
+    function drawDragonSpiritRadiance(x, y, radiusPx, progress, character, alpha = 1) {
+      const element = elementColorsFor(character);
+      const fade = Math.max(0, 1 - progress * 0.28);
+      const pulse = 0.9 + waveValue(progress, 0.12) * 0.16;
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      const gradient = ctx.createRadialGradient(x, y, radiusPx * 0.04, x, y, radiusPx * (1.12 + progress * 0.44));
+      gradient.addColorStop(0, hexToRgba("#ffffff", 0.96 * alpha));
+      gradient.addColorStop(0.25, hexToRgba("#fefce8", 0.72 * alpha));
+      gradient.addColorStop(0.52, hexToRgba(element.glow, 0.36 * alpha * fade));
+      gradient.addColorStop(1, hexToRgba(element.deep, 0));
+      ctx.beginPath();
+      ctx.arc(x, y, radiusPx * (1.08 + progress * 0.42) * pulse, 0, Math.PI * 2);
+      ctx.fillStyle = gradient;
+      ctx.fill();
+      for (let i = 0; i < 42; i += 1) {
+        const angle = i * Math.PI * 2 / 42 + progress * Math.PI * 0.9;
+        const inner = radiusPx * (0.16 + (i % 4) * 0.035);
+        const outer = radiusPx * (0.95 + waveValue(progress, i * 0.05) * 0.46);
+        ctx.beginPath();
+        ctx.moveTo(x + Math.cos(angle) * inner, y + Math.sin(angle) * inner);
+        ctx.lineTo(x + Math.cos(angle) * outer, y + Math.sin(angle) * outer);
+        ctx.strokeStyle = hexToRgba(i % 3 ? "#ffffff" : "#fbbf24", alpha * fade * (0.58 + (i % 5) * 0.035));
+        ctx.lineWidth = Math.max(1.4, cellSize * (0.045 + (i % 3) * 0.018));
+        ctx.lineCap = "round";
+        ctx.stroke();
+      }
+      drawWhiteGoldMagicCircle(x, y, radiusPx * 0.86, progress, character, alpha * 0.88);
+      ctx.beginPath();
+      ctx.arc(x, y, radiusPx * (0.22 + waveValue(progress, 0.2) * 0.08), 0, Math.PI * 2);
+      ctx.fillStyle = hexToRgba("#ffffff", 0.94 * alpha);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawSandTornadoProjectile(x, y, size, progress, character, alpha = 1) {
+      const element = elementColorsFor(character);
+      ctx.save();
+      ctx.globalCompositeOperation = "source-over";
+      for (let layer = 0; layer < 5; layer += 1) {
+        ctx.beginPath();
+        for (let step = 0; step < 34; step += 1) {
+          const t = step / 33;
+          const turn = progress * Math.PI * 7 + layer * 0.7 + t * Math.PI * 3.6;
+          const width = size * (0.12 + t * 0.48) * (1 - layer * 0.075);
+          const px = Math.cos(turn) * width;
+          const py = size * (0.62 - t * 1.18);
+          if (step === 0) ctx.moveTo(x + px, y + py);
+          else ctx.lineTo(x + px, y + py);
+        }
+        ctx.strokeStyle = hexToRgba(layer % 2 ? element.secondary : element.dust || element.primary, alpha * (0.74 - layer * 0.08));
+        ctx.lineWidth = Math.max(1.6, cellSize * (0.09 - layer * 0.008));
+        ctx.lineCap = "round";
+        ctx.stroke();
+      }
+      for (let i = 0; i < 16; i += 1) {
+        const angle = progress * Math.PI * 5 + i * Math.PI * 2 / 16;
+        const distance = size * (0.12 + (i % 5) * 0.065);
+        ctx.beginPath();
+        ctx.arc(x + Math.cos(angle) * distance, y + Math.sin(angle) * distance * 0.72, cellSize * (0.045 + (i % 3) * 0.018), 0, Math.PI * 2);
+        ctx.fillStyle = hexToRgba(i % 2 ? element.glow : element.deep, alpha * 0.62);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function drawFlyingFist(x, y, size, progress, character, mirror = 1, alpha = 1) {
+      const element = elementColorsFor(character);
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.scale(1, mirror);
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+      ctx.shadowColor = hexToRgba(element.glow, 0.68);
+      ctx.shadowBlur = cellSize * 0.18;
+      ctx.beginPath();
+      ctx.roundRect?.(-size * 0.18, -size * 0.32, size * 0.68, size * 0.64, size * 0.18);
+      if (!ctx.roundRect) ctx.rect(-size * 0.18, -size * 0.32, size * 0.68, size * 0.64);
+      ctx.fillStyle = hexToRgba(element.primary, 0.92 * alpha);
+      ctx.fill();
+      ctx.strokeStyle = hexToRgba(element.deep, 0.96 * alpha);
+      ctx.lineWidth = Math.max(1.6, cellSize * 0.06);
+      ctx.stroke();
+      for (let i = 0; i < 4; i += 1) {
+        ctx.beginPath();
+        ctx.arc(size * (0.2 + i * 0.13), -size * 0.26, size * 0.15, 0, Math.PI * 2);
+        ctx.fillStyle = hexToRgba(i % 2 ? element.secondary : element.hot, 0.88 * alpha);
+        ctx.fill();
+        ctx.strokeStyle = hexToRgba(element.deep, 0.82 * alpha);
+        ctx.stroke();
+      }
+      ctx.beginPath();
+      ctx.moveTo(-size * 0.2, 0);
+      ctx.quadraticCurveTo(-size * 0.54, -size * 0.16, -size * 0.82, -size * 0.04);
+      ctx.quadraticCurveTo(-size * 0.5, size * 0.24, -size * 0.12, size * 0.18);
+      ctx.fillStyle = hexToRgba(element.secondary, 0.74 * alpha);
+      ctx.fill();
+      ctx.stroke();
+      for (let i = 0; i < 5; i += 1) {
+        const trail = size * (0.46 + i * 0.16);
+        ctx.beginPath();
+        ctx.moveTo(-trail, -size * (0.22 - i * 0.025));
+        ctx.quadraticCurveTo(-trail - size * 0.28, 0, -trail, size * (0.2 - i * 0.018));
+        ctx.strokeStyle = hexToRgba(i % 2 ? element.secondary : element.glow, alpha * (0.52 - i * 0.06));
+        ctx.lineWidth = Math.max(1.2, cellSize * (0.05 - i * 0.004));
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawBuddhaPalmSeal(x, y, radiusPx, progress, character, alpha = 1, hand = "right") {
+      const element = elementColorsFor(character);
+      const mirror = hand === "left" ? -1 : 1;
+      const fade = Math.max(0, 1 - progress * 0.18);
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.scale(mirror, 1);
+      ctx.globalCompositeOperation = "lighter";
+      ctx.beginPath();
+      ctx.ellipse(0, 0, radiusPx * 0.46, radiusPx * 0.72, -0.12, 0, Math.PI * 2);
+      ctx.fillStyle = hexToRgba("#fff7ed", 0.34 * alpha * fade);
+      ctx.fill();
+      ctx.strokeStyle = hexToRgba(element.secondary, 0.92 * alpha * fade);
+      ctx.lineWidth = Math.max(2.2, cellSize * 0.095);
+      ctx.stroke();
+      for (let finger = 0; finger < 5; finger += 1) {
+        const fx = radiusPx * (-0.32 + finger * 0.16);
+        const length = radiusPx * (0.44 + (finger === 2 ? 0.2 : finger === 1 || finger === 3 ? 0.12 : 0.02));
+        ctx.beginPath();
+        ctx.roundRect?.(fx - radiusPx * 0.05, -radiusPx * 0.74 - length * 0.15, radiusPx * 0.1, length, radiusPx * 0.06);
+        if (!ctx.roundRect) ctx.rect(fx - radiusPx * 0.05, -radiusPx * 0.74 - length * 0.15, radiusPx * 0.1, length);
+        ctx.fillStyle = hexToRgba(finger % 2 ? element.hot : element.glow, 0.32 * alpha * fade);
+        ctx.fill();
+        ctx.strokeStyle = hexToRgba(element.secondary, 0.82 * alpha * fade);
+        ctx.stroke();
+      }
+      for (let line = 0; line < 5; line += 1) {
+        ctx.beginPath();
+        const yLine = radiusPx * (-0.28 + line * 0.16);
+        ctx.moveTo(-radiusPx * 0.24, yLine);
+        ctx.quadraticCurveTo(radiusPx * 0.08, yLine - radiusPx * 0.1, radiusPx * 0.28, yLine + radiusPx * 0.04);
+        ctx.strokeStyle = hexToRgba(line % 2 ? element.secondary : "#ffffff", 0.52 * alpha * fade);
+        ctx.lineWidth = Math.max(1.1, cellSize * 0.035);
+        ctx.stroke();
+      }
+      ctx.restore();
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      for (let ring = 0; ring < 4; ring += 1) {
+        ctx.beginPath();
+        ctx.arc(x, y, radiusPx * (0.42 + ring * 0.18 + progress * 0.18), 0, Math.PI * 2);
+        ctx.strokeStyle = hexToRgba(ring % 2 ? element.secondary : element.hot, alpha * fade * (0.58 - ring * 0.07));
+        ctx.lineWidth = Math.max(1.4, cellSize * (0.065 - ring * 0.006));
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
     function drawPoisonVortex(x, y, radiusPx, progress, character, alpha = 1) {
       const element = elementColorsFor(character);
       ctx.save();
@@ -9185,6 +9468,12 @@
       ctx.shadowColor = hexToRgba(element.glow, 0.72);
       ctx.shadowBlur = cellSize * 0.22;
 
+      if ((projectile.visualType || "").startsWith("lobster-palm")) {
+        drawFlyingFist(0, 0, size * 1.05, progress, character, projectile.hand === "left" ? -1 : 1, 1);
+        ctx.restore();
+        return;
+      }
+
       if (character.id === "dragon") {
         if (projectile.kind === "dragonOrb") {
           ctx.beginPath();
@@ -9233,26 +9522,7 @@
         ctx.strokeStyle = hexToRgba(element.secondary, 0.88);
         ctx.stroke();
       } else if (character.id === "sandworm") {
-        ctx.beginPath();
-        ctx.moveTo(size * 0.72, 0);
-        ctx.lineTo(size * 0.18, -size * 0.34);
-        ctx.lineTo(-size * 0.48, -size * 0.24);
-        ctx.lineTo(-size * 0.66, 0);
-        ctx.lineTo(-size * 0.48, size * 0.24);
-        ctx.lineTo(size * 0.18, size * 0.34);
-        ctx.closePath();
-        ctx.fillStyle = hexToRgba(element.primary, 0.9);
-        ctx.fill();
-        ctx.strokeStyle = hexToRgba(element.deep, 0.96);
-        ctx.lineWidth = Math.max(1.6, cellSize * 0.06);
-        ctx.stroke();
-        [-0.22, 0, 0.22].forEach(offset => {
-          ctx.beginPath();
-          ctx.moveTo(size * (0.38 - Math.abs(offset)), size * offset);
-          ctx.lineTo(size * 0.7, 0);
-          ctx.strokeStyle = hexToRgba(element.glow, 0.68);
-          ctx.stroke();
-        });
+        drawSandTornadoProjectile(0, 0, size * 1.1, progress, character, 0.98);
       } else if (character.id === "quetzal") {
         ctx.beginPath();
         ctx.moveTo(size * 0.78, 0);
@@ -9358,6 +9628,12 @@
       const element = elementColorsFor(character);
       ctx.save();
       drawElementAura(x, y, radiusPx * (isBig ? 1.05 : 0.72), progress, character, isBig ? 0.72 : 0.34);
+      if (type.startsWith("lobster-palm") && projectile.kind === "dragonOrb") {
+        drawElementAura(x, y, radiusPx * 0.86, progress, character, 0.42);
+        drawSmallProjectileHead(x, y, projectile, progress, character, travelAngle);
+        ctx.restore();
+        return;
+      }
       if (type.startsWith("dragon") && projectile.kind === "dragonOrb") {
         drawElementAura(x, y, radiusPx * 0.86, progress, character, 0.46);
         drawSmallProjectileHead(x, y, projectile, progress, character, travelAngle);
@@ -9370,7 +9646,9 @@
         return;
       }
       drawElementMotifs(x, y, radiusPx * 1.08, progress, character, 0.95, 16);
-      if (type.startsWith("dragon")) {
+      if (type.startsWith("dragon-spirit")) {
+        drawDragonSpiritRadiance(x, y, radiusPx * 0.82, progress, character, 0.78);
+      } else if (type.startsWith("dragon")) {
         drawEnergyBeamBurst(x, y, radiusPx * 0.78, progress, character, 0.82);
       } else if (type.startsWith("sandworm")) {
         drawSandBurial(x, y, radiusPx * 0.94, progress, character, 0.72);
@@ -9389,6 +9667,8 @@
             5
           );
         }
+      } else if (type.startsWith("lobster-palm")) {
+        drawBuddhaPalmSeal(x, y, radiusPx * 0.92, progress, character, 0.74, projectile.hand || "right");
       } else if (type.startsWith("lobster")) {
         drawNuclearBloom(x, y, radiusPx * 0.74, progress, character, 0.68);
       } else if (type.startsWith("gu_king")) {
@@ -9463,7 +9743,12 @@
         if (projectile.kind === "headCircle") {
           const progress = Math.min(1, Math.max(0, (now - projectile.createdAt) / (projectile.delay || baseAttackDelayMs)));
           const target = axialToPixel(projectile.followHead ? ownerHead(projectile.owner) : projectile.target);
-          drawNuclearBloom(target.x, target.y, cellSize * Math.max(1.2, projectile.radius || 1) * 0.96, progress, blastCharacter, 0.36 + progress * 0.32);
+          const type = projectile.visualType || "";
+          if (type.startsWith("dragon-spirit")) {
+            drawDragonSpiritRadiance(target.x, target.y, cellSize * Math.max(1.2, projectile.radius || 1) * 0.9, progress, blastCharacter, 0.42 + progress * 0.32);
+          } else {
+            drawNuclearBloom(target.x, target.y, cellSize * Math.max(1.2, projectile.radius || 1) * 0.96, progress, blastCharacter, 0.36 + progress * 0.32);
+          }
           drawPulseRing(target.x, target.y, cellSize * Math.max(1.2, projectile.radius || 1) * (0.72 + progress * 0.5), progress, blastCharacter.color, blastCharacter.line, 1.08);
           return;
         }
@@ -9473,7 +9758,7 @@
         const x = start.x + (end.x - start.x) * progress;
         const y = start.y + (end.y - start.y) * progress;
         const isSmallProjectile = projectile.profile === "small";
-        const arcHeight = isSmallProjectile ? 0 : Math.sin(progress * Math.PI) * cellSize * 1.5;
+        const arcHeight = Math.sin(progress * Math.PI) * cellSize * (isSmallProjectile ? 0.82 : 1.5);
         const projectilePoint = { x, y: y - arcHeight };
         const travelAngle = Math.atan2(end.y - start.y, end.x - start.x);
         if (!isSmallProjectile) {
@@ -9520,7 +9805,12 @@
         const blastCharacter = characterForVisualType(hazard.owner, hazard.visualType);
         if (hazard.kind === "radiation") {
           const { x, y } = axialToPixel(hazard.target);
-          drawRadiationDust(x, y, cellSize * Math.max(1, hazard.radius || hazard.width || 1) * 1.52, progress, blastCharacter, 0.92);
+          const radiusPx = cellSize * Math.max(1, hazard.radius || hazard.width || 1) * 1.52;
+          if ((hazard.visualType || "").startsWith("dragon-spirit")) {
+            drawWhiteGoldMagicCircle(x, y, radiusPx, progress, blastCharacter, 0.92);
+          } else {
+            drawRadiationDust(x, y, radiusPx, progress, blastCharacter, 0.92);
+          }
           return;
         }
         cellsNearCells(hazard.cells, hazard.width, hazard.visualExcludedCells || [], hazard.minDistance || 0).forEach(cell => {
@@ -9580,7 +9870,9 @@
       drawElementAura(x, y, radiusPx * (isBig ? 1.04 : 0.86), progress, character, (isBig ? 0.92 : 0.68) * alpha);
       drawPulseRing(x, y, radiusPx, progress, character.color, character.line, isBig ? 1.35 : 1);
       drawElementMotifs(x, y, radiusPx * (isBig ? 0.94 : 0.82), progress, character, (isBig ? 1.05 : 0.84) * alpha, isBig ? 22 : 14);
-      if (type.startsWith("dragon") && type.includes("burst")) {
+      if (type.startsWith("dragon-spirit") && type.includes("burst")) {
+        drawDragonSpiritRadiance(x, y, radiusPx * 1.12, progress, character, alpha);
+      } else if (type.startsWith("dragon") && type.includes("burst")) {
         drawDragonBigBurst(x, y, radiusPx * 1.15, progress, character, alpha);
       } else if (type.startsWith("dragon")) {
         drawEnergyBeamBurst(x, y, radiusPx * 1.08, progress, character, alpha);
@@ -9590,6 +9882,10 @@
         drawSwampForestBloom(x, y, radiusPx * 1.02, progress, character, alpha);
       } else if (type.startsWith("moray")) {
         drawEnergyBeamBurst(x, y, radiusPx * 1.02, progress, character, alpha);
+      } else if (type.startsWith("lobster-palm") && type.includes("burst")) {
+        drawBuddhaPalmSeal(x, y, radiusPx * 0.95, progress, character, alpha, blast.hand || "right");
+      } else if (type.startsWith("lobster-palm")) {
+        drawBuddhaPalmSeal(x, y, radiusPx * 0.78, progress, character, alpha, blast.hand || "right");
       } else if (type.startsWith("lobster")) {
         drawNuclearBloom(x, y, radiusPx, progress, character, alpha);
       } else if (type.startsWith("gu_king")) {
@@ -10426,7 +10722,12 @@
       settingsToggle.setAttribute("aria-expanded", String(open));
       settingsContent.hidden = !open;
       if (!open) setPendingDirectionKeybind(null);
+      if (open && !rulesModal.hidden) {
+        rulesModal.hidden = true;
+        rulesButton.setAttribute("aria-expanded", "false");
+      }
       if (open) setGmOpen(false);
+      if (open) settingsCloseButton.focus();
       settingsToggle.closest(".settings-section").classList.toggle("open", open || !gmContent.hidden);
     }
 
@@ -10439,10 +10740,15 @@
       gmToggle.setAttribute("aria-expanded", String(open));
       gmContent.hidden = !open;
       if (open && !running) {
+        if (!rulesModal.hidden) {
+          rulesModal.hidden = true;
+          rulesButton.setAttribute("aria-expanded", "false");
+        }
         setGmMode(true);
         saveGmSettings();
       }
       if (open) setSettingsOpen(false);
+      if (open) gmCloseButton.focus();
       gmToggle.closest(".settings-section").classList.toggle("open", open || !settingsContent.hidden);
     }
 
@@ -10470,10 +10776,18 @@
     });
 
     settingsContent.addEventListener("pointerdown", event => {
+      if (event.target === settingsContent) {
+        setSettingsOpen(false);
+        return;
+      }
       event.stopPropagation();
     });
 
     gmContent.addEventListener("pointerdown", event => {
+      if (event.target === gmContent) {
+        setGmOpen(false);
+        return;
+      }
       event.stopPropagation();
     });
 
