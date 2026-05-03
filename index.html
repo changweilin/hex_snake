@@ -3689,6 +3689,7 @@
     let movePointerStartY = 0;
     let movePointerMoved = false;
     let attackPointer = null;
+    let controlAttackPointer = null;
     let targetCell = null;
     let targetActive = false;
     let moduleHoldTimer = null;
@@ -5891,6 +5892,10 @@
 
     function bigAttackUsesDrawnDirection(characterId) {
       return characterId === "moray" || characterId === "lobster";
+    }
+
+    function shouldUseControlPadAttackDirection() {
+      return selectedAttackProfile === "big" && bigAttackUsesDrawnDirection(characterFor("player").id);
     }
 
     function defaultAiStrategyWeights() {
@@ -9826,6 +9831,62 @@
       return Math.floor(adjusted / 60) % 6;
     }
 
+    function controlPadDirectionFromEvent(event) {
+      const rect = joyZone.contains(event.target) ? joyZone.getBoundingClientRect() : controlRow.getBoundingClientRect();
+      return pointerToDirection(event, rect);
+    }
+
+    function beginControlPadAttackPointer(event) {
+      if (!shouldUseControlPadAttackDirection()) return false;
+      if (!running || gameOver) {
+        if (!autoStartGame()) return true;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      const dirButton = event.target.closest("[data-dir-button]");
+      const direction = dirButton ? Number(dirButton.dataset.dir) : controlPadDirectionFromEvent(event);
+      controlAttackPointer = {
+        pointerId: event.pointerId,
+        direction: Number.isInteger(direction) ? direction : ownerDirection("player")
+      };
+      targetCell = directionalAttackTarget(controlAttackPointer.direction);
+      targetActive = true;
+      try {
+        controlRow.setPointerCapture(event.pointerId);
+      } catch (error) {
+        // Window-level pointer listeners still finish the attack gesture.
+      }
+      draw();
+      return true;
+    }
+
+    function moveControlPadAttackPointer(event) {
+      if (!controlAttackPointer || event.pointerId !== controlAttackPointer.pointerId) return;
+      event.preventDefault();
+      const direction = controlPadDirectionFromEvent(event);
+      if (direction !== null) controlAttackPointer.direction = direction;
+      targetCell = directionalAttackTarget(controlAttackPointer.direction);
+      targetActive = true;
+      draw();
+    }
+
+    function finishControlPadAttackPointer(event) {
+      if (!controlAttackPointer || event.pointerId !== controlAttackPointer.pointerId) return;
+      event.preventDefault();
+      const direction = controlAttackPointer.direction;
+      controlAttackPointer = null;
+      if (controlRow.hasPointerCapture?.(event.pointerId)) controlRow.releasePointerCapture(event.pointerId);
+      launchPlayerAttackDirection(direction, "big");
+    }
+
+    function cancelControlPadAttackPointer(event) {
+      if (!controlAttackPointer || event.pointerId !== controlAttackPointer.pointerId) return;
+      controlAttackPointer = null;
+      targetActive = false;
+      if (controlRow.hasPointerCapture?.(event.pointerId)) controlRow.releasePointerCapture(event.pointerId);
+      draw();
+    }
+
     function moveStick(event) {
       const rect = joyZone.getBoundingClientRect();
       const cx = rect.left + rect.width / 2;
@@ -10018,7 +10079,11 @@
       };
       targetCell = { ...cell };
       targetActive = true;
-      playArea.setPointerCapture(event.pointerId);
+      try {
+        canvas.setPointerCapture(event.pointerId);
+      } catch (error) {
+        // Pointer capture is a convenience; window-level listeners still finish the drag.
+      }
       draw();
     }
 
@@ -10038,7 +10103,7 @@
       event.preventDefault();
       const pointer = attackPointer;
       attackPointer = null;
-      if (playArea.hasPointerCapture(event.pointerId)) playArea.releasePointerCapture(event.pointerId);
+      if (canvas.hasPointerCapture?.(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
       const target = pointer.currentCell || pointer.startCell;
       const options = {};
       if (selectedAttackProfile === "big" && pointer.moved && bigAttackUsesDrawnDirection(characterFor("player").id)) {
@@ -10052,7 +10117,7 @@
       if (!attackPointer || event.pointerId !== attackPointer.pointerId) return;
       attackPointer = null;
       targetActive = false;
-      if (playArea.hasPointerCapture(event.pointerId)) playArea.releasePointerCapture(event.pointerId);
+      if (canvas.hasPointerCapture?.(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
       draw();
     }
 
@@ -10362,8 +10427,15 @@
       overlay.classList.add("show");
     });
 
+    smallAttackButton.addEventListener("pointerdown", () => selectAttackProfile("small"));
+    bigAttackButton.addEventListener("pointerdown", () => selectAttackProfile("big"));
     smallAttackButton.addEventListener("click", () => selectAttackProfile("small"));
     bigAttackButton.addEventListener("click", () => selectAttackProfile("big"));
+    controlRow.addEventListener("pointerdown", event => {
+      if (joyZone.contains(event.target)) return;
+      if (event.target.closest("#bigAttackButton")) selectAttackProfile("big");
+      if (beginControlPadAttackPointer(event)) return;
+    });
     leftHandModeInput.addEventListener("change", () => setLeftHandMode(leftHandModeInput.checked));
     surrenderButton.addEventListener("click", surrenderGame);
     rulesButton.addEventListener("click", openRulesModal);
@@ -10609,6 +10681,7 @@
     });
 
     joyZone.addEventListener("pointerdown", event => {
+      if (beginControlPadAttackPointer(event)) return;
       const dirButton = event.target.closest("[data-dir-button]");
       if (dirButton) {
         event.preventDefault();
@@ -10628,6 +10701,10 @@
     });
 
     joyZone.addEventListener("pointermove", event => {
+      if (controlAttackPointer && event.pointerId === controlAttackPointer.pointerId) {
+        moveControlPadAttackPointer(event);
+        return;
+      }
       if (event.pointerId === movePointerId && !moveStickEngaged) {
         const dragDistance = Math.hypot(event.clientX - movePointerStartX, event.clientY - movePointerStartY);
         if (dragDistance > 5) engageMoveStick(event);
@@ -10635,15 +10712,33 @@
       if (event.pointerId === movePointerId && moveStickEngaged) moveStick(event);
     });
 
-    joyZone.addEventListener("pointerup", releaseMoveStick);
-    joyZone.addEventListener("pointercancel", releaseMoveStick);
+    joyZone.addEventListener("pointerup", event => {
+      if (controlAttackPointer && event.pointerId === controlAttackPointer.pointerId) {
+        finishControlPadAttackPointer(event);
+        return;
+      }
+      releaseMoveStick(event);
+    });
+    joyZone.addEventListener("pointercancel", event => {
+      if (controlAttackPointer && event.pointerId === controlAttackPointer.pointerId) {
+        cancelControlPadAttackPointer(event);
+        return;
+      }
+      releaseMoveStick(event);
+    });
 
     window.addEventListener("pointermove", event => {
+      if (controlAttackPointer && event.pointerId === controlAttackPointer.pointerId) {
+        moveControlPadAttackPointer(event);
+        return;
+      }
       if (!moveStickLocked && !moveStickEngaged) return;
       if (event.pointerId === movePointerId || event.pointerType === "mouse") {
         moveStick(event);
       }
     });
+    window.addEventListener("pointerup", finishControlPadAttackPointer);
+    window.addEventListener("pointercancel", cancelControlPadAttackPointer);
 
     playArea.addEventListener("pointerdown", event => {
       if (event.target.closest(".overlay")) return;
@@ -10652,6 +10747,9 @@
     playArea.addEventListener("pointermove", moveBoardAttackPointer);
     playArea.addEventListener("pointerup", finishBoardAttackPointer);
     playArea.addEventListener("pointercancel", cancelBoardAttackPointer);
+    window.addEventListener("pointermove", moveBoardAttackPointer);
+    window.addEventListener("pointerup", finishBoardAttackPointer);
+    window.addEventListener("pointercancel", cancelBoardAttackPointer);
 
     window.addEventListener("keydown", event => {
       if (pendingDirectionKeybind !== null) {
