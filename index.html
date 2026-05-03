@@ -613,11 +613,13 @@
 
     .overlay.intro-details .dialog {
       width: min(760px, 100%);
-      height: min(100%, 720px);
-      max-height: 100%;
+      height: auto;
+      max-height: calc(100dvh - max(20px, env(safe-area-inset-top)) - max(20px, env(safe-area-inset-bottom)));
+      overflow-y: auto;
+      overscroll-behavior: contain;
       display: grid;
       grid-template-rows: auto auto;
-      align-content: center;
+      align-content: start;
       gap: 10px;
     }
 
@@ -637,6 +639,7 @@
       background: rgba(7, 10, 16, 0.92);
       place-items: center;
       isolation: isolate;
+      touch-action: none;
     }
 
     .portrait-lightbox[hidden] {
@@ -675,9 +678,19 @@
       top: max(14px, env(safe-area-inset-top));
       right: max(14px, env(safe-area-inset-right));
       z-index: 1002;
-      width: auto;
-      min-width: 120px;
+      width: 44px;
+      min-width: 44px;
+      height: 42px;
+      min-height: 42px;
+      padding: 0;
+      font-size: 0;
       pointer-events: auto;
+    }
+
+    .portrait-lightbox-close::before {
+      content: "X";
+      font-size: 1.35rem;
+      line-height: 1;
     }
 
     .portrait-lightbox-arrow {
@@ -699,6 +712,40 @@
 
     .portrait-lightbox-arrow[data-portrait-lightbox-shift="1"] {
       right: max(14px, env(safe-area-inset-right));
+    }
+
+    .portrait-lightbox-variant {
+      position: fixed;
+      left: 50%;
+      z-index: 1001;
+      width: min(112px, 34vw);
+      min-height: 38px;
+      padding: 6px 10px;
+      transform: translateX(-50%);
+      pointer-events: auto;
+    }
+
+    .fighter-avatar-image[data-character-id="gu_king"][data-portrait-variant="full"] {
+      transform: scale(1.45);
+    }
+
+    .portrait-lightbox-image[data-character-id="gu_king"][data-portrait-variant="full"] {
+      transform: scale(1.68);
+    }
+
+    .portrait-lightbox-variant[data-portrait-lightbox-variant="full"] {
+      top: max(14px, env(safe-area-inset-top));
+    }
+
+    .portrait-lightbox-variant[data-portrait-lightbox-variant="chibi"] {
+      bottom: max(14px, env(safe-area-inset-bottom));
+    }
+
+    .portrait-lightbox-variant.is-selected {
+      background: var(--accent);
+      color: #171006;
+      border-color: color-mix(in srgb, var(--accent), white 34%);
+      box-shadow: 0 10px 28px rgba(245, 158, 11, 0.24);
     }
 
     button {
@@ -728,9 +775,21 @@
       width: 48px;
     }
 
+    button.secondary.portrait-lightbox-variant {
+      width: min(96px, 28vw);
+      min-width: 0;
+      min-height: 34px;
+      padding: 5px 8px;
+      font-size: 0.86rem;
+      z-index: 1001;
+    }
+
     button.secondary.portrait-lightbox-close {
-      width: auto;
-      min-width: 120px;
+      width: 38px;
+      min-width: 38px;
+      height: 38px;
+      min-height: 38px;
+      padding: 0;
       z-index: 1002;
     }
 
@@ -1500,6 +1559,10 @@
       user-select: none;
       -webkit-user-select: none;
       overflow: visible;
+    }
+
+    .overlay.intro-details .portrait-select {
+      min-height: 0;
     }
 
     .intro-avatar-gate {
@@ -2331,6 +2394,73 @@
 
     .rules-character-story p {
       margin: 0;
+    }
+
+    @media (min-width: 901px) and (max-height: 760px) {
+      .overlay.intro-details {
+        padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+      }
+
+      .overlay.intro-details .dialog {
+        width: min(700px, 100%);
+        max-height: calc(100dvh - max(16px, env(safe-area-inset-top)) - max(16px, env(safe-area-inset-bottom)));
+        padding: 12px;
+        gap: 8px;
+      }
+
+      .overlay.intro-details .portrait-select {
+        gap: 8px;
+      }
+
+      .overlay.intro-details .fighter-portrait {
+        width: min(170px, 34vw);
+        margin-bottom: 6px;
+      }
+
+      .overlay.intro-details .portrait-controls {
+        grid-template-columns: 38px minmax(0, 1fr) 38px;
+        gap: 6px;
+      }
+
+      .overlay.intro-details .portrait-arrow {
+        width: 38px;
+        height: 38px;
+        min-height: 38px;
+        font-size: 1.25rem;
+      }
+
+      .overlay.intro-details .portrait-copy {
+        gap: 3px;
+      }
+
+      .overlay.intro-details .portrait-copy strong {
+        font-size: 1rem;
+      }
+
+      .overlay.intro-details .portrait-copy span,
+      .overlay.intro-details .portrait-copy small,
+      .overlay.intro-details .portrait-story {
+        font-size: 0.78rem;
+        line-height: 1.32;
+      }
+
+      .overlay.intro-details .portrait-story {
+        gap: 4px;
+        margin-top: 4px;
+      }
+
+      .overlay.intro-details .portrait-moves {
+        gap: 4px;
+      }
+
+      .overlay.intro-details .portrait-moves span {
+        padding: 3px 6px;
+        font-size: 0.72rem;
+      }
+
+      .intro-close-button {
+        min-height: 38px;
+      }
     }
 
     @media (max-width: 900px) {
@@ -3254,12 +3384,14 @@
     </div>
   </div>
   <div class="portrait-lightbox" id="portraitLightbox" hidden aria-modal="true" role="dialog" aria-label="角色立繪">
+    <button class="secondary portrait-lightbox-variant" type="button" data-portrait-lightbox-variant="full" aria-label="Switch to full portrait">&uarr; Full</button>
     <button class="secondary portrait-lightbox-arrow" type="button" data-portrait-lightbox-shift="-1" aria-label="Previous">&lsaquo;</button>
     <figure class="portrait-lightbox-figure">
       <img class="portrait-lightbox-image" id="portraitLightboxImage" alt="">
       <figcaption class="portrait-lightbox-caption" id="portraitLightboxCaption"></figcaption>
     </figure>
     <button class="secondary portrait-lightbox-arrow" type="button" data-portrait-lightbox-shift="1" aria-label="Next">&rsaquo;</button>
+    <button class="secondary portrait-lightbox-variant" type="button" data-portrait-lightbox-variant="chibi" aria-label="Switch to Q portrait">&darr; Q</button>
     <button id="portraitLightboxClose" class="secondary portrait-lightbox-close" type="button">關閉</button>
   </div>
   <div class="replay-modal" id="replayModal" hidden aria-modal="true" role="dialog" aria-labelledby="replayTitle">
@@ -3321,6 +3453,7 @@
     const portraitLightboxCaption = document.querySelector("#portraitLightboxCaption");
     const portraitLightboxClose = document.querySelector("#portraitLightboxClose");
     const portraitLightboxShiftButtons = document.querySelectorAll("[data-portrait-lightbox-shift]");
+    const portraitLightboxVariantButtons = document.querySelectorAll("[data-portrait-lightbox-variant]");
     const statusEl = document.querySelector("#status");
     const scoreEl = document.querySelector("#score");
     const computerScoreEl = document.querySelector("#computerScore");
@@ -3699,7 +3832,9 @@
     let introDetailsOpen = false;
     let portraitLightboxOwner = "player";
     let portraitSwipeStartX = null;
+    let portraitSwipeStartY = null;
     let portraitLightboxDidSwipe = false;
+    let portraitVariantMode = localStorage.getItem("hexSnakePortraitVariant") === "full" ? "full" : "chibi";
     let restartUnlockAt = 0;
     const replayRecentKey = "hexSnakeReplayRecent";
     const replayFavoritesKey = "hexSnakeReplayFavorites";
@@ -3827,10 +3962,18 @@
       syncCharacterInputs();
     }
 
+    function portraitLibrary(character) {
+      if (portraitVariantMode === "full") {
+        return character.archivedPortraits || character.portraits || {};
+      }
+      return character.portraits || {};
+    }
+
     function portraitUrl(character, pose, size = "full") {
       const safePose = portraitPoses.has(pose) ? pose : "idle";
       const semanticPose = poseAliases[safePose] || "intro";
-      const portrait = character.portraits?.[semanticPose] || character.portraits?.intro || character.portraits?.opening;
+      const library = portraitLibrary(character);
+      const portrait = library?.[semanticPose] || library?.intro || library?.opening;
       if (portrait) {
         if (typeof portrait === "string") return portrait;
         return portrait[size] || portrait.full || portrait.md || portrait.sm || character.avatar || "";
@@ -3878,6 +4021,9 @@
     }
 
     function avatarUrl(character, size = "sm") {
+      if (portraitVariantMode === "full") {
+        return portraitUrl(character, "idle", size);
+      }
       const slug = character.slug || character.id;
       if (size === "sm" || size === "md") {
         return `assets/portraits/${size}/${slug}_chibi.png`;
@@ -3906,6 +4052,8 @@
           decoding="async"
           loading="${loadMode}"
           data-pose="${pose}"
+          data-character-id="${character.id}"
+          data-portrait-variant="${portraitVariantMode}"
         >
       `;
     }
@@ -3921,6 +4069,8 @@
           decoding="async"
           loading="eager"
           data-pose="${pose}"
+          data-character-id="${character.id}"
+          data-portrait-variant="${portraitVariantMode}"
         >
       `;
     }
@@ -4217,7 +4367,48 @@
       portraitLightboxImage.srcset = portraitSrcset(character, "intro", true);
       portraitLightboxImage.sizes = portraitSizesAttribute("full");
       portraitLightboxImage.alt = character.name;
-      portraitLightboxCaption.textContent = `${ownerMeta(portraitLightboxOwner).label} / ${character.name}`;
+      portraitLightboxImage.dataset.characterId = character.id;
+      portraitLightboxImage.dataset.portraitVariant = portraitVariantMode;
+      portraitLightboxCaption.textContent = `${ownerMeta(portraitLightboxOwner).label} / ${character.name} / ${portraitVariantMode === "full" ? "Full" : "Q"}`;
+      updatePortraitVariantButtons();
+    }
+
+    function updatePortraitVariantButtons() {
+      portraitLightboxVariantButtons.forEach(button => {
+        const selected = button.dataset.portraitLightboxVariant === portraitVariantMode;
+        button.classList.toggle("is-selected", selected);
+        button.setAttribute("aria-pressed", selected ? "true" : "false");
+      });
+    }
+
+    function rerenderPortraitSurfaces() {
+      if (!characterStage.hidden) buildCharacterStage();
+      if (!portraitLightbox.hidden) renderPortraitLightbox();
+      if (overlay.classList.contains("show") && !winnerPortrait.hidden) {
+        const resultPortraits = winnerPortrait.querySelectorAll("[data-result-owner]");
+        if (resultPortraits.length) {
+          const playerResult = winnerPortrait.querySelector('[data-result-owner="player"]');
+          const computerResult = winnerPortrait.querySelector('[data-result-owner="computer"]');
+          const winner = winnerPortrait.querySelector(".result-portrait.is-winner")?.dataset.resultOwner || null;
+          renderWinnerPortrait(winner, playerResult?.classList.contains("is-defeated"), computerResult?.classList.contains("is-defeated"));
+        } else {
+          renderIntroPortraits(introDetailsOpen);
+        }
+      }
+    }
+
+    function setPortraitVariantMode(mode) {
+      const nextMode = mode === "full" ? "full" : "chibi";
+      if (portraitVariantMode === nextMode) return;
+      portraitVariantMode = nextMode;
+      localStorage.setItem("hexSnakePortraitVariant", portraitVariantMode);
+      rerenderPortraitSurfaces();
+      preloadPortraitsFor("player");
+      preloadPortraitsFor("computer");
+    }
+
+    function togglePortraitVariantMode() {
+      setPortraitVariantMode(portraitVariantMode === "full" ? "chibi" : "full");
     }
 
     function openPortraitLightbox(owner) {
@@ -4239,6 +4430,8 @@
       portraitLightboxImage.removeAttribute("srcset");
       portraitLightboxImage.removeAttribute("sizes");
       portraitLightboxImage.alt = "";
+      delete portraitLightboxImage.dataset.characterId;
+      delete portraitLightboxImage.dataset.portraitVariant;
       portraitLightboxCaption.textContent = "";
     }
 
@@ -9983,13 +10176,48 @@
       targetActive = false;
     }
 
+    function playerAttackFailureReason(target, profile = selectedAttackProfile, now = performance.now()) {
+      const moveName = profile === "small" ? characterFor("player").smallMove : characterFor("player").bigMove;
+      if (replayMode) return "正在播放重播，不能施放招式。";
+      if (!running || gameOver) return "尚未開局；開始後再點棋盤可施放招式。";
+      if (paused) return "遊戲暫停中，請先繼續再施放招式。";
+      if (!target || !snake?.length) return `${moveName} 施放失敗：沒有有效目標格。`;
+
+      const stock = playerStock;
+      const foodCost = attackFoodCost(profile);
+      const missingFood = foodTypes
+        .filter(type => stock[type.id] < foodCost)
+        .map(type => type.label)
+        .join("、");
+      if (missingFood) return `${moveName} 施放失敗：${missingFood}庫存不足，需要四種庫存各 ${foodCost}。`;
+
+      const bombCost = attackBombCost(profile);
+      if (ammoFor("player") < bombCost) return `${moveName} 施放失敗：炸彈不足，需要 ${bombCost} 枚，目前 ${ammoFor("player")} 枚。`;
+
+      const cooldownMs = attackCooldown(stock) * (profile === "small" ? 0.58 : 1);
+      const remainingMs = cooldownMs - (now - lastPlayerAttackMs);
+      if (remainingMs > 0) return `${moveName} 施放失敗：冷卻中，還需 ${(remainingMs / 1000).toFixed(1)} 秒。`;
+
+      return `${moveName} 施放失敗：目前條件不允許施放。`;
+    }
+
     function launchPlayerAttack(target, profile = selectedAttackProfile, options = {}) {
-      if (replayMode) return false;
-      if (!running || gameOver) {
-        if (!autoStartGame()) return false;
+      if (replayMode) {
+        setStatus(playerAttackFailureReason(target, profile));
+        return false;
       }
-      if (paused) return false;
-      if (launchAttack("player", target, performance.now(), profile, options)) {
+      if (!running || gameOver) {
+        if (!autoStartGame()) {
+          setStatus(playerAttackFailureReason(target, profile));
+          return false;
+        }
+      }
+      if (paused) {
+        setStatus(playerAttackFailureReason(target, profile));
+        return false;
+      }
+      const now = performance.now();
+      if (launchAttack("player", target, now, profile, options)) {
         targetCell = { ...target };
         targetActive = true;
         draw();
@@ -10001,7 +10229,7 @@
         setStatus(`${moveName} 發動。`);
         return true;
       }
-      setStatus(profile === "small" ? "小招需要紅黃綠藍四種庫存各至少 1。" : `大招需要 ${bigAttackBombCost} 枚炸彈，且四種庫存各至少 2。`);
+      setStatus(playerAttackFailureReason(target, profile, now));
       return false;
     }
 
@@ -10106,9 +10334,11 @@
       if (canvas.hasPointerCapture?.(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
       const target = pointer.currentCell || pointer.startCell;
       const options = {};
-      if (selectedAttackProfile === "big" && pointer.moved && bigAttackUsesDrawnDirection(characterFor("player").id)) {
-        options.aimDirection = directionFromSourceToTarget(pointer.startCell, target, ownerDirection("player"));
-        options.aimOrigin = pointer.startCell;
+      if (selectedAttackProfile === "big" && bigAttackUsesDrawnDirection(characterFor("player").id)) {
+        options.aimDirection = pointer.moved
+          ? directionFromSourceToTarget(pointer.startCell, target, ownerDirection("player"))
+          : directionFromSourceToTarget(snake[0], target, ownerDirection("player"));
+        options.aimOrigin = pointer.moved ? pointer.startCell : snake[0];
       }
       launchPlayerAttack(target, selectedAttackProfile, options);
     }
@@ -10177,13 +10407,7 @@
       if (replayMode) return;
       const module = event.target.closest('[data-module="player"]');
       if (!module) return;
-      module.setPointerCapture(event.pointerId);
-      module.classList.add("is-charging");
-      clearTimeout(moduleHoldTimer);
-      moduleHoldTimer = setTimeout(() => {
-        moduleHoldTimer = null;
-        performModuleAttack();
-      }, 520);
+      event.preventDefault();
     });
 
     characterStage.addEventListener("pointerup", clearModuleHold);
@@ -10246,16 +10470,31 @@
       });
     });
 
+    portraitLightboxVariantButtons.forEach(button => {
+      button.addEventListener("click", event => {
+        event.stopPropagation();
+        setPortraitVariantMode(button.dataset.portraitLightboxVariant);
+      });
+    });
+
     portraitLightbox.addEventListener("pointerdown", event => {
       if (event.target.closest("button")) return;
       portraitSwipeStartX = event.clientX;
+      portraitSwipeStartY = event.clientY;
       portraitLightboxDidSwipe = false;
     });
 
     portraitLightbox.addEventListener("pointerup", event => {
       if (portraitSwipeStartX === null) return;
       const deltaX = event.clientX - portraitSwipeStartX;
+      const deltaY = event.clientY - portraitSwipeStartY;
       portraitSwipeStartX = null;
+      portraitSwipeStartY = null;
+      if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) >= 42) {
+        portraitLightboxDidSwipe = true;
+        togglePortraitVariantMode();
+        return;
+      }
       if (Math.abs(deltaX) < 42) return;
       portraitLightboxDidSwipe = true;
       shiftPortraitLightbox(deltaX < 0 ? 1 : -1);
@@ -10263,6 +10502,7 @@
 
     portraitLightbox.addEventListener("pointercancel", () => {
       portraitSwipeStartX = null;
+      portraitSwipeStartY = null;
     });
 
     portraitLightbox.addEventListener("click", event => {
@@ -10427,14 +10667,45 @@
       overlay.classList.add("show");
     });
 
-    smallAttackButton.addEventListener("pointerdown", () => selectAttackProfile("small"));
-    bigAttackButton.addEventListener("pointerdown", () => selectAttackProfile("big"));
-    smallAttackButton.addEventListener("click", () => selectAttackProfile("small"));
-    bigAttackButton.addEventListener("click", () => selectAttackProfile("big"));
+    function defaultPlayerAttackTarget() {
+      return targetCell || computerSnake[0] || snake[0];
+    }
+
+    function attackButtonPointerTarget(profile) {
+      if (profile === "big" && bigAttackUsesDrawnDirection(characterFor("player").id)) {
+        return directionalAttackTarget(ownerDirection("player"));
+      }
+      return defaultPlayerAttackTarget();
+    }
+
+    function attackButtonPointerOptions(profile) {
+      if (profile === "big" && bigAttackUsesDrawnDirection(characterFor("player").id)) {
+        return { aimDirection: ownerDirection("player"), aimOrigin: snake[0] };
+      }
+      return {};
+    }
+
+    function handleAttackButtonDown(event, profile) {
+      event.preventDefault();
+      event.stopPropagation();
+      selectAttackProfile(profile);
+    }
+
+    function handleAttackButtonUp(event, profile) {
+      event.preventDefault();
+      event.stopPropagation();
+      selectAttackProfile(profile);
+    }
+
+    smallAttackButton.addEventListener("pointerdown", event => handleAttackButtonDown(event, "small"));
+    bigAttackButton.addEventListener("pointerdown", event => handleAttackButtonDown(event, "big"));
+    smallAttackButton.addEventListener("pointerup", event => handleAttackButtonUp(event, "small"));
+    bigAttackButton.addEventListener("pointerup", event => handleAttackButtonUp(event, "big"));
+    smallAttackButton.addEventListener("click", event => event.preventDefault());
+    bigAttackButton.addEventListener("click", event => event.preventDefault());
     controlRow.addEventListener("pointerdown", event => {
       if (joyZone.contains(event.target)) return;
       if (event.target.closest("#bigAttackButton")) selectAttackProfile("big");
-      if (beginControlPadAttackPointer(event)) return;
     });
     leftHandModeInput.addEventListener("change", () => setLeftHandMode(leftHandModeInput.checked));
     surrenderButton.addEventListener("click", surrenderGame);
@@ -10681,14 +10952,15 @@
     });
 
     joyZone.addEventListener("pointerdown", event => {
-      if (beginControlPadAttackPointer(event)) return;
       const dirButton = event.target.closest("[data-dir-button]");
       if (dirButton) {
         event.preventDefault();
         setDirection(Number(dirButton.dataset.dir));
         return;
       }
-      if (!pointerNearMoveCenter(event)) return;
+      if (!pointerNearMoveCenter(event)) {
+        return;
+      }
       movePointerId = event.pointerId;
       movePointerStartedAt = performance.now();
       movePointerStartX = event.clientX;
@@ -10794,6 +11066,14 @@
           event.preventDefault();
           shiftPortraitLightbox(1);
         }
+        if (event.key === "ArrowUp") {
+          event.preventDefault();
+          setPortraitVariantMode("full");
+        }
+        if (event.key === "ArrowDown") {
+          event.preventDefault();
+          setPortraitVariantMode("chibi");
+        }
         return;
       }
       if (mobileInputQuery.matches) return;
@@ -10812,17 +11092,13 @@
       }
       if (pressedKey === keybinds.smallAttack || pressedKey === keybinds.bigAttack) {
         event.preventDefault();
-        if (!running || gameOver) {
-          if (!autoStartGame()) return;
-        }
         const profile = pressedKey === keybinds.smallAttack ? "small" : "big";
         selectAttackProfile(profile);
-        launchPlayerAttack(targetCell || computerSnake[0] || snake[0], profile);
         return;
       }
       if (keyToDir.has(pressedKey)) {
         event.preventDefault();
-        launchPlayerAttackDirection(keyToDir.get(pressedKey));
+        setDirection(keyToDir.get(pressedKey));
         return;
       }
       if ((pressedKey === " " && keybinds.pause !== " ") || (pressedKey === "q" && keybinds.smallAttack !== "q" && keybinds.bigAttack !== "q")) {
@@ -10866,7 +11142,7 @@
 
       if (keyToDir.has(key)) {
         event.preventDefault();
-        launchPlayerAttackDirection(keyToDir.get(key));
+        setDirection(keyToDir.get(key));
         return;
       }
     });
