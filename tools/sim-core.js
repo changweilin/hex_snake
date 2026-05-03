@@ -57,6 +57,20 @@ function loadCharacters(root = path.resolve(__dirname, "..")) {
   return loadJson(path.join(root, "data", "characters.json"));
 }
 
+function loadHighAiStrategies(root = path.resolve(__dirname, "..")) {
+  const filePath = path.join(root, "data", "high-ai-strategies.json");
+  if (!fs.existsSync(filePath)) return {};
+  const file = loadJson(filePath);
+  const rows = file.strategies || file.bestStrategies || file;
+  if (Array.isArray(rows)) {
+    return Object.fromEntries(rows
+      .filter(row => row.characterId && row.characterId !== "universal")
+      .map(row => [row.characterId, row.strategyWeights || row]));
+  }
+  return Object.fromEntries(Object.entries(rows)
+    .map(([characterId, row]) => [characterId, row.strategyWeights || row]));
+}
+
 function keyOf(cell) {
   return `${cell.q},${cell.r}`;
 }
@@ -312,6 +326,9 @@ function makePolicy(overrides = {}) {
     skillStrategy: overrides.skillStrategy || "balanced",
     foodStrategy: overrides.foodStrategy || "balanced",
     aiDifficulty: ["novice", "low", "medium", "high"].includes(inferredDifficulty) ? inferredDifficulty : "medium",
+    strategyId: overrides.strategyId,
+    characterStrategyId: overrides.characterStrategyId,
+    hasCustomStrategyWeights: Boolean(overrides.strategyWeights),
     strategyWeights
   };
 }
@@ -372,6 +389,15 @@ function normalizeStrategyWeights(overrides = {}) {
 }
 
 function makeFighter(owner, character, start, direction, settings, balance, policy) {
+  if (policy.aiDifficulty === "high" && !policy.hasCustomStrategyWeights) {
+    const highStrategyWeights = balance.highAiStrategies?.[character.id];
+    if (highStrategyWeights) {
+      policy.strategyId = policy.strategyId || "high-ai-default";
+      policy.characterStrategyId = policy.characterStrategyId || `${character.id}:high-ai-default`;
+      policy.strategyWeights = normalizeStrategyWeights({ ...policy, strategyWeights: highStrategyWeights });
+      policy.hasCustomStrategyWeights = true;
+    }
+  }
   const stock = { ...emptyStock(), ...(settings.initialStock || {}) };
   const snake = createStartingSnake(start, direction, settings.initialLength, settings.radius);
   return {
@@ -857,10 +883,11 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
     const endCell = path[path.length - 1] || source;
     const orbStepMs = ultimateSetting(balance, abilityId, "orbStepMs", DRAGON_ORB_STEP_MS);
     const orbRadius = small.radius * ultimateSetting(balance, abilityId, "orbRadiusMultiplier", DRAGON_ORB_RADIUS_MULTIPLIER);
-    const burstRadius = small.radius * ultimateSetting(balance, abilityId, "burstRadiusMultiplier", DRAGON_BURST_RADIUS_MULTIPLIER);
-    const burstDamage = small.damage * ultimateSetting(balance, abilityId, "burstDamageMultiplier", DRAGON_BURST_DAMAGE_MULTIPLIER);
-    const volleys = characterId === "lobster" ? 2 : 1;
-    const damageScale = characterId === "lobster" ? 0.75 : 1;
+    const isLobsterPalm = characterId === "lobster";
+    const burstRadius = small.radius * (isLobsterPalm ? 1.5 : ultimateSetting(balance, abilityId, "burstRadiusMultiplier", DRAGON_BURST_RADIUS_MULTIPLIER));
+    const burstDamage = small.damage * (isLobsterPalm ? 0.9 : ultimateSetting(balance, abilityId, "burstDamageMultiplier", DRAGON_BURST_DAMAGE_MULTIPLIER));
+    const volleys = isLobsterPalm ? 2 : 1;
+    const orbDamage = small.damage * (isLobsterPalm ? 0.3 : 1);
     for (let volley = 0; volley < volleys; volley += 1) {
       const volleyDelay = volley * 500;
       state.projectiles.push({
@@ -871,9 +898,9 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
         pathCells: path,
         impactAt: now + volleyDelay + small.delay + path.length * orbStepMs,
         radius: orbRadius,
-        damage: small.damage * damageScale,
+        damage: orbDamage,
         burstRadius,
-        burstDamage: burstDamage * damageScale,
+        burstDamage,
         stunChance
       });
       for (const hit of hits) {
@@ -884,9 +911,9 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
           target: { ...hit.cell },
           impactAt: now + volleyDelay + small.delay + (hit.index + 1) * orbStepMs,
           radius: orbRadius,
-          damage: small.damage * damageScale,
+          damage: orbDamage,
           burstRadius,
-          burstDamage: burstDamage * damageScale,
+          burstDamage,
           stunChance
         });
       }
@@ -954,18 +981,22 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
     const lobsterUltimateRadius = small.radius * ultimateSetting(balance, abilityId, "radiusMultiplier", 2.5);
     const volleys = characterId === "dragon" ? 1 : 2;
     const damageScale = characterId === "dragon" ? 1.5 : 1;
+    const impactDamage = characterId === "dragon" ? small.damage : big.damage * damageScale;
+    const radiationTotalDamage = characterId === "dragon" ? small.damage * 1.5 : impactDamage;
+    const firstImpactDelay = characterId === "dragon" ? small.delay / 1.5 : small.delay;
     for (let index = 0; index < volleys; index += 1) {
+      const impactDelay = firstImpactDelay + index * 2000;
       state.projectiles.push({
         kind: "headCircle",
         owner: attacker.owner,
         profile: "big",
         target: { ...target },
-        impactAt: now + small.delay + index * 2000,
+        impactAt: now + impactDelay,
         radius: lobsterUltimateRadius,
-        damage: big.damage * damageScale,
+        damage: impactDamage,
         radiationDurationMs: 4000,
         radiationTickMs: 500,
-        radiationTotalDamage: big.damage * damageScale,
+        radiationTotalDamage,
         stunChance,
         flat: true
       });
@@ -974,12 +1005,14 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
   }
   if (characterId === "gu_king") {
     const volleyIntervalMs = 180;
+    const firstImpactDelay = small.delay / 2;
     for (let index = 0; index < 3; index += 1) {
+      const impactDelay = firstImpactDelay + index * volleyIntervalMs;
       pushCircleAttack(state, {
         owner: attacker.owner,
         profile: "big",
         target,
-        impactAt: now + small.delay + index * volleyIntervalMs,
+        impactAt: now + impactDelay,
         radius: small.radius,
         damage: small.damage * 0.9 * ultimateDamageMultiplier(balance, characterId),
         stunChance
@@ -1236,6 +1269,9 @@ function sampleStock(fighter) {
 
 function createMatchState(options) {
   const balance = options.balance;
+  if (!balance.highAiStrategies) {
+    balance.highAiStrategies = loadHighAiStrategies(path.resolve(__dirname, ".."));
+  }
   const settings = {
     gridSize: options.gridSize ?? balance.defaults.gridSize,
     foodCount: options.foodCount ?? balance.defaults.foodCount,
@@ -1359,11 +1395,14 @@ function aggregateMatches(matches, playerCharacterId, computerCharacterId, balan
     acc.smallCasts += match.player.smallCasts;
     acc.bigCasts += match.player.bigCasts;
     acc.damageDealt += match.player.damageDealt;
+    acc.damageTaken += match.player.damageTaken;
     acc.stunApplied += match.player.stunApplied;
+    acc.foodCollected += match.player.foodCollected;
     return acc;
-  }, { smallCasts: 0, bigCasts: 0, damageDealt: 0, stunApplied: 0 });
+  }, { smallCasts: 0, bigCasts: 0, damageDealt: 0, damageTaken: 0, stunApplied: 0, foodCollected: 0 });
   const totalCasts = playerTotals.smallCasts + playerTotals.bigCasts;
   const winRate = wins / total;
+  const decisiveGames = wins + losses;
   return {
     playerCharacterId,
     computerCharacterId,
@@ -1373,12 +1412,20 @@ function aggregateMatches(matches, playerCharacterId, computerCharacterId, balan
     draws,
     winRate,
     drawRate: draws / total,
+    decisiveGames,
+    decisiveWinRate: decisiveGames ? wins / decisiveGames : 0,
     averageDurationMs: avg(match => match.durationMs),
     averageHpDiff: avg(match => match.player.hpDiff),
     averageScoreDiff: avg(match => match.player.scoreDiff),
+    averageDamageDealt: avg(match => match.player.damageDealt),
+    averageDamageTaken: avg(match => match.player.damageTaken),
+    averageFoodCollected: avg(match => match.player.foodCollected),
     playerSkill: {
       smallCasts: playerTotals.smallCasts,
       bigCasts: playerTotals.bigCasts,
+      damageDealt: playerTotals.damageDealt,
+      damageTaken: playerTotals.damageTaken,
+      foodCollected: playerTotals.foodCollected,
       smallCastRate: totalCasts ? playerTotals.smallCasts / totalCasts : 0,
       damagePerCast: totalCasts ? playerTotals.damageDealt / totalCasts : 0,
       stunPerCast: totalCasts ? playerTotals.stunApplied / totalCasts : 0,
@@ -1404,6 +1451,7 @@ module.exports = {
   createRng,
   loadBalance,
   loadCharacters,
+  loadHighAiStrategies,
   hexDistance,
   createBoard,
   nextWrappedCell,

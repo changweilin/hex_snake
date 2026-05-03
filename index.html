@@ -6895,8 +6895,11 @@
         const endCell = path[path.length - 1] || source;
         const orbStepMs = ultimateSetting(abilityId, "orbStepMs", dragonOrbStepMs);
         const travelDelay = small.delay + path.length * orbStepMs;
-        const volleys = character.id === "lobster" ? 2 : 1;
-        const damageScale = character.id === "lobster" ? 0.75 : 1;
+        const isLobsterPalm = character.id === "lobster";
+        const volleys = isLobsterPalm ? 2 : 1;
+        const orbDamage = small.damage * (isLobsterPalm ? 0.3 : 1);
+        const burstRadius = small.radius * (isLobsterPalm ? 1.5 : 2);
+        const burstDamage = small.damage * (isLobsterPalm ? 0.9 : 1.5);
         const visualType = character.id === "lobster" ? "lobster-palm-big" : attackVisualType(owner, "big", abilityId);
         for (let volley = 0; volley < volleys; volley += 1) {
           const volleyDelay = volley * 500;
@@ -6914,9 +6917,9 @@
             impactAt: now + volleyDelay + travelDelay,
             delay: travelDelay,
             radius: small.radius,
-            damage: small.damage * damageScale,
-            burstRadius: small.radius * 2,
-            burstDamage: small.damage * 1.5 * damageScale,
+            damage: orbDamage,
+            burstRadius,
+            burstDamage,
             stunChance
           });
           hits.forEach(hit => {
@@ -6933,9 +6936,9 @@
               impactAt: now + volleyDelay + small.delay + (hit.index + 1) * orbStepMs,
               delay: small.delay + (hit.index + 1) * orbStepMs,
               radius: small.radius,
-              damage: small.damage * damageScale,
-              burstRadius: small.radius * 2,
-              burstDamage: small.damage * 1.5 * damageScale,
+              damage: orbDamage,
+              burstRadius,
+              burstDamage,
               stunChance
             });
           });
@@ -7025,8 +7028,12 @@
         const lobsterUltimateRadius = small.radius * ultimateSetting(abilityId, "radiusMultiplier", 2.5);
         const volleys = character.id === "dragon" ? 1 : 2;
         const damageScale = character.id === "dragon" ? 1.5 : 1;
+        const impactDamage = character.id === "dragon" ? small.damage : big.damage * damageScale;
+        const radiationTotalDamage = character.id === "dragon" ? small.damage * 1.5 : impactDamage;
+        const firstImpactDelay = character.id === "dragon" ? small.delay / 1.5 : small.delay;
         const visualType = character.id === "dragon" ? "dragon-spirit-big" : attackVisualType(owner, "big", abilityId);
         for (let index = 0; index < volleys; index += 1) {
+          const impactDelay = firstImpactDelay + index * 2000;
           projectiles.push({
             kind: "headCircle",
             owner,
@@ -7034,37 +7041,39 @@
             source: { q: source.q, r: source.r },
             target: { q: target.q, r: target.r },
             createdAt: now,
-            impactAt: now + small.delay + index * 2000,
-            delay: small.delay + index * 2000,
+            impactAt: now + impactDelay,
+            delay: impactDelay,
             radius: lobsterUltimateRadius,
-            damage: big.damage * damageScale,
+            damage: impactDamage,
             radiationDurationMs: 4000,
             radiationTickMs: 500,
-            radiationTotalDamage: big.damage * damageScale,
+            radiationTotalDamage,
             stunChance,
             flat: true,
             visualType
           });
         }
-        return small.delay + (volleys - 1) * 2000;
+        return firstImpactDelay + (volleys - 1) * 2000;
       }
 
       if (character.id === "gu_king") {
         const volleyIntervalMs = 180;
+        const firstImpactDelay = small.delay / 2;
         for (let index = 0; index < 3; index += 1) {
+          const impactDelay = firstImpactDelay + index * volleyIntervalMs;
           pushCircleAttack({
             owner,
             profile: "big",
             target,
             createdAt: now,
-            impactAt: now + small.delay + index * volleyIntervalMs,
-            delay: small.delay + index * volleyIntervalMs,
+            impactAt: now + impactDelay,
+            delay: impactDelay,
             radius: small.radius,
             damage: small.damage * 0.9 * ultimateDamageMultiplier(character.id),
             stunChance
           });
         }
-        return small.delay + volleyIntervalMs * 2;
+        return firstImpactDelay + volleyIntervalMs * 2;
       }
 
       const big = attackStats(stock, "big");

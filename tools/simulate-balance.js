@@ -46,6 +46,7 @@ function parseInitialStock(args, defaults) {
 
 function policyFromArgs(args, prefix, fallback) {
   return {
+    aiDifficulty: stringArg(args, `${prefix}-aiDifficulty`, fallback.aiDifficulty),
     pathPrecision: numberArg(args, `${prefix}-pathPrecision`, fallback.pathPrecision),
     aimPrecision: numberArg(args, `${prefix}-aimPrecision`, fallback.aimPrecision),
     skillStrategy: stringArg(args, `${prefix}-skillStrategy`, fallback.skillStrategy),
@@ -76,6 +77,10 @@ function modelFromStrategyWeights(row) {
 
 function strategyRowForCharacter(strategyFile, characterId) {
   if (!strategyFile) return null;
+  if (!Array.isArray(strategyFile) && strategyFile.strategies && !Array.isArray(strategyFile.strategies)) {
+    const row = strategyFile.strategies[characterId] || strategyFile.strategies.universal;
+    return row ? { characterId, ...(row.strategyWeights ? row : { strategyWeights: row }) } : null;
+  }
   const rows = Array.isArray(strategyFile) ? strategyFile : strategyFile.bestStrategies || strategyFile.strategies || [];
   return rows.find(row => row.characterId === characterId)
     || rows.find(row => row.characterId === "universal")
@@ -110,11 +115,19 @@ function pairToCsvRows(results) {
     "draws",
     "winRate",
     "drawRate",
+    "decisiveGames",
+    "decisiveWinRate",
     "averageDurationMs",
     "averageHpDiff",
     "averageScoreDiff",
+    "averageDamageDealt",
+    "averageDamageTaken",
+    "averageFoodCollected",
     "smallCasts",
     "bigCasts",
+    "damageDealt",
+    "damageTaken",
+    "foodCollected",
     "smallCastRate",
     "damagePerCast",
     "stunPerCast",
@@ -132,11 +145,19 @@ function pairToCsvRows(results) {
     result.draws,
     result.winRate,
     result.drawRate,
+    result.decisiveGames,
+    result.decisiveWinRate,
     Math.round(result.averageDurationMs),
     result.averageHpDiff,
     result.averageScoreDiff,
+    result.averageDamageDealt,
+    result.averageDamageTaken,
+    result.averageFoodCollected,
     result.playerSkill.smallCasts,
     result.playerSkill.bigCasts,
+    result.playerSkill.damageDealt,
+    result.playerSkill.damageTaken,
+    result.playerSkill.foodCollected,
     result.playerSkill.smallCastRate,
     result.playerSkill.damagePerCast,
     result.playerSkill.stunPerCast,
@@ -254,9 +275,19 @@ function main() {
   if (!args.quiet) printSummary(report);
 }
 
-try {
-  main();
-} catch (error) {
-  console.error(error.message);
-  process.exitCode = 1;
+if (require.main === module) {
+  try {
+    main();
+  } catch (error) {
+    console.error(error.message);
+    process.exitCode = 1;
+  }
 }
+
+module.exports = {
+  modelFromStrategyWeights,
+  strategyRowForCharacter,
+  policyFromArgs,
+  pairToCsvRows,
+  createRunOptions
+};

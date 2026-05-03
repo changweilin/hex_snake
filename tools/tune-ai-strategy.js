@@ -18,6 +18,7 @@ const WEIGHT_MAX = 3;
 const DEFAULT_POPULATION_SIZE = 8;
 const DEFAULT_ELITE_COUNT = 3;
 const DEFAULT_ALGORITHM = "ga";
+const DEFAULT_DURATION_HOURS = 2;
 const DEFAULT_TOP_COUNT = 5;
 const DEFAULT_CONVERGENCE_THRESHOLD = 0.05;
 const DEFAULT_MIN_ROUNDS = 2;
@@ -757,7 +758,7 @@ function runSearch(options = {}) {
   const characters = options.characters || loadCharacters(root);
   const seed = String(options.seed || `ai-strategy-${stamp()}`);
   const algorithm = options.algorithm || DEFAULT_ALGORITHM;
-  const durationHours = Number(options.durationHours ?? 6);
+  const durationHours = Number(options.durationHours ?? DEFAULT_DURATION_HOURS);
   const mirrorRuns = Math.max(1, Math.floor(Number(options.mirrorRuns ?? 1000)));
   const populationSize = Math.max(algorithm === "cma-es" ? 4 : 2, Math.floor(Number(options.populationSize ?? DEFAULT_POPULATION_SIZE)));
   const eliteCount = Math.max(1, Math.min(populationSize, Math.floor(Number(options.eliteCount ?? DEFAULT_ELITE_COUNT))));
@@ -766,6 +767,7 @@ function runSearch(options = {}) {
   const maxDrawRate = options.maxDrawRate === undefined ? null : Number(options.maxDrawRate);
   const minRounds = Math.max(1, Math.floor(Number(options.minRounds ?? DEFAULT_MIN_ROUNDS)));
   const maxRounds = options.maxRounds === undefined ? null : Math.max(1, Math.floor(Number(options.maxRounds)));
+  const stopOnConvergence = Boolean(options.stopOnConvergence);
   const outputDir = options.outputDir || path.join(reportsDir, buildRunId(seed));
   const rng = createRng(seed);
   const deadlineMs = Date.now() + durationHours * 60 * 60 * 1000;
@@ -784,7 +786,6 @@ function runSearch(options = {}) {
   do {
     round += 1;
     for (const character of characters) {
-      if (Date.now() >= deadlineMs && round > 1) break;
       let ranked;
       if (algorithm === "cma-es") {
         const state = cmaStates.get(character.id);
@@ -837,7 +838,14 @@ function runSearch(options = {}) {
     convergence = convergenceStatus(characters, topByCharacter, topCount, convergenceThreshold, maxDrawRate);
     writeJson(path.join(outputDir, "history.json"), history);
     writeJson(path.join(outputDir, "top-strategies.json"), Object.fromEntries([...topByCharacter.entries()]));
-    if (round >= minRounds && convergence.converged) {
+    writeCsv(path.join(outputDir, "top-strategies.csv"), rankRowsToCsv(characters.flatMap(character =>
+      (topByCharacter.get(character.id) || []).map(row => ({
+        ...row,
+        characterId: character.id,
+        characterName: character.name
+      }))
+    )));
+    if (stopOnConvergence && round >= minRounds && convergence.converged) {
       stopReason = "converged";
       break;
     }
@@ -913,6 +921,7 @@ function runSearch(options = {}) {
     maxDrawRate,
     minRounds,
     maxRounds,
+    stopOnConvergence,
     rounds: round,
     stopReason,
     convergence,
@@ -935,7 +944,7 @@ function main() {
   const result = runSearch({
     algorithm: algorithmArg(args),
     seed: stringArg(args, "seed", `ai-strategy-${stamp()}`),
-    durationHours: numberArg(args, "duration-hours", 6),
+    durationHours: numberArg(args, "duration-hours", DEFAULT_DURATION_HOURS),
     mirrorRuns: numberArg(args, "mirror-runs", 1000),
     populationSize: numberArg(args, "population-size", DEFAULT_POPULATION_SIZE),
     eliteCount: numberArg(args, "elite-count", DEFAULT_ELITE_COUNT),
@@ -943,7 +952,8 @@ function main() {
     convergenceThreshold: numberArg(args, "convergence-threshold", DEFAULT_CONVERGENCE_THRESHOLD),
     maxDrawRate: args["max-draw-rate"] === undefined ? undefined : numberArg(args, "max-draw-rate", undefined),
     minRounds: optionalPositiveIntegerArg(args, "min-rounds", DEFAULT_MIN_ROUNDS),
-    maxRounds: optionalPositiveIntegerArg(args, "max-rounds", undefined)
+    maxRounds: optionalPositiveIntegerArg(args, "max-rounds", undefined),
+    stopOnConvergence: Boolean(args["stop-on-convergence"])
   });
   console.log(`Manifest: ${result.manifest.outputs.directory}\\manifest.json`);
   console.log(`Stop reason: ${result.manifest.stopReason}`);

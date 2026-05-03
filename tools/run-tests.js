@@ -49,6 +49,14 @@ const {
   runSearch
 } = require("./tune-ai-strategy");
 
+const {
+  strategyRowForCharacter
+} = require("./simulate-balance");
+
+const {
+  buildStrategyData
+} = require("./apply-ai-strategy");
+
 const root = path.resolve(__dirname, "..");
 const balance = loadBalance(root);
 const characters = loadCharacters(root);
@@ -605,6 +613,78 @@ test("AI strategy tuner produces character and universal best strategies", () =>
   assert.ok(universal);
   assert.ok(universal.strategyWeights.movement.safePath >= 0);
   assert.ok(universal.strategyWeights.movement.safePath <= 3);
+});
+
+test("AI strategy tuner defaults to two-hour full-character rounds", () => {
+  const result = runSearch({
+    balance,
+    characters,
+    seed: "ai-strategy-full-round-test",
+    mirrorRuns: 2,
+    populationSize: 6,
+    eliteCount: 1,
+    topCount: 5,
+    minRounds: 1,
+    maxRounds: 1,
+    outputDir: path.join(root, "reports", "ai-strategy-full-round-test")
+  });
+  assert.equal(result.manifest.durationHours, 2);
+  assert.equal(result.manifest.stopOnConvergence, false);
+  assert.equal(result.manifest.stopReason, "max-rounds");
+  characters.forEach(character => {
+    assert.equal(result.topStrategies[character.id].length, 5);
+  });
+  const roundsByCharacter = new Map(characters.map(character => [character.id, 0]));
+  result.history.forEach(entry => roundsByCharacter.set(entry.characterId, roundsByCharacter.get(entry.characterId) + 1));
+  assert.deepEqual([...roundsByCharacter.values()], characters.map(() => 1));
+});
+
+test("high difficulty applies character-specific default strategy weights", () => {
+  const tunedBalance = JSON.parse(JSON.stringify(balance));
+  tunedBalance.highAiStrategies = {
+    dragon: {
+      movement: { safePath: 0.25, leastDamage: 0.5, fastestArrival: 0.75 },
+      food: { fastestArrival: 0.5 },
+      skillAllocation: { preferSmall: 2.5, preferBig: 0.25 },
+      castTiming: { lethal: 3 }
+    }
+  };
+  const state = createMatchState({
+    balance: tunedBalance,
+    playerCharacter: characterById.get("dragon"),
+    computerCharacter: characterById.get("dragon"),
+    computerModel: { aiDifficulty: "high", pathPrecision: 1, aimPrecision: 1 }
+  });
+  assert.equal(state.fighters.player.policy.strategyWeights.movement.safePath, 1.2);
+  assert.equal(state.fighters.computer.policy.strategyWeights.movement.safePath, 0.25);
+});
+
+test("simulate-balance strategy files select rows by character", () => {
+  const strategyFile = {
+    strategies: {
+      dragon: { strategyId: "dragon-best", strategyWeights: { movement: { safePath: 0.2 } } },
+      moray: { strategyId: "moray-best", strategyWeights: { movement: { safePath: 2.4 } } }
+    }
+  };
+  assert.equal(strategyRowForCharacter(strategyFile, "moray").strategyId, "moray-best");
+  assert.equal(strategyRowForCharacter(strategyFile, "dragon").strategyId, "dragon-best");
+});
+
+test("apply-ai-strategy builds complete character strategy data", () => {
+  const rows = characters.map((character, index) => ({
+    characterId: character.id,
+    strategyId: `${character.id}-best`,
+    winRate: index / characters.length,
+    strategyWeights: {
+      movement: { safePath: 1, leastDamage: 1, fastestArrival: 1 },
+      food: { fastestArrival: 1, ownDeficit: 1, opponentDeficit: 1, ownPreferred: 1, opponentPreferred: 1 },
+      skillAllocation: { preferSmall: 1, preferBig: 1 },
+      castTiming: { lethal: 3, nearFullEnergy: 1, opponentDebuffed: 1, opponentAlmostReady: 1, nearOpponent: 1, farOpponent: 1 }
+    }
+  }));
+  const strategyData = buildStrategyData(rows, characters, "unit-test");
+  assert.equal(Object.keys(strategyData.strategies).length, characters.length);
+  assert.equal(strategyData.strategies.dragon.strategyId, "dragon-best");
 });
 
 let failed = 0;

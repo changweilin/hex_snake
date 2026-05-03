@@ -14,6 +14,8 @@
     "tune:balance": "node tools/tune-balance.js",
     "tune:dragon-draw": "node tools/tune-dragon-draw.js",
     "tune:ai-strategy": "node tools/tune-ai-strategy.js",
+    "apply:ai-strategy": "node tools/apply-ai-strategy.js",
+    "simulate:ai-cross": "node tools/run-ai-cross-play.js",
     "test": "node tools/run-tests.js"
   }
 }
