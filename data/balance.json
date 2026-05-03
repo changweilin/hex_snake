@@ -57,7 +57,11 @@
     "rangeDamageFalloffEnabled": false,
     "ultimates": {
       "dragon": {
-        "orbStepMs": 45
+        "orbStepMs": 45,
+        "orbRadiusMultiplier": 1,
+        "orbCurveMultiplier": 1,
+        "burstRadiusMultiplier": 2,
+        "burstDamageMultiplier": 1.5
       },
       "lobster": {
         "radiusMultiplier": 2.5

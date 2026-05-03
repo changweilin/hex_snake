@@ -583,16 +583,23 @@ test("AI strategy tuner produces character and universal best strategies", () =>
     seed: "ai-strategy-test",
     durationHours: 0.000001,
     mirrorRuns: 2,
-    populationSize: 3,
+    populationSize: 6,
     eliteCount: 1,
+    topCount: 2,
+    minRounds: 1,
+    maxRounds: 1,
     outputDir: path.join(root, "reports", "ai-strategy-test")
   });
   assert.equal(result.bestStrategies.length, characters.length + 1);
+  assert.equal(result.manifest.topCount, 2);
+  assert.equal(result.manifest.stopReason, "max-rounds");
   characters.forEach(character => {
     const row = result.bestStrategies.find(entry => entry.characterId === character.id);
     assert.ok(row);
+    assert.ok(Number.isFinite(row.decisiveWinRate));
     assert.ok(row.strategyWeights.movement.safePath >= 0);
     assert.ok(row.strategyWeights.movement.safePath <= 3);
+    assert.ok(result.topStrategies[character.id].length <= 2);
   });
   const universal = result.bestStrategies.find(entry => entry.characterId === "universal");
   assert.ok(universal);

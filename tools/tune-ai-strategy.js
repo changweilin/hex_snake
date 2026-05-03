@@ -18,6 +18,9 @@ const WEIGHT_MAX = 3;
 const DEFAULT_POPULATION_SIZE = 8;
 const DEFAULT_ELITE_COUNT = 3;
 const DEFAULT_ALGORITHM = "ga";
+const DEFAULT_TOP_COUNT = 5;
+const DEFAULT_CONVERGENCE_THRESHOLD = 0.05;
+const DEFAULT_MIN_ROUNDS = 2;
 const CMA_INITIAL_SIGMA = 0.45;
 const CMA_MIN_SIGMA = 0.025;
 
@@ -49,6 +52,13 @@ function numberArg(args, key, fallback) {
   if (args[key] === undefined) return fallback;
   const value = Number(args[key]);
   if (!Number.isFinite(value) || value <= 0) throw new Error(`--${key} must be a positive number.`);
+  return value;
+}
+
+function optionalPositiveIntegerArg(args, key, fallback) {
+  if (args[key] === undefined) return fallback;
+  const value = Number(args[key]);
+  if (!Number.isInteger(value) || value <= 0) throw new Error(`--${key} must be a positive integer.`);
   return value;
 }
 
@@ -128,7 +138,7 @@ function vectorToWeights(vector) {
 }
 
 function characterBaseWeights(character) {
-  return seedPopulation(character, createRng(`base:${character.id}`), 1)[0].strategyWeights;
+  return roleAdjustedBaseWeights(character);
 }
 
 function makePolicyFromWeights(strategy, characterId) {
@@ -169,6 +179,61 @@ function randomStrategy(id, rng, base = defaultStrategyWeights(), spread = 0.75)
   return makeStrategy(id, weights);
 }
 
+function roleAdjustedBaseWeights(character) {
+  const base = defaultStrategyWeights();
+  if (character.foodPreference && character.foodPreference !== "balanced") {
+    base.food.ownPreferred = 1.4;
+    base.food.ownDeficit = 1.1;
+  }
+  if (character.specialFood === "black") {
+    base.food.ownPreferred = 1.8;
+    base.castTiming.nearFullEnergy = 1.2;
+    base.skillAllocation.preferBig = 1.3;
+  }
+  return base;
+}
+
+function archetypeStrategies(character) {
+  const base = characterBaseWeights(character);
+  const make = (id, overrides) => {
+    const weights = clone(base);
+    Object.entries(overrides).forEach(([group, values]) => {
+      Object.entries(values).forEach(([key, value]) => {
+        weights[group][key] = round(clampWeight(value), 4);
+      });
+    });
+    weights.castTiming.lethal = 3;
+    return makeStrategy(id, weights);
+  };
+  const burstBias = character.specialFood === "black" ? 2.2 : 1.7;
+  const preferredBias = character.foodPreference && character.foodPreference !== "balanced" ? 2 : 1.2;
+  return [
+    make("archetype-rush-big", {
+      movement: { safePath: 1, leastDamage: 0.7, fastestArrival: 2.2 },
+      skillAllocation: { preferSmall: 0.7, preferBig: burstBias },
+      castTiming: { nearOpponent: 1.8, farOpponent: 0.2, nearFullEnergy: 1.5, opponentAlmostReady: 1.2 }
+    }),
+    make("archetype-control-deny", {
+      movement: { safePath: 1.8, leastDamage: 1.6, fastestArrival: 0.8 },
+      food: { fastestArrival: 0.8, ownDeficit: 0.9, opponentDeficit: 1.8, ownPreferred: preferredBias, opponentPreferred: 1.4 },
+      skillAllocation: { preferSmall: 1.4, preferBig: 0.9 },
+      castTiming: { opponentAlmostReady: 1.8, opponentDebuffed: 1.7, nearOpponent: 1.1 }
+    }),
+    make("archetype-resource-greed", {
+      movement: { safePath: 1.3, leastDamage: 1, fastestArrival: 1.5 },
+      food: { fastestArrival: 1.5, ownDeficit: 1.9, opponentDeficit: 0.3, ownPreferred: Math.max(1.8, preferredBias), opponentPreferred: 0.2 },
+      skillAllocation: { preferSmall: 0.5, preferBig: 2 },
+      castTiming: { nearFullEnergy: 2.2, farOpponent: 0.8, nearOpponent: 0.8 }
+    }),
+    make("archetype-survivor", {
+      movement: { safePath: 2.5, leastDamage: 2.2, fastestArrival: 0.5 },
+      food: { fastestArrival: 0.7, ownDeficit: 1.2, opponentDeficit: 0.8, ownPreferred: preferredBias, opponentPreferred: 0.6 },
+      skillAllocation: { preferSmall: 1, preferBig: 1 },
+      castTiming: { opponentAlmostReady: 1.4, nearOpponent: 0.5, farOpponent: 1.1 }
+    })
+  ];
+}
+
 function crossoverStrategy(id, left, right, rng, mutation = 0.35) {
   const weights = defaultStrategyWeights();
   Object.entries(weightShape).forEach(([group, keys]) => {
@@ -183,21 +248,12 @@ function crossoverStrategy(id, left, right, rng, mutation = 0.35) {
 }
 
 function seedPopulation(character, rng, size = DEFAULT_POPULATION_SIZE) {
-  const base = defaultStrategyWeights();
-  if (character.foodPreference && character.foodPreference !== "balanced") {
-    base.food.ownPreferred = 1.4;
-    base.food.ownDeficit = 1.1;
-  }
-  if (character.specialFood === "black") {
-    base.food.ownPreferred = 1.8;
-    base.castTiming.nearFullEnergy = 1.2;
-    base.skillAllocation.preferBig = 1.3;
-  }
-  const population = [makeStrategy("baseline", clone(base))];
+  const base = roleAdjustedBaseWeights(character);
+  const population = [makeStrategy("baseline", clone(base)), ...archetypeStrategies(character)];
   while (population.length < size) {
     population.push(randomStrategy(`seed-${population.length}`, rng, base));
   }
-  return population;
+  return population.slice(0, size);
 }
 
 function candidatePairs(population) {
@@ -291,6 +347,9 @@ function finalizeScores(scores) {
       ...row,
       winRate: row.games ? round(row.score / row.games) : 0,
       outcomeWinRate: row.games ? round(row.outcomeScore / row.games) : 0,
+      drawRate: row.games ? round(row.draws / row.games) : 0,
+      decisiveGames: row.wins + row.losses,
+      decisiveWinRate: row.wins + row.losses ? round(row.wins / (row.wins + row.losses)) : 0,
       advantageScore: round(row.advantageScore),
       averageScoreDiff: row.games ? round(row.totalScoreDiff / row.games) : 0,
       averageHpDiff: row.games ? round(row.totalHpDiff / row.games) : 0,
@@ -302,7 +361,8 @@ function finalizeScores(scores) {
 }
 
 function compareRankRows(a, b) {
-  return b.winRate - a.winRate
+  return b.decisiveWinRate - a.decisiveWinRate
+    || b.winRate - a.winRate
     || b.outcomeWinRate - a.outcomeWinRate
     || b.wins - a.wins
     || a.losses - b.losses
@@ -345,13 +405,60 @@ function evaluateCharacterRound({ balance, character, population, mirrorRuns, se
 
 function nextPopulation(character, ranked, rng, size = DEFAULT_POPULATION_SIZE, eliteCount = DEFAULT_ELITE_COUNT) {
   const elites = ranked.slice(0, Math.min(eliteCount, ranked.length)).map(row => makeStrategy(row.id, clone(row.strategyWeights)));
-  const next = elites.map((strategy, index) => makeStrategy(index === 0 ? "champion" : `elite-${index}`, clone(strategy.strategyWeights)));
+  const baseline = makeStrategy("baseline", characterBaseWeights(character));
+  const next = [baseline, ...elites].slice(0, size).map((strategy, index) => makeStrategy(index === 0 ? "baseline" : index === 1 ? "champion" : `elite-${index - 1}`, clone(strategy.strategyWeights)));
   while (next.length < size) {
     const left = elites[rng.int(elites.length)];
     const right = elites[rng.int(elites.length)];
     next.push(crossoverStrategy(`${character.id}-gen-${next.length}-${Math.floor(rng.next() * 1e9)}`, left, right, rng));
   }
   return next;
+}
+
+function strategySignature(strategyWeights) {
+  return JSON.stringify(weightsToVector(strategyWeights).map(value => round(value, 3)));
+}
+
+function updateTopRows(pool, ranked, topCount) {
+  const bySignature = new Map(pool.map(row => [strategySignature(row.strategyWeights), row]));
+  ranked.forEach(row => {
+    const signature = strategySignature(row.strategyWeights);
+    const existing = bySignature.get(signature);
+    if (!existing || compareRankRows(row, existing) < 0) bySignature.set(signature, row);
+  });
+  return [...bySignature.values()].sort(compareRankRows).slice(0, topCount);
+}
+
+function topSpread(rows, topCount) {
+  if (rows.length < topCount) return null;
+  const decisiveRows = rows.slice(0, topCount).filter(row => row.decisiveGames > 0);
+  if (decisiveRows.length < topCount) return null;
+  const rates = decisiveRows.map(row => row.decisiveWinRate);
+  return round(Math.max(...rates) - Math.min(...rates));
+}
+
+function convergenceStatus(characters, topByCharacter, topCount, threshold, maxDrawRate = null) {
+  const byCharacter = characters.map(character => {
+    const rows = topByCharacter.get(character.id) || [];
+    const topRows = rows.slice(0, topCount);
+    const spread = topSpread(rows, topCount);
+    const drawRateOk = maxDrawRate === null
+      ? true
+      : topRows.length >= topCount && topRows.every(row => row.drawRate < maxDrawRate);
+    return {
+      characterId: character.id,
+      characterName: character.name,
+      topCount: Math.min(rows.length, topCount),
+      spread,
+      maxDrawRate: topRows.length ? round(Math.max(...topRows.map(row => row.drawRate))) : null,
+      drawRateOk,
+      converged: spread !== null && spread <= threshold && drawRateOk
+    };
+  });
+  return {
+    converged: byCharacter.every(row => row.converged),
+    byCharacter
+  };
 }
 
 function zeros(length) {
@@ -601,8 +708,11 @@ function rankRowsToCsv(rows) {
     "wins",
     "losses",
     "draws",
+    "drawRate",
     "winRate",
     "outcomeWinRate",
+    "decisiveGames",
+    "decisiveWinRate",
     "advantageScore",
     "averageScoreDiff",
     "averageHpDiff",
@@ -621,8 +731,11 @@ function rankRowsToCsv(rows) {
       row.wins,
       row.losses,
       row.draws,
+      row.drawRate,
       row.winRate,
       row.outcomeWinRate,
+      row.decisiveGames,
+      row.decisiveWinRate,
       row.advantageScore,
       row.averageScoreDiff,
       row.averageHpDiff,
@@ -648,6 +761,11 @@ function runSearch(options = {}) {
   const mirrorRuns = Math.max(1, Math.floor(Number(options.mirrorRuns ?? 1000)));
   const populationSize = Math.max(algorithm === "cma-es" ? 4 : 2, Math.floor(Number(options.populationSize ?? DEFAULT_POPULATION_SIZE)));
   const eliteCount = Math.max(1, Math.min(populationSize, Math.floor(Number(options.eliteCount ?? DEFAULT_ELITE_COUNT))));
+  const topCount = Math.max(1, Math.floor(Number(options.topCount ?? DEFAULT_TOP_COUNT)));
+  const convergenceThreshold = Number(options.convergenceThreshold ?? DEFAULT_CONVERGENCE_THRESHOLD);
+  const maxDrawRate = options.maxDrawRate === undefined ? null : Number(options.maxDrawRate);
+  const minRounds = Math.max(1, Math.floor(Number(options.minRounds ?? DEFAULT_MIN_ROUNDS)));
+  const maxRounds = options.maxRounds === undefined ? null : Math.max(1, Math.floor(Number(options.maxRounds)));
   const outputDir = options.outputDir || path.join(reportsDir, buildRunId(seed));
   const rng = createRng(seed);
   const deadlineMs = Date.now() + durationHours * 60 * 60 * 1000;
@@ -655,8 +773,11 @@ function runSearch(options = {}) {
   const cmaStates = new Map(characters.map(character => [character.id, makeCmaState(characterBaseWeights(character), populationSize, createRng(`${seed}:cma:${character.id}`))]));
   const history = [];
   const bestByCharacter = new Map();
+  const topByCharacter = new Map(characters.map(character => [character.id, []]));
   const playoffCount = Math.max(1, Math.min(eliteCount, Math.floor(populationSize / 2)));
   let round = 0;
+  let convergence = convergenceStatus(characters, topByCharacter, topCount, convergenceThreshold, maxDrawRate);
+  let stopReason = "duration";
 
   ensureDir(outputDir);
 
@@ -667,12 +788,12 @@ function runSearch(options = {}) {
       let ranked;
       if (algorithm === "cma-es") {
         const state = cmaStates.get(character.id);
-        const warmStart = round === 1
-          ? [
-            makeVectorStrategy(`${character.id}-baseline`, characterBaseWeights(character)),
-            makeVectorStrategy(`${character.id}-warm-1`, randomStrategy(`${character.id}-warm-1`, rng, characterBaseWeights(character), 0.25).strategyWeights)
-          ]
-          : [];
+        const warmStart = [
+          makeVectorStrategy(`${character.id}-baseline`, characterBaseWeights(character)),
+          ...(round === 1
+            ? [makeVectorStrategy(`${character.id}-warm-1`, randomStrategy(`${character.id}-warm-1`, rng, characterBaseWeights(character), 0.25).strategyWeights)]
+            : [])
+        ];
         const sampled = sampleCmaPopulation(state, character.id);
         const candidates = [...warmStart, ...sampled].slice(0, populationSize);
         ranked = evaluateCmaCharacterRound({
@@ -701,16 +822,29 @@ function runSearch(options = {}) {
       if (!currentBest || compareRankRows(ranked[0], currentBest) < 0) {
         bestByCharacter.set(character.id, ranked[0]);
       }
+      const topRows = updateTopRows(topByCharacter.get(character.id), ranked, topCount);
+      topByCharacter.set(character.id, topRows);
       history.push({
         round,
         characterId: character.id,
         mirrorRuns,
         best: ranked[0],
+        topSpread: topSpread(topRows, topCount),
         completedAt: new Date().toISOString()
       });
       if (algorithm === "ga") populations.set(character.id, nextPopulation(character, ranked, rng, populationSize, eliteCount));
     }
+    convergence = convergenceStatus(characters, topByCharacter, topCount, convergenceThreshold, maxDrawRate);
     writeJson(path.join(outputDir, "history.json"), history);
+    writeJson(path.join(outputDir, "top-strategies.json"), Object.fromEntries([...topByCharacter.entries()]));
+    if (round >= minRounds && convergence.converged) {
+      stopReason = "converged";
+      break;
+    }
+    if (maxRounds && round >= maxRounds) {
+      stopReason = "max-rounds";
+      break;
+    }
   } while (Date.now() < deadlineMs);
 
   const bestStrategies = characters.map(character => {
@@ -721,6 +855,9 @@ function runSearch(options = {}) {
       strategyId: best.id,
       winRate: best.winRate,
       outcomeWinRate: best.outcomeWinRate,
+      drawRate: best.drawRate,
+      decisiveGames: best.decisiveGames,
+      decisiveWinRate: best.decisiveWinRate,
       advantageScore: best.advantageScore,
       averageScoreDiff: best.averageScoreDiff,
       averageHpDiff: best.averageHpDiff,
@@ -746,6 +883,9 @@ function runSearch(options = {}) {
     strategyId: universalBest.id,
     winRate: universalBest.winRate,
     outcomeWinRate: universalBest.outcomeWinRate,
+    drawRate: universalBest.drawRate,
+    decisiveGames: universalBest.decisiveGames,
+    decisiveWinRate: universalBest.decisiveWinRate,
     advantageScore: universalBest.advantageScore,
     averageScoreDiff: universalBest.averageScoreDiff,
     averageHpDiff: universalBest.averageHpDiff,
@@ -768,18 +908,26 @@ function runSearch(options = {}) {
     populationSize,
     eliteCount,
     playoffCount,
+    topCount,
+    convergenceThreshold,
+    maxDrawRate,
+    minRounds,
+    maxRounds,
     rounds: round,
+    stopReason,
+    convergence,
     generatedAt: new Date().toISOString(),
     outputs: {
       directory: outputDir,
       history: path.join(outputDir, "history.json"),
-      bestStrategies: path.join(outputDir, "best-strategies.json")
+      bestStrategies: path.join(outputDir, "best-strategies.json"),
+      topStrategies: path.join(outputDir, "top-strategies.json")
     }
   };
   writeJson(path.join(outputDir, "best-strategies.json"), bestStrategies);
   writeJson(path.join(outputDir, "manifest.json"), manifest);
   writeCsv(path.join(outputDir, "best-strategies.csv"), rankRowsToCsv(bestStrategies.map(row => ({ ...row, id: row.strategyId, averageDurationMs: "" }))));
-  return { manifest, bestStrategies, history };
+  return { manifest, bestStrategies, topStrategies: Object.fromEntries([...topByCharacter.entries()]), history };
 }
 
 function main() {
@@ -790,11 +938,17 @@ function main() {
     durationHours: numberArg(args, "duration-hours", 6),
     mirrorRuns: numberArg(args, "mirror-runs", 1000),
     populationSize: numberArg(args, "population-size", DEFAULT_POPULATION_SIZE),
-    eliteCount: numberArg(args, "elite-count", DEFAULT_ELITE_COUNT)
+    eliteCount: numberArg(args, "elite-count", DEFAULT_ELITE_COUNT),
+    topCount: optionalPositiveIntegerArg(args, "top-count", DEFAULT_TOP_COUNT),
+    convergenceThreshold: numberArg(args, "convergence-threshold", DEFAULT_CONVERGENCE_THRESHOLD),
+    maxDrawRate: args["max-draw-rate"] === undefined ? undefined : numberArg(args, "max-draw-rate", undefined),
+    minRounds: optionalPositiveIntegerArg(args, "min-rounds", DEFAULT_MIN_ROUNDS),
+    maxRounds: optionalPositiveIntegerArg(args, "max-rounds", undefined)
   });
   console.log(`Manifest: ${result.manifest.outputs.directory}\\manifest.json`);
+  console.log(`Stop reason: ${result.manifest.stopReason}`);
   result.bestStrategies.forEach(row => {
-    console.log(`${row.characterId}: ${(row.winRate * 100).toFixed(2)}% (${row.wins}/${row.games})`);
+    console.log(`${row.characterId}: ${(row.decisiveWinRate * 100).toFixed(2)}% decisive (${row.wins}/${row.wins + row.losses}), ${(row.winRate * 100).toFixed(2)}% scored (${row.wins}/${row.games})`);
   });
 }
 
@@ -814,6 +968,7 @@ module.exports = {
   defaultStrategyWeights,
   evaluateCharacterRound,
   evaluateCmaCharacterRound,
+  convergenceStatus,
   runSearch,
   seedPopulation
 };

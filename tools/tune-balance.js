@@ -22,6 +22,10 @@ const TARGET_MAX_WIN_RATE = 0.52;
 
 const tunables = [
   { path: ["attack", "ultimates", "dragon", "orbStepMs"], direction: "lower-is-stronger" },
+  { path: ["attack", "ultimates", "dragon", "burstDamageMultiplier"], direction: "higher-is-stronger" },
+  { path: ["attack", "ultimates", "dragon", "orbRadiusMultiplier"], direction: "higher-is-stronger" },
+  { path: ["attack", "ultimates", "dragon", "burstRadiusMultiplier"], direction: "higher-is-stronger" },
+  { path: ["attack", "ultimates", "dragon", "orbCurveMultiplier"], direction: "higher-is-stronger" },
   { path: ["attack", "ultimates", "lobster", "radiusMultiplier"], direction: "higher-is-stronger" },
   { path: ["attack", "ultimates", "sandworm", "damageMultiplier"], direction: "higher-is-stronger" },
   { path: ["attack", "ultimates", "quetzal", "damageMultiplier"], direction: "higher-is-stronger" },
@@ -30,7 +34,13 @@ const tunables = [
 ];
 
 const characterPrimaryTunables = {
-  dragon: [["attack", "ultimates", "dragon", "orbStepMs"]],
+  dragon: [
+    ["attack", "ultimates", "dragon", "orbCurveMultiplier"],
+    ["attack", "ultimates", "dragon", "orbStepMs"],
+    ["attack", "ultimates", "dragon", "burstDamageMultiplier"],
+    ["attack", "ultimates", "dragon", "orbRadiusMultiplier"],
+    ["attack", "ultimates", "dragon", "burstRadiusMultiplier"]
+  ],
   lobster: [["attack", "ultimates", "lobster", "radiusMultiplier"]],
   sandworm: [["attack", "ultimates", "sandworm", "damageMultiplier"]],
   quetzal: [["attack", "ultimates", "quetzal", "damageMultiplier"]],

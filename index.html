@@ -769,7 +769,7 @@
 
     .settings-actions {
       display: grid;
-      grid-template-columns: repeat(5, minmax(42px, 1fr));
+      grid-template-columns: repeat(4, minmax(42px, 1fr));
       justify-self: end;
       align-items: stretch;
       gap: 6px;
@@ -790,6 +790,10 @@
       background: #151b25;
       color: var(--ink);
       border: 1px solid var(--line);
+    }
+
+    .settings-actions > [hidden] {
+      display: none !important;
     }
 
     .gm-toggle {
@@ -2521,7 +2525,7 @@
 
       .side .settings-section .settings-actions {
         display: grid;
-        grid-template-columns: repeat(5, minmax(34px, 1fr));
+        grid-template-columns: repeat(4, minmax(34px, 1fr));
         gap: 5px;
         justify-self: end;
         width: min(100%, calc(100vw - max(6px, env(safe-area-inset-left)) - max(6px, env(safe-area-inset-right)) - 12px));
@@ -3037,16 +3041,16 @@
           </svg>
           <span class="replay-toggle-label">重播紀錄</span>
         </button>
-        <button class="surrender-button" id="surrenderButton" type="button" title="投降" aria-label="投降">
-          <svg class="settings-action-icon surrender-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h2v18H5V3Z"/><path d="M8 4h11l-2.2 4 2.2 4H8V4Z"/></svg>
-          <span class="settings-action-label">投降</span>
-        </button>
         <button class="settings-toggle" id="settingsToggle" type="button" aria-expanded="false" aria-controls="settingsContent" title="開局設定">
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             <path d="M19.4 15a1.8 1.8 0 0 0 .36 1.98l.04.04a2.1 2.1 0 0 1-2.97 2.97l-.04-.04a1.8 1.8 0 0 0-1.98-.36 1.8 1.8 0 0 0-1.09 1.65V21.4a2.1 2.1 0 0 1-4.2 0v-.16a1.8 1.8 0 0 0-1.09-1.65 1.8 1.8 0 0 0-1.98.36l-.04.04a2.1 2.1 0 0 1-2.97-2.97l.04-.04A1.8 1.8 0 0 0 3.8 15a1.8 1.8 0 0 0-1.65-1.09H2a2.1 2.1 0 0 1 0-4.2h.16A1.8 1.8 0 0 0 3.8 8.62a1.8 1.8 0 0 0-.36-1.98l-.04-.04A2.1 2.1 0 0 1 6.37 3.63l.04.04a1.8 1.8 0 0 0 1.98.36A1.8 1.8 0 0 0 9.48 2.38V2.2a2.1 2.1 0 0 1 4.2 0v.18a1.8 1.8 0 0 0 1.09 1.65 1.8 1.8 0 0 0 1.98-.36l.04-.04A2.1 2.1 0 0 1 19.76 6.6l-.04.04a1.8 1.8 0 0 0-.36 1.98 1.8 1.8 0 0 0 1.65 1.09h.19a2.1 2.1 0 0 1 0 4.2h-.19A1.8 1.8 0 0 0 19.4 15Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
           <span class="settings-title">開局設定</span>
+        </button>
+        <button class="surrender-button" id="surrenderButton" type="button" title="投降" aria-label="投降" hidden>
+          <svg class="settings-action-icon surrender-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h2v18H5V3Z"/><path d="M8 4h11l-2.2 4 2.2 4H8V4Z"/></svg>
+          <span class="settings-action-label">投降</span>
         </button>
         <button class="gm-toggle" id="gmToggle" type="button" aria-expanded="false" aria-controls="gmContent" title="GM 設定" aria-label="GM 設定">
           <span class="gm-letter" aria-hidden="true">G</span>
@@ -5248,6 +5252,14 @@
       lateGameModeButton.disabled = locked;
     }
 
+    function updateSettingsActionMode() {
+      const showSurrender = running && !gameOver && !replayMode;
+      if (showSurrender) setSettingsOpen(false);
+      settingsToggle.hidden = showSurrender;
+      surrenderButton.hidden = !showSurrender;
+      surrenderButton.disabled = !showSurrender;
+    }
+
     function setSettingsLocked(locked) {
       if (locked) {
         setSettingsOpen(false);
@@ -5259,6 +5271,7 @@
       playerCharacterInput.disabled = locked;
       computerCharacterInput.disabled = locked;
       setGmSettingsLocked(locked);
+      updateSettingsActionMode();
     }
 
     function keyOf(cell) {

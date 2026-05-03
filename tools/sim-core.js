@@ -3,6 +3,10 @@ const path = require("path");
 
 const FOOD_TYPES = ["protein", "fat", "fiber", "carb"];
 const DRAGON_ORB_STEP_MS = 45;
+const DRAGON_ORB_RADIUS_MULTIPLIER = 1;
+const DRAGON_ORB_CURVE_MULTIPLIER = 1;
+const DRAGON_BURST_RADIUS_MULTIPLIER = 2;
+const DRAGON_BURST_DAMAGE_MULTIPLIER = 1.5;
 const DIRECTIONS = [
   { q: 0, r: -1 },
   { q: 1, r: -1 },
@@ -738,17 +742,15 @@ function nearestDragonOrbTarget(cursor, targetSnake) {
   }, null).cell;
 }
 
-function dragonTrackingDirection(state, cursor, direction, targetSnake, visited) {
+function dragonTrackingDirection(state, cursor, direction, targetSnake, visited, curveMultiplier = DRAGON_ORB_CURVE_MULTIPLIER) {
   const target = nearestDragonOrbTarget(cursor, targetSnake);
   if (!target) return direction;
   const idealDirection = directionFromSourceToTarget(cursor, target, direction);
-  const candidates = [
-    direction,
-    (direction + 1) % DIRECTIONS.length,
-    (direction + 5) % DIRECTIONS.length,
-    (direction + 2) % DIRECTIONS.length,
-    (direction + 4) % DIRECTIONS.length
-  ];
+  const maxTurn = Math.max(0, Math.min(3, Math.ceil(2 * Math.max(0, curveMultiplier))));
+  const candidates = [direction];
+  for (let turn = 1; turn <= maxTurn; turn += 1) {
+    candidates.push((direction + turn) % DIRECTIONS.length, (direction - turn + DIRECTIONS.length) % DIRECTIONS.length);
+  }
   candidates.sort((a, b) => {
     const nextA = nextWrappedCell(cursor, a, state.radius);
     const nextB = nextWrappedCell(cursor, b, state.radius);
@@ -809,14 +811,14 @@ function dragonWrappedOrbPath(state, source, direction) {
   return path;
 }
 
-function dragonTrackingOrbPath(state, source, direction, targetSnake) {
+function dragonTrackingOrbPath(state, source, direction, targetSnake, curveMultiplier = DRAGON_ORB_CURVE_MULTIPLIER) {
   const path = [];
   const visited = new Set([keyOf(source)]);
   let cursor = { ...source };
   let currentDirection = direction;
   const maxSteps = Math.max(1, state.radius * 2 + 1);
   for (let step = 0; step < maxSteps; step += 1) {
-    currentDirection = dragonTrackingDirection(state, cursor, currentDirection, targetSnake, visited);
+    currentDirection = dragonTrackingDirection(state, cursor, currentDirection, targetSnake, visited, curveMultiplier);
     cursor = nextWrappedCell(cursor, currentDirection, state.radius);
     if (keyOf(cursor) === keyOf(source)) break;
     path.push({ ...cursor });
@@ -842,10 +844,14 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
   const direction = directionFromSourceToTarget(source, target, attacker.dir);
   const characterId = attacker.character.id;
   if (characterId === "dragon") {
-    const path = dragonTrackingOrbPath(state, source, attacker.dir, defender.snake);
+    const curveMultiplier = ultimateSetting(balance, characterId, "orbCurveMultiplier", DRAGON_ORB_CURVE_MULTIPLIER);
+    const path = dragonTrackingOrbPath(state, source, attacker.dir, defender.snake, curveMultiplier);
     const hits = pathHits(path, defender.snake);
     const endCell = path[path.length - 1] || source;
     const orbStepMs = ultimateSetting(balance, characterId, "orbStepMs", DRAGON_ORB_STEP_MS);
+    const orbRadius = small.radius * ultimateSetting(balance, characterId, "orbRadiusMultiplier", DRAGON_ORB_RADIUS_MULTIPLIER);
+    const burstRadius = small.radius * ultimateSetting(balance, characterId, "burstRadiusMultiplier", DRAGON_BURST_RADIUS_MULTIPLIER);
+    const burstDamage = small.damage * ultimateSetting(balance, characterId, "burstDamageMultiplier", DRAGON_BURST_DAMAGE_MULTIPLIER);
     state.projectiles.push({
       kind: "dragonOrb",
       owner: attacker.owner,
@@ -853,10 +859,10 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
       target: { ...endCell },
       pathCells: path,
       impactAt: now + small.delay + path.length * orbStepMs,
-      radius: small.radius,
+      radius: orbRadius,
       damage: small.damage,
-      burstRadius: small.radius * 2,
-      burstDamage: small.damage * 1.5,
+      burstRadius,
+      burstDamage,
       stunChance
     });
     for (const hit of hits) {
@@ -866,10 +872,10 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
         profile: "big",
         target: { ...hit.cell },
         impactAt: now + small.delay + (hit.index + 1) * orbStepMs,
-        radius: small.radius,
+        radius: orbRadius,
         damage: small.damage,
-        burstRadius: small.radius * 2,
-        burstDamage: small.damage * 1.5,
+        burstRadius,
+        burstDamage,
         stunChance
       });
     }
