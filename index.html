@@ -771,6 +771,13 @@
       border: 1px solid var(--line);
     }
 
+    .gm-preset-row button.secondary.is-selected {
+      background: rgba(251, 191, 36, 0.18);
+      color: #fde68a;
+      border-color: rgba(251, 191, 36, 0.72);
+      box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.16) inset;
+    }
+
     button.secondary.portrait-lightbox-arrow {
       width: 48px;
     }
@@ -3495,6 +3502,12 @@
     const midGameModeButton = document.querySelector("#midGameModeButton");
     const ultimateModeButton = document.querySelector("#ultimateModeButton");
     const lateGameModeButton = document.querySelector("#lateGameModeButton");
+    const gmPresetButtons = {
+      real: realModeButton,
+      battle: ultimateModeButton,
+      mid: midGameModeButton,
+      late: lateGameModeButton
+    };
     const gmToggle = document.querySelector("#gmToggle");
     const gmLetter = gmToggle.querySelector(".gm-letter");
     const gmContent = document.querySelector("#gmContent");
@@ -3581,6 +3594,7 @@
     let initialEnergy = 0;
     let initialBombs = 0;
     let initialStock = { protein: 0, fat: 0, fiber: 0, carb: 0 };
+    let gmPresetMode = "real";
     let playerCharacterId = "dragon";
     let computerCharacterId = "moray";
     let playerCharacterChoice = "dragon";
@@ -3599,6 +3613,7 @@
       attackNeedTotal = config.resources?.attackNeedTotal ?? attackNeedTotal;
       maxAmmo = config.resources?.maxAmmo ?? maxAmmo;
       maxFoodStock = config.resources?.maxFoodStock ?? maxFoodStock;
+      maxInitialLength = Math.max(maxInitialLength, maxFoodStock);
       foodEnergy = config.resources?.foodEnergy ?? foodEnergy;
       blackFoodEnergy = config.resources?.blackFoodEnergy ?? blackFoodEnergy;
       singleColorStockGain = config.resources?.singleColorStockGain ?? singleColorStockGain;
@@ -4515,6 +4530,11 @@
       return 1 + foodBonus(stock, "fiber", moveBonusPerPoint, maxMoveBonus);
     }
 
+    function movementSpeed(stock) {
+      const foodSpeedBonus = moveMultiplier(stock) - 1;
+      return gmMode ? initialSpeed + foodSpeedBonus : initialSpeed * moveMultiplier(stock);
+    }
+
     function damageMultiplier(stock) {
       return 2 + foodBonus(stock, "fat", damageBonusPerPoint, maxDamageBonus);
     }
@@ -4532,7 +4552,7 @@
     }
 
     function moveInterval(stock) {
-      return baseStepMs / (initialSpeed * moveMultiplier(stock));
+      return baseStepMs / movementSpeed(stock);
     }
 
     function moveIntervalFor(owner, now) {
@@ -5394,6 +5414,57 @@
       if (input) input.value = initialStock[typeId];
     }
 
+    function updateGmPresetHighlight() {
+      Object.entries(gmPresetButtons).forEach(([mode, button]) => {
+        const selected = gmPresetMode === mode;
+        button.classList.toggle("is-selected", selected);
+        button.setAttribute("aria-pressed", selected ? "true" : "false");
+      });
+    }
+
+    function saveGmSettings() {
+      localStorage.setItem("hexSnakeGmSettings", JSON.stringify({
+        gridSize,
+        foodCount,
+        initialSpeed,
+        gmMode,
+        initialLength,
+        initialEnergy,
+        initialBombs,
+        initialStock,
+        gmPresetMode
+      }));
+    }
+
+    function applyGmSettingsChanged(options = {}) {
+      gmPresetMode = options.presetMode ?? null;
+      updateGmPresetHighlight();
+      saveGmSettings();
+    }
+
+    function loadSavedGmSettings() {
+      try {
+        const saved = JSON.parse(localStorage.getItem("hexSnakeGmSettings") || "null");
+        if (!saved || typeof saved !== "object") {
+          updateGmPresetHighlight();
+          return;
+        }
+        setGridSize(saved.gridSize ?? defaultSettings.gridSize);
+        setFoodCount(saved.foodCount ?? defaultSettings.foodCount);
+        setInitialSpeed(saved.initialSpeed ?? defaultSettings.initialSpeed);
+        setGmMode(saved.gmMode ?? defaultSettings.gmMode);
+        setInitialLength(saved.initialLength ?? defaultSettings.initialLength);
+        setInitialEnergy(saved.initialEnergy ?? defaultSettings.initialEnergy);
+        setInitialBombs(saved.initialBombs ?? defaultSettings.initialBombs);
+        foodTypes.forEach(type => setInitialStock(type.id, saved.initialStock?.[type.id] ?? defaultSettings.initialStock[type.id]));
+        gmPresetMode = Object.prototype.hasOwnProperty.call(gmPresetButtons, saved.gmPresetMode) ? saved.gmPresetMode : null;
+        updateGmPresetHighlight();
+      } catch {
+        gmPresetMode = "real";
+        updateGmPresetHighlight();
+      }
+    }
+
     function setGmMode(active) {
       gmMode = Boolean(active);
       gmToggle.classList.toggle("is-active", gmMode);
@@ -5431,23 +5502,29 @@
 
     function applyUltimateModePreset() {
       setGmMode(true);
+      const presetStock = 4;
       setInitialBombs(maxAmmo);
       setInitialEnergy(attackNeedTotal);
-      foodTypes.forEach(type => setInitialStock(type.id, 4));
+      setInitialLength(presetStock);
+      foodTypes.forEach(type => setInitialStock(type.id, presetStock));
     }
 
     function applyMidGameModePreset() {
       setGmMode(true);
+      const presetStock = Math.floor(maxFoodStock / 2);
       setInitialBombs(maxAmmo);
       setInitialEnergy(attackNeedTotal);
-      foodTypes.forEach(type => setInitialStock(type.id, Math.floor(maxFoodStock / 2)));
+      setInitialLength(presetStock);
+      foodTypes.forEach(type => setInitialStock(type.id, presetStock));
     }
 
     function applyLateGameModePreset() {
       setGmMode(true);
+      const presetStock = maxFoodStock;
       setInitialBombs(maxAmmo);
       setInitialEnergy(attackNeedTotal);
-      foodTypes.forEach(type => setInitialStock(type.id, maxFoodStock));
+      setInitialLength(presetStock);
+      foodTypes.forEach(type => setInitialStock(type.id, presetStock));
     }
 
     function setGmSettingsLocked(locked) {
@@ -5681,6 +5758,7 @@
       setInitialEnergy(initialEnergyInput.value);
       setInitialBombs(initialBombsInput.value);
       initialStockInputs.forEach(input => setInitialStock(input.dataset.initialStock, input.value));
+      saveGmSettings();
       resolveCharacterChoicesForStart();
       resetGame();
       running = true;
@@ -5819,8 +5897,8 @@
       lastFeedTimeEl.textContent = formatTime(lastFeedElapsedMs);
       bestTimeEl.textContent = formatTime(bestTotalMs);
       const now = performance.now();
-      const playerSpeedValue = isMovementStunned("player", now) ? 0 : initialSpeed * moveMultiplier(playerStock) / (now < playerSlowUntil ? 2 : 1);
-      const computerSpeedValue = isMovementStunned("computer", now) ? 0 : initialSpeed * moveMultiplier(computerStock) / (now < computerSlowUntil ? 2 : 1);
+      const playerSpeedValue = isMovementStunned("player", now) ? 0 : movementSpeed(playerStock) / (now < playerSlowUntil ? 2 : 1);
+      const computerSpeedValue = isMovementStunned("computer", now) ? 0 : movementSpeed(computerStock) / (now < computerSlowUntil ? 2 : 1);
       const playerSpeed = Math.round(playerSpeedValue * 10) / 10;
       const computerSpeed = Math.round(computerSpeedValue * 10) / 10;
       playerSpeedEl.textContent = `${playerSpeed}x`;
@@ -10367,7 +10445,10 @@
     function setGmOpen(open) {
       gmToggle.setAttribute("aria-expanded", String(open));
       gmContent.hidden = !open;
-      if (open && !running) setGmMode(true);
+      if (open && !running) {
+        setGmMode(true);
+        saveGmSettings();
+      }
       if (open) setSettingsOpen(false);
       gmToggle.closest(".settings-section").classList.toggle("open", open || !settingsContent.hidden);
     }
@@ -10516,6 +10597,7 @@
     gridSizeInput.addEventListener("change", () => {
       if (running) return;
       setGridSize(gridSizeInput.value);
+      applyGmSettingsChanged();
       cancelAnimationFrame(rafId);
       resetGame();
       resize();
@@ -10529,6 +10611,7 @@
     foodCountInput.addEventListener("change", () => {
       if (running) return;
       setFoodCount(foodCountInput.value);
+      applyGmSettingsChanged();
       resetGame();
       resize();
       overlayTitle.textContent = "食物數量已更新";
@@ -10553,6 +10636,7 @@
     initialSpeedInput.addEventListener("change", () => {
       if (running) return;
       setInitialSpeed(initialSpeedInput.value);
+      applyGmSettingsChanged();
       resetGame();
       resize();
       overlayTitle.textContent = "初始速度已更新";
@@ -10565,6 +10649,7 @@
     initialLengthInput.addEventListener("change", () => {
       if (running) return;
       setInitialLength(initialLengthInput.value);
+      applyGmSettingsChanged();
       resetGame();
       resize();
     });
@@ -10572,6 +10657,7 @@
     initialEnergyInput.addEventListener("change", () => {
       if (running) return;
       setInitialEnergy(initialEnergyInput.value);
+      applyGmSettingsChanged();
       resetGame();
       resize();
     });
@@ -10579,6 +10665,7 @@
     initialBombsInput.addEventListener("change", () => {
       if (running) return;
       setInitialBombs(initialBombsInput.value);
+      applyGmSettingsChanged();
       resetGame();
       resize();
     });
@@ -10587,6 +10674,7 @@
       input.addEventListener("change", () => {
         if (running) return;
         setInitialStock(input.dataset.initialStock, input.value);
+        applyGmSettingsChanged();
         resetGame();
         resize();
       });
@@ -10624,24 +10712,28 @@
       if (running) return;
       setGmMode(true);
       resetGmParameters();
+      applyGmSettingsChanged({ presetMode: "real" });
       refreshGmPreview();
     });
 
     midGameModeButton.addEventListener("click", () => {
       if (running) return;
       applyMidGameModePreset();
+      applyGmSettingsChanged({ presetMode: "mid" });
       refreshGmPreview();
     });
 
     ultimateModeButton.addEventListener("click", () => {
       if (running) return;
       applyUltimateModePreset();
+      applyGmSettingsChanged({ presetMode: "battle" });
       refreshGmPreview();
     });
 
     lateGameModeButton.addEventListener("click", () => {
       if (running) return;
       applyLateGameModePreset();
+      applyGmSettingsChanged({ presetMode: "late" });
       refreshGmPreview();
     });
 
@@ -11161,15 +11253,17 @@
       buildCharacterStage();
       buildResourceHud();
       buildRulesContent();
+      loadSavedGmSettings();
       setGridSize(gridSizeInput.value);
       setFoodCount(foodCountInput.value);
       setComputerDifficulty(computerDifficultyInput.value);
       setInitialSpeed(initialSpeedInput.value);
-      setGmMode(defaultSettings.gmMode);
+      setGmMode(gmMode);
       setInitialLength(initialLengthInput.value);
       setInitialEnergy(initialEnergyInput.value);
       setInitialBombs(initialBombsInput.value);
       initialStockInputs.forEach(input => setInitialStock(input.dataset.initialStock, input.value));
+      updateGmPresetHighlight();
       setSettingsLocked(false);
       applyKeybinds();
       setLeftHandMode(localStorage.getItem("hexSnakeLeftHandMode") === "1");

@@ -115,6 +115,11 @@ function Normalize-Portrait {
     [int]$Threshold
   )
 
+  $tempPath = "$Path.tmp.png"
+  if (Test-Path -LiteralPath $tempPath) {
+    Remove-Item -LiteralPath $tempPath -Force
+  }
+
   $source = [System.Drawing.Bitmap]::new($Path)
   try {
     $bounds = Get-AlphaBounds -Bitmap $source -Threshold $Threshold
@@ -142,9 +147,7 @@ function Normalize-Portrait {
       $dest = [System.Drawing.RectangleF]::new([single]$drawX, [single]$drawY, [single]$drawWidth, [single]$drawHeight)
       $graphics.DrawImage($source, $dest)
 
-      $tempPath = "$Path.tmp.png"
       $canvas.Save($tempPath, [System.Drawing.Imaging.ImageFormat]::Png)
-      Move-Item -LiteralPath $tempPath -Destination $Path -Force
     } finally {
       $graphics.Dispose()
       $canvas.Dispose()
@@ -152,6 +155,8 @@ function Normalize-Portrait {
   } finally {
     $source.Dispose()
   }
+
+  Move-Item -LiteralPath $tempPath -Destination $Path -Force
 }
 
 $before = foreach ($file in $fullFiles) {
