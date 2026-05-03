@@ -805,11 +805,20 @@
       color: #fde68a;
     }
 
+    .gm-toggle.is-auto.is-active {
+      background: rgba(245, 158, 11, 0.16);
+      box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.22) inset;
+    }
+
     .gm-letter {
       font-weight: 800;
       font-size: 1.12rem;
       line-height: 1;
       letter-spacing: 0;
+    }
+
+    .gm-toggle.is-auto .gm-letter {
+      font-size: 0.72rem;
     }
 
     .settings-toggle:hover,
@@ -3354,6 +3363,7 @@
     const ultimateModeButton = document.querySelector("#ultimateModeButton");
     const lateGameModeButton = document.querySelector("#lateGameModeButton");
     const gmToggle = document.querySelector("#gmToggle");
+    const gmLetter = gmToggle.querySelector(".gm-letter");
     const gmContent = document.querySelector("#gmContent");
     const gmCloseButton = document.querySelector("#gmCloseButton");
     const settingsToggle = document.querySelector("#settingsToggle");
@@ -3639,6 +3649,7 @@
     let running = false;
     let paused = false;
     let computerBattleMode = false;
+    let playerAutoMode = false;
     let computerBattleSpeed = normalizeAutoBattleSpeed(localStorage.getItem("hexSnakeAutoBattleSpeed"));
     let relayModePreference = localStorage.getItem("hexSnakeRelayMode") === "1";
     let relayMode = false;
@@ -4331,7 +4342,7 @@
     function moveIntervalFor(owner, now) {
       const stock = owner === "player" ? playerStock : computerStock;
       const slowUntil = owner === "player" ? playerSlowUntil : computerSlowUntil;
-      const speedScale = computerBattleMode ? computerBattleSpeed : 1;
+      const speedScale = isPlayerAutoControlActive() ? computerBattleSpeed : 1;
       return moveInterval(stock) * (now < slowUntil ? 2 : 1) / speedScale;
     }
 
@@ -4836,6 +4847,7 @@
         running,
         paused,
         computerBattleMode,
+        playerAutoMode,
         relayMode,
         playerCharacterId,
         computerCharacterId,
@@ -4861,6 +4873,7 @@
       paused = state.paused;
       gameOver = state.gameOver;
       computerBattleMode = state.computerBattleMode;
+      playerAutoMode = Boolean(state.playerAutoMode);
       relayMode = state.relayMode;
       if (state.snapshot) applyReplaySnapshot(state.snapshot, state);
       overlay.className = state.overlayClassName;
@@ -4879,6 +4892,7 @@
       characterStage.innerHTML = state.characterStageHtml;
       setStatus(state.statusText);
       updateHud();
+      updateSettingsActionMode();
       updateAutoBattleControls();
       draw();
     }
@@ -4916,6 +4930,7 @@
       paused = true;
       gameOver = false;
       computerBattleMode = false;
+      playerAutoMode = false;
       setSettingsLocked(true);
       setOverlayChromeVisible(false);
       overlay.classList.remove("show");
@@ -5183,6 +5198,7 @@
     function setGmMode(active) {
       gmMode = Boolean(active);
       gmToggle.classList.toggle("is-active", gmMode);
+      updateSettingsActionMode();
       updateGmControlState();
     }
 
@@ -5258,6 +5274,13 @@
       settingsToggle.hidden = showSurrender;
       surrenderButton.hidden = !showSurrender;
       surrenderButton.disabled = !showSurrender;
+      gmToggle.classList.toggle("is-auto", showSurrender);
+      gmToggle.classList.toggle("is-active", showSurrender ? isPlayerAutoControlActive() : gmMode);
+      gmLetter.textContent = showSurrender ? "Auto" : "G";
+      gmToggle.title = showSurrender ? "Auto 操作" : "GM 設定";
+      gmToggle.setAttribute("aria-label", showSurrender ? "Auto 操作" : "GM 設定");
+      gmToggle.setAttribute("aria-expanded", showSurrender ? "false" : gmToggle.getAttribute("aria-expanded"));
+      gmToggle.disabled = showSurrender ? false : gmToggle.disabled;
     }
 
     function setSettingsLocked(locked) {
@@ -5446,6 +5469,7 @@
       if (gameOver && !canRestartAfterGameOver()) return false;
       clearRelayRestartTimer();
       computerBattleMode = Boolean(options.computerBattle);
+      playerAutoMode = false;
       if (computerBattleMode) setRelayMode(relayModePreference, Boolean(options.resetRelayScore), false);
       if (!computerBattleMode) setRelayMode(false, false, false);
       if (computerBattleMode) setComputerBattleSpeed(localStorage.getItem("hexSnakeAutoBattleSpeed"), false);
@@ -5483,7 +5507,9 @@
     function returnToStartScreen() {
       clearRelayRestartTimer();
       computerBattleMode = false;
+      playerAutoMode = false;
       setRelayMode(false, false, false);
+      updateSettingsActionMode();
       updateAutoBattleControls();
       resetGame();
       overlayTitle.textContent = "準備開局";
@@ -5646,6 +5672,10 @@
       lastTimerFrame = lastPlayerStep;
     }
 
+    function isPlayerAutoControlActive() {
+      return computerBattleMode || playerAutoMode;
+    }
+
     function clearRelayRestartTimer() {
       if (!relayRestartTimer) return;
       clearTimeout(relayRestartTimer);
@@ -5677,7 +5707,7 @@
     }
 
     function updateAutoBattleControls() {
-      const visible = computerBattleMode && running && !gameOver && !replayMode;
+      const visible = isPlayerAutoControlActive() && running && !gameOver && !replayMode;
       autoBattlePanel.hidden = !visible;
       autoBattleSpeedSelect.textContent = autoBattleSpeedLabel(computerBattleSpeed);
       autoBattleSpeedSelect.dataset.value = String(computerBattleSpeed);
@@ -5688,6 +5718,23 @@
       autoPauseButton.setAttribute("aria-label", paused ? "播放" : "暫停");
       autoPauseButton.title = paused ? "播放" : "暫停";
       updateRelayControls();
+    }
+
+    function setPlayerAutoMode(active, announce = true) {
+      const nextActive = Boolean(active) && running && !gameOver && !replayMode;
+      if (playerAutoMode === nextActive) return;
+      playerAutoMode = nextActive;
+      if (playerAutoMode) {
+        setComputerBattleSpeed(localStorage.getItem("hexSnakeAutoBattleSpeed"), false);
+        resetAutoBattleStepTimers();
+        if (announce) setStatus("Auto 已開啟，電腦接手 P1 操作。");
+      } else {
+        setAutoSpeedMenuOpen(false);
+        if (announce) setStatus("Auto 已關閉，回到玩家操作。");
+      }
+      updateSettingsActionMode();
+      updateAutoBattleControls();
+      updateHud();
     }
 
     function sandwormUndergroundAlpha(owner, now) {
@@ -6460,7 +6507,7 @@
 
       if (character.id === "dragon") {
         const targetSnake = owner === "player" ? computerSnake : snake;
-        const useTracking = computerBattleMode || owner === "computer";
+        const useTracking = isPlayerAutoControlActive() || owner === "computer";
         const path = useTracking
           ? dragonTrackingOrbPath(source, ownerDirection(owner), targetSnake)
           : dragonWrappedOrbPath(source, ownerDirection(owner));
@@ -6680,7 +6727,7 @@
       if (!profile) return;
       const profileCooldownScale = profile === "small" ? 0.7 : 1;
       const cooldown = { novice: 6200, low: 6200, medium: 4700, high: 3400 }[computerDifficulty] * profileCooldownScale / attackSpeedMultiplier(computerStock);
-      if (now - lastComputerAttackMs < cooldown / (computerBattleMode ? computerBattleSpeed : 1)) return;
+      if (now - lastComputerAttackMs < cooldown / (isPlayerAutoControlActive() ? computerBattleSpeed : 1)) return;
       const target = chooseAiAttackTarget("computer", profile, now);
       if (launchAttack("computer", target, now, profile)) {
         lastComputerAttackMs = now;
@@ -6697,7 +6744,7 @@
     }
 
     function maybeAutoBattlePlayerAttack(now) {
-      if (!computerBattleMode || isNoviceComputer()) return;
+      if (!isPlayerAutoControlActive() || isNoviceComputer()) return;
       const profile = chooseAiAttackProfile("player", now);
       if (!profile) return;
       const profileCooldownScale = profile === "small" ? 0.7 : 1;
@@ -6932,7 +6979,7 @@
     }
 
     function step() {
-      if (computerBattleMode) {
+      if (isPlayerAutoControlActive()) {
         nextDir = chooseAutoDirection("player");
         hexDirButtons.forEach(button => button.classList.toggle("active", Number(button.dataset.dir) === nextDir));
       }
@@ -7020,7 +7067,7 @@
     }
 
     function stepPlayerOnly() {
-      if (computerBattleMode) {
+      if (isPlayerAutoControlActive()) {
         nextDir = chooseAutoDirection("player");
         hexDirButtons.forEach(button => button.classList.toggle("active", Number(button.dataset.dir) === nextDir));
       }
@@ -7098,6 +7145,7 @@
       if (gameOver) return;
       finishReplayRecording(playerLost, computerLost);
       running = false;
+      playerAutoMode = false;
       gameOver = true;
       updateAutoBattleControls();
       restartUnlockAt = performance.now() + gameOverRestartDelayMs;
@@ -7149,7 +7197,7 @@
       }
       if (!paused) {
         const delta = lastTimerFrame ? now - lastTimerFrame : 0;
-        const timeScale = computerBattleMode ? computerBattleSpeed : 1;
+        const timeScale = isPlayerAutoControlActive() ? computerBattleSpeed : 1;
         totalElapsedMs += delta * timeScale;
         lastFeedElapsedMs += delta * timeScale;
         lastTimerFrame = now;
@@ -9926,6 +9974,11 @@
     }
 
     function toggleGmSettings() {
+      if (running && !gameOver && !replayMode) {
+        if (computerBattleMode) return;
+        setPlayerAutoMode(!playerAutoMode);
+        return;
+      }
       if (gmToggle.disabled || running) return;
       setGmOpen(gmToggle.getAttribute("aria-expanded") !== "true");
     }
@@ -10354,7 +10407,7 @@
     autoBattleSpeedSelect.addEventListener("pointerdown", event => {
       event.preventDefault();
       event.stopPropagation();
-      if (!computerBattleMode) return;
+      if (!isPlayerAutoControlActive()) return;
       autoBattleSpeedDrag = {
         pointerId: event.pointerId,
         startY: event.clientY,
@@ -10382,7 +10435,7 @@
       if (!autoBattleSpeedDrag || event.pointerId !== autoBattleSpeedDrag.pointerId) return;
       event.preventDefault();
       event.stopPropagation();
-      const shouldToggleMenu = !autoBattleSpeedDrag.moved && computerBattleMode;
+      const shouldToggleMenu = !autoBattleSpeedDrag.moved && isPlayerAutoControlActive();
       autoBattleSpeedSelect.classList.remove("is-dragging");
       if (autoBattleSpeedSelect.hasPointerCapture(event.pointerId)) {
         autoBattleSpeedSelect.releasePointerCapture(event.pointerId);
@@ -10395,7 +10448,7 @@
     autoBattleSpeedSelect.addEventListener("pointercancel", endAutoBattleSpeedDrag);
 
     autoBattleSpeedSelect.addEventListener("wheel", event => {
-      if (!computerBattleMode) return;
+      if (!isPlayerAutoControlActive()) return;
       event.preventDefault();
       event.stopPropagation();
       const currentIndex = autoBattleSpeeds.indexOf(computerBattleSpeed);
@@ -10404,7 +10457,7 @@
     }, { passive: false });
 
     autoBattleSpeedSelect.addEventListener("keydown", event => {
-      if (!computerBattleMode || !["ArrowUp", "ArrowDown", "Enter", " "].includes(event.key)) return;
+      if (!isPlayerAutoControlActive() || !["ArrowUp", "ArrowDown", "Enter", " "].includes(event.key)) return;
       event.preventDefault();
       event.stopPropagation();
       if (event.key === "Enter" || event.key === " ") {
@@ -10418,7 +10471,7 @@
     autoSpeedMenu.addEventListener("click", event => {
       event.stopPropagation();
       const button = event.target.closest("[data-auto-speed]");
-      if (!button || !computerBattleMode) return;
+      if (!button || !isPlayerAutoControlActive()) return;
       setComputerBattleSpeed(button.dataset.autoSpeed);
       resetAutoBattleStepTimers();
       updateAutoBattleControls();
@@ -10441,7 +10494,7 @@
 
     autoPauseButton.addEventListener("click", event => {
       event.stopPropagation();
-      if (!computerBattleMode || !running || gameOver) return;
+      if (!isPlayerAutoControlActive() || !running || gameOver) return;
       paused = !paused;
       if (!paused) {
         lastPlayerStep = performance.now();
