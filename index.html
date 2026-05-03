@@ -3650,6 +3650,7 @@
     let paused = false;
     let computerBattleMode = false;
     let playerAutoMode = false;
+    let computerBattleManualOverride = false;
     let computerBattleSpeed = normalizeAutoBattleSpeed(localStorage.getItem("hexSnakeAutoBattleSpeed"));
     let relayModePreference = localStorage.getItem("hexSnakeRelayMode") === "1";
     let relayMode = false;
@@ -4848,6 +4849,7 @@
         paused,
         computerBattleMode,
         playerAutoMode,
+        computerBattleManualOverride,
         relayMode,
         playerCharacterId,
         computerCharacterId,
@@ -4874,6 +4876,7 @@
       gameOver = state.gameOver;
       computerBattleMode = state.computerBattleMode;
       playerAutoMode = Boolean(state.playerAutoMode);
+      computerBattleManualOverride = Boolean(state.computerBattleManualOverride);
       relayMode = state.relayMode;
       if (state.snapshot) applyReplaySnapshot(state.snapshot, state);
       overlay.className = state.overlayClassName;
@@ -4931,6 +4934,7 @@
       gameOver = false;
       computerBattleMode = false;
       playerAutoMode = false;
+      computerBattleManualOverride = false;
       setSettingsLocked(true);
       setOverlayChromeVisible(false);
       overlay.classList.remove("show");
@@ -5470,6 +5474,7 @@
       clearRelayRestartTimer();
       computerBattleMode = Boolean(options.computerBattle);
       playerAutoMode = false;
+      computerBattleManualOverride = false;
       if (computerBattleMode) setRelayMode(relayModePreference, Boolean(options.resetRelayScore), false);
       if (!computerBattleMode) setRelayMode(false, false, false);
       if (computerBattleMode) setComputerBattleSpeed(localStorage.getItem("hexSnakeAutoBattleSpeed"), false);
@@ -5508,6 +5513,7 @@
       clearRelayRestartTimer();
       computerBattleMode = false;
       playerAutoMode = false;
+      computerBattleManualOverride = false;
       setRelayMode(false, false, false);
       updateSettingsActionMode();
       updateAutoBattleControls();
@@ -5673,7 +5679,7 @@
     }
 
     function isPlayerAutoControlActive() {
-      return computerBattleMode || playerAutoMode;
+      return (computerBattleMode && !computerBattleManualOverride) || playerAutoMode;
     }
 
     function clearRelayRestartTimer() {
@@ -5731,6 +5737,22 @@
       } else {
         setAutoSpeedMenuOpen(false);
         if (announce) setStatus("Auto 已關閉，回到玩家操作。");
+      }
+      updateSettingsActionMode();
+      updateAutoBattleControls();
+      updateHud();
+    }
+
+    function setComputerBattleManualOverride(active) {
+      if (!computerBattleMode || !running || gameOver || replayMode) return;
+      computerBattleManualOverride = Boolean(active);
+      if (!computerBattleManualOverride) {
+        setComputerBattleSpeed(localStorage.getItem("hexSnakeAutoBattleSpeed"), false);
+        resetAutoBattleStepTimers();
+        setStatus("Auto 已開啟，電腦接手 P1 操作。");
+      } else {
+        setAutoSpeedMenuOpen(false);
+        setStatus("Auto 已關閉，回到玩家操作。");
       }
       updateSettingsActionMode();
       updateAutoBattleControls();
@@ -7146,6 +7168,7 @@
       finishReplayRecording(playerLost, computerLost);
       running = false;
       playerAutoMode = false;
+      computerBattleManualOverride = false;
       gameOver = true;
       updateAutoBattleControls();
       restartUnlockAt = performance.now() + gameOverRestartDelayMs;
@@ -9975,8 +9998,8 @@
 
     function toggleGmSettings() {
       if (running && !gameOver && !replayMode) {
-        if (computerBattleMode) return;
-        setPlayerAutoMode(!playerAutoMode);
+        if (computerBattleMode) setComputerBattleManualOverride(!computerBattleManualOverride);
+        else setPlayerAutoMode(!playerAutoMode);
         return;
       }
       if (gmToggle.disabled || running) return;
