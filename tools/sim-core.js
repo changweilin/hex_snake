@@ -973,12 +973,13 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
     return;
   }
   if (characterId === "gu_king") {
+    const volleyIntervalMs = 180;
     for (let index = 0; index < 3; index += 1) {
       pushCircleAttack(state, {
         owner: attacker.owner,
         profile: "big",
         target,
-        impactAt: now + small.delay + index * 360,
+        impactAt: now + small.delay + index * volleyIntervalMs,
         radius: small.radius,
         damage: small.damage * 0.9 * ultimateDamageMultiplier(balance, characterId),
         stunChance

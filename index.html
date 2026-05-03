@@ -725,14 +725,6 @@
       pointer-events: auto;
     }
 
-    .fighter-avatar-image[data-character-id="gu_king"][data-portrait-variant="full"] {
-      transform: scale(1.45);
-    }
-
-    .portrait-lightbox-image[data-character-id="gu_king"][data-portrait-variant="full"] {
-      transform: scale(1.68);
-    }
-
     .portrait-lightbox-variant[data-portrait-lightbox-variant="full"] {
       top: max(14px, env(safe-area-inset-top));
     }
@@ -6987,20 +6979,21 @@
       }
 
       if (character.id === "gu_king") {
+        const volleyIntervalMs = 180;
         for (let index = 0; index < 3; index += 1) {
           pushCircleAttack({
             owner,
             profile: "big",
             target,
             createdAt: now,
-            impactAt: now + small.delay + index * 360,
-            delay: small.delay + index * 360,
+            impactAt: now + small.delay + index * volleyIntervalMs,
+            delay: small.delay + index * volleyIntervalMs,
             radius: small.radius,
             damage: small.damage * 0.9 * ultimateDamageMultiplier(character.id),
             stunChance
           });
         }
-        return small.delay + 720;
+        return small.delay + volleyIntervalMs * 2;
       }
 
       const big = attackStats(stock, "big");
