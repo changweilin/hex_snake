@@ -87,7 +87,7 @@ function formatNumber(value) {
 }
 
 function formatWeights(weights, indent = "        ") {
-  const groups = ["movement", "food", "skillAllocation", "castTiming"];
+  const groups = ["movement", "food", "skillAllocation", "castTiming", "castTarget", "castDirection"];
   return groups.map(group => {
     const entries = Object.entries(weights[group] || {})
       .map(([key, value]) => `${key}: ${formatNumber(Number(value))}`)

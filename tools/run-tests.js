@@ -16,6 +16,7 @@ const {
   buildCharacterMap,
   canAttack,
   chooseAttackProfile,
+  chooseAttackDirection,
   chooseAttackTarget,
   chooseFoodTarget,
   collectFood,
@@ -27,6 +28,7 @@ const {
   directionToward,
   emptyStock,
   hexDistance,
+  wrappedDistance,
   loadBalance,
   loadCharacters,
   nextWrappedCell,
@@ -299,6 +301,107 @@ test("weighted food strategy can prefer arrival speed or character preference", 
   assert.deepEqual(chooseFoodTarget(state, state.fighters.computer, state.fighters.player), state.foods[1]);
 });
 
+test("high AI strategy normalization fills cast target and direction weights", () => {
+  const tunedBalance = JSON.parse(JSON.stringify(balance));
+  tunedBalance.highAiStrategies = {
+    dragon: {
+      movement: { safePath: 0.25, leastDamage: 0.5, fastestArrival: 0.75 },
+      food: { fastestArrival: 0.5 },
+      skillAllocation: { preferSmall: 2.5, preferBig: 0.25 },
+      castTiming: { lethal: 3 }
+    }
+  };
+  const state = createMatchState({
+    balance: tunedBalance,
+    playerCharacter: characterById.get("moray"),
+    computerCharacter: characterById.get("dragon"),
+    computerModel: { aiDifficulty: "high", pathPrecision: 1, aimPrecision: 1 }
+  });
+  const weights = state.fighters.computer.policy.strategyWeights;
+  assert.equal(weights.movement.safePath, 0.25);
+  assert.ok(weights.castTarget.targetHead >= 0);
+  assert.ok(weights.castTarget.bodyCluster <= 3);
+  assert.ok(weights.castDirection.selfHeadToOpponentHead >= 0);
+  assert.ok(weights.castDirection.opponentHeadToNearestFood <= 3);
+});
+
+test("attack target weights can prefer head cluster or target nearest food", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("moray"),
+    computerCharacter: characterById.get("moray"),
+    seed: "cast-target-weights",
+    computerModel: { aiDifficulty: "high", aimPrecision: 1 }
+  });
+  const attacker = state.fighters.computer;
+  const defender = state.fighters.player;
+  attacker.stock = { protein: 20, fat: 0, fiber: 0, carb: 0 };
+  defender.snake = [{ q: 0, r: 0 }, { q: 1, r: 0 }, { q: 1, r: -1 }, { q: 0, r: -1 }];
+  defender.hp = 99;
+  state.foods = [{ q: 4, r: -4, types: ["protein"] }];
+
+  attacker.policy.strategyWeights.castTarget = { targetHead: 3, bodyCluster: 0, targetNearestFood: 0 };
+  assert.deepEqual(chooseAttackTarget(state, attacker, defender, balance, "small"), defender.snake[0]);
+
+  attacker.policy.strategyWeights.castTarget = { targetHead: 0, bodyCluster: 3, targetNearestFood: 0 };
+  const clusterTarget = chooseAttackTarget(state, attacker, defender, balance, "small");
+  assert.ok(damageSnake(defender.snake, clusterTarget, attackStats(attacker.stock, "small", balance).radius, 1, balance) >= 2);
+
+  attacker.policy.strategyWeights.castTarget = { targetHead: 0, bodyCluster: 0, targetNearestFood: 3 };
+  assert.deepEqual(chooseAttackTarget(state, attacker, defender, balance, "small"), state.foods[0]);
+});
+
+test("directional cast weights can prefer each direction strategy", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("moray"),
+    computerCharacter: characterById.get("moray"),
+    seed: "cast-direction-weights",
+    computerModel: { aiDifficulty: "high", aimPrecision: 1 }
+  });
+  const attacker = state.fighters.computer;
+  const defender = state.fighters.player;
+  attacker.snake[0] = { q: 0, r: 0 };
+  attacker.dir = 0;
+  defender.snake = [{ q: 2, r: 0 }, { q: 1, r: 0 }, { q: 0, r: 0 }];
+  state.foods = [{ q: 2, r: -2, types: ["carb"] }];
+  const target = defender.snake[0];
+
+  attacker.policy.strategyWeights.castDirection = { selfHeadToOpponentHead: 3, opponentBodyLongestAxis: 0, opponentHeadToNearestFood: 0 };
+  assert.equal(chooseAttackDirection(state, attacker, defender, target, attacker.dir), 2);
+
+  attacker.policy.strategyWeights.castDirection = { selfHeadToOpponentHead: 0, opponentBodyLongestAxis: 3, opponentHeadToNearestFood: 0 };
+  assert.equal(chooseAttackDirection(state, attacker, defender, target, attacker.dir), 5);
+
+  attacker.policy.strategyWeights.castDirection = { selfHeadToOpponentHead: 0, opponentBodyLongestAxis: 0, opponentHeadToNearestFood: 3 };
+  assert.equal(chooseAttackDirection(state, attacker, defender, target, attacker.dir), 0);
+});
+
+test("wrapped distance and stale food target switching affect food choices", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("quetzal"),
+    computerCharacter: characterById.get("quetzal"),
+    seed: "wrapped-food-target",
+    computerModel: { aiDifficulty: "high", pathPrecision: 1, aimPrecision: 1 }
+  });
+  const fighter = state.fighters.computer;
+  const opponent = state.fighters.player;
+  fighter.snake[0] = { q: 0, r: -state.radius };
+  opponent.snake[0] = { q: 0, r: 0 };
+  state.foods = [
+    { q: 0, r: state.radius, types: ["fiber"] },
+    { q: 2, r: -2, types: ["fiber"] }
+  ];
+  fighter.policy.strategyWeights.food = { fastestArrival: 3, ownDeficit: 0, opponentDeficit: 0, ownPreferred: 0, opponentPreferred: 0 };
+  assert.equal(wrappedDistance(state, fighter.snake[0], state.foods[0]), 1);
+  assert.deepEqual(chooseFoodTarget(state, fighter, opponent), state.foods[0]);
+  fighter.foodTargetKey = `${state.foods[0].q},${state.foods[0].r}`;
+  fighter.lastFoodAt = 0;
+  state.now = 21000;
+  assert.deepEqual(chooseFoodTarget(state, fighter, opponent), state.foods[1]);
+});
+
 test("lethal attack opportunity overrides small or big skill preferences", () => {
   const state = createMatchState({
     balance,
@@ -351,7 +454,8 @@ test("dragon tracking orb has limited curvature and board-width range", () => {
   const source = { q: -3, r: 1 };
   const targetSnake = [{ q: 3, r: -2 }, { q: 2, r: -1 }];
   const path = dragonTrackingOrbPath(state, source, 0, targetSnake);
-  assert.ok(path.length <= state.radius * 2 + 1);
+  assert.ok(path.length <= Math.ceil((state.radius * 2 + 1) / 2));
+  assert.deepEqual(path[0], nextWrappedCell(source, 0, state.radius));
   let cursor = source;
   let direction = 0;
   path.forEach(cell => {

@@ -29,7 +29,9 @@ const weightShape = {
   movement: ["safePath", "leastDamage", "fastestArrival"],
   food: ["fastestArrival", "ownDeficit", "opponentDeficit", "ownPreferred", "opponentPreferred"],
   skillAllocation: ["preferSmall", "preferBig"],
-  castTiming: ["lethal", "nearFullEnergy", "opponentDebuffed", "opponentAlmostReady", "nearOpponent", "farOpponent"]
+  castTiming: ["lethal", "nearFullEnergy", "opponentDebuffed", "opponentAlmostReady", "nearOpponent", "farOpponent"],
+  castTarget: ["targetHead", "bodyCluster", "targetNearestFood"],
+  castDirection: ["selfHeadToOpponentHead", "opponentBodyLongestAxis", "opponentHeadToNearestFood"]
 };
 
 function parseArgs(argv) {
@@ -113,7 +115,9 @@ function defaultStrategyWeights() {
     movement: { safePath: 1.4, leastDamage: 1.1, fastestArrival: 1 },
     food: { fastestArrival: 1, ownDeficit: 0.9, opponentDeficit: 0.5, ownPreferred: 1.1, opponentPreferred: 0.4 },
     skillAllocation: { preferSmall: 1, preferBig: 1 },
-    castTiming: { lethal: 3, nearFullEnergy: 0.8, opponentDebuffed: 1.1, opponentAlmostReady: 0.8, nearOpponent: 0.9, farOpponent: 0.4 }
+    castTiming: { lethal: 3, nearFullEnergy: 0.8, opponentDebuffed: 1.1, opponentAlmostReady: 0.8, nearOpponent: 0.9, farOpponent: 0.4 },
+    castTarget: { targetHead: 1.3, bodyCluster: 1.2, targetNearestFood: 0.8 },
+    castDirection: { selfHeadToOpponentHead: 1.4, opponentBodyLongestAxis: 1.1, opponentHeadToNearestFood: 0.8 }
   };
 }
 
@@ -174,6 +178,17 @@ function randomStrategy(id, rng, base = defaultStrategyWeights(), spread = 0.75)
   Object.entries(weightShape).forEach(([group, keys]) => {
     keys.forEach(key => {
       weights[group][key] = round(clampWeight(weights[group][key] + randomBetween(rng, -spread, spread)), 4);
+    });
+  });
+  weights.castTiming.lethal = 3;
+  return makeStrategy(id, weights);
+}
+
+function fullyRandomStrategy(id, rng) {
+  const weights = defaultStrategyWeights();
+  Object.entries(weightShape).forEach(([group, keys]) => {
+    keys.forEach(key => {
+      weights[group][key] = round(randomBetween(rng, WEIGHT_MIN, WEIGHT_MAX), 4);
     });
   });
   weights.castTiming.lethal = 3;
@@ -249,12 +264,11 @@ function crossoverStrategy(id, left, right, rng, mutation = 0.35) {
 }
 
 function seedPopulation(character, rng, size = DEFAULT_POPULATION_SIZE) {
-  const base = roleAdjustedBaseWeights(character);
-  const population = [makeStrategy("baseline", clone(base)), ...archetypeStrategies(character)];
+  const population = [];
   while (population.length < size) {
-    population.push(randomStrategy(`seed-${population.length}`, rng, base));
+    population.push(fullyRandomStrategy(`seed-${population.length}`, rng));
   }
-  return population.slice(0, size);
+  return population;
 }
 
 function candidatePairs(population) {

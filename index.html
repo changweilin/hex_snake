@@ -1385,14 +1385,50 @@
     .fighter-avatar-image[data-avatar-kind="avatar"] {
       --avatar-object-position: 50% 18%;
       --avatar-scale: 1;
+      --avatar-shift-x: 0%;
+      --avatar-shift-y: 0%;
       object-fit: cover;
       object-position: var(--avatar-object-position);
-      transform: scale(var(--avatar-scale));
+      transform: translate(var(--avatar-shift-x), var(--avatar-shift-y)) scale(var(--avatar-scale));
     }
 
     .fighter-avatar-image[data-avatar-kind="avatar"][data-portrait-variant="human"] {
-      --avatar-object-position: 50% 14%;
-      --avatar-scale: 1.08;
+      --avatar-object-position: 50% 0%;
+      --avatar-scale: 3.05;
+      --avatar-shift-y: 76%;
+    }
+
+    .fighter-avatar-image[data-avatar-kind="avatar"][data-portrait-variant="human"][data-character-id="gu_king"] {
+      --avatar-scale: 3.25;
+      --avatar-shift-x: 15%;
+      --avatar-shift-y: 101%;
+    }
+
+    .fighter-avatar-image[data-avatar-kind="avatar"][data-portrait-variant="human"][data-character-id="moray"] {
+      --avatar-scale: 3.1;
+      --avatar-shift-x: -18%;
+      --avatar-shift-y: 86%;
+    }
+
+    .fighter-avatar-image[data-avatar-kind="avatar"][data-portrait-variant="human"][data-character-id="quetzal"] {
+      --avatar-scale: 3.28;
+      --avatar-shift-x: -4%;
+      --avatar-shift-y: 87%;
+    }
+
+    .fighter-avatar-image[data-avatar-kind="avatar"][data-portrait-variant="human"][data-character-id="dragon"] {
+      --avatar-scale: 3;
+      --avatar-shift-x: -12%;
+      --avatar-shift-y: 86%;
+    }
+
+    .fighter-avatar-image[data-avatar-kind="avatar"][data-portrait-variant="human"][data-character-id="lobster"] {
+      --avatar-shift-y: 76%;
+    }
+
+    .fighter-avatar-image[data-avatar-kind="avatar"][data-portrait-variant="human"][data-character-id="sandworm"] {
+      --avatar-scale: 3.15;
+      --avatar-shift-y: 88%;
     }
 
     .fighter-avatar-image[data-avatar-kind="avatar"][data-portrait-variant="beast"] {
@@ -1403,6 +1439,15 @@
     .fighter-avatar-image[data-avatar-kind="avatar"][data-portrait-variant="chibi"] {
       --avatar-object-position: 50% 24%;
       --avatar-scale: 1;
+    }
+
+    .fighter-module-clip .fighter-avatar-image[data-duel-avatar="true"] {
+      --avatar-object-position: 50% 50%;
+      --avatar-scale: 1;
+      --avatar-shift-x: 0%;
+      --avatar-shift-y: 0%;
+      object-position: 50% 50%;
+      transform: none;
     }
 
     .fighter-module::before,
@@ -1425,18 +1470,18 @@
     .fighter-portrait::after {
       content: attr(data-owner-mark);
       position: absolute;
-      right: 5px;
-      bottom: 5px;
-      min-width: 24px;
-      height: 20px;
-      padding: 0 5px;
+      right: 4px;
+      bottom: 4px;
+      min-width: 21px;
+      height: 17px;
+      padding: 0 4px;
       display: grid;
       place-items: center;
       border-radius: 999px;
       border: 1px solid var(--owner-line);
       background: color-mix(in srgb, var(--owner-color), #101720 34%);
       color: #ffffff;
-      font-size: 0.68rem;
+      font-size: 0.6rem;
       font-weight: 950;
       line-height: 1;
       letter-spacing: 0;
@@ -1451,12 +1496,12 @@
     }
 
     .fighter-module::after {
-      top: -7px;
-      right: -7px;
-      bottom: auto;
-      min-width: 22px;
-      height: 18px;
-      font-size: 0.62rem;
+      right: -3px;
+      bottom: -3px;
+      min-width: 17px;
+      height: 14px;
+      padding: 0 3px;
+      font-size: 0.5rem;
       z-index: 5;
     }
 
@@ -3893,6 +3938,10 @@
     let lastVisibleComputerSnake = [];
     let lastVisiblePlayerDir = 0;
     let lastVisibleComputerDir = 3;
+    let playerFoodTargetKey = null;
+    let computerFoodTargetKey = null;
+    let lastPlayerFoodAt = 0;
+    let lastComputerFoodAt = 0;
     let lastTimerFrame = 0;
     let lastPlayerAttackMs = -Infinity;
     let lastComputerAttackMs = 0;
@@ -4122,15 +4171,14 @@
       return "(max-width: 700px) 46vw, 360px";
     }
 
-    function avatarUrl(character, size = "sm") {
-      if (portraitVariantMode !== "chibi") {
-        return portraitUrl(character, "idle", size);
-      }
+    function duelAvatarUrl(character, size = "sm") {
       const slug = character.slug || character.id;
-      if (size === "sm" || size === "md") {
-        return `assets/portraits/${size}/${slug}_chibi.png`;
-      }
-      return `assets/portraits/${slug}_chibi.png`;
+      const variant = portraitVariantModes.includes(portraitVariantMode) ? portraitVariantMode : "chibi";
+      return `assets/portraits/avatars/${variant}/${size}/${slug}_duel.png`;
+    }
+
+    function avatarUrl(character, size = "sm") {
+      return duelAvatarUrl(character, size);
     }
 
     function avatarSrcset(character, includeFull = false) {
@@ -4156,7 +4204,6 @@
           data-pose="${pose}"
           data-character-id="${character.id}"
           data-portrait-variant="${portraitVariantMode}"
-          data-avatar-kind="avatar"
         >
       `;
     }
@@ -4174,6 +4221,8 @@
           data-pose="${pose}"
           data-character-id="${character.id}"
           data-portrait-variant="${portraitVariantMode}"
+          data-avatar-kind="avatar"
+          data-duel-avatar="true"
         >
       `;
     }
@@ -5523,6 +5572,7 @@
       localStorage.setItem("hexSnakeGmSettings", JSON.stringify({
         gridSize,
         foodCount,
+        computerDifficulty,
         initialSpeed,
         gmMode,
         initialLength,
@@ -5548,6 +5598,7 @@
         }
         setGridSize(saved.gridSize ?? defaultSettings.gridSize);
         setFoodCount(saved.foodCount ?? defaultSettings.foodCount);
+        setComputerDifficulty(saved.computerDifficulty ?? defaultSettings.computerDifficulty);
         setInitialSpeed(saved.initialSpeed ?? defaultSettings.initialSpeed);
         setGmMode(saved.gmMode ?? defaultSettings.gmMode);
         setInitialLength(saved.initialLength ?? defaultSettings.initialLength);
@@ -5823,6 +5874,10 @@
       lastVisibleComputerSnake = computerSnake.map(segment => ({ ...segment }));
       lastVisiblePlayerDir = dir;
       lastVisibleComputerDir = computerDir;
+      playerFoodTargetKey = null;
+      computerFoodTargetKey = null;
+      lastPlayerFoodAt = 0;
+      lastComputerFoodAt = 0;
       lastPlayerAttackMs = -Infinity;
       lastComputerAttackMs = 0;
       replaySurrendered = false;
@@ -6195,7 +6250,31 @@
 
     function nearestFoodDistance(cell) {
       if (!foods.length) return Number.POSITIVE_INFINITY;
-      return Math.min(...foods.map(food => hexDistance(cell, food)));
+      return Math.min(...foods.map(food => wrappedDistance(cell, food)));
+    }
+
+    function wrappedDistance(start, target) {
+      if (!start || !target) return Number.POSITIVE_INFINITY;
+      if (keyOf(start) === keyOf(target)) return 0;
+      const visited = new Set([keyOf(start)]);
+      const queue = [{ cell: start, distance: 0 }];
+      for (let index = 0; index < queue.length; index += 1) {
+        const current = queue[index];
+        for (let direction = 0; direction < directions.length; direction += 1) {
+          const next = nextWrappedCell(current.cell, direction);
+          const nextKey = keyOf(next);
+          if (visited.has(nextKey)) continue;
+          if (nextKey === keyOf(target)) return current.distance + 1;
+          visited.add(nextKey);
+          queue.push({ cell: next, distance: current.distance + 1 });
+        }
+      }
+      return hexDistance(start, target);
+    }
+
+    function nearestFoodFor(cell) {
+      if (!foods.length) return null;
+      return [...foods].sort((a, b) => wrappedDistance(cell, a) - wrappedDistance(cell, b))[0];
     }
 
     function randomItem(items) {
@@ -6213,40 +6292,52 @@
 
     const highAiStrategyWeightsByCharacter = {
       dragon: {
-        movement: { safePath: 1.5588, leastDamage: 1.6121, fastestArrival: 1.7857 },
-        food: { fastestArrival: 0.5212, ownDeficit: 0, opponentDeficit: 0.3621, ownPreferred: 1.072, opponentPreferred: 1.0814 },
-        skillAllocation: { preferSmall: 1.6995, preferBig: 0.465 },
-        castTiming: { lethal: 3, nearFullEnergy: 0.4208, opponentDebuffed: 0.4931, opponentAlmostReady: 0.7456, nearOpponent: 0.8023, farOpponent: 0.7928 }
+        movement: { safePath: 2.4391, leastDamage: 0.4827, fastestArrival: 0.9183 },
+        food: { fastestArrival: 0.3615, ownDeficit: 2.2066, opponentDeficit: 2.2535, ownPreferred: 2.7, opponentPreferred: 1.287 },
+        skillAllocation: { preferSmall: 0.7963, preferBig: 0.5354 },
+        castTiming: { lethal: 3, nearFullEnergy: 1.0789, opponentDebuffed: 1.5827, opponentAlmostReady: 0.4801, nearOpponent: 2.4436, farOpponent: 1.8235 },
+        castTarget: { targetHead: 2.6208, bodyCluster: 2.0027, targetNearestFood: 0.3366 },
+        castDirection: { selfHeadToOpponentHead: 0.4444, opponentBodyLongestAxis: 2.0251, opponentHeadToNearestFood: 0.8802 }
       },
       sandworm: {
-        movement: { safePath: 2.5526, leastDamage: 0.6603, fastestArrival: 0.3375 },
-        food: { fastestArrival: 1.4318, ownDeficit: 0.9415, opponentDeficit: 0.4762, ownPreferred: 0.2113, opponentPreferred: 0.3524 },
-        skillAllocation: { preferSmall: 0.8539, preferBig: 1.228 },
-        castTiming: { lethal: 3, nearFullEnergy: 1.3695, opponentDebuffed: 0.1003, opponentAlmostReady: 1.9772, nearOpponent: 1.7418, farOpponent: 1.5957 }
+        movement: { safePath: 2.275, leastDamage: 0.3001, fastestArrival: 2.1183 },
+        food: { fastestArrival: 2.7308, ownDeficit: 0.0173, opponentDeficit: 0.4444, ownPreferred: 0.5262, opponentPreferred: 0.1931 },
+        skillAllocation: { preferSmall: 0.7358, preferBig: 2.8337 },
+        castTiming: { lethal: 3, nearFullEnergy: 1.3631, opponentDebuffed: 1.5677, opponentAlmostReady: 1.2949, nearOpponent: 2.6487, farOpponent: 0.7148 },
+        castTarget: { targetHead: 2.9589, bodyCluster: 2.6262, targetNearestFood: 1.899 },
+        castDirection: { selfHeadToOpponentHead: 0.1048, opponentBodyLongestAxis: 0.5028, opponentHeadToNearestFood: 2.7798 }
       },
       quetzal: {
-        movement: { safePath: 0.7338, leastDamage: 2.7908, fastestArrival: 0.2879 },
-        food: { fastestArrival: 2.6869, ownDeficit: 0.8009, opponentDeficit: 0.4538, ownPreferred: 0.082, opponentPreferred: 0.6292 },
-        skillAllocation: { preferSmall: 2.2894, preferBig: 3 },
-        castTiming: { lethal: 3, nearFullEnergy: 2.8778, opponentDebuffed: 0.3555, opponentAlmostReady: 0.4152, nearOpponent: 0.5248, farOpponent: 0.7908 }
+        movement: { safePath: 0.7215, leastDamage: 2.043, fastestArrival: 2.8806 },
+        food: { fastestArrival: 2.2716, ownDeficit: 1.6132, opponentDeficit: 1.4371, ownPreferred: 0.3025, opponentPreferred: 2.6297 },
+        skillAllocation: { preferSmall: 2.6991, preferBig: 2.8627 },
+        castTiming: { lethal: 3, nearFullEnergy: 0.9051, opponentDebuffed: 1.2581, opponentAlmostReady: 1.1279, nearOpponent: 0.5001, farOpponent: 0.9577 },
+        castTarget: { targetHead: 2.9646, bodyCluster: 0.3723, targetNearestFood: 1.8288 },
+        castDirection: { selfHeadToOpponentHead: 2.0102, opponentBodyLongestAxis: 2.6791, opponentHeadToNearestFood: 2.6263 }
       },
       moray: {
-        movement: { safePath: 0.347, leastDamage: 0, fastestArrival: 0.2809 },
-        food: { fastestArrival: 3, ownDeficit: 1.9572, opponentDeficit: 0.2476, ownPreferred: 0, opponentPreferred: 0 },
-        skillAllocation: { preferSmall: 0.8998, preferBig: 2.2955 },
-        castTiming: { lethal: 3, nearFullEnergy: 2.0326, opponentDebuffed: 0.6509, opponentAlmostReady: 0, nearOpponent: 2.2229, farOpponent: 1.4683 }
+        movement: { safePath: 0.7897, leastDamage: 0.3349, fastestArrival: 1.8574 },
+        food: { fastestArrival: 2.2697, ownDeficit: 2.3837, opponentDeficit: 0.7869, ownPreferred: 2.2269, opponentPreferred: 0.9253 },
+        skillAllocation: { preferSmall: 1.5183, preferBig: 1.0406 },
+        castTiming: { lethal: 3, nearFullEnergy: 1.9911, opponentDebuffed: 0.0427, opponentAlmostReady: 1.0187, nearOpponent: 1.3133, farOpponent: 1.3689 },
+        castTarget: { targetHead: 2.9044, bodyCluster: 2.4521, targetNearestFood: 1.7096 },
+        castDirection: { selfHeadToOpponentHead: 1.1555, opponentBodyLongestAxis: 2.2171, opponentHeadToNearestFood: 1.6267 }
       },
       lobster: {
-        movement: { safePath: 0, leastDamage: 0.8269, fastestArrival: 0.0956 },
-        food: { fastestArrival: 2.3552, ownDeficit: 1.8649, opponentDeficit: 0, ownPreferred: 0, opponentPreferred: 0 },
-        skillAllocation: { preferSmall: 1.2308, preferBig: 2.2717 },
-        castTiming: { lethal: 3, nearFullEnergy: 2.3079, opponentDebuffed: 2.5038, opponentAlmostReady: 1.7061, nearOpponent: 0.5592, farOpponent: 1.5145 }
+        movement: { safePath: 2.0436, leastDamage: 1.2824, fastestArrival: 0.1606 },
+        food: { fastestArrival: 2.3519, ownDeficit: 2.142, opponentDeficit: 1.7749, ownPreferred: 1.1667, opponentPreferred: 0.0611 },
+        skillAllocation: { preferSmall: 2.1332, preferBig: 2.5317 },
+        castTiming: { lethal: 3, nearFullEnergy: 2.0314, opponentDebuffed: 0.0622, opponentAlmostReady: 2.9222, nearOpponent: 1.2235, farOpponent: 1.3658 },
+        castTarget: { targetHead: 2.6307, bodyCluster: 1.542, targetNearestFood: 0.6258 },
+        castDirection: { selfHeadToOpponentHead: 2.6991, opponentBodyLongestAxis: 0.7737, opponentHeadToNearestFood: 1.6523 }
       },
       gu_king: {
-        movement: { safePath: 1.5307, leastDamage: 2.3577, fastestArrival: 0.1434 },
-        food: { fastestArrival: 2.6533, ownDeficit: 0.043, opponentDeficit: 0, ownPreferred: 0, opponentPreferred: 0 },
-        skillAllocation: { preferSmall: 1.9593, preferBig: 2.7991 },
-        castTiming: { lethal: 3, nearFullEnergy: 2.5735, opponentDebuffed: 0.2721, opponentAlmostReady: 0.5662, nearOpponent: 1.2454, farOpponent: 2.9204 }
+        movement: { safePath: 1.2354, leastDamage: 2.7963, fastestArrival: 1.7133 },
+        food: { fastestArrival: 1.6337, ownDeficit: 1.1691, opponentDeficit: 0.2202, ownPreferred: 0.2503, opponentPreferred: 0.3732 },
+        skillAllocation: { preferSmall: 1.6374, preferBig: 1.8423 },
+        castTiming: { lethal: 3, nearFullEnergy: 0.6652, opponentDebuffed: 1.9551, opponentAlmostReady: 1.561, nearOpponent: 2.7869, farOpponent: 1.5272 },
+        castTarget: { targetHead: 1.9542, bodyCluster: 2.2246, targetNearestFood: 0.4308 },
+        castDirection: { selfHeadToOpponentHead: 1.7434, opponentBodyLongestAxis: 2.5441, opponentHeadToNearestFood: 1.0906 }
       }
     };
     const dragonOrbStepMs = 45;
@@ -6299,7 +6390,36 @@
           opponentAlmostReady: computerDifficulty === "high" ? 1.2 : 0.65,
           nearOpponent: computerDifficulty === "high" ? 1.15 : 0.85,
           farOpponent: computerDifficulty === "high" ? 0.75 : 0.35
+        },
+        castTarget: {
+          targetHead: 1.3,
+          bodyCluster: computerDifficulty === "high" ? 1.2 : 0.8,
+          targetNearestFood: computerDifficulty === "high" ? 0.8 : 0.5
+        },
+        castDirection: {
+          selfHeadToOpponentHead: 1.4,
+          opponentBodyLongestAxis: computerDifficulty === "high" ? 1.1 : 0.7,
+          opponentHeadToNearestFood: computerDifficulty === "high" ? 0.8 : 0.4
         }
+      };
+    }
+
+    function mergeAiWeights(defaults, provided = {}) {
+      return Object.fromEntries(Object.entries(defaults).map(([key, fallback]) => {
+        const value = Number(provided[key]);
+        return [key, Number.isFinite(value) ? Math.min(3, Math.max(0, value)) : fallback];
+      }));
+    }
+
+    function normalizeAiStrategyWeights(provided = {}) {
+      const defaults = defaultAiStrategyWeights();
+      return {
+        movement: mergeAiWeights(defaults.movement, provided.movement),
+        food: mergeAiWeights(defaults.food, provided.food),
+        skillAllocation: mergeAiWeights(defaults.skillAllocation, provided.skillAllocation),
+        castTiming: mergeAiWeights(defaults.castTiming, provided.castTiming),
+        castTarget: mergeAiWeights(defaults.castTarget, provided.castTarget),
+        castDirection: mergeAiWeights(defaults.castDirection, provided.castDirection)
       };
     }
 
@@ -6310,7 +6430,7 @@
 
     function aiStrategyWeightsFor(owner) {
       if (computerDifficulty !== "high") return defaultAiStrategyWeights();
-      return highAiStrategyWeightsByCharacter[characterFor(owner).id] || defaultAiStrategyWeights();
+      return normalizeAiStrategyWeights(highAiStrategyWeightsByCharacter[characterFor(owner).id]);
     }
 
     function ownerSnake(owner) {
@@ -6522,6 +6642,54 @@
       return damageSnake(targetSnake, target, radius, damageScale);
     }
 
+    function bestBodyClusterTarget(targetSnake, stats) {
+      if (!targetSnake.length) return null;
+      return [...cells].sort((a, b) => {
+        const damageDiff = attackTargetDamage(targetSnake, b, stats.radius, stats.damage) - attackTargetDamage(targetSnake, a, stats.radius, stats.damage);
+        if (damageDiff) return damageDiff;
+        return wrappedDistance(targetSnake[0], a) - wrappedDistance(targetSnake[0], b);
+      })[0];
+    }
+
+    function directionForLongestBodyAxis(targetSnake, fallbackDirection = 0) {
+      if (!targetSnake.length) return fallbackDirection;
+      const values = targetSnake.map(cell => ({ q: cell.q, r: cell.r, s: -cell.q - cell.r }));
+      const rangeFor = axis => Math.max(...values.map(value => value[axis])) - Math.min(...values.map(value => value[axis]));
+      const axis = ["q", "r", "s"].sort((a, b) => rangeFor(b) - rangeFor(a))[0];
+      const head = values[0];
+      const tailAverage = values.slice(1).reduce((sum, value) => sum + value[axis], 0) / Math.max(1, values.length - 1);
+      const positive = tailAverage >= head[axis];
+      if (axis === "q") return positive ? 2 : 5;
+      if (axis === "r") return positive ? 3 : 0;
+      return positive ? 4 : 1;
+    }
+
+    function chooseAiAttackDirection(owner, target, now) {
+      const opponent = opponentOf(owner);
+      const targetSnake = perceivedSnakeFor(owner, opponent, now);
+      const targetHead = targetSnake[0] || target;
+      const nearestFood = nearestFoodFor(targetHead);
+      const fallbackDirection = ownerDirection(owner);
+      const ideal = directionFromSourceToTarget(ownerHead(owner), target, fallbackDirection);
+      const weights = aiStrategyWeightsFor(owner).castDirection;
+      const candidates = [
+        {
+          direction: directionFromSourceToTarget(ownerHead(owner), targetHead, fallbackDirection),
+          weight: weights.selfHeadToOpponentHead
+        },
+        {
+          direction: directionForLongestBodyAxis(targetSnake, fallbackDirection),
+          weight: weights.opponentBodyLongestAxis
+        },
+        {
+          direction: nearestFood ? directionFromSourceToTarget(targetHead, nearestFood, fallbackDirection) : fallbackDirection,
+          weight: nearestFood ? weights.opponentHeadToNearestFood : 0
+        }
+      ];
+      candidates.sort((a, b) => b.weight - a.weight || turnDistance(a.direction, ideal) - turnDistance(b.direction, ideal));
+      return candidates[0].direction;
+    }
+
     function chooseAiAttackTarget(owner, profile, now) {
       const opponent = opponentOf(owner);
       const targetSnake = perceivedSnakeFor(owner, opponent, now);
@@ -6529,15 +6697,24 @@
       const stats = attackStats(ownerStock(owner), profile);
 
       if (computerDifficulty === "high") {
-        const candidates = cellsWithinDistance(targetHead, 0, Math.max(1, Math.ceil(stats.radius + 1)));
-        candidates.sort((a, b) => {
-          const damageDiff = attackTargetDamage(targetSnake, b, stats.radius, stats.damage) - attackTargetDamage(targetSnake, a, stats.radius, stats.damage);
-          if (damageDiff) return damageDiff;
-          const role = aiProfileFor(owner).role;
-          if (role === "control") return nearestFoodDistance(a) - nearestFoodDistance(b);
-          return hexDistance(a, targetHead) - hexDistance(b, targetHead);
+        const maxDamageTarget = bestBodyClusterTarget(targetSnake, stats) || targetHead;
+        if (attackTargetDamage(targetSnake, maxDamageTarget, stats.radius, stats.damage) >= ownerHp(opponent)) return { ...maxDamageTarget };
+        const weights = aiStrategyWeightsFor(owner).castTarget;
+        const nearestFood = nearestFoodFor(targetHead);
+        const weighted = [
+          { target: targetHead, weight: weights.targetHead },
+          { target: maxDamageTarget, weight: weights.bodyCluster },
+          { target: nearestFood || targetHead, weight: nearestFood ? weights.targetNearestFood : 0 }
+        ];
+        weighted.sort((a, b) => {
+          const aDamage = attackTargetDamage(targetSnake, a.target, stats.radius, stats.damage);
+          const bDamage = attackTargetDamage(targetSnake, b.target, stats.radius, stats.damage);
+          const aScore = a.weight * 2 + aDamage * 0.8 + (aDamage > 0 ? 0.5 : -2);
+          const bScore = b.weight * 2 + bDamage * 0.8 + (bDamage > 0 ? 0.5 : -2);
+          if (aScore !== bScore) return bScore - aScore;
+          return wrappedDistance(targetHead, a.target) - wrappedDistance(targetHead, b.target);
         });
-        return candidates[0] || { ...targetHead };
+        return { ...weighted[0].target };
       }
 
       if (computerDifficulty === "medium") {
@@ -6609,9 +6786,9 @@
     }
 
     function foodValueFor(owner, opponent, food, now) {
-      const ownDistance = hexDistance(ownerHead(owner), food);
+      const ownDistance = wrappedDistance(ownerHead(owner), food);
       const opponentHead = perceivedSnakeFor(owner, opponent, now)[0];
-      const opponentDistance = hexDistance(opponentHead, food);
+      const opponentDistance = wrappedDistance(opponentHead, food);
       const profile = aiProfileFor(owner);
       const opponentProfile = aiProfileFor(opponent);
       const types = food.types || [];
@@ -6643,7 +6820,7 @@
 
     function chooseAiMoveTarget(owner, opponent, now) {
       const perceivedOpponent = perceivedSnakeFor(owner, opponent, now);
-      const distance = hexDistance(ownerHead(owner), perceivedOpponent[0]);
+      const distance = wrappedDistance(ownerHead(owner), perceivedOpponent[0]);
       if (computerDifficulty === "high") {
         const role = aiProfileFor(owner).role;
         if ((role === "rush" && distance <= 5) || (role === "melee" && distance <= 3)) return perceivedOpponent[0];
@@ -6653,7 +6830,14 @@
         }
       }
       if (!foods.length) return perceivedOpponent[0];
-      return [...foods].sort((a, b) => foodValueFor(owner, opponent, b, now) - foodValueFor(owner, opponent, a, now))[0];
+      const targetKey = owner === "player" ? playerFoodTargetKey : computerFoodTargetKey;
+      const lastFoodAt = owner === "player" ? lastPlayerFoodAt : lastComputerFoodAt;
+      const staleTarget = targetKey && now - lastFoodAt >= 20000 ? targetKey : null;
+      const choices = foods.filter(food => keyOf(food) !== staleTarget);
+      const target = [...(choices.length ? choices : foods)].sort((a, b) => foodValueFor(owner, opponent, b, now) - foodValueFor(owner, opponent, a, now))[0];
+      if (owner === "player") playerFoodTargetKey = target ? keyOf(target) : null;
+      else computerFoodTargetKey = target ? keyOf(target) : null;
+      return target;
     }
 
     function chooseAiDirection(owner, now = performance.now()) {
@@ -6681,7 +6865,7 @@
         const danger = keyOf(opponentThreat) === nextKey ? 20 : 0;
         const wallPressure = cells.filter(cell => hexDistance(cell, next) <= 1 && !occupied.has(keyOf(cell))).length;
         const pathDistance = shortestFoodDistance(next, occupied);
-        const targetDistance = hexDistance(next, target);
+        const targetDistance = wrappedDistance(next, target);
         const role = aiProfileFor(owner).role;
         const pressureBias = computerDifficulty === "high" && (role === "rush" || role === "melee") ? targetDistance : 0;
         const expectedDamage = expectedDamageAt(owner, next, now);
@@ -6771,19 +6955,8 @@
       return Math.min(clockwise, directions.length - clockwise);
     }
 
-    function nearestDragonOrbTarget(cursor, targetSnake) {
-      if (!targetSnake.length) return null;
-      return targetSnake.reduce((best, segment, index) => {
-        const distance = hexDistance(cursor, segment);
-        if (!best || distance < best.distance || (distance === best.distance && index < best.index)) {
-          return { cell: segment, distance, index };
-        }
-        return best;
-      }, null).cell;
-    }
-
     function dragonTrackingDirection(cursor, direction, targetSnake, visited) {
-      const target = nearestDragonOrbTarget(cursor, targetSnake);
+      const target = targetSnake[0];
       if (!target) return direction;
       const idealDirection = directionFromSourceToTarget(cursor, target, direction);
       const candidates = [
@@ -6860,15 +7033,32 @@
       const visited = new Set([keyOf(source)]);
       let cursor = { q: source.q, r: source.r };
       let currentDirection = direction;
-      const maxSteps = Math.max(1, radius * 2 + 1);
+      const maxSteps = Math.max(1, Math.ceil((radius * 2 + 1) / 2));
       for (let step = 0; step < maxSteps; step += 1) {
-        currentDirection = dragonTrackingDirection(cursor, currentDirection, targetSnake, visited);
+        if (step > 0) {
+          currentDirection = dragonTrackingDirection(cursor, currentDirection, targetSnake, visited);
+        }
         cursor = nextWrappedCell(cursor, currentDirection);
         if (keyOf(cursor) === keyOf(source)) break;
         path.push({ q: cursor.q, r: cursor.r });
         visited.add(keyOf(cursor));
       }
       return path;
+    }
+
+    function pointAlongPath(source, pathCells = [], progress = 0) {
+      const points = [source, ...pathCells].map(cell => axialToPixel(cell));
+      if (points.length <= 1) return points[0] || { x: 0, y: 0, angle: 0 };
+      const segmentProgress = Math.min(points.length - 1, Math.max(0, progress) * (points.length - 1));
+      const index = Math.min(points.length - 2, Math.floor(segmentProgress));
+      const localProgress = segmentProgress - index;
+      const start = points[index];
+      const end = points[index + 1];
+      return {
+        x: start.x + (end.x - start.x) * localProgress,
+        y: start.y + (end.y - start.y) * localProgress,
+        angle: Math.atan2(end.y - start.y, end.x - start.x)
+      };
     }
 
     function pathHits(path, targetSnake) {
@@ -7075,7 +7265,7 @@
         const lobsterUltimateRadius = small.radius * ultimateSetting(abilityId, "radiusMultiplier", 2.5);
         const volleys = character.id === "dragon" ? 1 : 2;
         const damageScale = character.id === "dragon" ? 1.5 : 1;
-        const impactDamage = character.id === "dragon" ? small.damage : big.damage * damageScale;
+        const impactDamage = character.id === "dragon" ? small.damage * 1.5 : big.damage * damageScale;
         const radiationTotalDamage = character.id === "dragon" ? small.damage * 1.5 : impactDamage;
         const firstImpactDelay = character.id === "dragon" ? small.delay / 1.5 : small.delay;
         const visualType = character.id === "dragon" ? "dragon-spirit-big" : attackVisualType(owner, "big", abilityId);
@@ -7116,7 +7306,7 @@
             impactAt: now + impactDelay,
             delay: impactDelay,
             radius: small.radius,
-            damage: small.damage * 0.9 * ultimateDamageMultiplier(character.id),
+            damage: small.damage * ultimateDamageMultiplier(character.id),
             stunChance
           });
         }
@@ -7179,7 +7369,8 @@
       const cooldown = { novice: 6200, low: 6200, medium: 4700, high: 3400 }[computerDifficulty] * profileCooldownScale / attackSpeedMultiplier(computerStock);
       if (now - lastComputerAttackMs < cooldown / (isPlayerAutoControlActive() ? computerBattleSpeed : 1)) return;
       const target = chooseAiAttackTarget("computer", profile, now);
-      if (launchAttack("computer", target, now, profile)) {
+      const options = profile === "big" ? { aimDirection: chooseAiAttackDirection("computer", target, now), aimOrigin: computerSnake[0] } : {};
+      if (launchAttack("computer", target, now, profile, options)) {
         lastComputerAttackMs = now;
         setStatus(profile === "small" ? "P2 施放小招。" : "P2 施放大招，2 秒後落地。");
       }
@@ -7200,7 +7391,9 @@
       const profileCooldownScale = profile === "small" ? 0.7 : 1;
       const cooldown = { novice: 6200, low: 6200, medium: 4700, high: 3400 }[computerDifficulty] * profileCooldownScale / attackSpeedMultiplier(playerStock);
       if (now - lastPlayerAttackMs < cooldown / computerBattleSpeed) return;
-      launchAttack("player", chooseAiAttackTarget("player", profile, now), now, profile);
+      const target = chooseAiAttackTarget("player", profile, now);
+      const options = profile === "big" ? { aimDirection: chooseAiAttackDirection("player", target, now), aimOrigin: snake[0] } : {};
+      launchAttack("player", target, now, profile, options);
     }
 
     function damageSnake(parts, target, radius, damageScale) {
@@ -7430,7 +7623,7 @@
       if (playerHp <= 0 || computerHp <= 0) endGame(playerHp <= 0, computerHp <= 0);
     }
 
-    function step() {
+    function step(headCollisionOrder = "simultaneous") {
       if (isPlayerAutoControlActive()) {
         nextDir = chooseAutoDirection("player");
         hexDirButtons.forEach(button => button.classList.toggle("active", Number(button.dataset.dir) === nextDir));
@@ -7453,8 +7646,14 @@
       let playerOpponentHit = computerBody.some(segment => keyOf(segment) === nextKey);
       let computerOpponentHit = body.some(segment => keyOf(segment) === computerNextKey);
       if (nextKey === computerNextKey) {
-        playerOpponentHit = true;
-        computerOpponentHit = true;
+        if (headCollisionOrder === "playerFirst") {
+          computerOpponentHit = true;
+        } else if (headCollisionOrder === "computerFirst") {
+          playerOpponentHit = true;
+        } else {
+          playerOpponentHit = true;
+          computerOpponentHit = true;
+        }
       }
       if (nextKey === keyOf(computerSnake[0]) && computerNextKey === keyOf(snake[0])) {
         playerOpponentHit = true;
@@ -7486,6 +7685,8 @@
         best = Math.max(best, score);
         localStorage.setItem("hexSnakeBest", String(best));
         lastFeedElapsedMs = 0;
+        lastPlayerFoodAt = performance.now();
+        playerFoodTargetKey = null;
         playerHp = Math.min(snake.length, playerHp + 1);
       } else if (!playerCollision) {
         snake.pop();
@@ -7493,6 +7694,8 @@
 
       if (!computerCollision && computerEating) {
         computerScore += 1;
+        lastComputerFoodAt = performance.now();
+        computerFoodTargetKey = null;
         if (computerCanGrow()) {
           collectFood("computer", computerEatenFood);
           computerHp = Math.min(computerSnake.length, computerHp + 1);
@@ -7548,6 +7751,8 @@
         best = Math.max(best, score);
         localStorage.setItem("hexSnakeBest", String(best));
         lastFeedElapsedMs = 0;
+        lastPlayerFoodAt = performance.now();
+        playerFoodTargetKey = null;
         playerHp = Math.min(snake.length, playerHp + 1);
         foods = foods.filter(food => keyOf(food) !== nextKey);
         placeFoods(["player"]);
@@ -7579,6 +7784,8 @@
       computerSnake.unshift(computerNext);
       if (computerEating) {
         computerScore += 1;
+        lastComputerFoodAt = performance.now();
+        computerFoodTargetKey = null;
         if (computerCanGrow()) {
           collectFood("computer", computerEatenFood);
           computerHp = Math.min(computerSnake.length, computerHp + 1);
@@ -7672,7 +7879,12 @@
         const playerDue = !isMovementStunned("player", now) && now - lastPlayerStep >= moveIntervalFor("player", now);
         const computerDue = !isMovementStunned("computer", now) && now - lastComputerStep >= moveIntervalFor("computer", now);
         if (playerDue && computerDue) {
-          step();
+          const playerDueAt = lastPlayerStep + moveIntervalFor("player", now);
+          const computerDueAt = lastComputerStep + moveIntervalFor("computer", now);
+          const headCollisionOrder = Math.abs(playerDueAt - computerDueAt) < 0.001
+            ? "simultaneous"
+            : playerDueAt < computerDueAt ? "playerFirst" : "computerFirst";
+          step(headCollisionOrder);
           lastPlayerStep = now;
           lastComputerStep = now;
         } else if (playerDue) {
@@ -9831,12 +10043,8 @@
         }
         if (projectile.kind === "dragonOrb") {
           const progress = Math.min(1, Math.max(0, (now - projectile.createdAt) / (projectile.delay || baseAttackDelayMs)));
-          const start = axialToPixel(projectile.source || projectile.target);
-          const end = axialToPixel(projectile.target);
-          const x = start.x + (end.x - start.x) * progress;
-          const y = start.y + (end.y - start.y) * progress;
-          const travelAngle = Math.atan2(end.y - start.y, end.x - start.x);
-          drawProjectileCore(x, y, projectile, progress, blastCharacter, travelAngle);
+          const point = pointAlongPath(projectile.source || projectile.target, projectile.pathCells || [projectile.target], progress);
+          drawProjectileCore(point.x, point.y, projectile, progress, blastCharacter, point.angle || 0);
           return;
         }
         if (projectile.kind === "line") {
@@ -11150,6 +11358,7 @@
     computerDifficultyInput.addEventListener("change", () => {
       if (running) return;
       setComputerDifficulty(computerDifficultyInput.value);
+      saveGmSettings();
       resetGame();
       resize();
       overlayTitle.textContent = "難度已更新";
@@ -11266,6 +11475,9 @@
     resetSettingsButton.addEventListener("click", () => {
       if (running) return;
       setComputerDifficulty(defaultSettings.computerDifficulty);
+      setGmMode(defaultSettings.gmMode);
+      resetGmParameters();
+      applyGmSettingsChanged({ presetMode: "real" });
       playerCharacterId = defaultSettings.playerCharacterId;
       computerCharacterId = defaultSettings.computerCharacterId;
       playerCharacterChoice = playerCharacterId;
