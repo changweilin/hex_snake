@@ -8907,53 +8907,71 @@
 
     function drawSmallSkillClawEmblem(x, y, size, progress, character, alpha = 1) {
       const element = elementColorsFor(character);
-      const open = 0.28 + waveValue(progress, 0.08) * 0.42;
+      const strike = Math.pow(waveValue(progress, 0.18), 1.8);
+      const lift = size * (0.56 - strike * 0.52);
+      const squash = 1 + strike * 0.16;
       ctx.save();
       ctx.translate(x, y);
-      ctx.rotate(-0.04 + Math.sin(progress * Math.PI * 2) * 0.06);
+      ctx.rotate(-0.08 + Math.sin(progress * Math.PI * 2) * 0.045);
       ctx.globalCompositeOperation = "source-over";
       ctx.shadowColor = hexToRgba(element.glow, 0.54 * alpha);
       ctx.shadowBlur = cellSize * 0.16;
+
+      ctx.save();
+      ctx.translate(0, lift);
+      ctx.scale(1.02, squash);
       ctx.beginPath();
-      ctx.ellipse(-size * 0.36, 0, size * 0.38, size * 0.34, 0, 0, Math.PI * 2);
-      ctx.fillStyle = hexToRgba(element.deep, 0.86 * alpha);
+      ctx.moveTo(-size * 0.52, -size * 0.42);
+      ctx.quadraticCurveTo(-size * 0.72, -size * 0.08, -size * 0.42, size * 0.34);
+      ctx.quadraticCurveTo(-size * 0.16, size * 0.76, size * 0.28, size * 0.58);
+      ctx.quadraticCurveTo(size * 0.72, size * 0.4, size * 0.74, -size * 0.08);
+      ctx.quadraticCurveTo(size * 0.68, -size * 0.48, size * 0.28, -size * 0.66);
+      ctx.quadraticCurveTo(size * 0.04, -size * 0.26, -size * 0.18, -size * 0.02);
+      ctx.quadraticCurveTo(-size * 0.28, -size * 0.28, -size * 0.52, -size * 0.42);
+      ctx.closePath();
+      ctx.fillStyle = hexToRgba(element.primary, 0.9 * alpha);
       ctx.fill();
-      ctx.strokeStyle = hexToRgba(element.glow, 0.82 * alpha);
-      ctx.lineWidth = Math.max(1.4, cellSize * 0.048);
+      ctx.strokeStyle = hexToRgba(element.hot, 0.94 * alpha);
+      ctx.lineWidth = Math.max(1.8, cellSize * 0.062);
       ctx.stroke();
-      [-1, 1].forEach(mirror => {
-        ctx.save();
-        ctx.scale(1, mirror);
-        ctx.rotate(-mirror * open);
+
+      ctx.beginPath();
+      ctx.moveTo(-size * 0.2, -size * 0.1);
+      ctx.quadraticCurveTo(size * 0.04, -size * 0.22, size * 0.34, -size * 0.16);
+      ctx.strokeStyle = hexToRgba(element.deep, 0.44 * alpha);
+      ctx.lineWidth = Math.max(1.2, cellSize * 0.035);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(-size * 0.18, size * 0.2);
+      ctx.quadraticCurveTo(size * 0.08, size * 0.3, size * 0.42, size * 0.14);
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.beginPath();
+      ctx.roundRect?.(-size * 0.16, -size * 0.95 + lift, size * 0.32, size * 0.48, size * 0.1);
+      if (!ctx.roundRect) ctx.rect(-size * 0.16, -size * 0.95 + lift, size * 0.32, size * 0.48);
+      ctx.fillStyle = hexToRgba(element.deep, 0.82 * alpha);
+      ctx.fill();
+      ctx.strokeStyle = hexToRgba(element.glow, 0.72 * alpha);
+      ctx.lineWidth = Math.max(1.2, cellSize * 0.04);
+      ctx.stroke();
+
+      if (strike > 0.55) {
+        ctx.globalCompositeOperation = "lighter";
         ctx.beginPath();
-        ctx.moveTo(-size * 0.18, -size * 0.02);
-        ctx.quadraticCurveTo(size * 0.22, -size * 0.54, size * 0.82, -size * 0.34);
-        ctx.quadraticCurveTo(size * 0.56, -size * 0.08, size * 0.18, size * 0.02);
-        ctx.quadraticCurveTo(size * 0.5, size * 0.08, size * 0.72, size * 0.28);
-        ctx.quadraticCurveTo(size * 0.18, size * 0.44, -size * 0.18, -size * 0.02);
-        ctx.closePath();
-        ctx.fillStyle = hexToRgba(mirror < 0 ? element.primary : element.secondary, 0.88 * alpha);
-        ctx.fill();
-        ctx.strokeStyle = hexToRgba(element.hot, 0.92 * alpha);
+        ctx.ellipse(0, size * 0.62, size * (0.46 + strike * 0.24), size * (0.12 + strike * 0.04), 0, 0, Math.PI * 2);
+        ctx.strokeStyle = hexToRgba(element.hot, alpha * 0.72);
         ctx.lineWidth = Math.max(1.6, cellSize * 0.055);
         ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(size * 0.24, -size * 0.16);
-        ctx.quadraticCurveTo(size * 0.48, -size * 0.2, size * 0.66, -size * 0.08);
-        ctx.strokeStyle = hexToRgba(element.deep, 0.42 * alpha);
-        ctx.lineWidth = Math.max(1, cellSize * 0.028);
-        ctx.stroke();
-        ctx.restore();
-      });
-      if (open < 0.46) {
-        ctx.globalCompositeOperation = "lighter";
-        for (let cut = 0; cut < 5; cut += 1) {
+        for (let crack = 0; crack < 7; crack += 1) {
+          const angle = -Math.PI * 0.88 + crack * Math.PI * 1.76 / 6;
+          const inner = size * 0.16;
+          const outer = size * (0.44 + (crack % 3) * 0.08);
           ctx.beginPath();
-          const cy = (cut - 2) * size * 0.13;
-          ctx.moveTo(size * (0.18 + cut * 0.02), cy - size * 0.12);
-          ctx.lineTo(size * (0.74 - cut * 0.03), cy + size * 0.08);
-          ctx.strokeStyle = hexToRgba(cut % 2 ? element.hot : "#ffffff", alpha * (0.68 - cut * 0.06));
-          ctx.lineWidth = Math.max(1.1, cellSize * 0.034);
+          ctx.moveTo(Math.cos(angle) * inner, size * 0.62 + Math.sin(angle) * inner * 0.36);
+          ctx.lineTo(Math.cos(angle) * outer, size * 0.62 + Math.sin(angle) * outer * 0.42);
+          ctx.strokeStyle = hexToRgba(crack % 2 ? element.secondary : "#ffffff", alpha * (0.62 - crack * 0.035));
+          ctx.lineWidth = Math.max(1.1, cellSize * 0.032);
           ctx.lineCap = "round";
           ctx.stroke();
         }

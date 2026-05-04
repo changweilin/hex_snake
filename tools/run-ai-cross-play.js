@@ -63,6 +63,83 @@ function writeCsv(filePath, rows) {
   fs.writeFileSync(filePath, `${rows}\n`, "utf8");
 }
 
+function percent(value) {
+  return `${(value * 100).toFixed(1)}%`;
+}
+
+function csvEscape(value) {
+  const text = String(value ?? "");
+  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+function buildMatrix(results, characters) {
+  const byPair = new Map(results.map(result => [
+    `${result.playerCharacterId}:${result.computerCharacterId}`,
+    result
+  ]));
+  const rows = characters.map(playerCharacter => ({
+    characterId: playerCharacter.id,
+    cells: characters.map(computerCharacter => {
+      if (playerCharacter.id === computerCharacter.id) return null;
+      return byPair.get(`${playerCharacter.id}:${computerCharacter.id}`) || null;
+    })
+  }));
+  const averages = rows.map(row => {
+    const played = row.cells.filter(Boolean);
+    const averageWinRate = played.length
+      ? played.reduce((sum, result) => sum + result.winRate, 0) / played.length
+      : 0;
+    return {
+      characterId: row.characterId,
+      averageWinRate,
+      games: played.reduce((sum, result) => sum + result.runs, 0)
+    };
+  });
+  return { rows, averages };
+}
+
+function matrixToCsv(matrix, characters) {
+  const header = ["player\\opponent", ...characters.map(character => character.id), "average"];
+  const rows = matrix.rows.map(row => {
+    const average = matrix.averages.find(item => item.characterId === row.characterId);
+    return [
+      row.characterId,
+      ...row.cells.map(result => result ? result.winRate.toFixed(4) : ""),
+      average.averageWinRate.toFixed(4)
+    ];
+  });
+  return [header, ...rows].map(row => row.map(csvEscape).join(",")).join("\n");
+}
+
+function matrixToMarkdown(matrix, characters, report) {
+  const header = ["player \\ opponent", ...characters.map(character => character.id), "avg"];
+  const divider = header.map(() => "---");
+  const rows = matrix.rows.map(row => {
+    const average = matrix.averages.find(item => item.characterId === row.characterId);
+    return [
+      row.characterId,
+      ...row.cells.map(result => result ? percent(result.winRate) : "-"),
+      percent(average.averageWinRate)
+    ];
+  });
+  const sorted = [...matrix.averages].sort((a, b) => b.averageWinRate - a.averageWinRate);
+  const lines = [
+    "# Character Cross Win Rates",
+    "",
+    `Generated: ${report.generatedAt}`,
+    `Runs per ordered pair: ${report.config.runs}`,
+    `Seed: ${report.config.seed}`,
+    `Strategy source: ${report.config.strategySource}`,
+    "",
+    [header, divider, ...rows].map(row => `| ${row.join(" | ")} |`).join("\n"),
+    "",
+    "## Average Ranking",
+    "",
+    ...sorted.map((item, index) => `${index + 1}. ${item.characterId}: ${percent(item.averageWinRate)}`)
+  ];
+  return lines.join("\n");
+}
+
 function highModel(strategyFile, characterId) {
   const row = strategyRowForCharacter(strategyFile, characterId);
   if (row) return modelFromStrategyWeights(row);
@@ -106,9 +183,14 @@ function runCrossPlay(options = {}) {
   };
   const jsonPath = `${outputBase}.json`;
   const csvPath = `${outputBase}.csv`;
+  const matrixCsvPath = `${outputBase}-matrix.csv`;
+  const markdownPath = `${outputBase}.md`;
+  const matrix = buildMatrix(results, characters);
   writeJson(jsonPath, report);
   writeCsv(csvPath, pairToCsvRows(results));
-  return { report, jsonPath, csvPath };
+  writeCsv(matrixCsvPath, matrixToCsv(matrix, characters));
+  fs.writeFileSync(markdownPath, `${matrixToMarkdown(matrix, characters, report)}\n`, "utf8");
+  return { report, jsonPath, csvPath, matrixCsvPath, markdownPath };
 }
 
 function main() {
@@ -124,6 +206,8 @@ function main() {
   });
   console.log(`JSON: ${result.jsonPath}`);
   console.log(`CSV: ${result.csvPath}`);
+  console.log(`Matrix CSV: ${result.matrixCsvPath}`);
+  console.log(`Markdown: ${result.markdownPath}`);
   console.log(`Pairs: ${result.report.results.length}`);
 }
 
