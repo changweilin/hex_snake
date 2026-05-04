@@ -244,7 +244,7 @@ function attackStats(stock, profile, balance) {
   return {
     delay: attackDelay(stock, balance) * (isSmall ? SMALL_ATTACK_DELAY_SCALE : 1),
     radius: Math.max(1, blastRadius(stock, balance) + (isSmall ? -1 : 0)),
-    damage: damageMultiplier(stock, balance) * (isSmall ? 0.55 : 1)
+    damage: damageMultiplier(stock, balance)
   };
 }
 
@@ -326,15 +326,25 @@ function damageSnakeFlat(parts, target, radius, damageScale) {
   return parts.reduce((total, segment) => hexDistance(segment, target) <= radius ? total + damageScale : total, 0);
 }
 
-function damageSnakeCells(parts, effectCells, width, damageScale, excludedCells = [], minDistance = 0) {
+function damageSnakeCells(parts, effectCells, width, damageScale, excludedCells = [], minDistance = 0, outerDamageMultiplier = 1) {
   const excluded = cellKeySet(excludedCells);
   return parts.reduce((total, segment) => {
     if (excluded.has(keyOf(segment))) return total;
-    return effectCells.some(cell => {
+    const bestMultiplier = effectCells.reduce((best, cell) => {
       const distance = hexDistance(segment, cell);
-      return distance >= minDistance && distance <= width;
-    }) ? total + damageScale : total;
+      if (distance < minDistance || distance > width) return best;
+      return Math.max(best, distance === 0 ? 1 : outerDamageMultiplier);
+    }, 0);
+    return bestMultiplier > 0 ? total + damageScale * bestMultiplier : total;
   }, 0);
+}
+
+function snakeBodyHitAtCenter(snake, target) {
+  return snake.slice(1).some(segment => keyOf(segment) === keyOf(target));
+}
+
+function snakeHeadHitAtCenter(snake, target) {
+  return Boolean(snake[0] && keyOf(snake[0]) === keyOf(target));
 }
 
 function buildCharacterMap(characters) {
@@ -461,6 +471,7 @@ function makeFighter(owner, character, start, direction, settings, balance, poli
     lastVisibleSnake: snake.map(segment => ({ ...segment })),
     lastVisibleDir: direction,
     foodTargetKey: null,
+    foodTargetAt: 0,
     lastFoodAt: 0,
     stats: {
       smallCasts: 0,
@@ -613,12 +624,16 @@ function foodValueFor(fighter, opponent, food, policy, state = null) {
 function chooseFoodTarget(state, fighter, opponent) {
   const perceivedOpponent = perceivedSnakeFor(state, fighter, opponent);
   if (!state.foods.length) return perceivedOpponent[0];
-  const staleTarget = fighter.foodTargetKey && state.now - fighter.lastFoodAt >= FOOD_TARGET_SWITCH_MS ? fighter.foodTargetKey : null;
+  const staleTarget = fighter.foodTargetKey && Number.isFinite(fighter.foodTargetAt) && state.now - fighter.foodTargetAt >= FOOD_TARGET_SWITCH_MS ? fighter.foodTargetKey : null;
   const choices = state.foods.filter(food => keyOf(food) !== staleTarget);
   const filteredChoices = filterUnsafeFoodTargets(state, fighter, opponent, choices.length ? choices : state.foods);
-  const target = [...(filteredChoices.length ? filteredChoices : choices.length ? choices : state.foods)]
+  const targetPool = filteredChoices.length ? filteredChoices : choices.length ? choices : state.foods;
+  const lockedTarget = !staleTarget && fighter.foodTargetKey ? targetPool.find(food => keyOf(food) === fighter.foodTargetKey) : null;
+  const target = lockedTarget || [...targetPool]
     .sort((a, b) => foodValueFor(fighter, opponent, b, fighter.policy, state) - foodValueFor(fighter, opponent, a, fighter.policy, state))[0];
-  fighter.foodTargetKey = target ? keyOf(target) : null;
+  const nextTargetKey = target ? keyOf(target) : null;
+  if (nextTargetKey !== fighter.foodTargetKey) fighter.foodTargetAt = nextTargetKey ? state.now : 0;
+  fighter.foodTargetKey = nextTargetKey;
   return target;
 }
 
@@ -991,6 +1006,38 @@ function dragonTrackingOrbPath(state, source, direction, targetSnake, curveMulti
   return path;
 }
 
+function lobsterFistDirection(state, cursor, direction, targetSnake) {
+  const target = targetSnake[0];
+  if (!target) return direction;
+  const candidates = [direction, (direction + 1) % DIRECTIONS.length, (direction - 1 + DIRECTIONS.length) % DIRECTIONS.length];
+  candidates.sort((a, b) => {
+    const nextA = nextWrappedCell(cursor, a, state.radius);
+    const nextB = nextWrappedCell(cursor, b, state.radius);
+    const distanceA = hexDistance(nextA, target);
+    const distanceB = hexDistance(nextB, target);
+    if (distanceA !== distanceB) return distanceA - distanceB;
+    return turnDistance(a, direction) - turnDistance(b, direction);
+  });
+  return candidates[0];
+}
+
+function lobsterFistPath(state, source, direction, targetSnake) {
+  const path = [];
+  let cursor = { ...source };
+  let currentDirection = direction;
+  const maxSteps = Math.max(1, Math.ceil((state.radius * 2 + 1) / 2));
+  const turnStep = Math.ceil(maxSteps / 2);
+  for (let step = 0; step < maxSteps; step += 1) {
+    if (step === turnStep) {
+      currentDirection = lobsterFistDirection(state, cursor, currentDirection, targetSnake);
+    }
+    cursor = nextWrappedCell(cursor, currentDirection, state.radius);
+    if (keyOf(cursor) === keyOf(source)) break;
+    path.push({ ...cursor });
+  }
+  return path;
+}
+
 function pathHits(path, targetSnake) {
   const targetCells = cellKeySet(targetSnake);
   return path
@@ -1010,18 +1057,21 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
   const abilityId = bigAttackAbilityId(characterId);
   if (abilityId === "dragon") {
     const curveMultiplier = ultimateSetting(balance, abilityId, "orbCurveMultiplier", DRAGON_ORB_CURVE_MULTIPLIER);
-    const path = dragonTrackingOrbPath(state, source, direction, defender.snake, curveMultiplier);
+    const isLobsterPalm = characterId === "lobster";
+    const path = isLobsterPalm
+      ? lobsterFistPath(state, source, direction, defender.snake)
+      : dragonTrackingOrbPath(state, source, direction, defender.snake, curveMultiplier);
     const hits = pathHits(path, defender.snake);
     const endCell = path[path.length - 1] || source;
     const orbStepMs = ultimateSetting(balance, abilityId, "orbStepMs", DRAGON_ORB_STEP_MS);
-    const orbRadius = small.radius * ultimateSetting(balance, abilityId, "orbRadiusMultiplier", DRAGON_ORB_RADIUS_MULTIPLIER);
-    const isLobsterPalm = characterId === "lobster";
+    const orbRadius = isLobsterPalm ? 1 : small.radius * ultimateSetting(balance, abilityId, "orbRadiusMultiplier", DRAGON_ORB_RADIUS_MULTIPLIER);
     const burstRadius = small.radius * (isLobsterPalm ? 1.5 : ultimateSetting(balance, abilityId, "burstRadiusMultiplier", DRAGON_BURST_RADIUS_MULTIPLIER));
     const burstDamage = small.damage * (isLobsterPalm ? 0.9 : ultimateSetting(balance, abilityId, "burstDamageMultiplier", DRAGON_BURST_DAMAGE_MULTIPLIER));
     const volleys = isLobsterPalm ? 2 : 1;
     const orbDamage = small.damage * (isLobsterPalm ? 0.3 : 1);
+    const volleyIntervalMs = isLobsterPalm ? attackDelay(attacker.stock, balance) : 500;
     for (let volley = 0; volley < volleys; volley += 1) {
-      const volleyDelay = volley * 500;
+      const volleyDelay = volley * volleyIntervalMs;
       state.projectiles.push({
         kind: "dragonOrb",
         owner: attacker.owner,
@@ -1035,7 +1085,8 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
         burstDamage,
         stunChance
       });
-      for (const hit of hits) {
+      const burstHits = isLobsterPalm && !hits.length ? [{ cell: endCell, index: Math.max(0, path.length - 1) }] : hits;
+      for (const hit of burstHits) {
         state.projectiles.push({
           kind: "dragonOrbBurst",
           owner: attacker.owner,
@@ -1065,7 +1116,7 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
         excludedCells,
         width: bandDistanceFromTotalWidth(small.radius),
         impactAt: now + small.delay + index * 320,
-        damage: small.damage * 0.6 * ultimateDamageMultiplier(balance, characterId),
+        damage: small.damage * 0.8 * ultimateDamageMultiplier(balance, characterId),
         stunChance,
         stackStun: true
       });
@@ -1074,14 +1125,16 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
   }
   if (characterId === "quetzal") {
     const trail = attacker.snake.map(segment => ({ ...segment }));
-    const outwardWidth = Math.max(1, bandDistanceFromTotalWidth(small.radius));
+    const extensionDamageMultiplier = Math.max(0, Math.min(1, (attacker.stock.protein || 0) / balance.resources.maxFoodStock));
+    const outwardWidth = extensionDamageMultiplier > 0 ? 1 : 0;
     state.hazards.push({
       kind: "swamp",
       owner: attacker.owner,
       cells: trail,
       damageExcludedCells: trail,
       width: outwardWidth,
-      minDistance: 1,
+      minDistance: 0,
+      outerDamageMultiplier: extensionDamageMultiplier,
       damage: small.damage * ultimateDamageMultiplier(balance, characterId),
       profile: "big",
       stunChance,
@@ -1105,7 +1158,8 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
       damage: small.damage * 3.5 * ultimateDamageMultiplier(balance, characterId),
       stunChance,
       sandwormHidden: true,
-      sandwormParalyzeOnHead: true
+      sandwormParalyzeOnBody: true,
+      sandwormKillOnHead: true
     });
     return;
   }
@@ -1114,9 +1168,9 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
     const lobsterUltimateRadius = small.radius * ultimateSetting(balance, abilityId, "radiusMultiplier", 2.5);
     const volleys = characterId === "dragon" ? 1 : 2;
     const damageScale = characterId === "dragon" ? 1.5 : 1;
-    const impactDamage = characterId === "dragon" ? small.damage * 1.5 : big.damage * damageScale;
+    const impactDamage = characterId === "dragon" ? small.damage * 0.5 : big.damage * damageScale;
     const radiationTotalDamage = characterId === "dragon" ? small.damage * 1.5 : impactDamage;
-    const firstImpactDelay = characterId === "dragon" ? small.delay / 1.5 : small.delay;
+    const firstImpactDelay = characterId === "dragon" ? (small.delay / 1.5) * 2 : small.delay;
     for (let index = 0; index < volleys; index += 1) {
       const impactDelay = firstImpactDelay + index * 2000;
       state.projectiles.push({
@@ -1261,9 +1315,21 @@ function resolveProjectiles(state, now, balance) {
           endAt: now + projectile.radiationDurationMs
         });
       }
-      if (projectile.sandwormParalyzeOnHead) {
-        if (projectile.owner !== "player" && keyOf(projectile.target) === keyOf(player.snake[0])) applyCollisionParalysis(player, now, balance);
-        if (projectile.owner !== "computer" && keyOf(projectile.target) === keyOf(computer.snake[0])) applyCollisionParalysis(computer, now, balance);
+      if (projectile.sandwormParalyzeOnBody || projectile.sandwormKillOnHead) {
+        if (projectile.owner !== "player") {
+          if (projectile.sandwormKillOnHead && snakeHeadHitAtCenter(player.snake, explosionTarget)) playerDamage = Math.max(playerDamage, player.hp);
+          else if (projectile.sandwormParalyzeOnBody && snakeBodyHitAtCenter(player.snake, explosionTarget)) {
+            applyCollisionParalysis(player, now, balance);
+            attacker.stats.stunApplied += 1;
+          }
+        }
+        if (projectile.owner !== "computer") {
+          if (projectile.sandwormKillOnHead && snakeHeadHitAtCenter(computer.snake, explosionTarget)) computerDamage = Math.max(computerDamage, computer.hp);
+          else if (projectile.sandwormParalyzeOnBody && snakeBodyHitAtCenter(computer.snake, explosionTarget)) {
+            applyCollisionParalysis(computer, now, balance);
+            attacker.stats.stunApplied += 1;
+          }
+        }
       }
     }
     if (projectile.owner === "player") playerDamage = 0;
@@ -1286,10 +1352,10 @@ function resolveHazards(state, now, balance) {
     const damageExcludedCells = hazard.damageExcludedCells || hazard.excludedCells || [];
     let playerDamage = hazard.kind === "radiation"
       ? damageSnake(state.fighters.player.snake, hazard.target, hazard.radius, hazard.damage, balance)
-      : damageSnakeCells(state.fighters.player.snake, hazard.cells, hazard.width, hazard.damage, hazard.owner === "player" ? damageExcludedCells : [], hazard.minDistance || 0);
+      : damageSnakeCells(state.fighters.player.snake, hazard.cells, hazard.width, hazard.damage, hazard.owner === "player" ? damageExcludedCells : [], hazard.minDistance || 0, hazard.outerDamageMultiplier ?? 1);
     let computerDamage = hazard.kind === "radiation"
       ? damageSnake(state.fighters.computer.snake, hazard.target, hazard.radius, hazard.damage, balance)
-      : damageSnakeCells(state.fighters.computer.snake, hazard.cells, hazard.width, hazard.damage, hazard.owner === "computer" ? damageExcludedCells : [], hazard.minDistance || 0);
+      : damageSnakeCells(state.fighters.computer.snake, hazard.cells, hazard.width, hazard.damage, hazard.owner === "computer" ? damageExcludedCells : [], hazard.minDistance || 0, hazard.outerDamageMultiplier ?? 1);
     if (hazard.owner === "player") playerDamage = 0;
     if (hazard.owner === "computer") computerDamage = 0;
     applyDamage(state, state.fighters.player, playerDamage, hazard.profile || "big", now);
@@ -1408,6 +1474,7 @@ function moveFighters(state, movers, now, balance) {
       fighter.stats.foodCollected += 1;
       fighter.lastFoodAt = now;
       fighter.foodTargetKey = null;
+      fighter.foodTargetAt = 0;
       collectFood(fighter, plan.eatenFood, balance, state.rng);
       fighter.hp = Math.min(fighter.snake.length, fighter.hp + 1);
     } else {

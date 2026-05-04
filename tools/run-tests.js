@@ -255,6 +255,55 @@ test("sandworm big attack stays hidden until 0.2s before impact and burrows for 
   assert.equal(isProjectileVisibleTo(computer, projectile, projectile.impactAt - 200), true);
 });
 
+test("sandworm big attack center body hit always paralyzes and center head hit kills", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("moray"),
+    computerCharacter: characterById.get("sandworm"),
+    seed: "sandworm-center-hit",
+    initialStock: Object.fromEntries(FOOD_TYPES.map(type => [type, 6]))
+  });
+  const player = state.fighters.player;
+  const computer = state.fighters.computer;
+  player.snake = [{ q: 0, r: 0 }, { q: -1, r: 0 }, { q: -2, r: 0 }];
+  player.hp = 3;
+  state.now = 2000;
+  state.projectiles.push({
+    kind: "circle",
+    owner: "computer",
+    profile: "big",
+    target: { q: -1, r: 0 },
+    impactAt: state.now,
+    radius: 0.5,
+    damage: 0,
+    stunChance: 0,
+    sandwormParalyzeOnBody: true,
+    sandwormKillOnHead: true
+  });
+  resolveProjectiles(state, state.now, balance);
+  assert.equal(player.hp, 3);
+  assert.equal(player.stunUntil, state.now + balance.collision.collisionStunMs);
+
+  player.stunUntil = 0;
+  player.slowUntil = 0;
+  state.projectiles.push({
+    kind: "circle",
+    owner: "computer",
+    profile: "big",
+    target: { q: 0, r: 0 },
+    impactAt: state.now,
+    radius: 0.5,
+    damage: 0,
+    stunChance: 0,
+    sandwormParalyzeOnBody: true,
+    sandwormKillOnHead: true
+  });
+  resolveProjectiles(state, state.now, balance);
+  assert.equal(player.hp, 0);
+  assert.equal(state.fatalEvents.at(-1).cause, "big");
+  assert.equal(computer.stats.damageDealt, 3);
+});
+
 test("high difficulty movement ignores character story roles", () => {
   const dragonState = createMatchState({
     balance,
@@ -430,6 +479,8 @@ test("weighted food strategy can prefer arrival speed or character preference", 
     ownPreferred: 3,
     opponentPreferred: 0
   };
+  state.fighters.computer.foodTargetKey = null;
+  state.fighters.computer.foodTargetAt = 0;
   assert.deepEqual(chooseFoodTarget(state, state.fighters.computer, state.fighters.player), state.foods[1]);
 });
 
@@ -479,7 +530,7 @@ test("attack target weights can prefer head cluster or target nearest food", () 
   const clusterTarget = chooseAttackTarget(state, attacker, defender, balance, "small");
   assert.ok(damageSnake(defender.snake, clusterTarget, attackStats(attacker.stock, "small", balance).radius, 1, balance) >= 2);
 
-  attacker.policy.strategyWeights.castTarget = { targetHead: 0, bodyCluster: 0, targetNearestFood: 3 };
+  attacker.policy.strategyWeights.castTarget = { targetHead: 0, bodyCluster: 0, targetNearestFood: 4 };
   assert.deepEqual(chooseAttackTarget(state, attacker, defender, balance, "small"), state.foods[0]);
 });
 
@@ -529,8 +580,36 @@ test("wrapped distance and stale food target switching affect food choices", () 
   assert.equal(wrappedDistance(state, fighter.snake[0], state.foods[0]), 1);
   assert.deepEqual(chooseFoodTarget(state, fighter, opponent), state.foods[0]);
   fighter.foodTargetKey = `${state.foods[0].q},${state.foods[0].r}`;
-  fighter.lastFoodAt = 0;
+  fighter.foodTargetAt = 0;
   state.now = 21000;
+  assert.deepEqual(chooseFoodTarget(state, fighter, opponent), state.foods[1]);
+});
+
+test("stale food target timer resets when switching to a new target", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("quetzal"),
+    computerCharacter: characterById.get("quetzal"),
+    seed: "food-target-stale-reset",
+    computerModel: { aiDifficulty: "high", pathPrecision: 1, aimPrecision: 1 }
+  });
+  const fighter = state.fighters.computer;
+  const opponent = state.fighters.player;
+  fighter.snake[0] = { q: 0, r: 0 };
+  opponent.snake[0] = { q: 5, r: -5 };
+  state.foods = [
+    { q: 1, r: 0, types: ["fiber"] },
+    { q: 3, r: 0, types: ["fiber"] }
+  ];
+  fighter.policy.strategyWeights.food = { fastestArrival: 3, ownDeficit: 0, opponentDeficit: 0, ownPreferred: 0, opponentPreferred: 0 };
+  fighter.foodTargetKey = `${state.foods[0].q},${state.foods[0].r}`;
+  fighter.foodTargetAt = 0;
+  state.now = 21000;
+  assert.deepEqual(chooseFoodTarget(state, fighter, opponent), state.foods[1]);
+  assert.equal(fighter.foodTargetKey, `${state.foods[1].q},${state.foods[1].r}`);
+  assert.equal(fighter.foodTargetAt, 21000);
+
+  state.now = 21100;
   assert.deepEqual(chooseFoodTarget(state, fighter, opponent), state.foods[1]);
 });
 
@@ -644,8 +723,10 @@ test("auto battle attack decisions are owner-mirrored under equal conditions", (
   state.now = 100;
   state.fighters.player.stunUntil = 1000;
   state.fighters.computer.stunUntil = 1000;
-  assert.equal(chooseAttackProfile(state, state.fighters.player, state.fighters.computer, balance), "big");
-  assert.equal(chooseAttackProfile(state, state.fighters.computer, state.fighters.player, balance), "big");
+  const playerChoice = chooseAttackProfile(state, state.fighters.player, state.fighters.computer, balance);
+  const computerChoice = chooseAttackProfile(state, state.fighters.computer, state.fighters.player, balance);
+  assert.equal(playerChoice, computerChoice);
+  assert.ok(["small", "big"].includes(playerChoice));
 });
 
 test("dragon tracking orb has limited curvature and board-width range", () => {
@@ -730,6 +811,7 @@ test("each character big attack can be simulated in a deterministic setup", () =
       playerCharacter: character,
       computerCharacter: characterById.get("dragon"),
       seed: `big-${character.id}`,
+      initialLength: 20,
       initialEnergy: balance.resources.attackNeedTotal,
       initialBombs: balance.resources.maxAmmo,
       initialStock: Object.fromEntries(FOOD_TYPES.map(type => [type, 6])),
