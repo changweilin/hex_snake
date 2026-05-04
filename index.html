@@ -1790,10 +1790,11 @@
     }
 
     .portrait-controls {
+      position: relative;
       display: grid;
-      grid-template-columns: 42px minmax(0, 1fr) 42px;
-      align-items: center;
-      gap: 8px;
+      grid-template-columns: minmax(0, 1fr);
+      padding: 0 50px;
+      align-items: start;
       min-height: 0;
     }
 
@@ -1805,6 +1806,19 @@
       border-radius: 999px;
       font-size: 1.5rem;
       line-height: 1;
+      align-self: center;
+      justify-self: center;
+      position: absolute;
+      top: 73px;
+      z-index: 2;
+    }
+
+    .portrait-controls .portrait-arrow:first-child {
+      left: 0;
+    }
+
+    .portrait-controls .portrait-arrow:last-child {
+      right: 0;
     }
 
     .portrait-copy {
@@ -2517,8 +2531,7 @@
       }
 
       .overlay.intro-details .portrait-controls {
-        grid-template-columns: 38px minmax(0, 1fr) 38px;
-        gap: 6px;
+        padding: 0 44px;
       }
 
       .overlay.intro-details .portrait-arrow {
@@ -2526,6 +2539,7 @@
         height: 38px;
         min-height: 38px;
         font-size: 1.25rem;
+        top: 55px;
       }
 
       .overlay.intro-details .portrait-copy {
@@ -3116,8 +3130,7 @@
       }
 
       .overlay.intro-details .portrait-controls {
-        grid-template-columns: 34px minmax(0, 1fr) 34px;
-        gap: 5px;
+        padding: 0 39px;
       }
 
       .overlay.intro-details .portrait-arrow {
@@ -3125,6 +3138,7 @@
         height: 34px;
         min-height: 34px;
         font-size: 1.1rem;
+        top: 49px;
       }
 
       .overlay.intro-details .portrait-copy {
@@ -3942,6 +3956,7 @@
     let computerFoodTargetKey = null;
     let lastPlayerFoodAt = 0;
     let lastComputerFoodAt = 0;
+    const deadEndMinSpace = 5;
     let lastTimerFrame = 0;
     let lastPlayerAttackMs = -Infinity;
     let lastComputerAttackMs = 0;
@@ -4581,7 +4596,11 @@
 
     function shiftPortraitLightbox(delta) {
       selectedPortraitOwner = portraitLightboxOwner;
-      applySelectedPortraitCharacter(delta);
+      const choices = characters.map(character => character.id);
+      const currentId = characterFor(selectedPortraitOwner).id;
+      const currentIndex = Math.max(0, choices.indexOf(currentId));
+      const nextChoice = choices[(currentIndex + delta + choices.length) % choices.length];
+      setSelectedPortraitCharacter(nextChoice);
       renderPortraitLightbox();
     }
 
@@ -6834,10 +6853,37 @@
       const lastFoodAt = owner === "player" ? lastPlayerFoodAt : lastComputerFoodAt;
       const staleTarget = targetKey && now - lastFoodAt >= 20000 ? targetKey : null;
       const choices = foods.filter(food => keyOf(food) !== staleTarget);
-      const target = [...(choices.length ? choices : foods)].sort((a, b) => foodValueFor(owner, opponent, b, now) - foodValueFor(owner, opponent, a, now))[0];
+      const filteredChoices = filterUnsafeFoodTargets(owner, opponent, choices.length ? choices : foods, now);
+      const target = [...(filteredChoices.length ? filteredChoices : choices.length ? choices : foods)].sort((a, b) => foodValueFor(owner, opponent, b, now) - foodValueFor(owner, opponent, a, now))[0];
       if (owner === "player") playerFoodTargetKey = target ? keyOf(target) : null;
       else computerFoodTargetKey = target ? keyOf(target) : null;
       return target;
+    }
+
+    function movementOccupiedSet(owner, opponent, now) {
+      const ownSnake = ownerSnake(owner);
+      const opponentSnake = perceivedSnakeFor(owner, opponent, now);
+      const occupied = new Set(ownSnake.slice(0, -1).map(keyOf));
+      if (aiAvoidsOpponentBody() && !isOwnerUnderground(opponent, now)) {
+        opponentSnake.forEach(segment => occupied.add(keyOf(segment)));
+      }
+      return occupied;
+    }
+
+    function filterUnsafeFoodTargets(owner, opponent, candidateFoods, now) {
+      if (candidateFoods.length <= 1) return candidateFoods;
+      const occupied = movementOccupiedSet(owner, opponent, now);
+      const withRace = candidateFoods.map(food => ({
+        food,
+        raceGap: wrappedDistance(ownerHead(opponent), food) - wrappedDistance(ownerHead(owner), food),
+        reachable: reachableSpace(food, occupied, deadEndMinSpace)
+      }));
+      const maxPositiveGap = Math.max(0, ...withRace.map(row => row.raceGap));
+      const filtered = withRace
+        .filter(row => !(maxPositiveGap > 0 && row.raceGap === maxPositiveGap))
+        .filter(row => row.reachable >= deadEndMinSpace)
+        .map(row => row.food);
+      return filtered.length ? filtered : candidateFoods;
     }
 
     function chooseAiDirection(owner, now = performance.now()) {
@@ -6848,12 +6894,7 @@
       const opponentDirection = perceivedDirectionFor(opponent, now);
       const opponentThreat = nextWrappedCell(opponentSnake[0], opponentDirection);
       const target = chooseAiMoveTarget(owner, opponent, now);
-      const occupied = new Set([
-        ...ownSnake.slice(0, -1).map(keyOf)
-      ]);
-      if (aiAvoidsOpponentBody() && !isOwnerUnderground(opponent, now)) {
-        opponentSnake.forEach(segment => occupied.add(keyOf(segment)));
-      }
+      const occupied = movementOccupiedSet(owner, opponent, now);
       const options = [];
 
       directions.forEach((_, candidate) => {
@@ -6870,10 +6911,14 @@
         const pressureBias = computerDifficulty === "high" && (role === "rush" || role === "melee") ? targetDistance : 0;
         const expectedDamage = expectedDamageAt(owner, next, now);
         const trapRisk = Math.max(0, 5 - reachableSpace(next, occupied, 10));
+        const deadEnd = reachableSpace(next, occupied, deadEndMinSpace) < deadEndMinSpace;
+        const lethalThreat = expectedDamage >= ownerHp(owner);
         const weights = aiStrategyWeightsFor(owner).movement;
         const risk = danger + trapRisk * 4 + expectedDamage;
         options.push({
           direction: candidate,
+          deadEnd,
+          lethalThreat,
           pathValue: Number.isFinite(pathDistance) ? pathDistance : nearestFoodDistance(next),
           tacticalValue: computerDifficulty === "high"
             ? weights.fastestArrival * targetDistance + weights.safePath * risk + weights.leastDamage * expectedDamage - wallPressure * 0.04 + pressureBias * 0.3
@@ -6884,7 +6929,10 @@
 
       if (!options.length) return currentDirection;
 
-      options.sort((a, b) => {
+      const hardSafe = options.filter(option => !option.deadEnd && !option.lethalThreat);
+      const rankedOptions = hardSafe.length ? hardSafe : options.filter(option => !option.lethalThreat);
+      const sortableOptions = rankedOptions.length ? rankedOptions : options;
+      sortableOptions.sort((a, b) => {
         if (computerDifficulty === "high") return a.tacticalValue - b.tacticalValue;
         const aValue = Number.isFinite(a.tacticalValue) ? a.tacticalValue : a.fallbackValue;
         const bValue = Number.isFinite(b.tacticalValue) ? b.tacticalValue : b.fallbackValue;
@@ -6892,8 +6940,8 @@
       });
       const randomChance = { high: 0, medium: 0.3, low: 0.52, novice: 0.52 }[computerDifficulty];
 
-      if (Math.random() < randomChance) return randomItem(options).direction;
-      return options[0].direction;
+      if (Math.random() < randomChance) return randomItem(sortableOptions).direction;
+      return sortableOptions[0].direction;
     }
 
     function chooseComputerDirection() {

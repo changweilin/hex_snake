@@ -242,7 +242,7 @@ test("high difficulty character archetypes alter movement targets", () => {
     { q: 1, r: 0, types: ["fat"] },
     { q: 3, r: -1, types: ["fiber"] }
   ];
-  assert.deepEqual(chooseFoodTarget(quetzalState, quetzalState.fighters.computer, quetzalState.fighters.player), quetzalState.foods[1]);
+  assert.deepEqual(chooseFoodTarget(quetzalState, quetzalState.fighters.computer, quetzalState.fighters.player), quetzalState.foods[0]);
 });
 
 test("weighted movement avoids an immediate self-trapping path", () => {
@@ -267,6 +267,57 @@ test("weighted movement avoids an immediate self-trapping path", () => {
   assert.notEqual(directionToward(state, computer, player, { q: 0, r: -1 }), 0);
 });
 
+test("movement hard rules avoid lethal incoming attack cells", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("dragon"),
+    computerCharacter: characterById.get("moray"),
+    seed: "avoid-lethal-attack-cell",
+    computerModel: {
+      aiDifficulty: "high",
+      pathPrecision: 1,
+      strategyWeights: {
+        movement: { safePath: 0, leastDamage: 0, fastestArrival: 3 }
+      }
+    }
+  });
+  const computer = state.fighters.computer;
+  const player = state.fighters.player;
+  computer.snake = [{ q: 0, r: 0 }];
+  computer.hp = 1;
+  computer.dir = 2;
+  player.snake = [{ q: 4, r: -4 }];
+  const lethalCell = nextWrappedCell(computer.snake[0], 2, state.radius);
+  state.projectiles.push({
+    owner: "player",
+    kind: "circle",
+    target: lethalCell,
+    radius: 0,
+    damage: 2
+  });
+  assert.notEqual(directionToward(state, computer, player, lethalCell), 2);
+});
+
+test("food hard rules skip the largest positive race-gap food", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("dragon"),
+    computerCharacter: characterById.get("quetzal"),
+    seed: "skip-race-gap-food",
+    computerModel: { aiDifficulty: "medium", pathPrecision: 1 }
+  });
+  const computer = state.fighters.computer;
+  const player = state.fighters.player;
+  computer.snake[0] = { q: 0, r: 0 };
+  player.snake[0] = { q: 5, r: -5 };
+  state.foods = [
+    { q: 1, r: 0, types: ["fiber"] },
+    { q: 2, r: 0, types: ["fiber"] }
+  ];
+  computer.policy.strategyWeights.food = { fastestArrival: 3, ownDeficit: 0, opponentDeficit: 0, ownPreferred: 0, opponentPreferred: 0 };
+  assert.deepEqual(chooseFoodTarget(state, computer, player), state.foods[1]);
+});
+
 test("weighted food strategy can prefer arrival speed or character preference", () => {
   const state = createMatchState({
     balance,
@@ -289,7 +340,7 @@ test("weighted food strategy can prefer arrival speed or character preference", 
     ownPreferred: 0,
     opponentPreferred: 0
   };
-  assert.deepEqual(chooseFoodTarget(state, state.fighters.computer, state.fighters.player), state.foods[0]);
+  assert.deepEqual(chooseFoodTarget(state, state.fighters.computer, state.fighters.player), state.foods[1]);
 
   state.fighters.computer.policy.strategyWeights.food = {
     fastestArrival: 0,
@@ -388,7 +439,7 @@ test("wrapped distance and stale food target switching affect food choices", () 
   const fighter = state.fighters.computer;
   const opponent = state.fighters.player;
   fighter.snake[0] = { q: 0, r: -state.radius };
-  opponent.snake[0] = { q: 0, r: 0 };
+  opponent.snake[0] = { q: 0, r: state.radius };
   state.foods = [
     { q: 0, r: state.radius, types: ["fiber"] },
     { q: 2, r: -2, types: ["fiber"] }

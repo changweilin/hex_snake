@@ -8,6 +8,7 @@ const DRAGON_ORB_CURVE_MULTIPLIER = 1;
 const DRAGON_BURST_RADIUS_MULTIPLIER = 2;
 const DRAGON_BURST_DAMAGE_MULTIPLIER = 1.5;
 const FOOD_TARGET_SWITCH_MS = 20000;
+const DEAD_END_MIN_SPACE = 5;
 const DIRECTIONS = [
   { q: 0, r: -1 },
   { q: 1, r: -1 },
@@ -633,16 +634,39 @@ function chooseFoodTarget(state, fighter, opponent) {
   if (!state.foods.length) return perceivedOpponent[0];
   const staleTarget = fighter.foodTargetKey && state.now - fighter.lastFoodAt >= FOOD_TARGET_SWITCH_MS ? fighter.foodTargetKey : null;
   const choices = state.foods.filter(food => keyOf(food) !== staleTarget);
-  const target = [...(choices.length ? choices : state.foods)]
+  const filteredChoices = filterUnsafeFoodTargets(state, fighter, opponent, choices.length ? choices : state.foods);
+  const target = [...(filteredChoices.length ? filteredChoices : choices.length ? choices : state.foods)]
     .sort((a, b) => foodValueFor(fighter, opponent, b, fighter.policy, state) - foodValueFor(fighter, opponent, a, fighter.policy, state))[0];
   fighter.foodTargetKey = target ? keyOf(target) : null;
   return target;
 }
 
-function directionToward(state, fighter, opponent, target) {
+function movementOccupiedSet(state, fighter, opponent) {
   const occupied = new Set(fighter.snake.slice(0, -1).map(keyOf));
   const perceivedOpponent = perceivedSnakeFor(state, fighter, opponent);
   if (fighter.policy.pathPrecision > 0.35 && !isUnderground(opponent, state.now)) perceivedOpponent.forEach(segment => occupied.add(keyOf(segment)));
+  return occupied;
+}
+
+function filterUnsafeFoodTargets(state, fighter, opponent, foods) {
+  if (foods.length <= 1) return foods;
+  const occupied = movementOccupiedSet(state, fighter, opponent);
+  const withRace = foods.map(food => ({
+    food,
+    raceGap: wrappedDistance(state, opponent.snake[0], food) - wrappedDistance(state, fighter.snake[0], food),
+    reachable: reachableSpace(state, food, occupied, DEAD_END_MIN_SPACE)
+  }));
+  const maxPositiveGap = Math.max(0, ...withRace.map(row => row.raceGap));
+  const filtered = withRace
+    .filter(row => !(maxPositiveGap > 0 && row.raceGap === maxPositiveGap))
+    .filter(row => row.reachable >= DEAD_END_MIN_SPACE)
+    .map(row => row.food);
+  return filtered.length ? filtered : foods;
+}
+
+function directionToward(state, fighter, opponent, target) {
+  const occupied = movementOccupiedSet(state, fighter, opponent);
+  const perceivedOpponent = perceivedSnakeFor(state, fighter, opponent);
   const options = [];
   DIRECTIONS.forEach((_, direction) => {
     if (!canTurn(fighter.snake, fighter.dir, direction)) return;
@@ -656,10 +680,14 @@ function directionToward(state, fighter, opponent, target) {
     const expectedDamage = expectedDamageAt(state, fighter, next);
     const weights = fighter.policy.strategyWeights.movement;
     const trapRisk = Math.max(0, 5 - reachable);
+    const deadEnd = reachable < DEAD_END_MIN_SPACE;
+    const lethalThreat = expectedDamage >= fighter.hp;
     const risk = (selfBlocked ? 100 : 0) + (opponentBlocked ? 35 : 0) + trapRisk * 4 + expectedDamage;
     options.push({
       direction,
       blocked,
+      deadEnd,
+      lethalThreat,
       risk,
       score: weights.fastestArrival * wrappedDistance(state, next, target)
         + weights.safePath * risk
@@ -668,7 +696,8 @@ function directionToward(state, fighter, opponent, target) {
     });
   });
   const viable = options.length ? options : [{ direction: fighter.dir, score: 0, blocked: false }];
-  const safe = viable.filter(option => !option.blocked && option.risk < 20);
+  const hardSafe = viable.filter(option => !option.blocked && !option.deadEnd && !option.lethalThreat);
+  const safe = hardSafe.length ? hardSafe : viable.filter(option => !option.blocked && !option.lethalThreat && option.risk < 20);
   const candidates = safe.length ? safe : viable;
   candidates.sort((a, b) => a.score - b.score || a.risk - b.risk);
   if (state.rng.next() > fighter.policy.pathPrecision) return state.rng.item(viable).direction;
