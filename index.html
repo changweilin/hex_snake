@@ -1728,6 +1728,18 @@
       margin-top: 8px;
     }
 
+    .intro-avatar-label-controls {
+      margin-top: 8px;
+    }
+
+    .intro-avatar-label-controls .intro-avatar-label {
+      margin-top: 0;
+      padding: 3px 7px;
+      border-radius: 999px;
+      line-height: 1.2;
+      white-space: nowrap;
+    }
+
     .portrait-select .portrait-pair {
       margin-bottom: 0;
     }
@@ -4186,6 +4198,7 @@
     let portraitSwipeStartX = null;
     let portraitSwipeStartY = null;
     let portraitSwipeOwner = null;
+    let portraitInfoSwipeStartX = null;
     let portraitIntroDidSwipe = false;
     let portraitLightboxDidSwipe = false;
     const portraitVariantModes = ["human", "beast", "chibi"];
@@ -4893,14 +4906,20 @@
               const character = selectedCharacterFor(owner);
               const label = owner === "player" ? "P1" : "P2";
               return `
-                <button class="intro-avatar-button" type="button" data-owner="${owner}" data-open-intro="${owner}" style="${characterStyle(character || {
+                <div class="intro-avatar-button" role="button" tabindex="0" data-owner="${owner}" data-open-intro="${owner}" style="${characterStyle(character || {
                   color: ownerMeta(owner).color,
                   line: ownerMeta(owner).line,
                   accent: "#fbbf24"
                 }, owner)}" aria-label="開啟${label}角色選擇">
-                  ${character ? `<div class="fighter-portrait" data-owner="${owner}" data-owner-mark="${ownerMeta(owner).mark}">${fighterArt(character, "intro", true, "small")}</div>` : randomPortraitMarkup(owner)}
-                  <span class="intro-avatar-label"><span class="owner-name ${owner === "player" ? "is-p1" : "is-p2"}">${ownerMeta(owner).label}</span> · ${character ? character.name : "隨機選擇"}</span>
-                </button>
+                  <div class="portrait-card-controls" data-portrait-swipe-owner="${owner}">
+                    ${character ? `<div class="fighter-portrait" data-owner="${owner}" data-owner-mark="${ownerMeta(owner).mark}">${fighterArt(character, "intro", true, "small")}</div>` : randomPortraitMarkup(owner)}
+                  </div>
+                  <div class="portrait-label-controls intro-avatar-label-controls">
+                    <button class="secondary portrait-arrow portrait-label-arrow" type="button" data-portrait-owner="${owner}" data-portrait-shift="-1" aria-label="${ownerMeta(owner).label} 上一位">‹</button>
+                    <span class="intro-avatar-label"><span class="owner-name ${owner === "player" ? "is-p1" : "is-p2"}">${ownerMeta(owner).label}</span> · ${character ? character.name : "隨機選擇"}</span>
+                    <button class="secondary portrait-arrow portrait-label-arrow" type="button" data-portrait-owner="${owner}" data-portrait-shift="1" aria-label="${ownerMeta(owner).label} 下一位">›</button>
+                  </div>
+                </div>
               `;
             }).join("")}
           </div>
@@ -4956,7 +4975,7 @@
       renderIntroPortraits(true);
     }
 
-    function setPortraitCharacterForOwner(owner, characterId) {
+    function setPortraitCharacterForOwner(owner, characterId, showDetails = introDetailsOpen) {
       if (characterId !== randomCharacterChoiceId && !characterById.has(characterId)) return;
       selectedPortraitOwner = owner === "computer" ? "computer" : "player";
       if (selectedPortraitOwner === "player") {
@@ -4969,7 +4988,7 @@
       syncCharacterInputs();
       saveCharacterChoices();
       if (characterId !== randomCharacterChoiceId) preloadPortraitsFor(selectedPortraitOwner);
-      renderIntroPortraits(true);
+      renderIntroPortraits(showDetails);
       resize();
       if (characterId !== randomCharacterChoiceId) {
         playCharacterSfx(owner, "select", { character: characterById.get(characterId), unlock: true });
@@ -4980,13 +4999,13 @@
       setPortraitCharacterForOwner(selectedPortraitOwner, characterId);
     }
 
-    function applyPortraitCharacter(owner, delta) {
+    function applyPortraitCharacter(owner, delta, showDetails = introDetailsOpen) {
       const safeOwner = owner === "computer" ? "computer" : "player";
       const currentId = characterChoiceFor(safeOwner);
       const choices = [randomCharacterChoiceId, ...characters.map(character => character.id)];
       const currentIndex = Math.max(0, choices.indexOf(currentId));
       const nextChoice = choices[(currentIndex + delta + choices.length) % choices.length];
-      setPortraitCharacterForOwner(safeOwner, nextChoice);
+      setPortraitCharacterForOwner(safeOwner, nextChoice, showDetails);
     }
 
     function applySelectedPortraitCharacter(delta) {
@@ -12907,10 +12926,16 @@
 
     winnerPortrait.addEventListener("pointerdown", event => {
       const swipeZone = event.target.closest("[data-portrait-swipe-owner]");
-      if (!swipeZone || !event.target.closest("[data-portrait-select]")) return;
-      portraitSwipeStartX = event.clientX;
-      portraitSwipeOwner = swipeZone.dataset.portraitSwipeOwner === "computer" ? "computer" : "player";
-      portraitIntroDidSwipe = false;
+      if (swipeZone && (event.target.closest("[data-portrait-select]") || event.target.closest(".intro-avatar-gate"))) {
+        portraitSwipeStartX = event.clientX;
+        portraitSwipeOwner = swipeZone.dataset.portraitSwipeOwner === "computer" ? "computer" : "player";
+        portraitIntroDidSwipe = false;
+        return;
+      }
+      if (event.target.closest(".portrait-copy") && event.target.closest("[data-portrait-select]")) {
+        portraitInfoSwipeStartX = event.clientX;
+        portraitIntroDidSwipe = false;
+      }
     });
 
     winnerPortrait.addEventListener("click", event => {
@@ -12953,19 +12978,35 @@
     });
 
     winnerPortrait.addEventListener("pointerup", event => {
-      if (portraitSwipeStartX === null) return;
-      const deltaX = event.clientX - portraitSwipeStartX;
-      const owner = portraitSwipeOwner;
-      portraitSwipeStartX = null;
-      portraitSwipeOwner = null;
-      if (Math.abs(deltaX) < 42) return;
-      portraitIntroDidSwipe = true;
-      applyPortraitCharacter(owner, deltaX < 0 ? 1 : -1);
+      if (portraitSwipeStartX !== null) {
+        const deltaX = event.clientX - portraitSwipeStartX;
+        const owner = portraitSwipeOwner;
+        portraitSwipeStartX = null;
+        portraitSwipeOwner = null;
+        if (Math.abs(deltaX) < 42) return;
+        portraitIntroDidSwipe = true;
+        setTimeout(() => {
+          portraitIntroDidSwipe = false;
+        }, 160);
+        applyPortraitCharacter(owner, deltaX < 0 ? 1 : -1);
+        return;
+      }
+      if (portraitInfoSwipeStartX !== null) {
+        const deltaX = event.clientX - portraitInfoSwipeStartX;
+        portraitInfoSwipeStartX = null;
+        if (Math.abs(deltaX) < 42) return;
+        portraitIntroDidSwipe = true;
+        setTimeout(() => {
+          portraitIntroDidSwipe = false;
+        }, 160);
+        applyPortraitCharacter(selectedPortraitOwner, deltaX < 0 ? 1 : -1);
+      }
     });
 
     winnerPortrait.addEventListener("pointercancel", () => {
       portraitSwipeStartX = null;
       portraitSwipeOwner = null;
+      portraitInfoSwipeStartX = null;
     });
 
     portraitLightboxClose.addEventListener("click", closePortraitLightbox);
