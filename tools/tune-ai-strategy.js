@@ -10,6 +10,10 @@ const {
   loadCharacters,
   simulateMatch
 } = require("./sim-core");
+const {
+  BASIC_STRATEGY_ID,
+  makeBasicStrategy
+} = require("./basic-ai-strategy");
 
 const root = path.resolve(__dirname, "..");
 const reportsDir = path.join(root, "reports");
@@ -386,7 +390,7 @@ function compareRankRows(a, b) {
     || b.averageScoreDiff - a.averageScoreDiff;
 }
 
-function evaluateCharacterRound({ balance, character, population, mirrorRuns, seed, round }) {
+function evaluateMirrorPool({ balance, character, population, mirrorRuns, seed, round, phase = "mirror" }) {
   const pairs = candidatePairs(population);
   const scores = new Map(population.map(strategy => [strategy.id, emptyScore(strategy)]));
   if (!pairs.length) return finalizeScores(scores);
@@ -402,7 +406,7 @@ function evaluateCharacterRound({ balance, character, population, mirrorRuns, se
       computerCharacter: character,
       playerModel: makePolicyFromWeights(playerStrategy, character.id),
       computerModel: makePolicyFromWeights(computerStrategy, character.id),
-      seed: `${seed}:${character.id}:round-${round}:match-${index}`
+      seed: `${seed}:${character.id}:round-${round}:${phase}:match-${index}`
     });
     if (!match.winner) {
       recordResult(scores, playerStrategy, "draw", match.durationMs, metricsFor(match.player, match.computer));
@@ -416,6 +420,91 @@ function evaluateCharacterRound({ balance, character, population, mirrorRuns, se
     }
   }
   return finalizeScores(scores);
+}
+
+function annotateGateRow(row, passed) {
+  return {
+    ...row,
+    gatePassed: passed,
+    gateDecisiveWinRate: row.decisiveWinRate,
+    gateOutcomeWinRate: row.outcomeWinRate,
+    gateWins: row.wins,
+    gateLosses: row.losses,
+    gateDraws: row.draws
+  };
+}
+
+function passesBasicGate(row) {
+  return row.decisiveWinRate > 0.5 && row.outcomeWinRate > 0.5;
+}
+
+function baselineFallbackRow({ balance, character, baseline, runs, seed, round, phase }) {
+  return annotateGateRow(evaluateCandidateAgainstBaseline({
+    balance,
+    character,
+    candidate: baseline,
+    baseline,
+    runs,
+    seed,
+    round,
+    phase
+  }), true);
+}
+
+function gateCandidatesAgainstBaseline({ balance, character, candidates, baseline, runs, seed, round, phase }) {
+  return candidates.map(candidate => {
+    const row = evaluateCandidateAgainstBaseline({
+      balance,
+      character,
+      candidate,
+      baseline,
+      runs,
+      seed,
+      round,
+      phase
+    });
+    return {
+      candidate,
+      row: annotateGateRow(row, passesBasicGate(row))
+    };
+  });
+}
+
+function evaluateCharacterRound({ balance, character, population, mirrorRuns, seed, round }) {
+  const baseline = baselineHighStrategy(character);
+  const gateRows = gateCandidatesAgainstBaseline({
+    balance,
+    character,
+    candidates: population,
+    baseline,
+    runs: mirrorRuns,
+    seed,
+    round,
+    phase: "gate"
+  });
+  const passed = gateRows.filter(entry => entry.row.gatePassed);
+  if (!passed.length) {
+    return [baselineFallbackRow({ balance, character, baseline, runs: mirrorRuns, seed, round, phase: "fallback" })];
+  }
+  if (passed.length === 1) return [passed[0].row];
+  const mirrorRows = evaluateMirrorPool({
+    balance,
+    character,
+    population: passed.map(entry => entry.candidate),
+    mirrorRuns,
+    seed,
+    round
+  });
+  const gateById = new Map(gateRows.map(entry => [entry.row.id, entry.row]));
+  return mirrorRows.map(row => ({
+    ...row,
+    gatePassed: true,
+    gateDecisiveWinRate: gateById.get(row.id)?.gateDecisiveWinRate,
+    gateOutcomeWinRate: gateById.get(row.id)?.gateOutcomeWinRate,
+    gateWins: gateById.get(row.id)?.gateWins,
+    gateLosses: gateById.get(row.id)?.gateLosses,
+    gateDraws: gateById.get(row.id)?.gateDraws
+  })).sort(compareRankRows);
 }
 
 function nextPopulation(character, ranked, rng, size = DEFAULT_POPULATION_SIZE, eliteCount = DEFAULT_ELITE_COUNT) {
@@ -593,7 +682,7 @@ function updateCmaState(state, ranked) {
 }
 
 function baselineHighStrategy(character) {
-  return makeStrategy("baseline-high", characterBaseWeights(character));
+  return makeBasicStrategy(BASIC_STRATEGY_ID);
 }
 
 function evaluateCandidateAgainstBaseline({ balance, character, candidate, baseline, runs, seed, round, phase }) {
@@ -643,21 +732,51 @@ function mergeScoreRows(primary, extra) {
 
 function evaluateCmaCharacterRound({ balance, character, candidates, mirrorRuns, seed, round, playoffCount }) {
   const baseline = baselineHighStrategy(character);
-  const quickRuns = Math.max(2, Math.floor(mirrorRuns * 0.35));
-  const playoffRuns = Math.max(0, mirrorRuns - quickRuns);
-  const quickRanked = candidates.map(candidate => ({
-    ...evaluateCandidateAgainstBaseline({ balance, character, candidate, baseline, runs: quickRuns, seed, round, phase: "quick" }),
-    id: candidate.id,
-    vector: candidate.vector,
-    strategyWeights: candidate.strategyWeights
+  const gateRows = gateCandidatesAgainstBaseline({
+    balance,
+    character,
+    candidates,
+    baseline,
+    runs: mirrorRuns,
+    seed,
+    round,
+    phase: "cma-gate"
+  }).map(entry => ({
+    ...entry,
+    row: {
+      ...entry.row,
+      id: entry.candidate.id,
+      vector: entry.candidate.vector,
+      strategyWeights: entry.candidate.strategyWeights,
+      phase: "gate"
+    }
+  }));
+  const passed = gateRows.filter(entry => entry.row.gatePassed);
+  if (!passed.length) {
+    return [baselineFallbackRow({ balance, character, baseline, runs: mirrorRuns, seed, round, phase: "cma-fallback" })];
+  }
+  if (passed.length === 1) return [passed[0].row];
+  const mirrorRows = evaluateMirrorPool({
+    balance,
+    character,
+    population: passed.map(entry => entry.candidate),
+    mirrorRuns,
+    seed,
+    round,
+    phase: "cma-mirror"
+  });
+  const gateById = new Map(gateRows.map(entry => [entry.row.id, entry.row]));
+  return mirrorRows.map(row => ({
+    ...row,
+    vector: gateById.get(row.id)?.vector,
+    gatePassed: true,
+    gateDecisiveWinRate: gateById.get(row.id)?.gateDecisiveWinRate,
+    gateOutcomeWinRate: gateById.get(row.id)?.gateOutcomeWinRate,
+    gateWins: gateById.get(row.id)?.gateWins,
+    gateLosses: gateById.get(row.id)?.gateLosses,
+    gateDraws: gateById.get(row.id)?.gateDraws,
+    phase: "mirror"
   })).sort(compareRankRows);
-  const finalists = new Set(quickRanked.slice(0, Math.max(1, playoffCount)).map(row => row.id));
-  return quickRanked.map(row => {
-    if (!finalists.has(row.id) || playoffRuns <= 0) return { ...row, phase: "quick" };
-    const candidate = candidates.find(item => item.id === row.id);
-    const extra = evaluateCandidateAgainstBaseline({ balance, character, candidate, baseline, runs: playoffRuns, seed, round, phase: "playoff" });
-    return { ...mergeScoreRows(row, extra), id: row.id, vector: row.vector, strategyWeights: row.strategyWeights, phase: "playoff" };
-  }).sort(compareRankRows);
 }
 
 function averageWeights(rows) {
@@ -734,6 +853,12 @@ function rankRowsToCsv(rows) {
     "averageDamageDiff",
     "averageFoodDiff",
     "averageDurationMs",
+    "gatePassed",
+    "gateDecisiveWinRate",
+    "gateOutcomeWinRate",
+    "gateWins",
+    "gateLosses",
+    "gateDraws",
     "strategyWeights"
   ];
   return [
@@ -757,6 +882,12 @@ function rankRowsToCsv(rows) {
       row.averageDamageDiff,
       row.averageFoodDiff,
       row.averageDurationMs,
+      row.gatePassed ?? "",
+      row.gateDecisiveWinRate ?? "",
+      row.gateOutcomeWinRate ?? "",
+      row.gateWins ?? "",
+      row.gateLosses ?? "",
+      row.gateDraws ?? "",
       JSON.stringify(row.strategyWeights)
     ])
   ];
@@ -820,7 +951,8 @@ function runSearch(options = {}) {
           round,
           playoffCount
         }).map(row => ({ ...row, characterId: character.id, characterName: character.name, round }));
-        updateCmaState(state, ranked.filter(row => row.vector));
+        const vectorRows = ranked.filter(row => row.vector);
+        if (vectorRows.length) updateCmaState(state, vectorRows);
       } else {
         ranked = evaluateCharacterRound({
           balance,
@@ -889,6 +1021,12 @@ function runSearch(options = {}) {
       wins: best.wins,
       losses: best.losses,
       draws: best.draws,
+      gatePassed: best.gatePassed,
+      gateDecisiveWinRate: best.gateDecisiveWinRate,
+      gateOutcomeWinRate: best.gateOutcomeWinRate,
+      gateWins: best.gateWins,
+      gateLosses: best.gateLosses,
+      gateDraws: best.gateDraws,
       strategyWeights: best.strategyWeights
     };
   });

@@ -28,9 +28,11 @@ const {
   directionToward,
   emptyStock,
   hexDistance,
+  isProjectileVisibleTo,
   wrappedDistance,
   loadBalance,
   loadCharacters,
+  launchAttack,
   nextWrappedCell,
   perceivedSnakeFor,
   randomFoodTypeIdsForCharacter,
@@ -48,8 +50,15 @@ const {
 } = require("./tune-balance");
 
 const {
+  evaluateCharacterRound,
   runSearch
 } = require("./tune-ai-strategy");
+
+const {
+  BASIC_STRATEGY_ID,
+  basicStrategyWeights,
+  makeBasicPolicy
+} = require("./basic-ai-strategy");
 
 const {
   strategyRowForCharacter
@@ -216,6 +225,34 @@ test("sandworm underground perception uses last visible snake instead of true po
   assert.deepEqual(perceivedSnakeFor(state, computer, player)[0], { q: 0, r: 0 });
   const target = chooseAttackTarget(state, computer, player, balance, "big");
   assert.ok(hexDistance(target, { q: 0, r: 0 }) < hexDistance(target, { q: 4, r: -4 }));
+});
+
+test("small attack delay is doubled in speed while big attack delay is unchanged", () => {
+  const stock = Object.fromEntries(FOOD_TYPES.map(type => [type, 0]));
+  assert.equal(attackStats(stock, "small", balance).delay, balance.attack.baseAttackDelayMs * 0.31);
+  assert.equal(attackStats(stock, "big", balance).delay, balance.attack.baseAttackDelayMs);
+});
+
+test("sandworm big attack stays hidden until 0.2s before impact and burrows for 0.5s around impact", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("sandworm"),
+    computerCharacter: characterById.get("moray"),
+    seed: "sandworm-ult-visibility",
+    initialBombs: balance.attack.bigAttackBombCost,
+    initialStock: Object.fromEntries(FOOD_TYPES.map(type => [type, 6])),
+    playerModel: { aiDifficulty: "high", skillStrategy: "preferBig", aimPrecision: 1, pathPrecision: 1 }
+  });
+  const player = state.fighters.player;
+  const computer = state.fighters.computer;
+  state.now = 1000;
+  assert.equal(launchAttack(state, player, computer, "big", state.now, balance), true);
+  const projectile = state.projectiles.find(item => item.owner === "player" && item.profile === "big");
+  assert.ok(projectile.sandwormHidden);
+  assert.equal(projectile.impactAt - player.undergroundFrom, 500);
+  assert.equal(player.undergroundUntil - projectile.impactAt, 500);
+  assert.equal(isProjectileVisibleTo(computer, projectile, projectile.impactAt - 201), false);
+  assert.equal(isProjectileVisibleTo(computer, projectile, projectile.impactAt - 200), true);
 });
 
 test("high difficulty character archetypes alter movement targets", () => {
@@ -787,11 +824,57 @@ test("AI strategy tuner defaults to two-hour full-character rounds", () => {
   assert.equal(result.manifest.stopOnConvergence, false);
   assert.equal(result.manifest.stopReason, "max-rounds");
   characters.forEach(character => {
-    assert.equal(result.topStrategies[character.id].length, 5);
+    assert.ok(result.topStrategies[character.id].length <= 5);
+    assert.ok(result.topStrategies[character.id].length >= 1);
   });
   const roundsByCharacter = new Map(characters.map(character => [character.id, 0]));
   result.history.forEach(entry => roundsByCharacter.set(entry.characterId, roundsByCharacter.get(entry.characterId) + 1));
   assert.deepEqual([...roundsByCharacter.values()], characters.map(() => 1));
+});
+
+test("basic strategy weights are fixed and not role-adjusted", () => {
+  const weights = basicStrategyWeights();
+  assert.deepEqual(weights.movement, { safePath: 0, leastDamage: 0, fastestArrival: 3 });
+  assert.deepEqual(weights.food, {
+    fastestArrival: 3,
+    ownDeficit: 0,
+    opponentDeficit: 0,
+    ownPreferred: 0,
+    opponentPreferred: 0
+  });
+  assert.deepEqual(weights.skillAllocation, { preferSmall: 1, preferBig: 1 });
+  assert.equal(weights.castTiming.nearFullEnergy, 3);
+  assert.equal(weights.castTiming.opponentDebuffed, 3);
+  assert.deepEqual(weights.castTarget, { targetHead: 3, bodyCluster: 0, targetNearestFood: 0 });
+  assert.deepEqual(weights.castDirection, {
+    selfHeadToOpponentHead: 0,
+    opponentBodyLongestAxis: 0,
+    opponentHeadToNearestFood: 3
+  });
+  assert.deepEqual(makeBasicPolicy("gu_king").strategyWeights, weights);
+  assert.deepEqual(makeBasicPolicy("dragon").strategyWeights, weights);
+});
+
+test("AI strategy gate falls back to the basic baseline when no candidate wins decisively", () => {
+  const character = characterById.get("dragon");
+  const ranked = evaluateCharacterRound({
+    balance,
+    character,
+    population: [
+      {
+        id: "same-as-basic-candidate",
+        strategyWeights: basicStrategyWeights()
+      }
+    ],
+    mirrorRuns: 2,
+    seed: "gate-fallback-test",
+    round: 1
+  });
+  assert.equal(ranked.length, 1);
+  assert.equal(ranked[0].id, BASIC_STRATEGY_ID);
+  assert.equal(ranked[0].gatePassed, true);
+  assert.equal(ranked[0].gateOutcomeWinRate, 0.5);
+  assert.deepEqual(ranked[0].strategyWeights, basicStrategyWeights());
 });
 
 test("high difficulty applies character-specific default strategy weights", () => {

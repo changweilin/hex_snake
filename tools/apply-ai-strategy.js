@@ -159,6 +159,8 @@ if (require.main === module) {
 
 module.exports = {
   buildStrategyData,
+  updateIndex,
+  writeJson,
   rowsFromInput,
   formatIndexBlock
 };

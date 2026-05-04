@@ -7,6 +7,10 @@ const DRAGON_ORB_RADIUS_MULTIPLIER = 1;
 const DRAGON_ORB_CURVE_MULTIPLIER = 1;
 const DRAGON_BURST_RADIUS_MULTIPLIER = 2;
 const DRAGON_BURST_DAMAGE_MULTIPLIER = 1.5;
+const SMALL_ATTACK_DELAY_SCALE = 0.31;
+const SMALL_ATTACK_COOLDOWN_SCALE = 0.29;
+const SANDWORM_REVEAL_BEFORE_IMPACT_MS = 200;
+const SANDWORM_UNDERGROUND_WINDOW_MS = 500;
 const FOOD_TARGET_SWITCH_MS = 20000;
 const DEAD_END_MIN_SPACE = 5;
 const DIRECTIONS = [
@@ -238,7 +242,7 @@ function canAttack(fighter, profile, balance) {
 function attackStats(stock, profile, balance) {
   const isSmall = profile === "small";
   return {
-    delay: attackDelay(stock, balance) * (isSmall ? 0.62 : 1),
+    delay: attackDelay(stock, balance) * (isSmall ? SMALL_ATTACK_DELAY_SCALE : 1),
     radius: Math.max(1, blastRadius(stock, balance) + (isSmall ? -1 : 0)),
     damage: damageMultiplier(stock, balance) * (isSmall ? 0.55 : 1)
   };
@@ -726,6 +730,7 @@ function expectedDamageAt(state, fighter, cell) {
   let damage = 0;
   state.projectiles.forEach(projectile => {
     if (projectile.owner !== opponentOwner) return;
+    if (!isProjectileVisibleTo(fighter, projectile, state.now)) return;
     if (projectile.kind === "line") {
       if (projectile.lineCells?.some(lineCell => hexDistance(lineCell, cell) <= projectile.width)) damage += projectile.damage || 0;
       return;
@@ -739,6 +744,12 @@ function expectedDamageAt(state, fighter, cell) {
     if (hazard.cells?.some(hazardCell => hexDistance(hazardCell, cell) <= hazard.width)) damage += hazard.damage || 0;
   });
   return damage;
+}
+
+function isProjectileVisibleTo(observer, projectile, now) {
+  if (projectile.owner === observer.owner) return true;
+  if (!projectile.sandwormHidden) return true;
+  return projectile.impactAt - now <= SANDWORM_REVEAL_BEFORE_IMPACT_MS;
 }
 
 function cellsWithinDistance(state, origin, minDistance, maxDistance) {
@@ -1094,8 +1105,8 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
   }
   if (characterId === "sandworm") {
     const delay = small.delay * 2;
-    attacker.undergroundFrom = now + Math.max(0, delay - 1000);
-    attacker.undergroundUntil = now + delay + 1000;
+    attacker.undergroundFrom = now + Math.max(0, delay - SANDWORM_UNDERGROUND_WINDOW_MS);
+    attacker.undergroundUntil = now + delay + SANDWORM_UNDERGROUND_WINDOW_MS;
     pushCircleAttack(state, {
       owner: attacker.owner,
       profile: "big",
@@ -1104,6 +1115,7 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
       radius: Math.max(0.5, small.radius * 0.5),
       damage: small.damage * 3.5 * ultimateDamageMultiplier(balance, characterId),
       stunChance,
+      sandwormHidden: true,
       sandwormParalyzeOnHead: true
     });
     return;
@@ -1158,7 +1170,7 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
 
 function launchAttack(state, attacker, defender, profile, now, balance) {
   if (!canAttack(attacker, profile, balance)) return false;
-  const cooldownScale = profile === "small" ? 0.58 : 1;
+  const cooldownScale = profile === "small" ? SMALL_ATTACK_COOLDOWN_SCALE : 1;
   if (now - attacker.lastAttack < attackCooldown(attacker.stock, balance) * cooldownScale) return false;
   const target = chooseAttackTarget(state, attacker, defender, balance, profile);
   const stats = attackStats(attacker.stock, profile, balance);
@@ -1616,10 +1628,12 @@ module.exports = {
   chooseAttackProfile,
   chooseAttackTarget,
   chooseAttackDirection,
+  launchAttack,
   chooseFoodTarget,
   directionToward,
   perceivedSnakeFor,
   isUnderground,
+  isProjectileVisibleTo,
   updateVisibleMemory,
   resolveProjectiles,
   resolveHazards,

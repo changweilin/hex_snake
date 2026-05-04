@@ -98,12 +98,12 @@ source_balance: data/balance.json
 
 | id | name | foodPreference | specialFood | smallMove | bigMove |
 | --- | --- | --- | --- | --- | --- |
-| dragon | 白龍 | balanced |  | 潮鱗回旋 | 破浪龍息 |
-| sandworm | 沙蟲 | fat |  | 潛沙突咬 | 貧土潛襲 |
-| quetzal | 羽蛇 | fiber |  | 祖語翠羽 | 祖語沼界 |
-| moray | 電鰻 | carb |  | 暗潮電咬 | 逆潮電磁砲 |
-| lobster | 智蝦 | protein |  | 古螯斷浪 | 混沌爆螯 |
-| gu_king | 蠱王 | black | black | 毒足先斬 | 甕底毒煙令 |
+| dragon | 白龍 | balanced |  | 銀鱗旋擊 | 冰霜極光龍息彈 |
+| sandworm | 沙蟲 | fat |  | 潛沙絞殺 | 沙海地葬 |
+| quetzal | 羽蛇 | fiber |  | 翠羽裂風 | 萬藤沼界 |
+| moray | 電鰻 | carb |  | 雷牙狂咬 | 逆潮雷脈砲 |
+| lobster | 智蝦 | protein |  | 赤螯重擊 | 混沌爆螯 |
+| gu_king | 蠱王 | black | black | 百足毒斬 | 萬蠱蝕界令 |
 
 ## Character Result Summary
 

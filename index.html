@@ -3346,6 +3346,13 @@
               <span>啟用</span>
             </span>
           </label>
+          <label class="field settings-toggle-field">
+            <span>音效</span>
+            <span class="settings-toggle-control">
+              <input id="sfxMuteToggle" type="checkbox">
+              <span>靜音</span>
+            </span>
+          </label>
         </div>
         <div class="character-picks" hidden>
           <div class="field">
@@ -3602,6 +3609,7 @@
     const smallAttackButton = document.querySelector("#smallAttackButton");
     const bigAttackButton = document.querySelector("#bigAttackButton");
     const leftHandModeInput = document.querySelector("#leftHandMode");
+    const sfxMuteToggle = document.querySelector("#sfxMuteToggle");
     const surrenderButton = document.querySelector("#surrenderButton");
     const joyZone = document.querySelector("#joyZone");
     const rulesButton = document.querySelector("#rulesButton");
@@ -3694,6 +3702,11 @@
     let rangeDamageFalloffEnabled = false;
     let targetMaxHex = 6;
     let gameOverRestartDelayMs = 700;
+    const smallAttackDelayScale = 0.31;
+    const smallAttackCooldownScale = 0.29;
+    const aiSmallAttackThrottleScale = 0.35;
+    const sandwormRevealBeforeImpactMs = 200;
+    const sandwormUndergroundWindowMs = 500;
     let defaultSettings = {
       gridSize: 10,
       foodCount: 4,
@@ -4013,6 +4026,7 @@
     let sfxMaster = null;
     let sfxNoiseBuffer = null;
     let sfxUnlocked = false;
+    let sfxMuted = localStorage.getItem("hexSnakeSfxMuted") === "1";
     const sfxLastPlayedAt = new Map();
 
     const sfxVariantProfiles = {
@@ -4242,6 +4256,7 @@
     }
 
     function unlockSfx() {
+      if (sfxMuted) return false;
       const context = ensureAudioContext();
       if (!context) return false;
       if (context.state === "suspended") {
@@ -4249,6 +4264,17 @@
       }
       sfxUnlocked = true;
       return true;
+    }
+
+    function setSfxMuted(muted) {
+      sfxMuted = Boolean(muted);
+      sfxMuteToggle.checked = sfxMuted;
+      localStorage.setItem("hexSnakeSfxMuted", sfxMuted ? "1" : "0");
+      if (sfxMuted && sfxContext?.state === "running") {
+        sfxContext.suspend().catch(() => {});
+      } else if (!sfxMuted) {
+        unlockSfx();
+      }
     }
 
     function sfxNow() {
@@ -4361,6 +4387,7 @@
     }
 
     function playCharacterSfx(owner, eventName, options = {}) {
+      if (sfxMuted) return;
       if (!sfxUnlocked && !options.unlock) return;
       if (!unlockSfx()) return;
       const nowMs = performance.now();
@@ -6292,8 +6319,8 @@
     }
 
     function updateHud() {
-      scoreEl.textContent = `${score} HP ${Math.max(0, Math.ceil(playerHp))}/${snake.length}`;
-      computerScoreEl.textContent = `${computerScore} HP ${Math.max(0, Math.ceil(computerHp))}/${computerSnake.length}`;
+      scoreEl.textContent = `HP ${Math.max(0, Math.ceil(playerHp))}/${snake.length}`;
+      computerScoreEl.textContent = `HP ${Math.max(0, Math.ceil(computerHp))}/${computerSnake.length}`;
       bestEl.textContent = best;
       totalTimeEl.textContent = formatTime(totalElapsedMs);
       lastFeedTimeEl.textContent = formatTime(lastFeedElapsedMs);
@@ -6447,10 +6474,10 @@
       const from = owner === "player" ? playerUndergroundFrom : computerUndergroundFrom;
       const until = owner === "player" ? playerUndergroundUntil : computerUndergroundUntil;
       if (!from || now < from || now > until) return 1;
-      const fadeMs = 650;
+      const fadeMs = 120;
       const fadeIn = Math.min(1, Math.max(0, (now - from) / fadeMs));
       const fadeOut = Math.min(1, Math.max(0, (until - now) / fadeMs));
-      return 0.2 + (1 - Math.min(fadeIn, fadeOut)) * 0.8;
+      return 1 - Math.min(fadeIn, fadeOut);
     }
 
     function canTurn(newDir) {
@@ -6542,52 +6569,52 @@
 
     const highAiStrategyWeightsByCharacter = {
       dragon: {
-        movement: { safePath: 2.4391, leastDamage: 0.4827, fastestArrival: 0.9183 },
-        food: { fastestArrival: 0.3615, ownDeficit: 2.2066, opponentDeficit: 2.2535, ownPreferred: 2.7, opponentPreferred: 1.287 },
-        skillAllocation: { preferSmall: 0.7963, preferBig: 0.5354 },
-        castTiming: { lethal: 3, nearFullEnergy: 1.0789, opponentDebuffed: 1.5827, opponentAlmostReady: 0.4801, nearOpponent: 2.4436, farOpponent: 1.8235 },
-        castTarget: { targetHead: 2.6208, bodyCluster: 2.0027, targetNearestFood: 0.3366 },
-        castDirection: { selfHeadToOpponentHead: 0.4444, opponentBodyLongestAxis: 2.0251, opponentHeadToNearestFood: 0.8802 }
+        movement: { safePath: 0, leastDamage: 0, fastestArrival: 3 },
+        food: { fastestArrival: 3, ownDeficit: 0, opponentDeficit: 0, ownPreferred: 0, opponentPreferred: 0 },
+        skillAllocation: { preferSmall: 1, preferBig: 1 },
+        castTiming: { lethal: 3, nearFullEnergy: 3, opponentDebuffed: 3, opponentAlmostReady: 0, nearOpponent: 0, farOpponent: 0 },
+        castTarget: { targetHead: 3, bodyCluster: 0, targetNearestFood: 0 },
+        castDirection: { selfHeadToOpponentHead: 0, opponentBodyLongestAxis: 0, opponentHeadToNearestFood: 3 }
       },
       sandworm: {
-        movement: { safePath: 2.275, leastDamage: 0.3001, fastestArrival: 2.1183 },
-        food: { fastestArrival: 2.7308, ownDeficit: 0.0173, opponentDeficit: 0.4444, ownPreferred: 0.5262, opponentPreferred: 0.1931 },
-        skillAllocation: { preferSmall: 0.7358, preferBig: 2.8337 },
-        castTiming: { lethal: 3, nearFullEnergy: 1.3631, opponentDebuffed: 1.5677, opponentAlmostReady: 1.2949, nearOpponent: 2.6487, farOpponent: 0.7148 },
-        castTarget: { targetHead: 2.9589, bodyCluster: 2.6262, targetNearestFood: 1.899 },
-        castDirection: { selfHeadToOpponentHead: 0.1048, opponentBodyLongestAxis: 0.5028, opponentHeadToNearestFood: 2.7798 }
+        movement: { safePath: 0, leastDamage: 0, fastestArrival: 3 },
+        food: { fastestArrival: 3, ownDeficit: 0, opponentDeficit: 0, ownPreferred: 0, opponentPreferred: 0 },
+        skillAllocation: { preferSmall: 1, preferBig: 1 },
+        castTiming: { lethal: 3, nearFullEnergy: 3, opponentDebuffed: 3, opponentAlmostReady: 0, nearOpponent: 0, farOpponent: 0 },
+        castTarget: { targetHead: 3, bodyCluster: 0, targetNearestFood: 0 },
+        castDirection: { selfHeadToOpponentHead: 0, opponentBodyLongestAxis: 0, opponentHeadToNearestFood: 3 }
       },
       quetzal: {
-        movement: { safePath: 0.7215, leastDamage: 2.043, fastestArrival: 2.8806 },
-        food: { fastestArrival: 2.2716, ownDeficit: 1.6132, opponentDeficit: 1.4371, ownPreferred: 0.3025, opponentPreferred: 2.6297 },
-        skillAllocation: { preferSmall: 2.6991, preferBig: 2.8627 },
-        castTiming: { lethal: 3, nearFullEnergy: 0.9051, opponentDebuffed: 1.2581, opponentAlmostReady: 1.1279, nearOpponent: 0.5001, farOpponent: 0.9577 },
-        castTarget: { targetHead: 2.9646, bodyCluster: 0.3723, targetNearestFood: 1.8288 },
-        castDirection: { selfHeadToOpponentHead: 2.0102, opponentBodyLongestAxis: 2.6791, opponentHeadToNearestFood: 2.6263 }
+        movement: { safePath: 0, leastDamage: 0, fastestArrival: 3 },
+        food: { fastestArrival: 3, ownDeficit: 0, opponentDeficit: 0, ownPreferred: 0, opponentPreferred: 0 },
+        skillAllocation: { preferSmall: 1, preferBig: 1 },
+        castTiming: { lethal: 3, nearFullEnergy: 3, opponentDebuffed: 3, opponentAlmostReady: 0, nearOpponent: 0, farOpponent: 0 },
+        castTarget: { targetHead: 3, bodyCluster: 0, targetNearestFood: 0 },
+        castDirection: { selfHeadToOpponentHead: 0, opponentBodyLongestAxis: 0, opponentHeadToNearestFood: 3 }
       },
       moray: {
-        movement: { safePath: 0.7897, leastDamage: 0.3349, fastestArrival: 1.8574 },
-        food: { fastestArrival: 2.2697, ownDeficit: 2.3837, opponentDeficit: 0.7869, ownPreferred: 2.2269, opponentPreferred: 0.9253 },
-        skillAllocation: { preferSmall: 1.5183, preferBig: 1.0406 },
-        castTiming: { lethal: 3, nearFullEnergy: 1.9911, opponentDebuffed: 0.0427, opponentAlmostReady: 1.0187, nearOpponent: 1.3133, farOpponent: 1.3689 },
-        castTarget: { targetHead: 2.9044, bodyCluster: 2.4521, targetNearestFood: 1.7096 },
-        castDirection: { selfHeadToOpponentHead: 1.1555, opponentBodyLongestAxis: 2.2171, opponentHeadToNearestFood: 1.6267 }
+        movement: { safePath: 0, leastDamage: 0, fastestArrival: 3 },
+        food: { fastestArrival: 3, ownDeficit: 0, opponentDeficit: 0, ownPreferred: 0, opponentPreferred: 0 },
+        skillAllocation: { preferSmall: 1, preferBig: 1 },
+        castTiming: { lethal: 3, nearFullEnergy: 3, opponentDebuffed: 3, opponentAlmostReady: 0, nearOpponent: 0, farOpponent: 0 },
+        castTarget: { targetHead: 3, bodyCluster: 0, targetNearestFood: 0 },
+        castDirection: { selfHeadToOpponentHead: 0, opponentBodyLongestAxis: 0, opponentHeadToNearestFood: 3 }
       },
       lobster: {
-        movement: { safePath: 2.0436, leastDamage: 1.2824, fastestArrival: 0.1606 },
-        food: { fastestArrival: 2.3519, ownDeficit: 2.142, opponentDeficit: 1.7749, ownPreferred: 1.1667, opponentPreferred: 0.0611 },
-        skillAllocation: { preferSmall: 2.1332, preferBig: 2.5317 },
-        castTiming: { lethal: 3, nearFullEnergy: 2.0314, opponentDebuffed: 0.0622, opponentAlmostReady: 2.9222, nearOpponent: 1.2235, farOpponent: 1.3658 },
-        castTarget: { targetHead: 2.6307, bodyCluster: 1.542, targetNearestFood: 0.6258 },
-        castDirection: { selfHeadToOpponentHead: 2.6991, opponentBodyLongestAxis: 0.7737, opponentHeadToNearestFood: 1.6523 }
+        movement: { safePath: 0, leastDamage: 0, fastestArrival: 3 },
+        food: { fastestArrival: 3, ownDeficit: 0, opponentDeficit: 0, ownPreferred: 0, opponentPreferred: 0 },
+        skillAllocation: { preferSmall: 1, preferBig: 1 },
+        castTiming: { lethal: 3, nearFullEnergy: 3, opponentDebuffed: 3, opponentAlmostReady: 0, nearOpponent: 0, farOpponent: 0 },
+        castTarget: { targetHead: 3, bodyCluster: 0, targetNearestFood: 0 },
+        castDirection: { selfHeadToOpponentHead: 0, opponentBodyLongestAxis: 0, opponentHeadToNearestFood: 3 }
       },
       gu_king: {
-        movement: { safePath: 1.2354, leastDamage: 2.7963, fastestArrival: 1.7133 },
-        food: { fastestArrival: 1.6337, ownDeficit: 1.1691, opponentDeficit: 0.2202, ownPreferred: 0.2503, opponentPreferred: 0.3732 },
-        skillAllocation: { preferSmall: 1.6374, preferBig: 1.8423 },
-        castTiming: { lethal: 3, nearFullEnergy: 0.6652, opponentDebuffed: 1.9551, opponentAlmostReady: 1.561, nearOpponent: 2.7869, farOpponent: 1.5272 },
-        castTarget: { targetHead: 1.9542, bodyCluster: 2.2246, targetNearestFood: 0.4308 },
-        castDirection: { selfHeadToOpponentHead: 1.7434, opponentBodyLongestAxis: 2.5441, opponentHeadToNearestFood: 1.0906 }
+        movement: { safePath: 0, leastDamage: 0, fastestArrival: 3 },
+        food: { fastestArrival: 3, ownDeficit: 0, opponentDeficit: 0, ownPreferred: 0, opponentPreferred: 0 },
+        skillAllocation: { preferSmall: 1, preferBig: 1 },
+        castTiming: { lethal: 3, nearFullEnergy: 3, opponentDebuffed: 3, opponentAlmostReady: 0, nearOpponent: 0, farOpponent: 0 },
+        castTarget: { targetHead: 3, bodyCluster: 0, targetNearestFood: 0 },
+        castDirection: { selfHeadToOpponentHead: 0, opponentBodyLongestAxis: 0, opponentHeadToNearestFood: 3 }
       }
     };
     const dragonOrbStepMs = 45;
@@ -7020,6 +7047,7 @@
       let damage = 0;
       projectiles.forEach(projectile => {
         if (projectile.owner !== opponent) return;
+        if (!isProjectileVisibleTo(owner, projectile, now)) return;
         if (projectile.kind === "line") {
           if (projectile.lineCells?.some(lineCell => hexDistance(lineCell, cell) <= projectile.width)) damage += projectile.damage || 0;
           return;
@@ -7033,6 +7061,12 @@
         if (hazard.cells?.some(hazardCell => hexDistance(hazardCell, cell) <= hazard.width)) damage += hazard.damage || 0;
       });
       return damage;
+    }
+
+    function isProjectileVisibleTo(observer, projectile, now) {
+      if (projectile.owner === observer) return true;
+      if (!projectile.sandwormHidden) return true;
+      return projectile.impactAt - now <= sandwormRevealBeforeImpactMs;
     }
 
     function foodValueFor(owner, opponent, food, now) {
@@ -7195,7 +7229,7 @@
     function attackStats(stock, profile = "big") {
       const isSmall = profile === "small";
       return {
-        delay: attackDelay(stock) * (isSmall ? 0.62 : 1),
+        delay: attackDelay(stock) * (isSmall ? smallAttackDelayScale : 1),
         radius: Math.max(1, blastRadius(stock) + (isSmall ? -1 : 0)),
         damage: damageMultiplier(stock) * (isSmall ? 0.55 : 1)
       };
@@ -7513,8 +7547,8 @@
 
       if (character.id === "sandworm") {
         const delay = small.delay * 2;
-        const undergroundFrom = now + Math.max(0, delay - 1000);
-        const undergroundUntil = now + delay + 1000;
+        const undergroundFrom = now + Math.max(0, delay - sandwormUndergroundWindowMs);
+        const undergroundUntil = now + delay + sandwormUndergroundWindowMs;
         if (owner === "player") {
           playerUndergroundFrom = undergroundFrom;
           playerUndergroundUntil = Math.max(playerUndergroundUntil, undergroundUntil);
@@ -7534,6 +7568,7 @@
           damage: small.damage * 3.5 * ultimateDamageMultiplier(character.id),
           stunChance,
           hidden: true,
+          sandwormHidden: true,
           sandwormParalyzeOnHead: true
         });
         return delay;
@@ -7604,7 +7639,7 @@
       const character = characterFor(owner);
       const isSmall = profile === "small";
       if (!canAttack(owner, profile)) return false;
-      if (now - lastAttack < attackCooldown(stock) * (isSmall ? 0.58 : 1)) return false;
+      if (now - lastAttack < attackCooldown(stock) * (isSmall ? smallAttackCooldownScale : 1)) return false;
       const stats = attackStats(stock, profile);
       const stunChance = attackStunChance(stock);
       consumeAttackCost(owner, stock, profile);
@@ -7645,7 +7680,7 @@
       if (!computerCanUseAttack()) return;
       const profile = chooseAiAttackProfile("computer", now);
       if (!profile) return;
-      const profileCooldownScale = profile === "small" ? 0.7 : 1;
+      const profileCooldownScale = profile === "small" ? aiSmallAttackThrottleScale : 1;
       const cooldown = { novice: 6200, low: 6200, medium: 4700, high: 3400 }[computerDifficulty] * profileCooldownScale / attackSpeedMultiplier(computerStock);
       if (now - lastComputerAttackMs < cooldown / (isPlayerAutoControlActive() ? computerBattleSpeed : 1)) return;
       const target = chooseAiAttackTarget("computer", profile, now);
@@ -7668,7 +7703,7 @@
       if (!isPlayerAutoControlActive() || isNoviceComputer()) return;
       const profile = chooseAiAttackProfile("player", now);
       if (!profile) return;
-      const profileCooldownScale = profile === "small" ? 0.7 : 1;
+      const profileCooldownScale = profile === "small" ? aiSmallAttackThrottleScale : 1;
       const cooldown = { novice: 6200, low: 6200, medium: 4700, high: 3400 }[computerDifficulty] * profileCooldownScale / attackSpeedMultiplier(playerStock);
       if (now - lastPlayerAttackMs < cooldown / computerBattleSpeed) return;
       const target = chooseAiAttackTarget("player", profile, now);
@@ -8501,29 +8536,343 @@
       return type.endsWith("-big") || type.endsWith("-burst") || type.endsWith("-radiation");
     }
 
+    function drawSmallSkillOrb(x, y, size, progress, character, alpha = 1) {
+      const element = elementColorsFor(character);
+      const pulse = 0.92 + waveValue(progress, 0.18) * 0.14;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.globalCompositeOperation = "lighter";
+      const glow = ctx.createRadialGradient(0, 0, size * 0.08, 0, 0, size * 1.15);
+      glow.addColorStop(0, hexToRgba(element.hot, 0.72 * alpha));
+      glow.addColorStop(0.45, hexToRgba(element.primary, 0.34 * alpha));
+      glow.addColorStop(1, hexToRgba(element.deep, 0));
+      ctx.beginPath();
+      ctx.arc(0, 0, size * 1.1, 0, Math.PI * 2);
+      ctx.fillStyle = glow;
+      ctx.fill();
+      ctx.globalCompositeOperation = "source-over";
+      ctx.beginPath();
+      ctx.arc(0, 0, size * 0.48 * pulse, 0, Math.PI * 2);
+      ctx.fillStyle = hexToRgba(element.hot, 0.9 * alpha);
+      ctx.fill();
+      ctx.strokeStyle = hexToRgba(element.secondary, 0.95 * alpha);
+      ctx.lineWidth = Math.max(1.4, cellSize * 0.05);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawSmallSkillScale(x, y, size, angle, character, alpha = 1) {
+      const element = elementColorsFor(character);
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angle);
+      ctx.beginPath();
+      ctx.moveTo(0, -size);
+      ctx.quadraticCurveTo(size * 0.55, -size * 0.2, size * 0.18, size * 0.82);
+      ctx.quadraticCurveTo(-size * 0.48, size * 0.18, 0, -size);
+      ctx.closePath();
+      ctx.fillStyle = hexToRgba(element.primary, 0.64 * alpha);
+      ctx.fill();
+      ctx.strokeStyle = hexToRgba(element.glow, 0.86 * alpha);
+      ctx.lineWidth = Math.max(1.1, cellSize * 0.032);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawSmallSkillRuneRing(x, y, radiusPx, progress, character, alpha = 1) {
+      const element = elementColorsFor(character);
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(progress * Math.PI * 0.72);
+      ctx.globalCompositeOperation = "lighter";
+      for (let ring = 0; ring < 2; ring += 1) {
+        ctx.beginPath();
+        ctx.arc(0, 0, radiusPx * (0.48 + ring * 0.2), 0, Math.PI * 2);
+        ctx.strokeStyle = hexToRgba(ring ? element.secondary : element.glow, (0.46 - ring * 0.1) * alpha);
+        ctx.lineWidth = Math.max(1.2, cellSize * (0.035 + ring * 0.012));
+        ctx.stroke();
+      }
+      for (let i = 0; i < 6; i += 1) {
+        const angle = i * Math.PI * 2 / 6;
+        const px = Math.cos(angle) * radiusPx * 0.66;
+        const py = Math.sin(angle) * radiusPx * 0.66;
+        ctx.save();
+        ctx.translate(px, py);
+        ctx.rotate(angle + Math.PI / 2);
+        drawLocalHex(cellSize * 0.11);
+        ctx.fillStyle = hexToRgba(i % 2 ? element.primary : element.hot, 0.28 * alpha);
+        ctx.fill();
+        ctx.strokeStyle = hexToRgba(i % 2 ? element.glow : element.secondary, 0.78 * alpha);
+        ctx.lineWidth = Math.max(1, cellSize * 0.024);
+        ctx.stroke();
+        ctx.restore();
+      }
+      ctx.restore();
+    }
+
+    function drawSmallSkillGroundCracks(x, y, radiusPx, progress, character, alpha = 1) {
+      const element = elementColorsFor(character);
+      ctx.save();
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      for (let i = 0; i < 7; i += 1) {
+        const angle = i * Math.PI * 2 / 7 + 0.18;
+        const inner = radiusPx * (0.12 + progress * 0.08);
+        const mid = radiusPx * (0.34 + (i % 2) * 0.08);
+        const outer = radiusPx * (0.58 + progress * 0.28);
+        ctx.beginPath();
+        ctx.moveTo(x + Math.cos(angle) * inner, y + Math.sin(angle) * inner * 0.72);
+        ctx.lineTo(x + Math.cos(angle + 0.12) * mid, y + Math.sin(angle + 0.12) * mid * 0.72);
+        ctx.lineTo(x + Math.cos(angle - 0.08) * outer, y + Math.sin(angle - 0.08) * outer * 0.72);
+        ctx.strokeStyle = hexToRgba(i % 2 ? element.secondary : element.deep, alpha * (0.68 - progress * 0.24));
+        ctx.lineWidth = Math.max(1.4, cellSize * 0.045);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawSmallSkillWaterRibbon(x, y, size, progress, character, alpha = 1) {
+      const element = elementColorsFor(character);
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      for (let band = -1; band <= 1; band += 1) {
+        ctx.beginPath();
+        for (let step = 0; step <= 22; step += 1) {
+          const t = step / 22;
+          const px = -size * 0.82 + t * size * 1.64;
+          const py = Math.sin(t * Math.PI * 2 + progress * Math.PI * 2 + band * 0.7) * size * 0.13 + band * size * 0.16;
+          if (step === 0) ctx.moveTo(x + px, y + py);
+          else ctx.lineTo(x + px, y + py);
+        }
+        ctx.strokeStyle = hexToRgba(band ? element.secondary : element.hot, alpha * (band ? 0.5 : 0.7));
+        ctx.lineWidth = Math.max(1.4, cellSize * (band ? 0.04 : 0.06));
+        ctx.lineCap = "round";
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawSmallSkillClawEmblem(x, y, size, progress, character, alpha = 1) {
+      const element = elementColorsFor(character);
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(-0.1 + progress * 0.16);
+      ctx.globalCompositeOperation = "source-over";
+      [-1, 1].forEach(mirror => {
+        ctx.save();
+        ctx.scale(mirror, 1);
+        ctx.beginPath();
+        ctx.moveTo(size * 0.08, -size * 0.18);
+        ctx.quadraticCurveTo(size * 0.64, -size * 0.64, size * 0.94, -size * 0.1);
+        ctx.quadraticCurveTo(size * 0.68, size * 0.12, size * 0.34, size * 0.06);
+        ctx.quadraticCurveTo(size * 0.28, size * 0.44, -size * 0.02, size * 0.46);
+        ctx.quadraticCurveTo(size * 0.08, size * 0.12, size * 0.08, -size * 0.18);
+        ctx.closePath();
+        ctx.fillStyle = hexToRgba(element.primary, 0.66 * alpha);
+        ctx.fill();
+        ctx.strokeStyle = hexToRgba(element.glow, 0.86 * alpha);
+        ctx.lineWidth = Math.max(1.5, cellSize * 0.05);
+        ctx.stroke();
+        ctx.restore();
+      });
+      drawFlameTongue(0, size * 0.1, size * 0.36, Math.PI, element.secondary, element.hot, 0.52 * alpha);
+      ctx.restore();
+    }
+
+    function drawSmallSkillPoisonSigil(x, y, radiusPx, progress, character, alpha = 1) {
+      const element = elementColorsFor(character);
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(-progress * Math.PI * 0.9);
+      ctx.globalCompositeOperation = "lighter";
+      ctx.beginPath();
+      ctx.arc(0, 0, radiusPx * 0.42, 0, Math.PI * 2);
+      ctx.fillStyle = hexToRgba("#020617", 0.72 * alpha);
+      ctx.fill();
+      ctx.strokeStyle = hexToRgba(element.glow, 0.82 * alpha);
+      ctx.lineWidth = Math.max(1.6, cellSize * 0.05);
+      ctx.stroke();
+      for (let i = 0; i < 6; i += 1) {
+        const angle = i * Math.PI / 3;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(angle) * radiusPx * 0.22, Math.sin(angle) * radiusPx * 0.22);
+        ctx.quadraticCurveTo(
+          Math.cos(angle + 0.34) * radiusPx * 0.46,
+          Math.sin(angle + 0.34) * radiusPx * 0.46,
+          Math.cos(angle + 0.68) * radiusPx * 0.74,
+          Math.sin(angle + 0.68) * radiusPx * 0.54
+        );
+        ctx.strokeStyle = hexToRgba(i % 2 ? element.secondary : element.hot, 0.68 * alpha);
+        ctx.lineWidth = Math.max(1.1, cellSize * 0.034);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawSmallSkillIcon(x, y, size, progress, character, angle = 0, alpha = 1) {
+      const element = elementColorsFor(character);
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angle);
+      if (character.id === "dragon") {
+        drawSmallSkillOrb(0, 0, size * 0.78, progress, character, alpha);
+        for (let i = 0; i < 5; i += 1) {
+          const scaleAngle = i * Math.PI * 2 / 5 + progress * Math.PI * 1.2;
+          drawSmallSkillScale(Math.cos(scaleAngle) * size * 0.58, Math.sin(scaleAngle) * size * 0.42, size * 0.2, scaleAngle, character, 0.78 * alpha);
+        }
+      } else if (character.id === "sandworm") {
+        ctx.beginPath();
+        ctx.moveTo(size * 0.72, 0);
+        ctx.lineTo(size * 0.12, -size * 0.4);
+        ctx.lineTo(-size * 0.64, -size * 0.22);
+        ctx.lineTo(-size * 0.26, 0);
+        ctx.lineTo(-size * 0.64, size * 0.22);
+        ctx.lineTo(size * 0.12, size * 0.4);
+        ctx.closePath();
+        ctx.fillStyle = hexToRgba(element.primary, 0.88 * alpha);
+        ctx.fill();
+        ctx.strokeStyle = hexToRgba(element.deep, 0.94 * alpha);
+        ctx.lineWidth = Math.max(1.5, cellSize * 0.052);
+        ctx.stroke();
+        drawSmallSkillGroundCracks(0, 0, size * 0.8, progress, character, 0.74 * alpha);
+      } else if (character.id === "quetzal") {
+        drawFeatherShape(0, 0, size * 0.72, Math.PI / 2, element.primary, element.glow, 0.92 * alpha);
+        [-1, 1].forEach(mirror => drawFeatherShape(-size * 0.18, mirror * size * 0.28, size * 0.42, Math.PI / 2 + mirror * 0.52, element.secondary, element.hot, 0.72 * alpha));
+      } else if (character.id === "moray") {
+        ctx.beginPath();
+        ctx.ellipse(0, 0, size * 0.62, size * 0.34, 0, 0, Math.PI * 2);
+        ctx.fillStyle = hexToRgba(element.deep, 0.88 * alpha);
+        ctx.fill();
+        ctx.strokeStyle = hexToRgba(element.hot, 0.94 * alpha);
+        ctx.lineWidth = Math.max(1.6, cellSize * 0.055);
+        ctx.stroke();
+        drawSmallSkillWaterRibbon(0, 0, size * 0.9, progress, character, alpha);
+      } else if (character.id === "lobster") {
+        drawSmallSkillClawEmblem(0, 0, size * 0.78, progress, character, alpha);
+      } else if (character.id === "gu_king") {
+        drawSmallSkillPoisonSigil(0, 0, size * 0.92, progress, character, alpha);
+        ctx.beginPath();
+        ctx.arc(size * 0.2, -size * 0.12, size * 0.12, 0, Math.PI * 2);
+        ctx.arc(size * 0.18, size * 0.14, size * 0.08, 0, Math.PI * 2);
+        ctx.fillStyle = hexToRgba(element.hot, 0.86 * alpha);
+        ctx.fill();
+      } else {
+        drawSmallSkillOrb(0, 0, size * 0.72, progress, character, alpha);
+      }
+      ctx.restore();
+    }
+
     function drawSmallCastFrame(x, y, radiusPx, progress, character, alpha = 1) {
       const element = elementColorsFor(character);
-      drawElementAura(x, y, radiusPx * 0.96, progress, character, 0.52 * alpha);
-      drawPulseRing(x, y, radiusPx * 0.78, progress, element.primary, element.glow, 0.82);
-      drawElementMotifs(x, y, radiusPx * 0.76, progress, character, 0.58 * alpha, 10);
-      for (let i = 0; i < 8; i += 1) {
-        const angle = progress * Math.PI * 2.8 + i * Math.PI * 2 / 8;
-        drawElementShard(
-          x + Math.cos(angle) * radiusPx * 0.58,
-          y + Math.sin(angle) * radiusPx * 0.42,
-          cellSize * 0.16,
-          angle,
-          paletteColor(character, i),
-          0.58 * alpha
-        );
+      const pulse = 0.82 + waveValue(progress, 0.16) * 0.18;
+      drawElementAura(x, y, radiusPx * 0.78, progress, character, 0.34 * alpha);
+      drawSmallSkillRuneRing(x, y, radiusPx * pulse, progress, character, 0.74 * alpha);
+      drawSmallSkillIcon(x, y, radiusPx * 0.46, progress, character, -Math.PI / 2 + progress * 0.28, alpha);
+      if (character.id === "sandworm") {
+        drawSmallSkillGroundCracks(x, y + radiusPx * 0.08, radiusPx * 0.72, progress, character, 0.52 * alpha);
+      } else if (character.id === "moray") {
+        drawSmallSkillWaterRibbon(x, y, radiusPx * 0.72, progress, character, 0.72 * alpha);
+      } else if (character.id === "lobster") {
+        drawClawArc(x - radiusPx * 0.12, y, radiusPx * 0.86, progress * 0.7, element.secondary, element.glow, 1);
+        drawClawArc(x + radiusPx * 0.12, y, radiusPx * 0.86, progress * 0.7, element.secondary, element.glow, -1);
+      } else if (character.id === "gu_king") {
+        drawSmallSkillPoisonSigil(x, y, radiusPx * 0.78, progress, character, 0.6 * alpha);
       }
     }
 
     function drawSmallImpactFrame(x, y, radiusPx, progress, character, alpha = 1) {
       const element = elementColorsFor(character);
-      drawElementAura(x, y, radiusPx * 1.02, progress, character, 0.7 * alpha);
-      drawPulseRing(x, y, radiusPx * 0.96, progress, element.primary, element.glow, 1);
-      drawElementMotifs(x, y, radiusPx * 0.86, progress, character, 0.72 * alpha, 12);
+      const fade = Math.max(0, 1 - progress * 0.18);
+      drawElementAura(x, y, radiusPx * 0.96, progress, character, 0.54 * alpha);
+      drawPulseRing(x, y, radiusPx * 0.86, progress, element.primary, element.glow, 0.82);
+      drawSmallSkillRuneRing(x, y, radiusPx * (0.58 + progress * 0.24), 1 - progress, character, 0.72 * alpha * fade);
+      if (character.id === "dragon") {
+        drawSmallSkillOrb(x, y, radiusPx * 0.42, progress, character, alpha);
+        for (let i = 0; i < 8; i += 1) {
+          const angle = i * Math.PI * 2 / 8 + progress * Math.PI * 0.8;
+          drawSmallSkillScale(x + Math.cos(angle) * radiusPx * 0.52, y + Math.sin(angle) * radiusPx * 0.38, cellSize * 0.18, angle, character, 0.7 * alpha);
+        }
+      } else if (character.id === "sandworm") {
+        drawSandSpike(x, y, radiusPx * 0.88, progress, element.secondary, element.glow);
+        drawSmallSkillGroundCracks(x, y + radiusPx * 0.08, radiusPx, progress, character, 0.8 * alpha);
+      } else if (character.id === "quetzal") {
+        drawSwampForestBloom(x, y, radiusPx * 0.66, progress, character, 0.72 * alpha, 2);
+        for (let i = 0; i < 7; i += 1) {
+          const angle = i * Math.PI * 2 / 7 + progress * 0.55;
+          drawFeatherShape(x + Math.cos(angle) * radiusPx * 0.5, y + Math.sin(angle) * radiusPx * 0.36, cellSize * 0.22, angle + Math.PI / 2, element.primary, element.hot, 0.68 * alpha);
+        }
+      } else if (character.id === "moray") {
+        drawSmallSkillWaterRibbon(x, y, radiusPx * 0.92, progress, character, alpha);
+        for (let i = 0; i < 5; i += 1) {
+          const angle = i * Math.PI * 2 / 5 + progress * Math.PI;
+          drawLightningBetween(
+            { x: x + Math.cos(angle) * radiusPx * 0.26, y: y + Math.sin(angle) * radiusPx * 0.18 },
+            { x: x + Math.cos(angle) * radiusPx * 0.72, y: y + Math.sin(angle) * radiusPx * 0.48 },
+            progress + i * 0.1,
+            i % 2 ? element.secondary : element.hot,
+            0.42,
+            3
+          );
+        }
+      } else if (character.id === "lobster") {
+        drawSmallSkillClawEmblem(x, y, radiusPx * 0.62, progress, character, alpha);
+        drawPulseRing(x, y, radiusPx * 0.62, progress, element.deep, element.hot, 0.72);
+      } else if (character.id === "gu_king") {
+        drawSmallSkillPoisonSigil(x, y, radiusPx * 0.78, progress, character, alpha);
+        for (let i = 0; i < 9; i += 1) {
+          const angle = i * Math.PI * 2 / 9 - progress * Math.PI * 1.4;
+          ctx.beginPath();
+          ctx.arc(x + Math.cos(angle) * radiusPx * 0.56, y + Math.sin(angle) * radiusPx * 0.4, cellSize * (0.06 + (i % 3) * 0.02), 0, Math.PI * 2);
+          ctx.fillStyle = hexToRgba(i % 2 ? element.glow : element.secondary, 0.58 * alpha);
+          ctx.fill();
+        }
+      } else {
+        drawSmallSkillIcon(x, y, radiusPx * 0.44, progress, character, 0, alpha);
+      }
+    }
+
+    function drawSmallSkillTrail(start, end, progress, character, alpha = 1) {
+      const element = elementColorsFor(character);
+      const dx = end.x - start.x;
+      const dy = end.y - start.y;
+      const length = Math.hypot(dx, dy) || 1;
+      const ux = dx / length;
+      const uy = dy / length;
+      const nx = -uy;
+      const ny = ux;
+      const headX = start.x + dx * progress;
+      const headY = start.y + dy * progress;
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      for (let i = 0; i < 5; i += 1) {
+        const back = cellSize * (0.32 + i * 0.22);
+        const width = cellSize * (0.1 + i * 0.035);
+        const fade = alpha * (0.45 - i * 0.065) * Math.min(1, progress * 2.2);
+        const tx = headX - ux * back;
+        const ty = headY - uy * back;
+        ctx.beginPath();
+        if (character.id === "sandworm") {
+          ctx.ellipse(tx, ty + cellSize * 0.08, width * 1.35, width * 0.62, Math.atan2(uy, ux), 0, Math.PI * 2);
+          ctx.fillStyle = hexToRgba(i % 2 ? element.secondary : element.dust || element.primary, fade);
+          ctx.fill();
+        } else if (character.id === "quetzal") {
+          drawFeatherShape(tx + nx * width * 0.5, ty + ny * width * 0.5, cellSize * (0.13 + i * 0.012), Math.atan2(uy, ux) + Math.PI / 2, i % 2 ? element.secondary : element.primary, element.glow, fade * 1.5);
+        } else if (character.id === "lobster") {
+          drawFlameTongue(tx, ty, cellSize * (0.16 + i * 0.018), Math.atan2(uy, ux) - Math.PI / 2, i % 2 ? element.secondary : element.primary, element.hot, fade * 1.25);
+        } else if (character.id === "gu_king") {
+          ctx.arc(tx + nx * Math.sin(i) * width, ty + ny * Math.sin(i) * width, cellSize * (0.055 + i * 0.008), 0, Math.PI * 2);
+          ctx.fillStyle = hexToRgba(i % 2 ? element.glow : element.secondary, fade * 1.25);
+          ctx.fill();
+        } else {
+          ctx.moveTo(tx - nx * width, ty - ny * width);
+          ctx.quadraticCurveTo(tx - ux * cellSize * 0.16, ty - uy * cellSize * 0.16, tx + nx * width, ty + ny * width);
+          ctx.strokeStyle = hexToRgba(character.id === "moray" && i % 2 ? element.hot : i % 2 ? element.secondary : element.glow, fade);
+          ctx.lineWidth = Math.max(1.1, cellSize * (0.042 - i * 0.004));
+          ctx.lineCap = "round";
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
     }
 
     function drawUltimateImpactFrame(x, y, radiusPx, progress, character, alpha = 1) {
@@ -9875,6 +10224,116 @@
       ctx.restore();
     }
 
+    function drawFrostShard(x, y, size, angle, alpha = 1) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angle);
+      ctx.beginPath();
+      ctx.moveTo(0, -size);
+      ctx.lineTo(size * 0.28, -size * 0.12);
+      ctx.lineTo(size * 0.12, size * 0.82);
+      ctx.lineTo(0, size);
+      ctx.lineTo(-size * 0.12, size * 0.82);
+      ctx.lineTo(-size * 0.28, -size * 0.12);
+      ctx.closePath();
+      ctx.fillStyle = hexToRgba("#e0f2fe", 0.64 * alpha);
+      ctx.fill();
+      ctx.strokeStyle = hexToRgba("#ffffff", 0.86 * alpha);
+      ctx.lineWidth = Math.max(1.1, cellSize * 0.032);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawFrostFreezeBurst(x, y, radiusPx, progress, character, alpha = 1) {
+      const freeze = Math.max(0, 1 - progress * 0.18);
+      const pulse = 0.9 + waveValue(progress, 0.2) * 0.12;
+      ctx.save();
+      ctx.globalCompositeOperation = "source-over";
+      const frost = ctx.createRadialGradient(x, y, radiusPx * 0.04, x, y, radiusPx * 1.15);
+      frost.addColorStop(0, hexToRgba("#ffffff", 0.92 * alpha));
+      frost.addColorStop(0.28, hexToRgba("#e0f2fe", 0.78 * alpha));
+      frost.addColorStop(0.6, hexToRgba("#7dd3fc", 0.38 * alpha));
+      frost.addColorStop(1, hexToRgba("#0f172a", 0));
+      ctx.beginPath();
+      ctx.arc(x, y, radiusPx * (0.94 + progress * 0.22) * pulse, 0, Math.PI * 2);
+      ctx.fillStyle = frost;
+      ctx.fill();
+      ctx.globalCompositeOperation = "lighter";
+      for (let arm = 0; arm < 12; arm += 1) {
+        const angle = arm * Math.PI * 2 / 12 + progress * 0.16;
+        const inner = radiusPx * 0.18;
+        const outer = radiusPx * (0.68 + waveValue(progress, arm * 0.04) * 0.24);
+        ctx.beginPath();
+        ctx.moveTo(x + Math.cos(angle) * inner, y + Math.sin(angle) * inner);
+        ctx.lineTo(x + Math.cos(angle) * outer, y + Math.sin(angle) * outer);
+        ctx.strokeStyle = hexToRgba(arm % 2 ? "#bae6fd" : "#ffffff", alpha * freeze * 0.78);
+        ctx.lineWidth = Math.max(1.4, cellSize * (0.045 + (arm % 3) * 0.014));
+        ctx.lineCap = "round";
+        ctx.stroke();
+        drawFrostShard(
+          x + Math.cos(angle) * radiusPx * (0.48 + progress * 0.08),
+          y + Math.sin(angle) * radiusPx * (0.48 + progress * 0.08),
+          cellSize * (0.2 + (arm % 3) * 0.035),
+          angle,
+          alpha * freeze
+        );
+      }
+      for (let ring = 0; ring < 3; ring += 1) {
+        ctx.beginPath();
+        ctx.arc(x, y, radiusPx * (0.28 + ring * 0.2 + progress * 0.18), 0, Math.PI * 2);
+        ctx.strokeStyle = hexToRgba(ring % 2 ? "#7dd3fc" : "#ffffff", alpha * freeze * (0.58 - ring * 0.1));
+        ctx.lineWidth = Math.max(1.4, cellSize * (0.06 - ring * 0.008));
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawFrostMagicCircle(x, y, radiusPx, progress, character, alpha = 1) {
+      const fade = Math.max(0, 1 - progress * 0.28);
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      for (let ring = 0; ring < 5; ring += 1) {
+        ctx.beginPath();
+        ctx.ellipse(
+          x,
+          y,
+          radiusPx * (0.34 + ring * 0.15 + waveValue(progress, ring * 0.08) * 0.025),
+          radiusPx * (0.22 + ring * 0.095),
+          progress * Math.PI * (ring % 2 ? -0.52 : 0.52),
+          0,
+          Math.PI * 2
+        );
+        ctx.strokeStyle = hexToRgba(ring % 2 ? "#7dd3fc" : "#e0f2fe", alpha * fade * (0.64 - ring * 0.07));
+        ctx.lineWidth = Math.max(1.4, cellSize * (0.062 - ring * 0.005));
+        ctx.stroke();
+      }
+      for (let i = 0; i < 18; i += 1) {
+        const angle = i * Math.PI * 2 / 18 + progress * Math.PI * 0.8;
+        const sx = x + Math.cos(angle) * radiusPx * 0.74;
+        const sy = y + Math.sin(angle) * radiusPx * 0.52;
+        drawFrostShard(sx, sy, cellSize * (0.14 + (i % 3) * 0.026), angle + Math.PI, alpha * fade * 0.72);
+      }
+      for (let wisp = 0; wisp < 24; wisp += 1) {
+        const angle = wisp * Math.PI * 2 / 24 + progress * Math.PI * 1.2;
+        const base = radiusPx * (0.18 + (wisp % 6) * 0.09);
+        const lift = radiusPx * (0.16 + waveValue(progress, wisp * 0.05) * 0.24);
+        ctx.beginPath();
+        ctx.moveTo(x + Math.cos(angle) * base, y + Math.sin(angle) * base * 0.58);
+        ctx.quadraticCurveTo(
+          x + Math.cos(angle + 0.28) * (base * 0.8),
+          y + Math.sin(angle + 0.28) * base * 0.48 - lift * 0.55,
+          x + Math.cos(angle + 0.5) * (base * 0.6),
+          y + Math.sin(angle + 0.5) * base * 0.38 - lift
+        );
+        ctx.strokeStyle = hexToRgba(wisp % 2 ? "#bae6fd" : "#ffffff", alpha * fade * (0.34 + (wisp % 3) * 0.04));
+        ctx.lineWidth = Math.max(1.1, cellSize * 0.032);
+        ctx.lineCap = "round";
+        ctx.stroke();
+      }
+      drawSpellGlyphRing(x, y, radiusPx * 0.86, progress, alpha * fade * 0.7);
+      ctx.restore();
+    }
+
     function drawDragonSpiritRadiance(x, y, radiusPx, progress, character, alpha = 1) {
       const element = elementColorsFor(character);
       const fade = Math.max(0, 1 - progress * 0.28);
@@ -10077,6 +10536,82 @@
       ctx.restore();
     }
 
+    function drawDarkGuKingTornado(x, y, radiusPx, progress, character, alpha = 1) {
+      const element = elementColorsFor(character);
+      const fade = Math.max(0, 1 - progress * 0.2);
+      ctx.save();
+      ctx.globalCompositeOperation = "source-over";
+      const shadow = ctx.createRadialGradient(x, y, radiusPx * 0.06, x, y, radiusPx * 1.34);
+      shadow.addColorStop(0, hexToRgba("#000000", 0.92 * alpha));
+      shadow.addColorStop(0.36, hexToRgba("#020617", 0.82 * alpha));
+      shadow.addColorStop(0.7, hexToRgba("#064e3b", 0.28 * alpha));
+      shadow.addColorStop(1, hexToRgba("#000000", 0));
+      ctx.beginPath();
+      ctx.arc(x, y, radiusPx * 1.28, 0, Math.PI * 2);
+      ctx.fillStyle = shadow;
+      ctx.fill();
+
+      for (let layer = 0; layer < 8; layer += 1) {
+        ctx.beginPath();
+        for (let step = 0; step < 70; step += 1) {
+          const t = step / 69;
+          const spin = progress * Math.PI * (5.6 + layer * 0.18) + layer * 0.74 + t * Math.PI * 5.4;
+          const width = radiusPx * (0.1 + t * 0.7) * (1 - layer * 0.045);
+          const px = x + Math.cos(spin) * width;
+          const py = y + radiusPx * (0.72 - t * 1.46) + Math.sin(spin) * radiusPx * 0.12;
+          if (step === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.strokeStyle = hexToRgba(layer % 3 === 0 ? "#000000" : layer % 3 === 1 ? "#7f1d1d" : "#064e3b", alpha * fade * (0.78 - layer * 0.055));
+        ctx.lineWidth = Math.max(2, cellSize * (0.16 - layer * 0.011));
+        ctx.lineCap = "round";
+        ctx.stroke();
+      }
+
+      ctx.globalCompositeOperation = "lighter";
+      for (let i = 0; i < 46; i += 1) {
+        const angle = progress * Math.PI * (1.5 + (i % 3) * 0.28) + i * Math.PI * 2 / 46;
+        const distance = radiusPx * (0.18 + ((i * 7) % 13) * 0.055 + progress * 0.14);
+        const puff = cellSize * (0.09 + (i % 5) * 0.026);
+        ctx.beginPath();
+        ctx.ellipse(
+          x + Math.cos(angle) * distance,
+          y + Math.sin(angle) * distance * 0.66 - radiusPx * (0.08 + (i % 4) * 0.025),
+          puff * 1.3,
+          puff * 0.72,
+          angle,
+          0,
+          Math.PI * 2
+        );
+        ctx.fillStyle = hexToRgba(i % 3 === 0 ? "#7f1d1d" : i % 3 === 1 ? "#064e3b" : "#111827", alpha * fade * (0.44 + (i % 4) * 0.04));
+        ctx.fill();
+      }
+      for (let ring = 0; ring < 4; ring += 1) {
+        ctx.beginPath();
+        ctx.ellipse(
+          x,
+          y + radiusPx * 0.18,
+          radiusPx * (0.42 + ring * 0.18 + progress * 0.1),
+          radiusPx * (0.18 + ring * 0.07),
+          -progress * Math.PI * 1.2 + ring * 0.24,
+          0,
+          Math.PI * 2
+        );
+        ctx.strokeStyle = hexToRgba(ring % 2 ? "#7f1d1d" : "#064e3b", alpha * fade * (0.52 - ring * 0.08));
+        ctx.lineWidth = Math.max(1.4, cellSize * (0.072 - ring * 0.008));
+        ctx.stroke();
+      }
+      ctx.globalCompositeOperation = "source-over";
+      ctx.beginPath();
+      ctx.arc(x, y - radiusPx * 0.08, radiusPx * (0.22 + waveValue(progress, 0.18) * 0.06), 0, Math.PI * 2);
+      ctx.fillStyle = hexToRgba("#000000", 0.78 * alpha);
+      ctx.fill();
+      ctx.strokeStyle = hexToRgba(element.glow, 0.58 * alpha);
+      ctx.lineWidth = Math.max(1.6, cellSize * 0.05);
+      ctx.stroke();
+      ctx.restore();
+    }
+
     function drawSmallProjectileHead(x, y, projectile, progress, character, angle = 0) {
       const element = elementColorsFor(character);
       const projectileScale = projectile.kind === "dragonOrb" ? 1.45 : 1;
@@ -10092,6 +10627,12 @@
 
       if ((projectile.visualType || "").startsWith("lobster-palm")) {
         drawFlyingFist(0, 0, size * 1.05, progress, character, projectile.hand === "left" ? -1 : 1, 1);
+        ctx.restore();
+        return;
+      }
+
+      if (projectile.profile === "small") {
+        drawSmallSkillIcon(0, 0, size * 1.05, progress, character, 0, 1);
         ctx.restore();
         return;
       }
@@ -10271,7 +10812,7 @@
       drawUltimateImpactFrame(x, y, radiusPx * 0.9, progress, character, 0.62);
       drawElementMotifs(x, y, radiusPx * 1.08, progress, character, 0.95, 16);
       if (type.startsWith("dragon-spirit")) {
-        drawDragonSpiritRadiance(x, y, radiusPx * 0.82, progress, character, 0.78);
+        drawFrostFreezeBurst(x, y, radiusPx * 0.9, progress, character, 0.86);
       } else if (type.startsWith("dragon")) {
         drawEnergyBeamBurst(x, y, radiusPx * 0.78, progress, character, 0.82);
       } else if (type.startsWith("sandworm")) {
@@ -10296,7 +10837,7 @@
       } else if (type.startsWith("lobster")) {
         drawNuclearBloom(x, y, radiusPx * 0.74, progress, character, 0.68);
       } else if (type.startsWith("gu_king")) {
-        drawPoisonVortex(x, y, radiusPx * 0.82, progress, character, 0.76);
+        drawDarkGuKingTornado(x, y, radiusPx * 0.92, progress, character, 0.82);
       } else {
         ctx.beginPath();
         ctx.arc(x, y, Math.max(5, cellSize * 0.16), 0, Math.PI * 2);
@@ -10316,7 +10857,8 @@
           const timeToImpact = projectile.impactAt - now;
           const target = axialToPixel(projectile.target);
           if ((projectile.visualType || "").startsWith("sandworm")) {
-            const warningProgress = Math.max(progress, Math.max(0, 1 - timeToImpact / 900));
+            if (timeToImpact > sandwormRevealBeforeImpactMs) return;
+            const warningProgress = Math.max(0, 1 - timeToImpact / sandwormRevealBeforeImpactMs);
             const warningRadius = cellSize * Math.max(2.4, (projectile.radius || 1) * 4.4);
             drawUltimateImpactFrame(target.x, target.y, warningRadius * 0.72, warningProgress, blastCharacter, 0.62 + warningProgress * 0.28);
             drawSuperBlackHole(target.x, target.y, warningRadius, warningProgress, blastCharacter, 0.74 + warningProgress * 0.26);
@@ -10367,13 +10909,13 @@
           const progress = Math.min(1, Math.max(0, (now - projectile.createdAt) / (projectile.delay || baseAttackDelayMs)));
           const target = axialToPixel(projectile.followHead ? ownerHead(projectile.owner) : projectile.target);
           const type = projectile.visualType || "";
-          drawUltimateImpactFrame(target.x, target.y, cellSize * Math.max(1.35, projectile.radius || 1) * 1.04, progress, blastCharacter, 0.58 + progress * 0.22);
           if (type.startsWith("dragon-spirit")) {
-            drawDragonSpiritRadiance(target.x, target.y, cellSize * Math.max(1.2, projectile.radius || 1) * 0.9, progress, blastCharacter, 0.42 + progress * 0.32);
+            drawFrostFreezeBurst(target.x, target.y, cellSize * Math.max(1.35, projectile.radius || 1) * 1.08, progress, blastCharacter, 0.72 + progress * 0.2);
           } else {
+            drawUltimateImpactFrame(target.x, target.y, cellSize * Math.max(1.35, projectile.radius || 1) * 1.04, progress, blastCharacter, 0.58 + progress * 0.22);
             drawNuclearBloom(target.x, target.y, cellSize * Math.max(1.2, projectile.radius || 1) * 0.96, progress, blastCharacter, 0.36 + progress * 0.32);
+            drawPulseRing(target.x, target.y, cellSize * Math.max(1.2, projectile.radius || 1) * (0.72 + progress * 0.5), progress, blastCharacter.color, blastCharacter.line, 1.08);
           }
-          drawPulseRing(target.x, target.y, cellSize * Math.max(1.2, projectile.radius || 1) * (0.72 + progress * 0.5), progress, blastCharacter.color, blastCharacter.line, 1.08);
           return;
         }
         const start = axialToPixel(projectile.source || projectile.target);
@@ -10388,6 +10930,8 @@
         if (!isSmallProjectile) {
           drawLightningBetween(start, projectilePoint, progress, blastCharacter.line, 0.85, 5);
           drawElementWake(start, projectilePoint, progress, blastCharacter);
+        } else {
+          drawSmallSkillTrail(start, projectilePoint, progress, blastCharacter, 0.88);
         }
         drawProjectileCore(projectilePoint.x, projectilePoint.y, projectile, progress, blastCharacter, travelAngle);
         ctx.beginPath();
@@ -10431,7 +10975,7 @@
           const { x, y } = axialToPixel(hazard.target);
           const radiusPx = cellSize * Math.max(1, hazard.radius || hazard.width || 1) * 1.52;
           if ((hazard.visualType || "").startsWith("dragon-spirit")) {
-            drawWhiteGoldMagicCircle(x, y, radiusPx, progress, blastCharacter, 0.92);
+            drawFrostMagicCircle(x, y, radiusPx, progress, blastCharacter, 0.92);
           } else {
             drawRadiationDust(x, y, radiusPx, progress, blastCharacter, 0.92);
           }
@@ -10489,8 +11033,19 @@
       const isBig = isUltimateVisualType(type);
       const element = elementColorsFor(character);
       const visualRadius = radiusPx * (isBig ? 1.18 : 1);
-      if (isBig) drawUltimateImpactFrame(x, y, visualRadius, progress, character, alpha);
-      else drawSmallImpactFrame(x, y, visualRadius, progress, character, alpha);
+      if (!isBig) {
+        drawSmallImpactFrame(x, y, visualRadius, progress, character, alpha);
+        return;
+      }
+      if (type.startsWith("dragon-spirit")) {
+        drawFrostFreezeBurst(x, y, visualRadius * 1.05, progress, character, alpha);
+        return;
+      }
+      if (type.startsWith("gu_king")) {
+        drawDarkGuKingTornado(x, y, visualRadius * 1.08, progress, character, alpha);
+        return;
+      }
+      drawUltimateImpactFrame(x, y, visualRadius, progress, character, alpha);
       drawElementAura(x, y, visualRadius * (isBig ? 1.04 : 0.86), progress, character, (isBig ? 0.92 : 0.68) * alpha);
       drawPulseRing(x, y, visualRadius, progress, character.color, character.line, isBig ? 1.35 : 1);
       drawElementMotifs(x, y, visualRadius * (isBig ? 0.94 : 0.82), progress, character, (isBig ? 1.05 : 0.84) * alpha, isBig ? 22 : 14);
@@ -10567,9 +11122,10 @@
       const progress = (now % 1400) / 1400;
       const oldCellSize = cellSize;
       const rowCount = Math.max(1, characters.length);
-      const headerHeight = Math.min(64, Math.max(46, rect.height * 0.09));
+      const compactComparison = rect.width < 560;
+      const headerHeight = compactComparison ? 54 : Math.min(64, Math.max(50, rect.height * 0.09));
       const rowHeight = (rect.height - headerHeight - 16) / rowCount;
-      const labelWidth = Math.min(150, rect.width * 0.2);
+      const labelWidth = compactComparison ? Math.min(96, rect.width * 0.25) : Math.min(150, rect.width * 0.2);
       const smallX = labelWidth + (rect.width - labelWidth) * 0.28;
       const bigX = labelWidth + (rect.width - labelWidth) * 0.72;
       cellSize = Math.max(11, Math.min(28, rowHeight * 0.18, rect.width * 0.018));
@@ -10580,11 +11136,13 @@
       ctx.fillStyle = "#e5e7eb";
       ctx.textAlign = "left";
       ctx.textBaseline = "middle";
-      ctx.font = "700 18px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
-      ctx.fillText("Skill Effect Comparison", 18, headerHeight * 0.42);
-      ctx.font = "600 13px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
-      ctx.fillStyle = "#cbd5e1";
-      ctx.fillText("Small skills share the same visual scale. Ultimates always render larger, denser, and brighter.", 18, headerHeight * 0.76);
+      ctx.font = `${compactComparison ? "700 18px" : "700 18px"} system-ui, -apple-system, BlinkMacSystemFont, sans-serif`;
+      ctx.fillText("Skill Effect Comparison", 18, compactComparison ? headerHeight * 0.36 : headerHeight * 0.38);
+      if (!compactComparison) {
+        ctx.font = "600 12px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+        ctx.fillStyle = "#cbd5e1";
+        ctx.fillText("Small: cast + projectile + impact", 18, headerHeight * 0.72);
+      }
       ctx.textAlign = "center";
       ctx.fillStyle = "#fde68a";
       ctx.fillText("Small", smallX, headerHeight - 12);
@@ -10609,6 +11167,10 @@
         ctx.font = "600 11px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
         ctx.fillText(character.smallMove || "small", 18, y + 10);
 
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(labelWidth, headerHeight + rowHeight * index + 1, rect.width - labelWidth - 12, rowHeight - 2);
+        ctx.clip();
         const smallProjectile = {
           owner: "player",
           profile: "small",
@@ -10616,12 +11178,16 @@
           radius: 2,
           visualType: `${character.id}-small`
         };
-        drawSmallCastFrame(smallX - radiusPx * 0.72, y, radiusPx * 0.78, progress, character, 0.9);
-        drawSmallProjectileHead(smallX - radiusPx * 0.72, y, smallProjectile, progress, character, 0);
+        const castPoint = { x: smallX - radiusPx * 1.0, y };
+        const headPoint = { x: smallX - radiusPx * 0.44, y: y - Math.sin(progress * Math.PI) * radiusPx * 0.12 };
+        drawSmallCastFrame(castPoint.x, castPoint.y, radiusPx * 0.78, progress, character, 0.9);
+        drawSmallSkillTrail(castPoint, headPoint, Math.max(0.2, progress), character, 0.8);
+        drawSmallProjectileHead(headPoint.x, headPoint.y, smallProjectile, progress, character, 0);
         drawCircleImpactAt(smallX + radiusPx * 0.7, y, radiusPx * 0.74, progress, 0.92, character, `${character.id}-small`);
 
         const bigType = comparisonBigVisualType(character);
         drawCircleImpactAt(bigX, y, radiusPx * 1.06, progress, 0.96, character, bigType);
+        ctx.restore();
         ctx.textAlign = "center";
         ctx.fillStyle = "rgba(248, 250, 252, 0.78)";
         ctx.font = "600 10px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
@@ -11778,6 +12344,7 @@
       saveKeybinds();
       applyKeybinds();
       setLeftHandMode(false);
+      setSfxMuted(false);
       resetGame();
       resize();
       overlayTitle.textContent = "已回到預設值";
@@ -11828,6 +12395,7 @@
       if (event.target.closest("#bigAttackButton")) selectAttackProfile("big");
     });
     leftHandModeInput.addEventListener("change", () => setLeftHandMode(leftHandModeInput.checked));
+    sfxMuteToggle.addEventListener("change", () => setSfxMuted(sfxMuteToggle.checked));
     surrenderButton.addEventListener("click", surrenderGame);
     rulesButton.addEventListener("click", openRulesModal);
     rulesCloseButton.addEventListener("click", closeRulesModal);
@@ -12295,6 +12863,7 @@
       setSettingsLocked(false);
       applyKeybinds();
       setLeftHandMode(localStorage.getItem("hexSnakeLeftHandMode") === "1");
+      sfxMuteToggle.checked = sfxMuted;
       updateAttackButtons();
       resetGame();
       resize();

@@ -1,292 +1,292 @@
 {
-  "generatedAt": "2026-05-04T08:01:01.656Z",
-  "source": "C:\\Users\\user\\Documents\\app\\hex_snake\\reports\\ai-strategy-20260504-054512-cast-strategy-ga-2h\\best-strategies.json",
+  "generatedAt": "2026-05-04T12:04:50.851Z",
+  "source": "tools/reset-high-ai-basic.js",
   "strategies": {
     "dragon": {
-      "strategyId": "seed-1",
-      "winRate": 0.509921,
-      "outcomeWinRate": 0.509921,
-      "drawRate": 0.964286,
-      "decisiveGames": 9,
-      "decisiveWinRate": 0.777778,
-      "games": 252,
-      "wins": 7,
-      "losses": 2,
-      "draws": 243,
+      "strategyId": "baseline-basic",
+      "winRate": 0.5,
+      "outcomeWinRate": 0.5,
+      "drawRate": 1,
+      "decisiveGames": 0,
+      "decisiveWinRate": 0,
+      "games": 0,
+      "wins": 0,
+      "losses": 0,
+      "draws": 0,
       "strategyWeights": {
         "movement": {
-          "safePath": 2.4391,
-          "leastDamage": 0.4827,
-          "fastestArrival": 0.9183
+          "safePath": 0,
+          "leastDamage": 0,
+          "fastestArrival": 3
         },
         "food": {
-          "fastestArrival": 0.3615,
-          "ownDeficit": 2.2066,
-          "opponentDeficit": 2.2535,
-          "ownPreferred": 2.7,
-          "opponentPreferred": 1.287
+          "fastestArrival": 3,
+          "ownDeficit": 0,
+          "opponentDeficit": 0,
+          "ownPreferred": 0,
+          "opponentPreferred": 0
         },
         "skillAllocation": {
-          "preferSmall": 0.7963,
-          "preferBig": 0.5354
+          "preferSmall": 1,
+          "preferBig": 1
         },
         "castTiming": {
           "lethal": 3,
-          "nearFullEnergy": 1.0789,
-          "opponentDebuffed": 1.5827,
-          "opponentAlmostReady": 0.4801,
-          "nearOpponent": 2.4436,
-          "farOpponent": 1.8235
+          "nearFullEnergy": 3,
+          "opponentDebuffed": 3,
+          "opponentAlmostReady": 0,
+          "nearOpponent": 0,
+          "farOpponent": 0
         },
         "castTarget": {
-          "targetHead": 2.6208,
-          "bodyCluster": 2.0027,
-          "targetNearestFood": 0.3366
+          "targetHead": 3,
+          "bodyCluster": 0,
+          "targetNearestFood": 0
         },
         "castDirection": {
-          "selfHeadToOpponentHead": 0.4444,
-          "opponentBodyLongestAxis": 2.0251,
-          "opponentHeadToNearestFood": 0.8802
+          "selfHeadToOpponentHead": 0,
+          "opponentBodyLongestAxis": 0,
+          "opponentHeadToNearestFood": 3
         }
       }
     },
     "sandworm": {
-      "strategyId": "seed-0",
-      "winRate": 0.716291,
-      "outcomeWinRate": 0.71627,
-      "drawRate": 0.123016,
-      "decisiveGames": 221,
-      "decisiveWinRate": 0.746606,
-      "games": 252,
-      "wins": 165,
-      "losses": 56,
-      "draws": 31,
+      "strategyId": "baseline-basic",
+      "winRate": 0.5,
+      "outcomeWinRate": 0.5,
+      "drawRate": 1,
+      "decisiveGames": 0,
+      "decisiveWinRate": 0,
+      "games": 0,
+      "wins": 0,
+      "losses": 0,
+      "draws": 0,
       "strategyWeights": {
         "movement": {
-          "safePath": 2.275,
-          "leastDamage": 0.3001,
-          "fastestArrival": 2.1183
+          "safePath": 0,
+          "leastDamage": 0,
+          "fastestArrival": 3
         },
         "food": {
-          "fastestArrival": 2.7308,
-          "ownDeficit": 0.0173,
-          "opponentDeficit": 0.4444,
-          "ownPreferred": 0.5262,
-          "opponentPreferred": 0.1931
+          "fastestArrival": 3,
+          "ownDeficit": 0,
+          "opponentDeficit": 0,
+          "ownPreferred": 0,
+          "opponentPreferred": 0
         },
         "skillAllocation": {
-          "preferSmall": 0.7358,
-          "preferBig": 2.8337
+          "preferSmall": 1,
+          "preferBig": 1
         },
         "castTiming": {
           "lethal": 3,
-          "nearFullEnergy": 1.3631,
-          "opponentDebuffed": 1.5677,
-          "opponentAlmostReady": 1.2949,
-          "nearOpponent": 2.6487,
-          "farOpponent": 0.7148
+          "nearFullEnergy": 3,
+          "opponentDebuffed": 3,
+          "opponentAlmostReady": 0,
+          "nearOpponent": 0,
+          "farOpponent": 0
         },
         "castTarget": {
-          "targetHead": 2.9589,
-          "bodyCluster": 2.6262,
-          "targetNearestFood": 1.899
+          "targetHead": 3,
+          "bodyCluster": 0,
+          "targetNearestFood": 0
         },
         "castDirection": {
-          "selfHeadToOpponentHead": 0.1048,
-          "opponentBodyLongestAxis": 0.5028,
-          "opponentHeadToNearestFood": 2.7798
+          "selfHeadToOpponentHead": 0,
+          "opponentBodyLongestAxis": 0,
+          "opponentHeadToNearestFood": 3
         }
       }
     },
     "quetzal": {
-      "strategyId": "seed-5",
-      "winRate": 0.688755,
-      "outcomeWinRate": 0.688755,
-      "drawRate": 0.13253,
-      "decisiveGames": 216,
-      "decisiveWinRate": 0.717593,
-      "games": 249,
-      "wins": 155,
-      "losses": 61,
-      "draws": 33,
+      "strategyId": "baseline-basic",
+      "winRate": 0.5,
+      "outcomeWinRate": 0.5,
+      "drawRate": 1,
+      "decisiveGames": 0,
+      "decisiveWinRate": 0,
+      "games": 0,
+      "wins": 0,
+      "losses": 0,
+      "draws": 0,
       "strategyWeights": {
         "movement": {
-          "safePath": 0.7215,
-          "leastDamage": 2.043,
-          "fastestArrival": 2.8806
+          "safePath": 0,
+          "leastDamage": 0,
+          "fastestArrival": 3
         },
         "food": {
-          "fastestArrival": 2.2716,
-          "ownDeficit": 1.6132,
-          "opponentDeficit": 1.4371,
-          "ownPreferred": 0.3025,
-          "opponentPreferred": 2.6297
+          "fastestArrival": 3,
+          "ownDeficit": 0,
+          "opponentDeficit": 0,
+          "ownPreferred": 0,
+          "opponentPreferred": 0
         },
         "skillAllocation": {
-          "preferSmall": 2.6991,
-          "preferBig": 2.8627
+          "preferSmall": 1,
+          "preferBig": 1
         },
         "castTiming": {
           "lethal": 3,
-          "nearFullEnergy": 0.9051,
-          "opponentDebuffed": 1.2581,
-          "opponentAlmostReady": 1.1279,
-          "nearOpponent": 0.5001,
-          "farOpponent": 0.9577
+          "nearFullEnergy": 3,
+          "opponentDebuffed": 3,
+          "opponentAlmostReady": 0,
+          "nearOpponent": 0,
+          "farOpponent": 0
         },
         "castTarget": {
-          "targetHead": 2.9646,
-          "bodyCluster": 0.3723,
-          "targetNearestFood": 1.8288
+          "targetHead": 3,
+          "bodyCluster": 0,
+          "targetNearestFood": 0
         },
         "castDirection": {
-          "selfHeadToOpponentHead": 2.0102,
-          "opponentBodyLongestAxis": 2.6791,
-          "opponentHeadToNearestFood": 2.6263
+          "selfHeadToOpponentHead": 0,
+          "opponentBodyLongestAxis": 0,
+          "opponentHeadToNearestFood": 3
         }
       }
     },
     "moray": {
-      "strategyId": "seed-3",
-      "winRate": 0.607986,
-      "outcomeWinRate": 0.608,
-      "drawRate": 0.208,
-      "decisiveGames": 198,
-      "decisiveWinRate": 0.636364,
-      "games": 250,
-      "wins": 126,
-      "losses": 72,
-      "draws": 52,
+      "strategyId": "baseline-basic",
+      "winRate": 0.5,
+      "outcomeWinRate": 0.5,
+      "drawRate": 1,
+      "decisiveGames": 0,
+      "decisiveWinRate": 0,
+      "games": 0,
+      "wins": 0,
+      "losses": 0,
+      "draws": 0,
       "strategyWeights": {
         "movement": {
-          "safePath": 0.7897,
-          "leastDamage": 0.3349,
-          "fastestArrival": 1.8574
+          "safePath": 0,
+          "leastDamage": 0,
+          "fastestArrival": 3
         },
         "food": {
-          "fastestArrival": 2.2697,
-          "ownDeficit": 2.3837,
-          "opponentDeficit": 0.7869,
-          "ownPreferred": 2.2269,
-          "opponentPreferred": 0.9253
+          "fastestArrival": 3,
+          "ownDeficit": 0,
+          "opponentDeficit": 0,
+          "ownPreferred": 0,
+          "opponentPreferred": 0
         },
         "skillAllocation": {
-          "preferSmall": 1.5183,
-          "preferBig": 1.0406
+          "preferSmall": 1,
+          "preferBig": 1
         },
         "castTiming": {
           "lethal": 3,
-          "nearFullEnergy": 1.9911,
-          "opponentDebuffed": 0.0427,
-          "opponentAlmostReady": 1.0187,
-          "nearOpponent": 1.3133,
-          "farOpponent": 1.3689
+          "nearFullEnergy": 3,
+          "opponentDebuffed": 3,
+          "opponentAlmostReady": 0,
+          "nearOpponent": 0,
+          "farOpponent": 0
         },
         "castTarget": {
-          "targetHead": 2.9044,
-          "bodyCluster": 2.4521,
-          "targetNearestFood": 1.7096
+          "targetHead": 3,
+          "bodyCluster": 0,
+          "targetNearestFood": 0
         },
         "castDirection": {
-          "selfHeadToOpponentHead": 1.1555,
-          "opponentBodyLongestAxis": 2.2171,
-          "opponentHeadToNearestFood": 1.6267
+          "selfHeadToOpponentHead": 0,
+          "opponentBodyLongestAxis": 0,
+          "opponentHeadToNearestFood": 3
         }
       }
     },
     "lobster": {
-      "strategyId": "seed-2",
-      "winRate": 0.579365,
-      "outcomeWinRate": 0.579365,
-      "drawRate": 0.436508,
-      "decisiveGames": 142,
-      "decisiveWinRate": 0.640845,
-      "games": 252,
-      "wins": 91,
-      "losses": 51,
-      "draws": 110,
+      "strategyId": "baseline-basic",
+      "winRate": 0.5,
+      "outcomeWinRate": 0.5,
+      "drawRate": 1,
+      "decisiveGames": 0,
+      "decisiveWinRate": 0,
+      "games": 0,
+      "wins": 0,
+      "losses": 0,
+      "draws": 0,
       "strategyWeights": {
         "movement": {
-          "safePath": 2.0436,
-          "leastDamage": 1.2824,
-          "fastestArrival": 0.1606
+          "safePath": 0,
+          "leastDamage": 0,
+          "fastestArrival": 3
         },
         "food": {
-          "fastestArrival": 2.3519,
-          "ownDeficit": 2.142,
-          "opponentDeficit": 1.7749,
-          "ownPreferred": 1.1667,
-          "opponentPreferred": 0.0611
+          "fastestArrival": 3,
+          "ownDeficit": 0,
+          "opponentDeficit": 0,
+          "ownPreferred": 0,
+          "opponentPreferred": 0
         },
         "skillAllocation": {
-          "preferSmall": 2.1332,
-          "preferBig": 2.5317
+          "preferSmall": 1,
+          "preferBig": 1
         },
         "castTiming": {
           "lethal": 3,
-          "nearFullEnergy": 2.0314,
-          "opponentDebuffed": 0.0622,
-          "opponentAlmostReady": 2.9222,
-          "nearOpponent": 1.2235,
-          "farOpponent": 1.3658
+          "nearFullEnergy": 3,
+          "opponentDebuffed": 3,
+          "opponentAlmostReady": 0,
+          "nearOpponent": 0,
+          "farOpponent": 0
         },
         "castTarget": {
-          "targetHead": 2.6307,
-          "bodyCluster": 1.542,
-          "targetNearestFood": 0.6258
+          "targetHead": 3,
+          "bodyCluster": 0,
+          "targetNearestFood": 0
         },
         "castDirection": {
-          "selfHeadToOpponentHead": 2.6991,
-          "opponentBodyLongestAxis": 0.7737,
-          "opponentHeadToNearestFood": 1.6523
+          "selfHeadToOpponentHead": 0,
+          "opponentBodyLongestAxis": 0,
+          "opponentHeadToNearestFood": 3
         }
       }
     },
     "gu_king": {
-      "strategyId": "seed-7",
-      "winRate": 0.623175,
-      "outcomeWinRate": 0.622984,
-      "drawRate": 0.149194,
-      "decisiveGames": 211,
-      "decisiveWinRate": 0.64455,
-      "games": 248,
-      "wins": 136,
-      "losses": 75,
-      "draws": 37,
+      "strategyId": "baseline-basic",
+      "winRate": 0.5,
+      "outcomeWinRate": 0.5,
+      "drawRate": 1,
+      "decisiveGames": 0,
+      "decisiveWinRate": 0,
+      "games": 0,
+      "wins": 0,
+      "losses": 0,
+      "draws": 0,
       "strategyWeights": {
         "movement": {
-          "safePath": 1.2354,
-          "leastDamage": 2.7963,
-          "fastestArrival": 1.7133
+          "safePath": 0,
+          "leastDamage": 0,
+          "fastestArrival": 3
         },
         "food": {
-          "fastestArrival": 1.6337,
-          "ownDeficit": 1.1691,
-          "opponentDeficit": 0.2202,
-          "ownPreferred": 0.2503,
-          "opponentPreferred": 0.3732
+          "fastestArrival": 3,
+          "ownDeficit": 0,
+          "opponentDeficit": 0,
+          "ownPreferred": 0,
+          "opponentPreferred": 0
         },
         "skillAllocation": {
-          "preferSmall": 1.6374,
-          "preferBig": 1.8423
+          "preferSmall": 1,
+          "preferBig": 1
         },
         "castTiming": {
           "lethal": 3,
-          "nearFullEnergy": 0.6652,
-          "opponentDebuffed": 1.9551,
-          "opponentAlmostReady": 1.561,
-          "nearOpponent": 2.7869,
-          "farOpponent": 1.5272
+          "nearFullEnergy": 3,
+          "opponentDebuffed": 3,
+          "opponentAlmostReady": 0,
+          "nearOpponent": 0,
+          "farOpponent": 0
         },
         "castTarget": {
-          "targetHead": 1.9542,
-          "bodyCluster": 2.2246,
-          "targetNearestFood": 0.4308
+          "targetHead": 3,
+          "bodyCluster": 0,
+          "targetNearestFood": 0
         },
         "castDirection": {
-          "selfHeadToOpponentHead": 1.7434,
-          "opponentBodyLongestAxis": 2.5441,
-          "opponentHeadToNearestFood": 1.0906
+          "selfHeadToOpponentHead": 0,
+          "opponentBodyLongestAxis": 0,
+          "opponentHeadToNearestFood": 3
         }
       }
     }
