@@ -1917,8 +1917,17 @@
       }
 
       .overlay.intro-details .portrait-arrow {
-        top: 182px;
+        position: fixed;
+        top: calc(50dvh - 196px);
         transform: translateY(-50%);
+      }
+
+      .overlay.intro-details .portrait-controls .portrait-arrow:first-child {
+        left: calc(50% - 363px);
+      }
+
+      .overlay.intro-details .portrait-controls .portrait-arrow:last-child {
+        right: calc(50% - 363px);
       }
     }
 
@@ -2570,7 +2579,15 @@
         height: 38px;
         min-height: 38px;
         font-size: 1.25rem;
-        top: 82px;
+        top: calc(50dvh - 162px);
+      }
+
+      .overlay.intro-details .portrait-controls .portrait-arrow:first-child {
+        left: calc(50% - 337px);
+      }
+
+      .overlay.intro-details .portrait-controls .portrait-arrow:last-child {
+        right: calc(50% - 337px);
       }
 
       .overlay.intro-details .portrait-copy {
