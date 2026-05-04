@@ -1,59 +1,233 @@
 {
-  "generatedAt": "2026-05-04T00:00:00.000Z",
-  "source": "index.html highAiStrategyWeightsByCharacter before automated retune",
+  "generatedAt": "2026-05-03T18:55:26.190Z",
+  "source": "C:\\Users\\user\\Documents\\app\\hex_snake\\reports\\ai-strategy-20260503-165500-post-move-ga-2h\\best-strategies.json",
   "strategies": {
     "dragon": {
-      "strategyId": "existing-high-ai",
+      "strategyId": "elite-2",
+      "winRate": 0.516,
+      "outcomeWinRate": 0.516,
+      "drawRate": 0.968,
+      "decisiveGames": 8,
+      "decisiveWinRate": 1,
+      "games": 250,
+      "wins": 8,
+      "losses": 0,
+      "draws": 242,
       "strategyWeights": {
-        "movement": { "safePath": 1.2, "leastDamage": 0.8, "fastestArrival": 0.6 },
-        "food": { "fastestArrival": 1.25, "ownDeficit": 1.25, "opponentDeficit": 0.35, "ownPreferred": 1, "opponentPreferred": 0.25 },
-        "skillAllocation": { "preferSmall": 0.55, "preferBig": 2.35 },
-        "castTiming": { "lethal": 3, "nearFullEnergy": 1.7, "opponentDebuffed": 1, "opponentAlmostReady": 1.25, "nearOpponent": 1.45, "farOpponent": 0.15 }
+        "movement": {
+          "safePath": 1.5588,
+          "leastDamage": 1.6121,
+          "fastestArrival": 1.7857
+        },
+        "food": {
+          "fastestArrival": 0.5212,
+          "ownDeficit": 0,
+          "opponentDeficit": 0.3621,
+          "ownPreferred": 1.072,
+          "opponentPreferred": 1.0814
+        },
+        "skillAllocation": {
+          "preferSmall": 1.6995,
+          "preferBig": 0.465
+        },
+        "castTiming": {
+          "lethal": 3,
+          "nearFullEnergy": 0.4208,
+          "opponentDebuffed": 0.4931,
+          "opponentAlmostReady": 0.7456,
+          "nearOpponent": 0.8023,
+          "farOpponent": 0.7928
+        }
       }
     },
     "sandworm": {
-      "strategyId": "existing-high-ai",
+      "strategyId": "sandworm-gen-7-514530073",
+      "winRate": 0.717787,
+      "outcomeWinRate": 0.717742,
+      "drawRate": 0.112903,
+      "decisiveGames": 220,
+      "decisiveWinRate": 0.745455,
+      "games": 248,
+      "wins": 164,
+      "losses": 56,
+      "draws": 28,
       "strategyWeights": {
-        "movement": { "safePath": 1.7349, "leastDamage": 0.3693, "fastestArrival": 0.2742 },
-        "food": { "fastestArrival": 1.9534, "ownDeficit": 1.7082, "opponentDeficit": 0, "ownPreferred": 0.5031, "opponentPreferred": 0 },
-        "skillAllocation": { "preferSmall": 0.506, "preferBig": 0 },
-        "castTiming": { "lethal": 3, "nearFullEnergy": 0.1005, "opponentDebuffed": 0.8462, "opponentAlmostReady": 0.2791, "nearOpponent": 0.2991, "farOpponent": 1.0259 }
+        "movement": {
+          "safePath": 2.5526,
+          "leastDamage": 0.6603,
+          "fastestArrival": 0.3375
+        },
+        "food": {
+          "fastestArrival": 1.4318,
+          "ownDeficit": 0.9415,
+          "opponentDeficit": 0.4762,
+          "ownPreferred": 0.2113,
+          "opponentPreferred": 0.3524
+        },
+        "skillAllocation": {
+          "preferSmall": 0.8539,
+          "preferBig": 1.228
+        },
+        "castTiming": {
+          "lethal": 3,
+          "nearFullEnergy": 1.3695,
+          "opponentDebuffed": 0.1003,
+          "opponentAlmostReady": 1.9772,
+          "nearOpponent": 1.7418,
+          "farOpponent": 1.5957
+        }
       }
     },
     "quetzal": {
-      "strategyId": "existing-high-ai",
+      "strategyId": "champion",
+      "winRate": 0.646851,
+      "outcomeWinRate": 0.646825,
+      "drawRate": 0.142857,
+      "decisiveGames": 216,
+      "decisiveWinRate": 0.671296,
+      "games": 252,
+      "wins": 145,
+      "losses": 71,
+      "draws": 36,
       "strategyWeights": {
-        "movement": { "safePath": 1.6795, "leastDamage": 0.9114, "fastestArrival": 0.933 },
-        "food": { "fastestArrival": 1.7059, "ownDeficit": 1.7704, "opponentDeficit": 0, "ownPreferred": 0.6432, "opponentPreferred": 0.2007 },
-        "skillAllocation": { "preferSmall": 0.8558, "preferBig": 0.2691 },
-        "castTiming": { "lethal": 3, "nearFullEnergy": 0.4639, "opponentDebuffed": 1.4567, "opponentAlmostReady": 1.1895, "nearOpponent": 1.1931, "farOpponent": 0 }
+        "movement": {
+          "safePath": 0.7338,
+          "leastDamage": 2.7908,
+          "fastestArrival": 0.2879
+        },
+        "food": {
+          "fastestArrival": 2.6869,
+          "ownDeficit": 0.8009,
+          "opponentDeficit": 0.4538,
+          "ownPreferred": 0.082,
+          "opponentPreferred": 0.6292
+        },
+        "skillAllocation": {
+          "preferSmall": 2.2894,
+          "preferBig": 3
+        },
+        "castTiming": {
+          "lethal": 3,
+          "nearFullEnergy": 2.8778,
+          "opponentDebuffed": 0.3555,
+          "opponentAlmostReady": 0.4152,
+          "nearOpponent": 0.5248,
+          "farOpponent": 0.7908
+        }
       }
     },
     "moray": {
-      "strategyId": "existing-high-ai",
+      "strategyId": "champion",
+      "winRate": 0.698511,
+      "outcomeWinRate": 0.698413,
+      "drawRate": 0.111111,
+      "decisiveGames": 224,
+      "decisiveWinRate": 0.723214,
+      "games": 252,
+      "wins": 162,
+      "losses": 62,
+      "draws": 28,
       "strategyWeights": {
-        "movement": { "safePath": 1.0943, "leastDamage": 0.619, "fastestArrival": 0.9009 },
-        "food": { "fastestArrival": 3, "ownDeficit": 0.8156, "opponentDeficit": 0.7993, "ownPreferred": 0.1164, "opponentPreferred": 0.2638 },
-        "skillAllocation": { "preferSmall": 1.4587, "preferBig": 1.0056 },
-        "castTiming": { "lethal": 3, "nearFullEnergy": 2.1596, "opponentDebuffed": 0.5061, "opponentAlmostReady": 2.8184, "nearOpponent": 0, "farOpponent": 0.7832 }
+        "movement": {
+          "safePath": 0.347,
+          "leastDamage": 0,
+          "fastestArrival": 0.2809
+        },
+        "food": {
+          "fastestArrival": 3,
+          "ownDeficit": 1.9572,
+          "opponentDeficit": 0.2476,
+          "ownPreferred": 0,
+          "opponentPreferred": 0
+        },
+        "skillAllocation": {
+          "preferSmall": 0.8998,
+          "preferBig": 2.2955
+        },
+        "castTiming": {
+          "lethal": 3,
+          "nearFullEnergy": 2.0326,
+          "opponentDebuffed": 0.6509,
+          "opponentAlmostReady": 0,
+          "nearOpponent": 2.2229,
+          "farOpponent": 1.4683
+        }
       }
     },
     "lobster": {
-      "strategyId": "existing-high-ai",
+      "strategyId": "lobster-gen-7-519281583",
+      "winRate": 0.677417,
+      "outcomeWinRate": 0.677419,
+      "drawRate": 0.298387,
+      "decisiveGames": 174,
+      "decisiveWinRate": 0.752874,
+      "games": 248,
+      "wins": 131,
+      "losses": 43,
+      "draws": 74,
       "strategyWeights": {
-        "movement": { "safePath": 2.05, "leastDamage": 1.7, "fastestArrival": 0.25 },
-        "food": { "fastestArrival": 2.25, "ownDeficit": 2, "opponentDeficit": 0.15, "ownPreferred": 1.95, "opponentPreferred": 0.15 },
-        "skillAllocation": { "preferSmall": 0.9, "preferBig": 1.45 },
-        "castTiming": { "lethal": 3, "nearFullEnergy": 1.55, "opponentDebuffed": 0.55, "opponentAlmostReady": 1.35, "nearOpponent": 0.95, "farOpponent": 0 }
+        "movement": {
+          "safePath": 0,
+          "leastDamage": 0.8269,
+          "fastestArrival": 0.0956
+        },
+        "food": {
+          "fastestArrival": 2.3552,
+          "ownDeficit": 1.8649,
+          "opponentDeficit": 0,
+          "ownPreferred": 0,
+          "opponentPreferred": 0
+        },
+        "skillAllocation": {
+          "preferSmall": 1.2308,
+          "preferBig": 2.2717
+        },
+        "castTiming": {
+          "lethal": 3,
+          "nearFullEnergy": 2.3079,
+          "opponentDebuffed": 2.5038,
+          "opponentAlmostReady": 1.7061,
+          "nearOpponent": 0.5592,
+          "farOpponent": 1.5145
+        }
       }
     },
     "gu_king": {
-      "strategyId": "existing-high-ai",
+      "strategyId": "champion",
+      "winRate": 0.686511,
+      "outcomeWinRate": 0.686508,
+      "drawRate": 0.111111,
+      "decisiveGames": 224,
+      "decisiveWinRate": 0.709821,
+      "games": 252,
+      "wins": 159,
+      "losses": 65,
+      "draws": 28,
       "strategyWeights": {
-        "movement": { "safePath": 1.1123, "leastDamage": 1.7447, "fastestArrival": 0.3172 },
-        "food": { "fastestArrival": 1.8958, "ownDeficit": 1.2623, "opponentDeficit": 0.1173, "ownPreferred": 1.9483, "opponentPreferred": 0.447 },
-        "skillAllocation": { "preferSmall": 1.9188, "preferBig": 1.5043 },
-        "castTiming": { "lethal": 3, "nearFullEnergy": 0.3379, "opponentDebuffed": 0.8041, "opponentAlmostReady": 1.5866, "nearOpponent": 1.1018, "farOpponent": 0.4405 }
+        "movement": {
+          "safePath": 1.5307,
+          "leastDamage": 2.3577,
+          "fastestArrival": 0.1434
+        },
+        "food": {
+          "fastestArrival": 2.6533,
+          "ownDeficit": 0.043,
+          "opponentDeficit": 0,
+          "ownPreferred": 0,
+          "opponentPreferred": 0
+        },
+        "skillAllocation": {
+          "preferSmall": 1.9593,
+          "preferBig": 2.7991
+        },
+        "castTiming": {
+          "lethal": 3,
+          "nearFullEnergy": 2.5735,
+          "opponentDebuffed": 0.2721,
+          "opponentAlmostReady": 0.5662,
+          "nearOpponent": 1.2454,
+          "farOpponent": 2.9204
+        }
       }
     }
   }

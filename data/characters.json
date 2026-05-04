@@ -83,6 +83,38 @@
         "md": "assets/portraits/md/white_dragon_defeat.png",
         "sm": "assets/portraits/sm/white_dragon_defeat.png"
       }
+    },
+    "humanPortraits": {
+      "opening": {
+        "full": "assets/portraits/human/white_dragon_human.png",
+        "md": "assets/portraits/human/md/white_dragon_human.png",
+        "sm": "assets/portraits/human/sm/white_dragon_human.png"
+      },
+      "intro": {
+        "full": "assets/portraits/human/white_dragon_human.png",
+        "md": "assets/portraits/human/md/white_dragon_human.png",
+        "sm": "assets/portraits/human/sm/white_dragon_human.png"
+      },
+      "small": {
+        "full": "assets/portraits/human/white_dragon_human.png",
+        "md": "assets/portraits/human/md/white_dragon_human.png",
+        "sm": "assets/portraits/human/sm/white_dragon_human.png"
+      },
+      "big": {
+        "full": "assets/portraits/human/white_dragon_human.png",
+        "md": "assets/portraits/human/md/white_dragon_human.png",
+        "sm": "assets/portraits/human/sm/white_dragon_human.png"
+      },
+      "victory": {
+        "full": "assets/portraits/human/white_dragon_human.png",
+        "md": "assets/portraits/human/md/white_dragon_human.png",
+        "sm": "assets/portraits/human/sm/white_dragon_human.png"
+      },
+      "defeat": {
+        "full": "assets/portraits/human/white_dragon_human.png",
+        "md": "assets/portraits/human/md/white_dragon_human.png",
+        "sm": "assets/portraits/human/sm/white_dragon_human.png"
+      }
     }
   },
   {
@@ -168,6 +200,38 @@
         "full": "assets/portraits/sandworm_defeat.png",
         "md": "assets/portraits/md/sandworm_defeat.png",
         "sm": "assets/portraits/sm/sandworm_defeat.png"
+      }
+    },
+    "humanPortraits": {
+      "opening": {
+        "full": "assets/portraits/human/sandworm_human.png",
+        "md": "assets/portraits/human/md/sandworm_human.png",
+        "sm": "assets/portraits/human/sm/sandworm_human.png"
+      },
+      "intro": {
+        "full": "assets/portraits/human/sandworm_human.png",
+        "md": "assets/portraits/human/md/sandworm_human.png",
+        "sm": "assets/portraits/human/sm/sandworm_human.png"
+      },
+      "small": {
+        "full": "assets/portraits/human/sandworm_human.png",
+        "md": "assets/portraits/human/md/sandworm_human.png",
+        "sm": "assets/portraits/human/sm/sandworm_human.png"
+      },
+      "big": {
+        "full": "assets/portraits/human/sandworm_human.png",
+        "md": "assets/portraits/human/md/sandworm_human.png",
+        "sm": "assets/portraits/human/sm/sandworm_human.png"
+      },
+      "victory": {
+        "full": "assets/portraits/human/sandworm_human.png",
+        "md": "assets/portraits/human/md/sandworm_human.png",
+        "sm": "assets/portraits/human/sm/sandworm_human.png"
+      },
+      "defeat": {
+        "full": "assets/portraits/human/sandworm_human.png",
+        "md": "assets/portraits/human/md/sandworm_human.png",
+        "sm": "assets/portraits/human/sm/sandworm_human.png"
       }
     }
   },
@@ -255,6 +319,38 @@
         "md": "assets/portraits/md/quetzalcoatl_defeat.png",
         "sm": "assets/portraits/sm/quetzalcoatl_defeat.png"
       }
+    },
+    "humanPortraits": {
+      "opening": {
+        "full": "assets/portraits/human/quetzalcoatl_human.png",
+        "md": "assets/portraits/human/md/quetzalcoatl_human.png",
+        "sm": "assets/portraits/human/sm/quetzalcoatl_human.png"
+      },
+      "intro": {
+        "full": "assets/portraits/human/quetzalcoatl_human.png",
+        "md": "assets/portraits/human/md/quetzalcoatl_human.png",
+        "sm": "assets/portraits/human/sm/quetzalcoatl_human.png"
+      },
+      "small": {
+        "full": "assets/portraits/human/quetzalcoatl_human.png",
+        "md": "assets/portraits/human/md/quetzalcoatl_human.png",
+        "sm": "assets/portraits/human/sm/quetzalcoatl_human.png"
+      },
+      "big": {
+        "full": "assets/portraits/human/quetzalcoatl_human.png",
+        "md": "assets/portraits/human/md/quetzalcoatl_human.png",
+        "sm": "assets/portraits/human/sm/quetzalcoatl_human.png"
+      },
+      "victory": {
+        "full": "assets/portraits/human/quetzalcoatl_human.png",
+        "md": "assets/portraits/human/md/quetzalcoatl_human.png",
+        "sm": "assets/portraits/human/sm/quetzalcoatl_human.png"
+      },
+      "defeat": {
+        "full": "assets/portraits/human/quetzalcoatl_human.png",
+        "md": "assets/portraits/human/md/quetzalcoatl_human.png",
+        "sm": "assets/portraits/human/sm/quetzalcoatl_human.png"
+      }
     }
   },
   {
@@ -340,6 +436,38 @@
         "full": "assets/portraits/moray_eel_defeat.png",
         "md": "assets/portraits/md/moray_eel_defeat.png",
         "sm": "assets/portraits/sm/moray_eel_defeat.png"
+      }
+    },
+    "humanPortraits": {
+      "opening": {
+        "full": "assets/portraits/human/moray_eel_human.png",
+        "md": "assets/portraits/human/md/moray_eel_human.png",
+        "sm": "assets/portraits/human/sm/moray_eel_human.png"
+      },
+      "intro": {
+        "full": "assets/portraits/human/moray_eel_human.png",
+        "md": "assets/portraits/human/md/moray_eel_human.png",
+        "sm": "assets/portraits/human/sm/moray_eel_human.png"
+      },
+      "small": {
+        "full": "assets/portraits/human/moray_eel_human.png",
+        "md": "assets/portraits/human/md/moray_eel_human.png",
+        "sm": "assets/portraits/human/sm/moray_eel_human.png"
+      },
+      "big": {
+        "full": "assets/portraits/human/moray_eel_human.png",
+        "md": "assets/portraits/human/md/moray_eel_human.png",
+        "sm": "assets/portraits/human/sm/moray_eel_human.png"
+      },
+      "victory": {
+        "full": "assets/portraits/human/moray_eel_human.png",
+        "md": "assets/portraits/human/md/moray_eel_human.png",
+        "sm": "assets/portraits/human/sm/moray_eel_human.png"
+      },
+      "defeat": {
+        "full": "assets/portraits/human/moray_eel_human.png",
+        "md": "assets/portraits/human/md/moray_eel_human.png",
+        "sm": "assets/portraits/human/sm/moray_eel_human.png"
       }
     }
   },
@@ -427,6 +555,38 @@
         "md": "assets/portraits/md/ghost_lobster_defeat.png",
         "sm": "assets/portraits/sm/ghost_lobster_defeat.png"
       }
+    },
+    "humanPortraits": {
+      "opening": {
+        "full": "assets/portraits/human/ghost_lobster_human.png",
+        "md": "assets/portraits/human/md/ghost_lobster_human.png",
+        "sm": "assets/portraits/human/sm/ghost_lobster_human.png"
+      },
+      "intro": {
+        "full": "assets/portraits/human/ghost_lobster_human.png",
+        "md": "assets/portraits/human/md/ghost_lobster_human.png",
+        "sm": "assets/portraits/human/sm/ghost_lobster_human.png"
+      },
+      "small": {
+        "full": "assets/portraits/human/ghost_lobster_human.png",
+        "md": "assets/portraits/human/md/ghost_lobster_human.png",
+        "sm": "assets/portraits/human/sm/ghost_lobster_human.png"
+      },
+      "big": {
+        "full": "assets/portraits/human/ghost_lobster_human.png",
+        "md": "assets/portraits/human/md/ghost_lobster_human.png",
+        "sm": "assets/portraits/human/sm/ghost_lobster_human.png"
+      },
+      "victory": {
+        "full": "assets/portraits/human/ghost_lobster_human.png",
+        "md": "assets/portraits/human/md/ghost_lobster_human.png",
+        "sm": "assets/portraits/human/sm/ghost_lobster_human.png"
+      },
+      "defeat": {
+        "full": "assets/portraits/human/ghost_lobster_human.png",
+        "md": "assets/portraits/human/md/ghost_lobster_human.png",
+        "sm": "assets/portraits/human/sm/ghost_lobster_human.png"
+      }
     }
   },
   {
@@ -513,6 +673,38 @@
         "full": "assets/portraits/gu_king_defeat.png",
         "md": "assets/portraits/md/gu_king_defeat.png",
         "sm": "assets/portraits/sm/gu_king_defeat.png"
+      }
+    },
+    "humanPortraits": {
+      "opening": {
+        "full": "assets/portraits/human/gu_king_human.png",
+        "md": "assets/portraits/human/md/gu_king_human.png",
+        "sm": "assets/portraits/human/sm/gu_king_human.png"
+      },
+      "intro": {
+        "full": "assets/portraits/human/gu_king_human.png",
+        "md": "assets/portraits/human/md/gu_king_human.png",
+        "sm": "assets/portraits/human/sm/gu_king_human.png"
+      },
+      "small": {
+        "full": "assets/portraits/human/gu_king_human.png",
+        "md": "assets/portraits/human/md/gu_king_human.png",
+        "sm": "assets/portraits/human/sm/gu_king_human.png"
+      },
+      "big": {
+        "full": "assets/portraits/human/gu_king_human.png",
+        "md": "assets/portraits/human/md/gu_king_human.png",
+        "sm": "assets/portraits/human/sm/gu_king_human.png"
+      },
+      "victory": {
+        "full": "assets/portraits/human/gu_king_human.png",
+        "md": "assets/portraits/human/md/gu_king_human.png",
+        "sm": "assets/portraits/human/sm/gu_king_human.png"
+      },
+      "defeat": {
+        "full": "assets/portraits/human/gu_king_human.png",
+        "md": "assets/portraits/human/md/gu_king_human.png",
+        "sm": "assets/portraits/human/sm/gu_king_human.png"
       }
     }
   }

@@ -732,11 +732,11 @@
       pointer-events: auto;
     }
 
-    .portrait-lightbox-variant[data-portrait-lightbox-variant="full"] {
+    .portrait-lightbox-variant[data-portrait-lightbox-direction="up"] {
       top: max(14px, env(safe-area-inset-top));
     }
 
-    .portrait-lightbox-variant[data-portrait-lightbox-variant="chibi"] {
+    .portrait-lightbox-variant[data-portrait-lightbox-direction="down"] {
       bottom: max(14px, env(safe-area-inset-bottom));
     }
 
@@ -1376,10 +1376,33 @@
       display: block;
       width: 100%;
       height: 100%;
-      object-fit: contain;
-      object-position: 50% 20%;
+      object-fit: cover;
+      object-position: var(--avatar-object-position, 50% 16%);
       transform: none;
       animation: module-swim 1500ms ease-in-out infinite;
+    }
+
+    .fighter-avatar-image[data-avatar-kind="avatar"] {
+      --avatar-object-position: 50% 18%;
+      --avatar-scale: 1;
+      object-fit: cover;
+      object-position: var(--avatar-object-position);
+      transform: scale(var(--avatar-scale));
+    }
+
+    .fighter-avatar-image[data-avatar-kind="avatar"][data-portrait-variant="human"] {
+      --avatar-object-position: 50% 14%;
+      --avatar-scale: 1.08;
+    }
+
+    .fighter-avatar-image[data-avatar-kind="avatar"][data-portrait-variant="beast"] {
+      --avatar-object-position: 50% 11%;
+      --avatar-scale: 1.04;
+    }
+
+    .fighter-avatar-image[data-avatar-kind="avatar"][data-portrait-variant="chibi"] {
+      --avatar-object-position: 50% 24%;
+      --avatar-scale: 1;
     }
 
     .fighter-module::before,
@@ -1633,9 +1656,8 @@
     .intro-avatar-button .fighter-avatar-image {
       width: 96%;
       height: 96%;
-      object-fit: contain;
-      object-position: 50% 50%;
-      transform: none;
+      object-fit: cover;
+      object-position: var(--avatar-object-position, 50% 18%);
     }
 
     .intro-avatar-label {
@@ -3437,14 +3459,14 @@
     </div>
   </div>
   <div class="portrait-lightbox" id="portraitLightbox" hidden aria-modal="true" role="dialog" aria-label="角色立繪">
-    <button class="secondary portrait-lightbox-variant" type="button" data-portrait-lightbox-variant="full" aria-label="Switch to full portrait">&uarr; Full</button>
+    <button class="secondary portrait-lightbox-variant" type="button" data-portrait-lightbox-direction="up" aria-label="Previous portrait version">&uarr; 幻獸版</button>
     <button class="secondary portrait-lightbox-arrow" type="button" data-portrait-lightbox-shift="-1" aria-label="Previous">&lsaquo;</button>
     <figure class="portrait-lightbox-figure">
       <img class="portrait-lightbox-image" id="portraitLightboxImage" alt="">
       <figcaption class="portrait-lightbox-caption" id="portraitLightboxCaption"></figcaption>
     </figure>
     <button class="secondary portrait-lightbox-arrow" type="button" data-portrait-lightbox-shift="1" aria-label="Next">&rsaquo;</button>
-    <button class="secondary portrait-lightbox-variant" type="button" data-portrait-lightbox-variant="chibi" aria-label="Switch to Q portrait">&darr; Q</button>
+    <button class="secondary portrait-lightbox-variant" type="button" data-portrait-lightbox-direction="down" aria-label="Next portrait version">&darr; Q獸版</button>
     <button id="portraitLightboxClose" class="secondary portrait-lightbox-close" type="button">關閉</button>
   </div>
   <div class="replay-modal" id="replayModal" hidden aria-modal="true" role="dialog" aria-labelledby="replayTitle">
@@ -3506,7 +3528,7 @@
     const portraitLightboxCaption = document.querySelector("#portraitLightboxCaption");
     const portraitLightboxClose = document.querySelector("#portraitLightboxClose");
     const portraitLightboxShiftButtons = document.querySelectorAll("[data-portrait-lightbox-shift]");
-    const portraitLightboxVariantButtons = document.querySelectorAll("[data-portrait-lightbox-variant]");
+    const portraitLightboxVariantButtons = document.querySelectorAll("[data-portrait-lightbox-direction]");
     const statusEl = document.querySelector("#status");
     const scoreEl = document.querySelector("#score");
     const computerScoreEl = document.querySelector("#computerScore");
@@ -3897,7 +3919,18 @@
     let portraitSwipeStartX = null;
     let portraitSwipeStartY = null;
     let portraitLightboxDidSwipe = false;
-    let portraitVariantMode = localStorage.getItem("hexSnakePortraitVariant") === "full" ? "full" : "chibi";
+    const portraitVariantModes = ["human", "beast", "chibi"];
+    const portraitVariantLabels = {
+      human: "擬人版",
+      beast: "幻獸版",
+      chibi: "Q獸版"
+    };
+    const storedPortraitVariant = localStorage.getItem("hexSnakePortraitVariant");
+    let portraitVariantMode = portraitVariantModes.includes(storedPortraitVariant)
+      ? storedPortraitVariant
+      : storedPortraitVariant === "full"
+        ? "human"
+        : "chibi";
     let restartUnlockAt = 0;
     const replayRecentKey = "hexSnakeReplayRecent";
     const replayFavoritesKey = "hexSnakeReplayFavorites";
@@ -4026,7 +4059,10 @@
     }
 
     function portraitLibrary(character) {
-      if (portraitVariantMode === "full") {
+      if (portraitVariantMode === "human") {
+        return character.humanPortraits || character.archivedPortraits || character.portraits || {};
+      }
+      if (portraitVariantMode === "beast") {
         return character.archivedPortraits || character.portraits || {};
       }
       return character.portraits || {};
@@ -4034,7 +4070,7 @@
 
     function portraitUrl(character, pose, size = "full") {
       const safePose = portraitPoses.has(pose) ? pose : "idle";
-      const semanticPose = poseAliases[safePose] || "intro";
+      const semanticPose = portraitVariantMode === "beast" ? "opening" : poseAliases[safePose] || "intro";
       const library = portraitLibrary(character);
       const portrait = library?.[semanticPose] || library?.intro || library?.opening;
       if (portrait) {
@@ -4067,13 +4103,16 @@
 
     function preloadPortraitsFor(owner) {
       const character = characterFor(owner);
-      ["intro", "idle", "attack", "victory", "defeat"].forEach(pose => preloadPortrait(character, pose, "sm"));
-      ["intro", "victory", "defeat"].forEach(pose => preloadPortrait(character, pose, "md"));
+      const smPoses = portraitVariantMode === "beast" ? ["intro"] : ["intro", "idle", "attack", "victory", "defeat"];
+      const mdPoses = portraitVariantMode === "beast" ? ["intro"] : ["intro", "victory", "defeat"];
+      smPoses.forEach(pose => preloadPortrait(character, pose, "sm"));
+      mdPoses.forEach(pose => preloadPortrait(character, pose, "md"));
     }
 
     function preloadAllPortraits() {
       characters.forEach(character => {
-        ["intro", "idle"].forEach(pose => preloadPortrait(character, pose, "sm"));
+        const poses = portraitVariantMode === "beast" ? ["intro"] : ["intro", "idle"];
+        poses.forEach(pose => preloadPortrait(character, pose, "sm"));
       });
     }
 
@@ -4084,7 +4123,7 @@
     }
 
     function avatarUrl(character, size = "sm") {
-      if (portraitVariantMode === "full") {
+      if (portraitVariantMode !== "chibi") {
         return portraitUrl(character, "idle", size);
       }
       const slug = character.slug || character.id;
@@ -4117,6 +4156,7 @@
           data-pose="${pose}"
           data-character-id="${character.id}"
           data-portrait-variant="${portraitVariantMode}"
+          data-avatar-kind="avatar"
         >
       `;
     }
@@ -4434,15 +4474,17 @@
       portraitLightboxImage.alt = character.name;
       portraitLightboxImage.dataset.characterId = character.id;
       portraitLightboxImage.dataset.portraitVariant = portraitVariantMode;
-      portraitLightboxCaption.textContent = `${ownerMeta(portraitLightboxOwner).label} / ${character.name} / ${portraitVariantMode === "full" ? "Full" : "Q"}`;
+      portraitLightboxCaption.textContent = `${ownerMeta(portraitLightboxOwner).label} / ${character.name} / ${portraitVariantLabels[portraitVariantMode] || portraitVariantMode}`;
       updatePortraitVariantButtons();
     }
 
     function updatePortraitVariantButtons() {
+      const currentIndex = portraitVariantModes.indexOf(portraitVariantMode);
       portraitLightboxVariantButtons.forEach(button => {
-        const selected = button.dataset.portraitLightboxVariant === portraitVariantMode;
-        button.classList.toggle("is-selected", selected);
-        button.setAttribute("aria-pressed", selected ? "true" : "false");
+        const delta = button.dataset.portraitLightboxDirection === "up" ? -1 : 1;
+        const nextMode = portraitVariantModes[(currentIndex + delta + portraitVariantModes.length) % portraitVariantModes.length];
+        button.textContent = `${delta < 0 ? "↑" : "↓"} ${portraitVariantLabels[nextMode] || nextMode}`;
+        button.setAttribute("aria-label", `${delta < 0 ? "Previous" : "Next"} portrait version: ${portraitVariantLabels[nextMode] || nextMode}`);
       });
     }
 
@@ -4463,7 +4505,7 @@
     }
 
     function setPortraitVariantMode(mode) {
-      const nextMode = mode === "full" ? "full" : "chibi";
+      const nextMode = mode === "full" ? "human" : portraitVariantModes.includes(mode) ? mode : "chibi";
       if (portraitVariantMode === nextMode) return;
       portraitVariantMode = nextMode;
       localStorage.setItem("hexSnakePortraitVariant", portraitVariantMode);
@@ -4473,7 +4515,12 @@
     }
 
     function togglePortraitVariantMode() {
-      setPortraitVariantMode(portraitVariantMode === "full" ? "chibi" : "full");
+      shiftPortraitVariantMode(1);
+    }
+
+    function shiftPortraitVariantMode(delta) {
+      const currentIndex = Math.max(0, portraitVariantModes.indexOf(portraitVariantMode));
+      setPortraitVariantMode(portraitVariantModes[(currentIndex + delta + portraitVariantModes.length) % portraitVariantModes.length]);
     }
 
     function openPortraitLightbox(owner) {
@@ -6166,40 +6213,40 @@
 
     const highAiStrategyWeightsByCharacter = {
       dragon: {
-        movement: { safePath: 1.2, leastDamage: 0.8, fastestArrival: 0.6 },
-        food: { fastestArrival: 1.25, ownDeficit: 1.25, opponentDeficit: 0.35, ownPreferred: 1, opponentPreferred: 0.25 },
-        skillAllocation: { preferSmall: 0.55, preferBig: 2.35 },
-        castTiming: { lethal: 3, nearFullEnergy: 1.7, opponentDebuffed: 1, opponentAlmostReady: 1.25, nearOpponent: 1.45, farOpponent: 0.15 }
+        movement: { safePath: 1.5588, leastDamage: 1.6121, fastestArrival: 1.7857 },
+        food: { fastestArrival: 0.5212, ownDeficit: 0, opponentDeficit: 0.3621, ownPreferred: 1.072, opponentPreferred: 1.0814 },
+        skillAllocation: { preferSmall: 1.6995, preferBig: 0.465 },
+        castTiming: { lethal: 3, nearFullEnergy: 0.4208, opponentDebuffed: 0.4931, opponentAlmostReady: 0.7456, nearOpponent: 0.8023, farOpponent: 0.7928 }
       },
       sandworm: {
-        movement: { safePath: 1.7349, leastDamage: 0.3693, fastestArrival: 0.2742 },
-        food: { fastestArrival: 1.9534, ownDeficit: 1.7082, opponentDeficit: 0, ownPreferred: 0.5031, opponentPreferred: 0 },
-        skillAllocation: { preferSmall: 0.506, preferBig: 0 },
-        castTiming: { lethal: 3, nearFullEnergy: 0.1005, opponentDebuffed: 0.8462, opponentAlmostReady: 0.2791, nearOpponent: 0.2991, farOpponent: 1.0259 }
+        movement: { safePath: 2.5526, leastDamage: 0.6603, fastestArrival: 0.3375 },
+        food: { fastestArrival: 1.4318, ownDeficit: 0.9415, opponentDeficit: 0.4762, ownPreferred: 0.2113, opponentPreferred: 0.3524 },
+        skillAllocation: { preferSmall: 0.8539, preferBig: 1.228 },
+        castTiming: { lethal: 3, nearFullEnergy: 1.3695, opponentDebuffed: 0.1003, opponentAlmostReady: 1.9772, nearOpponent: 1.7418, farOpponent: 1.5957 }
       },
       quetzal: {
-        movement: { safePath: 1.6795, leastDamage: 0.9114, fastestArrival: 0.933 },
-        food: { fastestArrival: 1.7059, ownDeficit: 1.7704, opponentDeficit: 0, ownPreferred: 0.6432, opponentPreferred: 0.2007 },
-        skillAllocation: { preferSmall: 0.8558, preferBig: 0.2691 },
-        castTiming: { lethal: 3, nearFullEnergy: 0.4639, opponentDebuffed: 1.4567, opponentAlmostReady: 1.1895, nearOpponent: 1.1931, farOpponent: 0 }
+        movement: { safePath: 0.7338, leastDamage: 2.7908, fastestArrival: 0.2879 },
+        food: { fastestArrival: 2.6869, ownDeficit: 0.8009, opponentDeficit: 0.4538, ownPreferred: 0.082, opponentPreferred: 0.6292 },
+        skillAllocation: { preferSmall: 2.2894, preferBig: 3 },
+        castTiming: { lethal: 3, nearFullEnergy: 2.8778, opponentDebuffed: 0.3555, opponentAlmostReady: 0.4152, nearOpponent: 0.5248, farOpponent: 0.7908 }
       },
       moray: {
-        movement: { safePath: 1.0943, leastDamage: 0.619, fastestArrival: 0.9009 },
-        food: { fastestArrival: 3, ownDeficit: 0.8156, opponentDeficit: 0.7993, ownPreferred: 0.1164, opponentPreferred: 0.2638 },
-        skillAllocation: { preferSmall: 1.4587, preferBig: 1.0056 },
-        castTiming: { lethal: 3, nearFullEnergy: 2.1596, opponentDebuffed: 0.5061, opponentAlmostReady: 2.8184, nearOpponent: 0, farOpponent: 0.7832 }
+        movement: { safePath: 0.347, leastDamage: 0, fastestArrival: 0.2809 },
+        food: { fastestArrival: 3, ownDeficit: 1.9572, opponentDeficit: 0.2476, ownPreferred: 0, opponentPreferred: 0 },
+        skillAllocation: { preferSmall: 0.8998, preferBig: 2.2955 },
+        castTiming: { lethal: 3, nearFullEnergy: 2.0326, opponentDebuffed: 0.6509, opponentAlmostReady: 0, nearOpponent: 2.2229, farOpponent: 1.4683 }
       },
       lobster: {
-        movement: { safePath: 2.05, leastDamage: 1.7, fastestArrival: 0.25 },
-        food: { fastestArrival: 2.25, ownDeficit: 2, opponentDeficit: 0.15, ownPreferred: 1.95, opponentPreferred: 0.15 },
-        skillAllocation: { preferSmall: 0.9, preferBig: 1.45 },
-        castTiming: { lethal: 3, nearFullEnergy: 1.55, opponentDebuffed: 0.55, opponentAlmostReady: 1.35, nearOpponent: 0.95, farOpponent: 0 }
+        movement: { safePath: 0, leastDamage: 0.8269, fastestArrival: 0.0956 },
+        food: { fastestArrival: 2.3552, ownDeficit: 1.8649, opponentDeficit: 0, ownPreferred: 0, opponentPreferred: 0 },
+        skillAllocation: { preferSmall: 1.2308, preferBig: 2.2717 },
+        castTiming: { lethal: 3, nearFullEnergy: 2.3079, opponentDebuffed: 2.5038, opponentAlmostReady: 1.7061, nearOpponent: 0.5592, farOpponent: 1.5145 }
       },
       gu_king: {
-        movement: { safePath: 1.1123, leastDamage: 1.7447, fastestArrival: 0.3172 },
-        food: { fastestArrival: 1.8958, ownDeficit: 1.2623, opponentDeficit: 0.1173, ownPreferred: 1.9483, opponentPreferred: 0.447 },
-        skillAllocation: { preferSmall: 1.9188, preferBig: 1.5043 },
-        castTiming: { lethal: 3, nearFullEnergy: 0.3379, opponentDebuffed: 0.8041, opponentAlmostReady: 1.5866, nearOpponent: 1.1018, farOpponent: 0.4405 }
+        movement: { safePath: 1.5307, leastDamage: 2.3577, fastestArrival: 0.1434 },
+        food: { fastestArrival: 2.6533, ownDeficit: 0.043, opponentDeficit: 0, ownPreferred: 0, opponentPreferred: 0 },
+        skillAllocation: { preferSmall: 1.9593, preferBig: 2.7991 },
+        castTiming: { lethal: 3, nearFullEnergy: 2.5735, opponentDebuffed: 0.2721, opponentAlmostReady: 0.5662, nearOpponent: 1.2454, farOpponent: 2.9204 }
       }
     };
     const dragonOrbStepMs = 45;
@@ -7645,7 +7692,16 @@
       rafId = requestAnimationFrame(loop);
     }
 
+    function comparisonLoop(now) {
+      drawEffectComparisonBoard(now);
+      rafId = requestAnimationFrame(comparisonLoop);
+    }
+
     function draw() {
+      if (isEffectComparisonMode()) {
+        drawEffectComparisonBoard(performance.now());
+        return;
+      }
       const now = performance.now();
       const rect = playArea.getBoundingClientRect();
       ctx.clearRect(0, 0, rect.width, rect.height);
@@ -7945,6 +8001,57 @@
       ctx.lineWidth = Math.max(1, cellSize * 0.04 * lineScale);
       ctx.stroke();
       ctx.restore();
+    }
+
+    function isUltimateVisualType(type = "") {
+      return type.endsWith("-big") || type.endsWith("-burst") || type.endsWith("-radiation");
+    }
+
+    function drawSmallCastFrame(x, y, radiusPx, progress, character, alpha = 1) {
+      const element = elementColorsFor(character);
+      drawElementAura(x, y, radiusPx * 0.96, progress, character, 0.52 * alpha);
+      drawPulseRing(x, y, radiusPx * 0.78, progress, element.primary, element.glow, 0.82);
+      drawElementMotifs(x, y, radiusPx * 0.76, progress, character, 0.58 * alpha, 10);
+      for (let i = 0; i < 8; i += 1) {
+        const angle = progress * Math.PI * 2.8 + i * Math.PI * 2 / 8;
+        drawElementShard(
+          x + Math.cos(angle) * radiusPx * 0.58,
+          y + Math.sin(angle) * radiusPx * 0.42,
+          cellSize * 0.16,
+          angle,
+          paletteColor(character, i),
+          0.58 * alpha
+        );
+      }
+    }
+
+    function drawSmallImpactFrame(x, y, radiusPx, progress, character, alpha = 1) {
+      const element = elementColorsFor(character);
+      drawElementAura(x, y, radiusPx * 1.02, progress, character, 0.7 * alpha);
+      drawPulseRing(x, y, radiusPx * 0.96, progress, element.primary, element.glow, 1);
+      drawElementMotifs(x, y, radiusPx * 0.86, progress, character, 0.72 * alpha, 12);
+    }
+
+    function drawUltimateImpactFrame(x, y, radiusPx, progress, character, alpha = 1) {
+      const element = elementColorsFor(character);
+      const pulse = 0.94 + waveValue(progress, 0.24) * 0.16;
+      drawElementAura(x, y, radiusPx * 1.36 * pulse, progress, character, 1.08 * alpha);
+      drawPulseRing(x, y, radiusPx * 1.22, progress, element.deep, element.glow, 1.65);
+      drawPulseRing(x, y, radiusPx * (0.82 + progress * 0.3), 1 - progress, element.primary, "#ffffff", 1.15);
+      drawElementMotifs(x, y, radiusPx * 1.18, progress, character, 1.08 * alpha, 24);
+      for (let i = 0; i < 22; i += 1) {
+        const angle = progress * Math.PI * 4.6 + i * Math.PI * 2 / 22;
+        const inner = radiusPx * 0.34;
+        const outer = radiusPx * (1.06 + waveValue(progress, i * 0.05) * 0.28);
+        drawLightningBetween(
+          { x: x + Math.cos(angle) * inner, y: y + Math.sin(angle) * inner * 0.74 },
+          { x: x + Math.cos(angle + 0.18) * outer, y: y + Math.sin(angle + 0.18) * outer * 0.74 },
+          progress + i * 0.04,
+          i % 4 === 0 ? "#ffffff" : paletteColor(character, i),
+          1.15,
+          5
+        );
+      }
     }
 
     function drawHexBurst(x, y, radiusPx, progress, color, line) {
@@ -9645,7 +9752,7 @@
     function drawProjectileCore(x, y, projectile, progress, character, travelAngle = 0) {
       const radiusPx = cellSize * Math.max(0.7, projectile.radius || 1);
       const type = projectile.visualType || attackVisualType(projectile.owner, projectile.profile);
-      const isBig = projectile.profile === "big";
+      const isBig = projectile.profile === "big" || isUltimateVisualType(type);
       const element = elementColorsFor(character);
       ctx.save();
       drawElementAura(x, y, radiusPx * (isBig ? 1.05 : 0.72), progress, character, isBig ? 0.72 : 0.34);
@@ -9662,10 +9769,12 @@
         return;
       }
       if (!isBig) {
+        drawSmallCastFrame(x, y, radiusPx, progress, character, 0.92);
         drawSmallProjectileHead(x, y, projectile, progress, character, travelAngle);
         ctx.restore();
         return;
       }
+      drawUltimateImpactFrame(x, y, radiusPx * 0.9, progress, character, 0.62);
       drawElementMotifs(x, y, radiusPx * 1.08, progress, character, 0.95, 16);
       if (type.startsWith("dragon-spirit")) {
         drawDragonSpiritRadiance(x, y, radiusPx * 0.82, progress, character, 0.78);
@@ -9712,8 +9821,11 @@
           const progress = Math.min(1, Math.max(0, (now - projectile.createdAt) / (projectile.delay || baseAttackDelayMs)));
           const timeToImpact = projectile.impactAt - now;
           const target = axialToPixel(projectile.target);
-          if ((projectile.visualType || "").startsWith("sandworm") && timeToImpact <= 200) {
-            drawSuperBlackHole(target.x, target.y, cellSize * Math.max(1.45, (projectile.radius || 1) * 2.75), Math.max(0, 1 - timeToImpact / 200), blastCharacter, 1);
+          if ((projectile.visualType || "").startsWith("sandworm")) {
+            const warningProgress = Math.max(progress, Math.max(0, 1 - timeToImpact / 900));
+            const warningRadius = cellSize * Math.max(2.4, (projectile.radius || 1) * 4.4);
+            drawUltimateImpactFrame(target.x, target.y, warningRadius * 0.72, warningProgress, blastCharacter, 0.62 + warningProgress * 0.28);
+            drawSuperBlackHole(target.x, target.y, warningRadius, warningProgress, blastCharacter, 0.74 + warningProgress * 0.26);
           }
           return;
         }
@@ -9765,6 +9877,7 @@
           const progress = Math.min(1, Math.max(0, (now - projectile.createdAt) / (projectile.delay || baseAttackDelayMs)));
           const target = axialToPixel(projectile.followHead ? ownerHead(projectile.owner) : projectile.target);
           const type = projectile.visualType || "";
+          drawUltimateImpactFrame(target.x, target.y, cellSize * Math.max(1.35, projectile.radius || 1) * 1.04, progress, blastCharacter, 0.58 + progress * 0.22);
           if (type.startsWith("dragon-spirit")) {
             drawDragonSpiritRadiance(target.x, target.y, cellSize * Math.max(1.2, projectile.radius || 1) * 0.9, progress, blastCharacter, 0.42 + progress * 0.32);
           } else {
@@ -9882,40 +9995,40 @@
       });
     }
 
-    function drawCircleBlast(blast, progress, alpha, character) {
-      const { x, y } = axialToPixel(blast.target);
-      const radiusPx = cellSize * (blast.radius || baseBlastHexRadius) * 1.52;
-      const type = blast.visualType || attackVisualType(blast.owner, "big");
-      const isBig = type.endsWith("-big");
+    function drawCircleImpactAt(x, y, radiusPx, progress, alpha, character, type, hand = "right") {
+      const isBig = isUltimateVisualType(type);
       const element = elementColorsFor(character);
-      drawElementAura(x, y, radiusPx * (isBig ? 1.04 : 0.86), progress, character, (isBig ? 0.92 : 0.68) * alpha);
-      drawPulseRing(x, y, radiusPx, progress, character.color, character.line, isBig ? 1.35 : 1);
-      drawElementMotifs(x, y, radiusPx * (isBig ? 0.94 : 0.82), progress, character, (isBig ? 1.05 : 0.84) * alpha, isBig ? 22 : 14);
+      const visualRadius = radiusPx * (isBig ? 1.18 : 1);
+      if (isBig) drawUltimateImpactFrame(x, y, visualRadius, progress, character, alpha);
+      else drawSmallImpactFrame(x, y, visualRadius, progress, character, alpha);
+      drawElementAura(x, y, visualRadius * (isBig ? 1.04 : 0.86), progress, character, (isBig ? 0.92 : 0.68) * alpha);
+      drawPulseRing(x, y, visualRadius, progress, character.color, character.line, isBig ? 1.35 : 1);
+      drawElementMotifs(x, y, visualRadius * (isBig ? 0.94 : 0.82), progress, character, (isBig ? 1.05 : 0.84) * alpha, isBig ? 22 : 14);
       if (type.startsWith("dragon-spirit") && type.includes("burst")) {
-        drawDragonSpiritRadiance(x, y, radiusPx * 1.12, progress, character, alpha);
+        drawDragonSpiritRadiance(x, y, visualRadius * 1.12, progress, character, alpha);
       } else if (type.startsWith("dragon") && type.includes("burst")) {
-        drawDragonBigBurst(x, y, radiusPx * 1.15, progress, character, alpha);
+        drawDragonBigBurst(x, y, visualRadius * 1.15, progress, character, alpha);
       } else if (type.startsWith("dragon")) {
-        drawEnergyBeamBurst(x, y, radiusPx * 1.08, progress, character, alpha);
+        drawEnergyBeamBurst(x, y, visualRadius * 1.08, progress, character, alpha);
       } else if (type.startsWith("sandworm")) {
-        drawSandBurial(x, y, radiusPx * 1.7, progress, character, alpha);
+        drawSandBurial(x, y, visualRadius * 1.7, progress, character, alpha);
       } else if (type.startsWith("quetzal")) {
-        drawSwampForestBloom(x, y, radiusPx * 1.02, progress, character, alpha);
+        drawSwampForestBloom(x, y, visualRadius * 1.02, progress, character, alpha);
       } else if (type.startsWith("moray")) {
-        drawEnergyBeamBurst(x, y, radiusPx * 1.02, progress, character, alpha);
+        drawEnergyBeamBurst(x, y, visualRadius * 1.02, progress, character, alpha);
       } else if (type.startsWith("lobster-palm") && type.includes("burst")) {
-        drawBuddhaPalmSeal(x, y, radiusPx * 0.95, progress, character, alpha, blast.hand || "right");
+        drawBuddhaPalmSeal(x, y, visualRadius * 0.95, progress, character, alpha, hand);
       } else if (type.startsWith("lobster-palm")) {
-        drawBuddhaPalmSeal(x, y, radiusPx * 0.78, progress, character, alpha, blast.hand || "right");
+        drawBuddhaPalmSeal(x, y, visualRadius * 0.78, progress, character, alpha, hand);
       } else if (type.startsWith("lobster")) {
-        drawNuclearBloom(x, y, radiusPx, progress, character, alpha);
+        drawNuclearBloom(x, y, visualRadius, progress, character, alpha);
       } else if (type.startsWith("gu_king")) {
-        drawPoisonVortex(x, y, radiusPx * 1.34, progress, character, alpha);
-        drawPulseRing(x, y, radiusPx * (0.72 + progress * 0.42), progress * 1.4, "#020617", element.secondary, 1.5);
+        drawPoisonVortex(x, y, visualRadius * 1.34, progress, character, alpha);
+        drawPulseRing(x, y, visualRadius * (0.72 + progress * 0.42), progress * 1.4, "#020617", element.secondary, 1.5);
         for (let i = 0; i < 16; i += 1) {
           const angle = progress * Math.PI * 5 + i * Math.PI * 2 / 16;
-          const inner = radiusPx * 0.34;
-          const outer = radiusPx * (1.06 + (i % 3) * 0.08);
+          const inner = visualRadius * 0.34;
+          const outer = visualRadius * (1.06 + (i % 3) * 0.08);
           drawLightningBetween(
             { x: x + Math.cos(angle) * inner, y: y + Math.sin(angle) * inner * 0.72 },
             { x: x + Math.cos(angle + 0.42) * outer, y: y + Math.sin(angle + 0.42) * outer * 0.72 },
@@ -9926,6 +10039,13 @@
           );
         }
       }
+    }
+
+    function drawCircleBlast(blast, progress, alpha, character) {
+      const { x, y } = axialToPixel(blast.target);
+      const radiusPx = cellSize * (blast.radius || baseBlastHexRadius) * 1.52;
+      const type = blast.visualType || attackVisualType(blast.owner, "big");
+      drawCircleImpactAt(x, y, radiusPx, progress, alpha, character, type, blast.hand || "right");
     }
 
     function drawBlasts() {
@@ -9940,6 +10060,84 @@
         }
         drawCircleBlast(blast, progress, alpha, blastCharacter);
       });
+    }
+
+    function isEffectComparisonMode() {
+      return new URLSearchParams(window.location.search).has("effectCompare");
+    }
+
+    function comparisonBigVisualType(character) {
+      if (character.id === "dragon") return "dragon-spirit-big";
+      if (character.id === "lobster") return "lobster-palm-big";
+      return `${character.id}-big`;
+    }
+
+    function drawEffectComparisonBoard(now = performance.now()) {
+      const rect = playArea.getBoundingClientRect();
+      const progress = (now % 1400) / 1400;
+      const oldCellSize = cellSize;
+      const rowCount = Math.max(1, characters.length);
+      const headerHeight = Math.min(64, Math.max(46, rect.height * 0.09));
+      const rowHeight = (rect.height - headerHeight - 16) / rowCount;
+      const labelWidth = Math.min(150, rect.width * 0.2);
+      const smallX = labelWidth + (rect.width - labelWidth) * 0.28;
+      const bigX = labelWidth + (rect.width - labelWidth) * 0.72;
+      cellSize = Math.max(11, Math.min(28, rowHeight * 0.18, rect.width * 0.018));
+
+      ctx.clearRect(0, 0, rect.width, rect.height);
+      ctx.fillStyle = "#111720";
+      ctx.fillRect(0, 0, rect.width, rect.height);
+      ctx.fillStyle = "#e5e7eb";
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      ctx.font = "700 18px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+      ctx.fillText("Skill Effect Comparison", 18, headerHeight * 0.42);
+      ctx.font = "600 13px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+      ctx.fillStyle = "#cbd5e1";
+      ctx.fillText("Small skills share the same visual scale. Ultimates always render larger, denser, and brighter.", 18, headerHeight * 0.76);
+      ctx.textAlign = "center";
+      ctx.fillStyle = "#fde68a";
+      ctx.fillText("Small", smallX, headerHeight - 12);
+      ctx.fillStyle = "#fca5a5";
+      ctx.fillText("Ultimate", bigX, headerHeight - 12);
+
+      characters.forEach((character, index) => {
+        const y = headerHeight + rowHeight * (index + 0.5);
+        const radiusPx = Math.max(22, rowHeight * 0.2);
+        ctx.strokeStyle = "rgba(148, 163, 184, 0.18)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(12, headerHeight + rowHeight * index);
+        ctx.lineTo(rect.width - 12, headerHeight + rowHeight * index);
+        ctx.stroke();
+
+        ctx.textAlign = "left";
+        ctx.fillStyle = "#e5e7eb";
+        ctx.font = "700 13px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+        ctx.fillText(character.id, 18, y - 10);
+        ctx.fillStyle = character.accent || character.line || "#cbd5e1";
+        ctx.font = "600 11px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+        ctx.fillText(character.smallMove || "small", 18, y + 10);
+
+        const smallProjectile = {
+          owner: "player",
+          profile: "small",
+          kind: "circle",
+          radius: 2,
+          visualType: `${character.id}-small`
+        };
+        drawSmallCastFrame(smallX - radiusPx * 0.72, y, radiusPx * 0.78, progress, character, 0.9);
+        drawSmallProjectileHead(smallX - radiusPx * 0.72, y, smallProjectile, progress, character, 0);
+        drawCircleImpactAt(smallX + radiusPx * 0.7, y, radiusPx * 0.74, progress, 0.92, character, `${character.id}-small`);
+
+        const bigType = comparisonBigVisualType(character);
+        drawCircleImpactAt(bigX, y, radiusPx * 1.06, progress, 0.96, character, bigType);
+        ctx.textAlign = "center";
+        ctx.fillStyle = "rgba(248, 250, 252, 0.78)";
+        ctx.font = "600 10px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+        ctx.fillText(bigType.replace(`${character.id}-`, ""), bigX, y + rowHeight * 0.33);
+      });
+      cellSize = oldCellSize;
     }
 
     function drawStatusStar(x, y, size, angle, color, alpha) {
@@ -10882,7 +11080,7 @@
     portraitLightboxVariantButtons.forEach(button => {
       button.addEventListener("click", event => {
         event.stopPropagation();
-        setPortraitVariantMode(button.dataset.portraitLightboxVariant);
+        shiftPortraitVariantMode(button.dataset.portraitLightboxDirection === "up" ? -1 : 1);
       });
     });
 
@@ -10901,7 +11099,7 @@
       portraitSwipeStartY = null;
       if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) >= 42) {
         portraitLightboxDidSwipe = true;
-        togglePortraitVariantMode();
+        shiftPortraitVariantMode(deltaY < 0 ? -1 : 1);
         return;
       }
       if (Math.abs(deltaX) < 42) return;
@@ -11488,11 +11686,11 @@
         }
         if (event.key === "ArrowUp") {
           event.preventDefault();
-          setPortraitVariantMode("full");
+          shiftPortraitVariantMode(-1);
         }
         if (event.key === "ArrowDown") {
           event.preventDefault();
-          setPortraitVariantMode("chibi");
+          shiftPortraitVariantMode(1);
         }
         return;
       }
@@ -11601,6 +11799,13 @@
       renderIntroPortraits(false);
       preloadPortraitsFor("player");
       preloadPortraitsFor("computer");
+      if (isEffectComparisonMode()) {
+        overlay.classList.remove("show");
+        characterStage.hidden = true;
+        setStatus("Skill effect comparison mode.");
+        cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(comparisonLoop);
+      }
       if ("requestIdleCallback" in window) {
         requestIdleCallback(preloadAllPortraits, { timeout: 1500 });
       } else {
