@@ -1667,6 +1667,7 @@
     }
 
     .portrait-select {
+      position: relative;
       display: grid;
       gap: 10px;
       align-content: start;
@@ -1828,6 +1829,10 @@
       z-index: 2;
     }
 
+    button.secondary.portrait-arrow {
+      width: 42px;
+    }
+
     .portrait-controls .portrait-arrow:first-child {
       left: 0;
     }
@@ -1904,6 +1909,17 @@
     @keyframes portrait-float {
       0%, 100% { transform: translateY(2px) scale(1); }
       50% { transform: translateY(-5px) scale(1.03); }
+    }
+
+    @media (min-width: 901px) {
+      .overlay.intro-details .portrait-controls {
+        position: static;
+      }
+
+      .overlay.intro-details .portrait-arrow {
+        top: 182px;
+        transform: translateY(-50%);
+      }
     }
 
     @keyframes charge-ring {
@@ -2554,7 +2570,7 @@
         height: 38px;
         min-height: 38px;
         font-size: 1.25rem;
-        top: 55px;
+        top: 82px;
       }
 
       .overlay.intro-details .portrait-copy {
