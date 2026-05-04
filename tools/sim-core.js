@@ -481,16 +481,16 @@ function canTurn(snake, currentDir, newDir) {
 }
 
 const characterAiProfiles = {
-  dragon: { role: "rush", preferredFood: "balanced" },
-  sandworm: { role: "ambush", preferredFood: "fat" },
-  quetzal: { role: "control", preferredFood: "fiber" },
-  moray: { role: "status", preferredFood: "carb" },
-  lobster: { role: "melee", preferredFood: "protein" },
-  gu_king: { role: "burst", preferredFood: "black" }
+  dragon: { preferredFood: "balanced" },
+  sandworm: { preferredFood: "fat" },
+  quetzal: { preferredFood: "fiber" },
+  moray: { preferredFood: "carb" },
+  lobster: { preferredFood: "protein" },
+  gu_king: { preferredFood: "black" }
 };
 
 function aiProfileFor(fighter) {
-  return characterAiProfiles[fighter.character.id] || { role: "balanced", preferredFood: fighter.character.foodPreference };
+  return characterAiProfiles[fighter.character.id] || { preferredFood: fighter.character.foodPreference };
 }
 
 function isUnderground(fighter, now) {
@@ -538,28 +538,6 @@ function strongestVisibleDamage(state, attacker, defender, balance, profile) {
   return candidates.reduce((best, cell) => Math.max(best, damageSnake(targetSnake, cell, stats.radius, stats.damage, balance)), 0);
 }
 
-function isOpponentConstrained(state, opponent) {
-  const occupied = new Set(opponent.snake.slice(0, -1).map(keyOf));
-  const exits = DIRECTIONS.filter((_, direction) => {
-    if (!canTurn(opponent.snake, opponent.dir, direction)) return false;
-    return !occupied.has(keyOf(nextWrappedCell(opponent.snake[0], direction, state.radius)));
-  });
-  return exits.length <= 2;
-}
-
-function hasRoleBigOpportunity(state, fighter, opponent, balance) {
-  const profile = aiProfileFor(fighter);
-  const perceived = perceivedSnakeFor(state, fighter, opponent);
-  const distance = hexDistance(fighter.snake[0], perceived[0]);
-  if (profile.role === "rush") return distance <= 4 || isOpponentConstrained(state, opponent);
-  if (profile.role === "ambush") return distance >= 2 && distance <= 5;
-  if (profile.role === "control") return distance <= 5 || state.foods.some(food => hexDistance(food, perceived[0]) <= 2);
-  if (profile.role === "status") return isDebuffed(opponent, state.now) || strongestVisibleDamage(state, fighter, opponent, balance, "small") > 0;
-  if (profile.role === "melee") return distance <= 2;
-  if (profile.role === "burst") return hasResourcePressure(fighter, balance);
-  return distance <= 3;
-}
-
 function isLethalAttack(state, fighter, opponent, balance, profile) {
   return canAttack(fighter, profile, balance) && strongestVisibleDamage(state, fighter, opponent, balance, profile) >= opponent.hp;
 }
@@ -599,7 +577,7 @@ function shouldUseBigAttack(state, fighter, opponent, balance) {
   }
   if (difficulty === "medium" || difficulty === "high") {
     const lethal = strongestVisibleDamage(state, fighter, opponent, balance, "big") >= opponent.hp;
-    return isDebuffed(opponent, state.now) || lethal || hasResourcePressure(fighter, balance) || (difficulty === "high" && hasRoleBigOpportunity(state, fighter, opponent, balance));
+    return isDebuffed(opponent, state.now) || lethal || hasResourcePressure(fighter, balance);
   }
   return false;
 }
@@ -634,15 +612,6 @@ function foodValueFor(fighter, opponent, food, policy, state = null) {
 
 function chooseFoodTarget(state, fighter, opponent) {
   const perceivedOpponent = perceivedSnakeFor(state, fighter, opponent);
-  const distance = wrappedDistance(state, fighter.snake[0], perceivedOpponent[0]);
-  if (fighter.policy.aiDifficulty === "high") {
-    const role = aiProfileFor(fighter).role;
-    if ((role === "rush" && distance <= 5) || (role === "melee" && distance <= 3)) return perceivedOpponent[0];
-    if (role === "ambush" && canAttack(fighter, "big", state.balance) && distance <= 5) {
-      const flank = cellsWithinDistance(state, perceivedOpponent[0], 1, 2).sort((a, b) => hexDistance(a, fighter.snake[0]) - hexDistance(b, fighter.snake[0]))[0];
-      if (flank) return flank;
-    }
-  }
   if (!state.foods.length) return perceivedOpponent[0];
   const staleTarget = fighter.foodTargetKey && state.now - fighter.lastFoodAt >= FOOD_TARGET_SWITCH_MS ? fighter.foodTargetKey : null;
   const choices = state.foods.filter(food => keyOf(food) !== staleTarget);

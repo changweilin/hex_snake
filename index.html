@@ -2110,24 +2110,61 @@
       grid-template-columns: 48px minmax(0, 1fr) 28px;
       gap: 8px;
       align-items: center;
-      color: var(--muted);
+      color: color-mix(in srgb, var(--food-line), var(--food-color) 22%);
       font-size: 0.82rem;
       font-weight: 800;
     }
 
+    .resource-label,
+    .resource-count {
+      color: color-mix(in srgb, var(--food-line), var(--food-color) 22%);
+      text-shadow: 0 0 10px color-mix(in srgb, var(--food-color), transparent 66%);
+    }
+
+    .resource-count {
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+    }
+
     .resource-track {
+      position: relative;
+      display: block;
       height: 9px;
       border-radius: 999px;
-      background: #151b25;
+      background:
+        linear-gradient(90deg, color-mix(in srgb, var(--food-color), transparent 88%), rgba(21, 27, 37, 0.9)),
+        #151b25;
       overflow: hidden;
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      border: 1px solid color-mix(in srgb, var(--food-line), transparent 58%);
+      box-shadow:
+        inset 0 0 0 1px color-mix(in srgb, var(--food-color), transparent 76%),
+        0 0 10px color-mix(in srgb, var(--food-color), transparent 84%);
+    }
+
+    .resource-track::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background:
+        repeating-linear-gradient(
+          90deg,
+          transparent 0,
+          transparent calc(5% - 1px),
+          rgba(15, 23, 36, 0.76) calc(5% - 1px),
+          rgba(15, 23, 36, 0.76) 5%
+        );
+      pointer-events: none;
     }
 
     .resource-fill {
+      display: block;
       width: 0%;
       height: 100%;
       border-radius: inherit;
       transition: width 140ms ease;
+      background: linear-gradient(90deg, var(--food-color), var(--food-line));
+      box-shadow: 0 0 12px color-mix(in srgb, var(--food-color), transparent 52%);
     }
 
     .control-row {
@@ -4961,9 +4998,9 @@
           row.style.setProperty("--food-color", type.color);
           row.style.setProperty("--food-line", type.line);
           row.innerHTML = `
-            <span>${type.label}</span>
-            <span class="resource-track"><span class="resource-fill" style="background:${type.color}" data-fill="${group.owner}-${type.id}"></span></span>
-            <span data-count="${group.owner}-${type.id}">0</span>
+            <span class="resource-label">${type.label}</span>
+            <span class="resource-track"><span class="resource-fill" data-fill="${group.owner}-${type.id}"></span></span>
+            <span class="resource-count" data-count="${group.owner}-${type.id}">0</span>
           `;
           panel.append(row);
         });
@@ -6358,7 +6395,7 @@
         `;
       }
       foodTypes.forEach(type => {
-        const count = stock[type.id];
+        const count = Math.max(0, Math.min(maxFoodStock, Math.round(stock[type.id] || 0)));
         const countEl = resourceBoard.querySelector(`[data-count="${owner}-${type.id}"]`);
         const fill = resourceBoard.querySelector(`[data-fill="${owner}-${type.id}"]`);
         if (countEl) countEl.textContent = count;
@@ -6607,12 +6644,12 @@
     }
 
     const aiProfiles = {
-      dragon: { role: "rush", preferredFood: "balanced" },
-      sandworm: { role: "ambush", preferredFood: "fat" },
-      quetzal: { role: "control", preferredFood: "fiber" },
-      moray: { role: "status", preferredFood: "carb" },
-      lobster: { role: "melee", preferredFood: "protein" },
-      gu_king: { role: "burst", preferredFood: "black" }
+      dragon: { preferredFood: "balanced" },
+      sandworm: { preferredFood: "fat" },
+      quetzal: { preferredFood: "fiber" },
+      moray: { preferredFood: "carb" },
+      lobster: { preferredFood: "protein" },
+      gu_king: { preferredFood: "black" }
     };
 
     const highAiStrategyWeightsByCharacter = {
@@ -6750,7 +6787,7 @@
 
     function aiProfileFor(owner) {
       const character = characterFor(owner);
-      return aiProfiles[character.id] || { role: "balanced", preferredFood: character.foodPreference };
+      return aiProfiles[character.id] || { preferredFood: character.foodPreference };
     }
 
     function aiStrategyWeightsFor(owner) {
@@ -6861,31 +6898,6 @@
       return candidates.reduce((best, cell) => Math.max(best, damageSnake(targetSnake, cell, stats.radius, stats.damage)), 0);
     }
 
-    function isOpponentConstrained(owner, now) {
-      const opponent = opponentOf(owner);
-      const opponentSnake = perceivedSnakeFor(owner, opponent, now);
-      const opponentDir = perceivedDirectionFor(opponent, now);
-      const occupied = new Set(opponentSnake.slice(0, -1).map(keyOf));
-      const exits = directions.filter((_, candidate) => {
-        if (opponentSnake.length >= 2 && (candidate + 3) % 6 === opponentDir) return false;
-        return !occupied.has(keyOf(nextWrappedCell(opponentSnake[0], candidate)));
-      });
-      return exits.length <= 2;
-    }
-
-    function hasRoleBigOpportunity(owner, now) {
-      const role = aiProfileFor(owner).role;
-      const opponent = opponentOf(owner);
-      const distance = hexDistance(ownerHead(owner), perceivedSnakeFor(owner, opponent, now)[0]);
-      if (role === "rush") return distance <= 4 || isOpponentConstrained(owner, now);
-      if (role === "ambush") return distance >= 2 && distance <= 5;
-      if (role === "control") return distance <= 5 || foods.some(food => hexDistance(food, perceivedSnakeFor(owner, opponent, now)[0]) <= 2);
-      if (role === "status") return hasOpponentDebuff(owner, now) || strongestVisibleDamage(owner, "small", now) > 0;
-      if (role === "melee") return distance <= 2;
-      if (role === "burst") return hasResourcePressure(owner);
-      return distance <= 3;
-    }
-
     function shouldUseBigAttack(owner, now) {
       if (!canAttack(owner, "big")) return false;
       if (computerDifficulty === "low") {
@@ -6894,7 +6906,7 @@
       }
       if (computerDifficulty === "medium" || computerDifficulty === "high") {
         const lethal = strongestVisibleDamage(owner, "big", now) >= ownerHp(opponentOf(owner));
-        return hasOpponentDebuff(owner, now) || lethal || hasResourcePressure(owner) || (computerDifficulty === "high" && hasRoleBigOpportunity(owner, now));
+        return hasOpponentDebuff(owner, now) || lethal || hasResourcePressure(owner);
       }
       return false;
     }
@@ -7152,21 +7164,12 @@
           (opponentDistance <= ownDistance ? weights.opponentDeficit * 0.35 : 0)
         );
       }
-      const roleBonus = preferred ? 1.5 : 0;
-      return -ownDistance + roleBonus + (opponentDistance <= ownDistance ? 0.4 : 0);
+      const preferredBonus = preferred ? 1.5 : 0;
+      return -ownDistance + preferredBonus + (opponentDistance <= ownDistance ? 0.4 : 0);
     }
 
     function chooseAiMoveTarget(owner, opponent, now) {
       const perceivedOpponent = perceivedSnakeFor(owner, opponent, now);
-      const distance = wrappedDistance(ownerHead(owner), perceivedOpponent[0]);
-      if (computerDifficulty === "high") {
-        const role = aiProfileFor(owner).role;
-        if ((role === "rush" && distance <= 5) || (role === "melee" && distance <= 3)) return perceivedOpponent[0];
-        if (role === "ambush" && canAttack(owner, "big") && distance <= 5) {
-          const flank = cellsWithinDistance(perceivedOpponent[0], 1, 2).sort((a, b) => hexDistance(a, ownerHead(owner)) - hexDistance(b, ownerHead(owner)))[0];
-          if (flank) return flank;
-        }
-      }
       if (!foods.length) return perceivedOpponent[0];
       const targetKey = owner === "player" ? playerFoodTargetKey : computerFoodTargetKey;
       const lastFoodAt = owner === "player" ? lastPlayerFoodAt : lastComputerFoodAt;
@@ -7227,8 +7230,6 @@
         const wallPressure = cells.filter(cell => hexDistance(cell, next) <= 1 && !occupied.has(keyOf(cell))).length;
         const pathDistance = shortestFoodDistance(next, occupied);
         const targetDistance = wrappedDistance(next, target);
-        const role = aiProfileFor(owner).role;
-        const pressureBias = computerDifficulty === "high" && (role === "rush" || role === "melee") ? targetDistance : 0;
         const expectedDamage = expectedDamageAt(owner, next, now);
         const trapRisk = Math.max(0, 5 - reachableSpace(next, occupied, 10));
         const deadEnd = reachableSpace(next, occupied, deadEndMinSpace) < deadEndMinSpace;
@@ -7243,8 +7244,8 @@
           lethalThreat,
           pathValue: Number.isFinite(pathDistance) ? pathDistance : nearestFoodDistance(next),
           tacticalValue: computerDifficulty === "high"
-            ? weights.fastestArrival * targetDistance + weights.safePath * risk + weights.leastDamage * expectedDamage - wallPressure * 0.04 + pressureBias * 0.3
-            : (Number.isFinite(pathDistance) ? pathDistance : nearestFoodDistance(next)) + targetDistance * 0.45 + pressureBias * 0.3 + danger - wallPressure * 0.08,
+            ? weights.fastestArrival * targetDistance + weights.safePath * risk + weights.leastDamage * expectedDamage - wallPressure * 0.04
+            : (Number.isFinite(pathDistance) ? pathDistance : nearestFoodDistance(next)) + targetDistance * 0.45 + danger - wallPressure * 0.08,
           fallbackValue: nearestFoodDistance(next) + targetDistance * 0.45 + danger - wallPressure * 0.08
         });
       });
