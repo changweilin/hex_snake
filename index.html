@@ -7767,7 +7767,7 @@
           createdAt: now,
           impactAt: now + small.delay,
           delay: small.delay,
-          damage: small.damage * 0.75 * ultimateDamageMultiplier(character.id),
+          damage: small.damage * 0.8 * ultimateDamageMultiplier(character.id),
           stunChance,
           stackStun: true
         });
@@ -7800,7 +7800,7 @@
       }
 
       if (character.id === "sandworm") {
-        const delay = small.delay * 2;
+        const delay = small.delay * 3;
         const undergroundFrom = now + Math.max(0, delay - sandwormUndergroundWindowMs);
         const undergroundUntil = now + delay + sandwormUndergroundWindowMs;
         if (owner === "player") {
@@ -7830,11 +7830,13 @@
       }
 
       if (abilityId === "lobster") {
-        const lobsterUltimateRadius = small.radius * ultimateSetting(abilityId, "radiusMultiplier", 2.5);
+        const lobsterUltimateRadius = character.id === "dragon"
+          ? small.radius * 2
+          : small.radius * ultimateSetting(abilityId, "radiusMultiplier", 2.5);
         const volleys = character.id === "dragon" ? 1 : 2;
         const impactDamage = character.id === "dragon" ? small.damage * 0.5 : small.damage;
         const radiationTotalDamage = character.id === "dragon" ? small.damage * 1.5 : small.damage * 0.25;
-        const firstImpactDelay = character.id === "dragon" ? (small.delay / 1.5) * 2 : small.delay;
+        const firstImpactDelay = character.id === "dragon" ? small.delay * 2 : small.delay;
         const visualType = character.id === "dragon" ? "dragon-spirit-big" : attackVisualType(owner, "big", abilityId);
         for (let index = 0; index < volleys; index += 1) {
           const impactDelay = firstImpactDelay + index * 2000;
@@ -7861,8 +7863,8 @@
       }
 
       if (character.id === "gu_king") {
-        const volleyIntervalMs = 180;
-        const firstImpactDelay = small.delay / 2;
+        const volleyIntervalMs = small.delay;
+        const firstImpactDelay = small.delay;
         for (let index = 0; index < 3; index += 1) {
           const impactDelay = firstImpactDelay + index * volleyIntervalMs;
           pushCircleAttack({

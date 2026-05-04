@@ -1116,7 +1116,7 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
       excludedCells,
       width: bandDistanceFromTotalWidth(small.radius),
       impactAt: now + small.delay,
-      damage: small.damage * 0.75 * ultimateDamageMultiplier(balance, characterId),
+      damage: small.damage * 0.8 * ultimateDamageMultiplier(balance, characterId),
       stunChance,
       stackStun: true
     });
@@ -1145,7 +1145,7 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
     return;
   }
   if (characterId === "sandworm") {
-    const delay = small.delay * 2;
+    const delay = small.delay * 3;
     attacker.undergroundFrom = now + Math.max(0, delay - SANDWORM_UNDERGROUND_WINDOW_MS);
     attacker.undergroundUntil = now + delay + SANDWORM_UNDERGROUND_WINDOW_MS;
     pushCircleAttack(state, {
@@ -1163,11 +1163,13 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
     return;
   }
   if (abilityId === "lobster") {
-    const lobsterUltimateRadius = small.radius * ultimateSetting(balance, abilityId, "radiusMultiplier", 2.5);
+    const lobsterUltimateRadius = characterId === "dragon"
+      ? small.radius * 2
+      : small.radius * ultimateSetting(balance, abilityId, "radiusMultiplier", 2.5);
     const volleys = characterId === "dragon" ? 1 : 2;
     const impactDamage = characterId === "dragon" ? small.damage * 0.5 : small.damage;
     const radiationTotalDamage = characterId === "dragon" ? small.damage * 1.5 : small.damage * 0.25;
-    const firstImpactDelay = characterId === "dragon" ? (small.delay / 1.5) * 2 : small.delay;
+    const firstImpactDelay = characterId === "dragon" ? small.delay * 2 : small.delay;
     for (let index = 0; index < volleys; index += 1) {
       const impactDelay = firstImpactDelay + index * 2000;
       state.projectiles.push({
@@ -1188,8 +1190,8 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
     return;
   }
   if (characterId === "gu_king") {
-    const volleyIntervalMs = 180;
-    const firstImpactDelay = small.delay / 2;
+    const volleyIntervalMs = small.delay;
+    const firstImpactDelay = small.delay;
     for (let index = 0; index < 3; index += 1) {
       const impactDelay = firstImpactDelay + index * volleyIntervalMs;
       pushCircleAttack(state, {

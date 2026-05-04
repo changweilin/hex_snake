@@ -70,7 +70,7 @@
         "damageMultiplier": 1
       },
       "quetzal": {
-        "damageMultiplier": 1
+        "damageMultiplier": 1.25
       },
       "moray": {
         "damageMultiplier": 1
