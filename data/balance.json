@@ -94,7 +94,7 @@
   "simulation": {
     "defaultRuns": 10000,
     "smokeRuns": 100,
-    "maxMatchMs": 120000,
+    "maxMatchMs": 240000,
     "tickMs": 100,
     "balanceWinRateMin": 0.45,
     "balanceWinRateMax": 0.55,

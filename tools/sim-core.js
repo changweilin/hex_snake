@@ -447,6 +447,7 @@ function makeFighter(owner, character, start, direction, settings, balance, poli
   }
   const stock = { ...emptyStock(), ...(settings.initialStock || {}) };
   const snake = createStartingSnake(start, direction, settings.initialLength, settings.radius);
+  const maxHp = snake.length * 2;
   return {
     owner,
     character,
@@ -454,7 +455,7 @@ function makeFighter(owner, character, start, direction, settings, balance, poli
     snake,
     dir: direction,
     nextDir: direction,
-    hp: snake.length,
+    hp: maxHp,
     score: 0,
     stock,
     balanceStockCap: balance.resources.maxFoodStock,
@@ -1106,21 +1107,19 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
   if (characterId === "moray") {
     const lineCells = boardLineThrough(state, target, direction);
     const excludedCells = attacker.snake.map(segment => ({ ...segment }));
-    for (let index = 0; index < 4; index += 1) {
-      state.projectiles.push({
-        kind: "line",
-        owner: attacker.owner,
-        profile: "big",
-        target,
-        lineCells,
-        excludedCells,
-        width: bandDistanceFromTotalWidth(small.radius),
-        impactAt: now + small.delay + index * 320,
-        damage: small.damage * 0.8 * ultimateDamageMultiplier(balance, characterId),
-        stunChance,
-        stackStun: true
-      });
-    }
+    state.projectiles.push({
+      kind: "line",
+      owner: attacker.owner,
+      profile: "big",
+      target,
+      lineCells,
+      excludedCells,
+      width: bandDistanceFromTotalWidth(small.radius),
+      impactAt: now + small.delay,
+      damage: small.damage * 0.75 * ultimateDamageMultiplier(balance, characterId),
+      stunChance,
+      stackStun: true
+    });
     return;
   }
   if (characterId === "quetzal") {
@@ -1141,7 +1140,7 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
       startedAt: now + small.delay,
       nextTickAt: now + small.delay,
       tickMs: moveInterval(attacker, balance, now),
-      endAt: now + small.delay + 2500
+      endAt: now + small.delay + 3000
     });
     return;
   }
@@ -1164,12 +1163,10 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
     return;
   }
   if (abilityId === "lobster") {
-    const big = attackStats(attacker.stock, "big", balance);
     const lobsterUltimateRadius = small.radius * ultimateSetting(balance, abilityId, "radiusMultiplier", 2.5);
     const volleys = characterId === "dragon" ? 1 : 2;
-    const damageScale = characterId === "dragon" ? 1.5 : 1;
-    const impactDamage = characterId === "dragon" ? small.damage * 0.5 : big.damage * damageScale;
-    const radiationTotalDamage = characterId === "dragon" ? small.damage * 1.5 : impactDamage;
+    const impactDamage = characterId === "dragon" ? small.damage * 0.5 : small.damage;
+    const radiationTotalDamage = characterId === "dragon" ? small.damage * 1.5 : small.damage * 0.25;
     const firstImpactDelay = characterId === "dragon" ? (small.delay / 1.5) * 2 : small.delay;
     for (let index = 0; index < volleys; index += 1) {
       const impactDelay = firstImpactDelay + index * 2000;
@@ -1476,7 +1473,7 @@ function moveFighters(state, movers, now, balance) {
       fighter.foodTargetKey = null;
       fighter.foodTargetAt = 0;
       collectFood(fighter, plan.eatenFood, balance, state.rng);
-      fighter.hp = Math.min(fighter.snake.length, fighter.hp + 1);
+      fighter.hp = Math.min(fighter.snake.length * 2, fighter.hp + 1);
     } else {
       fighter.snake.pop();
     }
@@ -1537,8 +1534,8 @@ function simulateMatch(options) {
   const balance = state.balance;
   const maxMatchMs = options.maxMatchMs ?? balance.simulation.maxMatchMs;
   const tickMs = options.tickMs ?? balance.simulation.tickMs;
-  while (state.now <= maxMatchMs && state.fighters.player.hp > 0 && state.fighters.computer.hp > 0) {
-    state.now += tickMs;
+  while (state.now < maxMatchMs && state.fighters.player.hp > 0 && state.fighters.computer.hp > 0) {
+    state.now = Math.min(maxMatchMs, state.now + tickMs);
     resolveProjectiles(state, state.now, balance);
     resolveHazards(state, state.now, balance);
     updateVisibleMemory(state);

@@ -1743,27 +1743,58 @@
       cursor: pointer;
     }
 
+    .portrait-card-controls {
+      position: relative;
+      display: grid;
+      touch-action: pan-y;
+    }
+
+    .portrait-label-controls {
+      display: grid;
+      grid-template-columns: 28px minmax(0, max-content) 28px;
+      width: fit-content;
+      max-width: 100%;
+      justify-self: center;
+      gap: 3px;
+      align-items: center;
+      touch-action: pan-y;
+    }
+
     .portrait-option .fighter-portrait {
       max-width: 100%;
       opacity: 0.66;
       transform: scale(0.96);
-      transition: opacity 150ms ease, transform 150ms ease, border-color 150ms ease;
+      transition: opacity 150ms ease, transform 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
     }
 
     .portrait-option.is-selected .fighter-portrait {
       opacity: 1;
       transform: scale(1);
       border-color: var(--fighter-accent);
+      box-shadow:
+        inset 0 0 0 2px color-mix(in srgb, var(--fighter-accent), white 24%),
+        inset 0 0 40px rgba(255, 255, 255, 0.08),
+        0 0 0 3px color-mix(in srgb, var(--owner-color), transparent 42%),
+        0 18px 58px color-mix(in srgb, var(--owner-color), transparent 72%);
     }
 
     .portrait-option-label {
+      justify-self: center;
+      max-width: 100%;
+      padding: 4px 8px;
+      border-radius: 999px;
       color: var(--muted);
       font-size: 0.76rem;
       font-weight: 800;
+      line-height: 1.2;
+      transition: background 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
     }
 
     .portrait-option.is-selected .portrait-option-label {
       color: var(--ink);
+      background: color-mix(in srgb, var(--owner-color), #101720 58%);
+      border: 1px solid color-mix(in srgb, var(--owner-line), transparent 38%);
+      box-shadow: 0 8px 20px color-mix(in srgb, var(--owner-color), transparent 78%);
     }
 
     .overlay.intro-details .fighter-portrait {
@@ -1831,6 +1862,34 @@
 
     button.secondary.portrait-arrow {
       width: 42px;
+    }
+
+    .portrait-controls > .portrait-arrow {
+      display: none;
+    }
+
+    .portrait-card-controls .portrait-arrow {
+      position: static;
+      align-self: center;
+      justify-self: center;
+      flex: 0 0 auto;
+      top: auto;
+      transform: none;
+    }
+
+    .portrait-label-controls .portrait-arrow {
+      position: static;
+      width: 28px;
+      height: 28px;
+      min-height: 28px;
+      padding: 0;
+      border-radius: 6px;
+      font-size: 1rem;
+      transform: none;
+    }
+
+    button.secondary.portrait-label-arrow {
+      width: 28px;
     }
 
     .portrait-controls .portrait-arrow:first-child {
@@ -1928,6 +1987,15 @@
 
       .overlay.intro-details .portrait-controls .portrait-arrow:last-child {
         right: calc(50% - 363px);
+      }
+
+      .overlay.intro-details .portrait-card-controls .portrait-arrow,
+      .overlay.intro-details .portrait-label-controls .portrait-arrow {
+        position: static;
+        top: auto;
+        left: auto;
+        right: auto;
+        transform: none;
       }
     }
 
@@ -2627,6 +2695,15 @@
         right: calc(50% - 337px);
       }
 
+      .overlay.intro-details .portrait-card-controls .portrait-arrow,
+      .overlay.intro-details .portrait-label-controls .portrait-arrow {
+        position: static;
+        top: auto;
+        left: auto;
+        right: auto;
+        transform: none;
+      }
+
       .overlay.intro-details .portrait-copy {
         gap: 3px;
       }
@@ -3166,7 +3243,7 @@
         width: 100%;
         height: 100%;
         max-height: 100%;
-        padding: 8px;
+        padding: 12px;
         gap: 8px;
       }
 
@@ -3205,13 +3282,28 @@
       }
 
       .overlay.intro-details .portrait-pair {
-        gap: 8px;
+        gap: 14px;
+      }
+
+      .overlay.intro-details .portrait-option .fighter-portrait {
+        transform: scale(0.99);
       }
 
       .overlay.intro-details .fighter-portrait {
-        width: min(158px, 43vw);
+        width: 100%;
         aspect-ratio: 0.78;
         margin-bottom: 5px;
+      }
+
+      .overlay.intro-details .fighter-portrait .fighter-avatar-image,
+      .overlay.intro-details .fighter-portrait .fighter-avatar {
+        width: 100%;
+        height: 100%;
+      }
+
+      .overlay.intro-details .portrait-label-controls {
+        grid-template-columns: 24px minmax(0, max-content) 24px;
+        gap: 3px;
       }
 
       .overlay.intro-details .portrait-controls {
@@ -3219,10 +3311,11 @@
       }
 
       .overlay.intro-details .portrait-arrow {
-        width: 34px;
-        height: 34px;
-        min-height: 34px;
-        font-size: 1.1rem;
+        width: 24px;
+        height: 24px;
+        min-height: 24px;
+        border-radius: 5px;
+        font-size: 0.96rem;
         top: 49px;
       }
 
@@ -3305,8 +3398,14 @@
       }
 
       .overlay.intro-details .fighter-portrait {
-        width: min(132px, 39vw);
+        width: 100%;
         aspect-ratio: 0.78;
+      }
+
+      .overlay.intro-details .fighter-portrait .fighter-avatar-image,
+      .overlay.intro-details .fighter-portrait .fighter-avatar {
+        width: 100%;
+        height: 100%;
       }
 
       .overlay.intro-details .portrait-copy span,
@@ -3786,10 +3885,10 @@
     let maxCollisionParalysisMs = 8000;
     let rangeDamageFalloffEnabled = false;
     let targetMaxHex = 6;
+    let maxMatchMs = 240000;
     let gameOverRestartDelayMs = 700;
     const smallAttackDelayScale = 0.31;
     const smallAttackCooldownScale = 0.29;
-    const aiSmallAttackThrottleScale = 0.35;
     const sandwormRevealBeforeImpactMs = 200;
     const sandwormUndergroundWindowMs = 500;
     let defaultSettings = {
@@ -3873,6 +3972,7 @@
       otherFoodWeight = config.foodWeights?.other ?? otherFoodWeight;
       balancedDualChance = config.foodWeights?.balancedDualChance ?? balancedDualChance;
       blackSpecialChance = config.foodWeights?.blackSpecialChance ?? blackSpecialChance;
+      maxMatchMs = config.simulation?.maxMatchMs ?? maxMatchMs;
       defaultSettings = { ...defaultSettings, ...(config.defaults || {}), initialStock: { ...defaultSettings.initialStock, ...(config.defaults?.initialStock || {}) } };
       gridSize = defaultSettings.gridSize;
       radius = gridSize - 1;
@@ -3995,6 +4095,7 @@
     let projectiles = [];
     let blasts = [];
     let hazards = [];
+    const elementalSpriteCache = new Map();
     let boardShakeUntil = 0;
     let boardShakeStartedAt = 0;
     let boardShakeStrength = 0;
@@ -4061,7 +4162,7 @@
     const deadEndMinSpace = 5;
     let lastTimerFrame = 0;
     let lastPlayerAttackMs = -Infinity;
-    let lastComputerAttackMs = 0;
+    let lastComputerAttackMs = -Infinity;
     let rafId = 0;
     let movePointerId = null;
     let targetPointerId = null;
@@ -4084,6 +4185,8 @@
     let portraitLightboxOwner = "player";
     let portraitSwipeStartX = null;
     let portraitSwipeStartY = null;
+    let portraitSwipeOwner = null;
+    let portraitIntroDidSwipe = false;
     let portraitLightboxDidSwipe = false;
     const portraitVariantModes = ["human", "beast", "chibi"];
     const portraitVariantLabels = {
@@ -4811,14 +4914,20 @@
               const character = selectedCharacterFor(owner);
               const label = owner === "player" ? "P1" : "P2";
               return `
-                <button class="portrait-option ${owner === selectedPortraitOwner ? "is-selected" : ""}" type="button" data-owner="${owner}" data-portrait-owner="${owner}" style="${characterStyle(character || {
+                <div class="portrait-option ${owner === selectedPortraitOwner ? "is-selected" : ""}" role="button" tabindex="0" data-owner="${owner}" data-portrait-owner="${owner}" style="${characterStyle(character || {
                   color: ownerMeta(owner).color,
                   line: ownerMeta(owner).line,
                   accent: "#fbbf24"
                 }, owner)}">
-                ${character ? `<div class="fighter-portrait" data-owner="${owner}" data-owner-mark="${ownerMeta(owner).mark}" data-full-portrait="${owner}">${fighterArt(character, "intro", true, "small")}</div>` : randomPortraitMarkup(owner)}
-                <span class="portrait-option-label"><span class="owner-name ${owner === "player" ? "is-p1" : "is-p2"}">${ownerMeta(owner).label}</span> · ${character ? character.name : "隨機選擇"}</span>
-              </button>
+                <div class="portrait-card-controls" data-portrait-swipe-owner="${owner}">
+                  ${character ? `<div class="fighter-portrait" data-owner="${owner}" data-owner-mark="${ownerMeta(owner).mark}" data-full-portrait="${owner}">${fighterArt(character, "intro", true, "small")}</div>` : randomPortraitMarkup(owner)}
+                </div>
+                <div class="portrait-label-controls">
+                  <button class="secondary portrait-arrow portrait-label-arrow" type="button" data-portrait-owner="${owner}" data-portrait-shift="-1" aria-label="${ownerMeta(owner).label} 上一位">‹</button>
+                  <span class="portrait-option-label"><span class="owner-name ${owner === "player" ? "is-p1" : "is-p2"}">${ownerMeta(owner).label}</span> · ${character ? character.name : "隨機選擇"}</span>
+                  <button class="secondary portrait-arrow portrait-label-arrow" type="button" data-portrait-owner="${owner}" data-portrait-shift="1" aria-label="${ownerMeta(owner).label} 下一位">›</button>
+                </div>
+              </div>
             `;
           }).join("")}
           </div>
@@ -4847,9 +4956,9 @@
       renderIntroPortraits(true);
     }
 
-    function setSelectedPortraitCharacter(characterId) {
+    function setPortraitCharacterForOwner(owner, characterId) {
       if (characterId !== randomCharacterChoiceId && !characterById.has(characterId)) return;
-      const owner = selectedPortraitOwner;
+      selectedPortraitOwner = owner === "computer" ? "computer" : "player";
       if (selectedPortraitOwner === "player") {
         playerCharacterChoice = characterId;
         if (characterId !== randomCharacterChoiceId) playerCharacterId = characterId;
@@ -4867,12 +4976,21 @@
       }
     }
 
-    function applySelectedPortraitCharacter(delta) {
-      const currentId = characterChoiceFor(selectedPortraitOwner);
+    function setSelectedPortraitCharacter(characterId) {
+      setPortraitCharacterForOwner(selectedPortraitOwner, characterId);
+    }
+
+    function applyPortraitCharacter(owner, delta) {
+      const safeOwner = owner === "computer" ? "computer" : "player";
+      const currentId = characterChoiceFor(safeOwner);
       const choices = [randomCharacterChoiceId, ...characters.map(character => character.id)];
       const currentIndex = Math.max(0, choices.indexOf(currentId));
       const nextChoice = choices[(currentIndex + delta + choices.length) % choices.length];
-      setSelectedPortraitCharacter(nextChoice);
+      setPortraitCharacterForOwner(safeOwner, nextChoice);
+    }
+
+    function applySelectedPortraitCharacter(delta) {
+      applyPortraitCharacter(selectedPortraitOwner, delta);
     }
 
     function renderPortraitLightbox() {
@@ -5515,8 +5633,8 @@
       targetActive = Boolean(snapshot.targetActive);
       score = snapshot.score || 0;
       computerScore = snapshot.computerScore || 0;
-      playerHp = snapshot.playerHp ?? snake.length;
-      computerHp = snapshot.computerHp ?? computerSnake.length;
+      playerHp = snapshot.playerHp ?? snake.length * 2;
+      computerHp = snapshot.computerHp ?? computerSnake.length * 2;
       playerStock = replayClone(snapshot.playerStock || {});
       computerStock = replayClone(snapshot.computerStock || {});
       playerAmmo = snapshot.playerAmmo || 0;
@@ -6199,8 +6317,8 @@
       computerSnake = createStartingSnake({ q: offset, r: -offset }, computerDir, startLength);
       score = 0;
       computerScore = 0;
-      playerHp = snake.length;
-      computerHp = computerSnake.length;
+      playerHp = snake.length * 2;
+      computerHp = computerSnake.length * 2;
       playerStock = startingStock();
       computerStock = startingStock();
       playerAmmo = startingBombs();
@@ -6246,7 +6364,7 @@
       lastPlayerFoodAt = 0;
       lastComputerFoodAt = 0;
       lastPlayerAttackMs = -Infinity;
-      lastComputerAttackMs = 0;
+      lastComputerAttackMs = -Infinity;
       replaySurrendered = false;
       gameOver = false;
       paused = false;
@@ -6413,8 +6531,8 @@
     }
 
     function updateHud() {
-      scoreEl.textContent = `HP ${Math.max(0, Math.ceil(playerHp))}/${snake.length}`;
-      computerScoreEl.textContent = `HP ${Math.max(0, Math.ceil(computerHp))}/${computerSnake.length}`;
+      scoreEl.textContent = `HP ${Math.max(0, Math.ceil(playerHp))}/${snake.length * 2}`;
+      computerScoreEl.textContent = `HP ${Math.max(0, Math.ceil(computerHp))}/${computerSnake.length * 2}`;
       bestEl.textContent = best;
       totalTimeEl.textContent = formatTime(totalElapsedMs);
       lastFeedTimeEl.textContent = formatTime(lastFeedElapsedMs);
@@ -7617,31 +7735,29 @@
         const lineOrigin = options.aimOrigin || target;
         const lineCells = boardLineThrough(lineOrigin, direction);
         const excludedCells = (owner === "player" ? snake : computerSnake).map(segment => ({ q: segment.q, r: segment.r }));
-        for (let index = 0; index < 4; index += 1) {
-          projectiles.push({
-            kind: "line",
-            owner,
-            profile: "big",
-            source: { q: source.q, r: source.r },
-            target: { q: target.q, r: target.r },
-            lineCells,
-            excludedCells,
-            width: bandDistanceFromTotalWidth(small.radius),
-            visualType: attackVisualType(owner, "big"),
-            createdAt: now,
-            impactAt: now + small.delay + index * 320,
-            delay: small.delay + index * 320,
-            damage: small.damage * 0.8 * ultimateDamageMultiplier(character.id),
-            stunChance,
-            stackStun: true
-          });
-        }
-        return small.delay + 960;
+        projectiles.push({
+          kind: "line",
+          owner,
+          profile: "big",
+          source: { q: source.q, r: source.r },
+          target: { q: target.q, r: target.r },
+          lineCells,
+          excludedCells,
+          width: bandDistanceFromTotalWidth(small.radius),
+          visualType: attackVisualType(owner, "big"),
+          createdAt: now,
+          impactAt: now + small.delay,
+          delay: small.delay,
+          damage: small.damage * 0.75 * ultimateDamageMultiplier(character.id),
+          stunChance,
+          stackStun: true
+        });
+        return small.delay;
       }
 
       if (character.id === "quetzal") {
         const trail = (owner === "player" ? snake : computerSnake).map(segment => ({ q: segment.q, r: segment.r }));
-        const duration = 2500;
+        const duration = 3000;
         const extensionDamageMultiplier = Math.max(0, Math.min(1, (stock.protein || 0) / maxFoodStock));
         const outwardWidth = extensionDamageMultiplier > 0 ? 1 : 0;
         hazards.push({
@@ -7695,12 +7811,10 @@
       }
 
       if (abilityId === "lobster") {
-        const big = attackStats(stock, "big");
         const lobsterUltimateRadius = small.radius * ultimateSetting(abilityId, "radiusMultiplier", 2.5);
         const volleys = character.id === "dragon" ? 1 : 2;
-        const damageScale = character.id === "dragon" ? 1.5 : 1;
-        const impactDamage = character.id === "dragon" ? small.damage * 0.5 : big.damage * damageScale;
-        const radiationTotalDamage = character.id === "dragon" ? small.damage * 1.5 : impactDamage;
+        const impactDamage = character.id === "dragon" ? small.damage * 0.5 : small.damage;
+        const radiationTotalDamage = character.id === "dragon" ? small.damage * 1.5 : small.damage * 0.25;
         const firstImpactDelay = character.id === "dragon" ? (small.delay / 1.5) * 2 : small.delay;
         const visualType = character.id === "dragon" ? "dragon-spirit-big" : attackVisualType(owner, "big", abilityId);
         for (let index = 0; index < volleys; index += 1) {
@@ -7800,13 +7914,9 @@
       if (!computerCanUseAttack()) return;
       const profile = chooseAiAttackProfile("computer", now);
       if (!profile) return;
-      const profileCooldownScale = profile === "small" ? aiSmallAttackThrottleScale : 1;
-      const cooldown = { novice: 6200, low: 6200, medium: 4700, high: 3400 }[computerDifficulty] * profileCooldownScale / attackSpeedMultiplier(computerStock);
-      if (now - lastComputerAttackMs < cooldown / (isPlayerAutoControlActive() ? computerBattleSpeed : 1)) return;
       const target = chooseAiAttackTarget("computer", profile, now);
       const options = profile === "big" ? { aimDirection: chooseAiAttackDirection("computer", target, now), aimOrigin: computerSnake[0] } : {};
       if (launchAttack("computer", target, now, profile, options)) {
-        lastComputerAttackMs = now;
         setStatus(profile === "small" ? "P2 施放小招。" : "P2 施放大招，2 秒後落地。");
       }
     }
@@ -7823,9 +7933,6 @@
       if (!isPlayerAutoControlActive() || isNoviceComputer()) return;
       const profile = chooseAiAttackProfile("player", now);
       if (!profile) return;
-      const profileCooldownScale = profile === "small" ? aiSmallAttackThrottleScale : 1;
-      const cooldown = { novice: 6200, low: 6200, medium: 4700, high: 3400 }[computerDifficulty] * profileCooldownScale / attackSpeedMultiplier(playerStock);
-      if (now - lastPlayerAttackMs < cooldown / computerBattleSpeed) return;
       const target = chooseAiAttackTarget("player", profile, now);
       const options = profile === "big" ? { aimDirection: chooseAiAttackDirection("player", target, now), aimOrigin: snake[0] } : {};
       launchAttack("player", target, now, profile, options);
@@ -8248,7 +8355,7 @@
         lastPlayerFoodAt = performance.now();
         playerFoodTargetKey = null;
         playerFoodTargetAt = 0;
-        playerHp = Math.min(snake.length, playerHp + 1);
+        playerHp = Math.min(snake.length * 2, playerHp + 1);
       } else if (!playerCollision) {
         snake.pop();
       }
@@ -8260,7 +8367,7 @@
         computerFoodTargetAt = 0;
         if (computerCanGrow()) {
           collectFood("computer", computerEatenFood);
-          computerHp = Math.min(computerSnake.length, computerHp + 1);
+          computerHp = Math.min(computerSnake.length * 2, computerHp + 1);
         } else {
           computerSnake.pop();
         }
@@ -8316,7 +8423,7 @@
         lastPlayerFoodAt = performance.now();
         playerFoodTargetKey = null;
         playerFoodTargetAt = 0;
-        playerHp = Math.min(snake.length, playerHp + 1);
+        playerHp = Math.min(snake.length * 2, playerHp + 1);
         foods = foods.filter(food => keyOf(food) !== nextKey);
         placeFoods(["player"]);
       } else {
@@ -8352,7 +8459,7 @@
         computerFoodTargetAt = 0;
         if (computerCanGrow()) {
           collectFood("computer", computerEatenFood);
-          computerHp = Math.min(computerSnake.length, computerHp + 1);
+          computerHp = Math.min(computerSnake.length * 2, computerHp + 1);
         } else {
           computerSnake.pop();
         }
@@ -8435,6 +8542,11 @@
         totalElapsedMs += delta * timeScale;
         lastFeedElapsedMs += delta * timeScale;
         lastTimerFrame = now;
+        if (totalElapsedMs >= maxMatchMs) {
+          totalElapsedMs = maxMatchMs;
+          endGame(true, true);
+          return;
+        }
       } else {
         lastTimerFrame = now;
       }
@@ -8492,6 +8604,7 @@
       const shake = boardShakeOffset(now);
       ctx.save();
       ctx.translate(shake.x, shake.y);
+      drawElementalBackdrop(now);
 
       cells.forEach(cell => {
         const { x, y } = axialToPixel(cell);
@@ -8621,6 +8734,292 @@
     function paletteColor(character, index) {
       const element = elementColorsFor(character);
       return element.palette[index % element.palette.length];
+    }
+
+    function clamp01(value) {
+      return Math.max(0, Math.min(1, value));
+    }
+
+    function stableUnitSeed(...parts) {
+      let hash = 2166136261;
+      parts.join("|").split("").forEach(char => {
+        hash ^= char.charCodeAt(0);
+        hash = Math.imul(hash, 16777619);
+      });
+      return (hash >>> 0) / 4294967295;
+    }
+
+    function spriteMotifsFor(character) {
+      if (character.id === "dragon") return ["cloud", "crystal", "rune", "scale"];
+      if (character.id === "sandworm") return ["dust", "crack", "stone", "spiral"];
+      if (character.id === "quetzal") return ["leaf", "petal", "vine", "feather"];
+      if (character.id === "moray") return ["water", "spark", "bubble", "current"];
+      if (character.id === "lobster") return ["flame", "ember", "palm", "smoke"];
+      if (character.id === "gu_king") return ["poison", "insect", "sigil", "miasma"];
+      return ["spark", "rune", "mist"];
+    }
+
+    function createElementalSprite(character, motif) {
+      const key = `${character.id}:${motif}`;
+      if (elementalSpriteCache.has(key)) return elementalSpriteCache.get(key);
+      const sprite = document.createElement("canvas");
+      const size = 96;
+      sprite.width = size;
+      sprite.height = size;
+      const sctx = sprite.getContext("2d");
+      const cx = size / 2;
+      const cy = size / 2;
+      const element = elementColorsFor(character);
+      const color = element.primary;
+      const secondary = element.secondary;
+      const glow = element.glow;
+      sctx.lineCap = "round";
+      sctx.lineJoin = "round";
+      const gradient = sctx.createRadialGradient(cx, cy, 2, cx, cy, size * 0.46);
+      gradient.addColorStop(0, hexToRgba(glow, 0.52));
+      gradient.addColorStop(0.52, hexToRgba(color, 0.22));
+      gradient.addColorStop(1, hexToRgba(element.deep, 0));
+      sctx.fillStyle = gradient;
+      sctx.beginPath();
+      sctx.arc(cx, cy, size * 0.45, 0, Math.PI * 2);
+      sctx.fill();
+
+      sctx.strokeStyle = hexToRgba(secondary, 0.9);
+      sctx.fillStyle = hexToRgba(color, 0.82);
+      sctx.lineWidth = 5;
+      if (motif === "leaf" || motif === "feather") {
+        sctx.beginPath();
+        sctx.moveTo(cx, cy + 34);
+        sctx.bezierCurveTo(cx - 34, cy + 8, cx - 24, cy - 32, cx, cy - 38);
+        sctx.bezierCurveTo(cx + 28, cy - 24, cx + 30, cy + 14, cx, cy + 34);
+        sctx.fill();
+        sctx.stroke();
+        sctx.strokeStyle = hexToRgba(glow, 0.78);
+        sctx.lineWidth = 3;
+        sctx.beginPath();
+        sctx.moveTo(cx, cy + 28);
+        sctx.lineTo(cx + 6, cy - 28);
+        sctx.stroke();
+      } else if (motif === "petal") {
+        for (let i = 0; i < 5; i += 1) {
+          const angle = -Math.PI / 2 + i * Math.PI * 2 / 5;
+          sctx.save();
+          sctx.translate(cx + Math.cos(angle) * 11, cy + Math.sin(angle) * 10);
+          sctx.rotate(angle);
+          sctx.beginPath();
+          sctx.ellipse(0, -16, 10, 25, 0, 0, Math.PI * 2);
+          sctx.fill();
+          sctx.stroke();
+          sctx.restore();
+        }
+      } else if (motif === "crystal" || motif === "stone" || motif === "scale") {
+        sctx.beginPath();
+        sctx.moveTo(cx, cy - 38);
+        sctx.lineTo(cx + 28, cy - 8);
+        sctx.lineTo(cx + 15, cy + 36);
+        sctx.lineTo(cx - 18, cy + 30);
+        sctx.lineTo(cx - 30, cy - 7);
+        sctx.closePath();
+        sctx.fill();
+        sctx.stroke();
+        sctx.strokeStyle = hexToRgba(glow, 0.78);
+        sctx.lineWidth = 3;
+        sctx.beginPath();
+        sctx.moveTo(cx, cy - 32);
+        sctx.lineTo(cx - 4, cy + 24);
+        sctx.lineTo(cx + 20, cy - 7);
+        sctx.stroke();
+      } else if (motif === "flame" || motif === "ember") {
+        sctx.fillStyle = hexToRgba(secondary, 0.86);
+        sctx.beginPath();
+        sctx.moveTo(cx, cy + 36);
+        sctx.bezierCurveTo(cx - 32, cy + 8, cx - 4, cy - 18, cx - 6, cy - 40);
+        sctx.bezierCurveTo(cx + 26, cy - 8, cx + 32, cy + 15, cx, cy + 36);
+        sctx.fill();
+        sctx.fillStyle = hexToRgba(glow, 0.76);
+        sctx.beginPath();
+        sctx.moveTo(cx + 2, cy + 24);
+        sctx.bezierCurveTo(cx - 10, cy + 4, cx + 7, cy - 8, cx + 6, cy - 26);
+        sctx.bezierCurveTo(cx + 22, cy - 2, cx + 20, cy + 14, cx + 2, cy + 24);
+        sctx.fill();
+      } else if (motif === "water" || motif === "current" || motif === "cloud" || motif === "smoke" || motif === "miasma") {
+        sctx.strokeStyle = hexToRgba(glow, 0.8);
+        sctx.lineWidth = 7;
+        for (let i = 0; i < 3; i += 1) {
+          const y = cy - 18 + i * 18;
+          sctx.beginPath();
+          sctx.moveTo(cx - 34, y);
+          sctx.bezierCurveTo(cx - 16, y - 18, cx + 10, y + 18, cx + 34, y - 2);
+          sctx.stroke();
+        }
+      } else if (motif === "crack" || motif === "spark") {
+        sctx.strokeStyle = hexToRgba(glow, 0.94);
+        sctx.lineWidth = 6;
+        sctx.beginPath();
+        sctx.moveTo(cx - 18, cy - 35);
+        sctx.lineTo(cx + 4, cy - 8);
+        sctx.lineTo(cx - 8, cy - 4);
+        sctx.lineTo(cx + 20, cy + 35);
+        sctx.stroke();
+      } else if (motif === "insect") {
+        sctx.fillStyle = hexToRgba(secondary, 0.84);
+        sctx.beginPath();
+        sctx.ellipse(cx, cy, 13, 24, 0, 0, Math.PI * 2);
+        sctx.fill();
+        sctx.stroke();
+        for (let i = -1; i <= 1; i += 1) {
+          sctx.beginPath();
+          sctx.moveTo(cx - 8, cy + i * 9);
+          sctx.lineTo(cx - 32, cy + i * 15);
+          sctx.moveTo(cx + 8, cy + i * 9);
+          sctx.lineTo(cx + 32, cy + i * 15);
+          sctx.stroke();
+        }
+      } else {
+        sctx.strokeStyle = hexToRgba(glow, 0.84);
+        sctx.lineWidth = 5;
+        sctx.beginPath();
+        sctx.arc(cx, cy, 28, 0, Math.PI * 2);
+        sctx.stroke();
+        sctx.beginPath();
+        for (let i = 0; i < 6; i += 1) {
+          const angle = i * Math.PI * 2 / 6;
+          const px = cx + Math.cos(angle) * 31;
+          const py = cy + Math.sin(angle) * 31;
+          if (i === 0) sctx.moveTo(px, py);
+          else sctx.lineTo(px, py);
+        }
+        sctx.closePath();
+        sctx.stroke();
+      }
+      elementalSpriteCache.set(key, sprite);
+      return sprite;
+    }
+
+    function drawElementSprite(x, y, size, angle, character, motif, alpha = 1, blend = "lighter") {
+      const sprite = createElementalSprite(character, motif);
+      ctx.save();
+      ctx.globalAlpha *= alpha;
+      ctx.globalCompositeOperation = blend;
+      ctx.translate(x, y);
+      ctx.rotate(angle);
+      ctx.drawImage(sprite, -size / 2, -size / 2, size, size);
+      ctx.restore();
+    }
+
+    function drawElementTextureParticles(cellsForEffect, character, progress, alpha = 1, options = {}) {
+      if (!cellsForEffect?.length) return;
+      const motifs = spriteMotifsFor(character);
+      const perCell = options.perCell ?? 1.25;
+      const maxParticles = options.maxParticles ?? 96;
+      const count = Math.min(maxParticles, Math.max(8, Math.floor(cellsForEffect.length * perCell)));
+      const seed = options.seed ?? 0;
+      for (let i = 0; i < count; i += 1) {
+        const cell = cellsForEffect[Math.floor(stableUnitSeed(seed, i, "cell") * cellsForEffect.length) % cellsForEffect.length];
+        const base = axialToPixel(cell);
+        const jitterRadius = cellSize * (options.jitter ?? 0.72);
+        const jitterAngle = stableUnitSeed(seed, i, "angle") * Math.PI * 2;
+        const drift = (progress - 0.5) * cellSize * (options.drift ?? 0.34);
+        const x = base.x + Math.cos(jitterAngle) * jitterRadius * stableUnitSeed(seed, i, "jx");
+        const y = base.y + Math.sin(jitterAngle) * jitterRadius * stableUnitSeed(seed, i, "jy") - drift;
+        const motif = motifs[(i + Math.floor(stableUnitSeed(seed, i, "motif") * motifs.length)) % motifs.length];
+        const pulse = 0.76 + waveValue(progress, stableUnitSeed(seed, i, "pulse")) * 0.42;
+        const size = cellSize * (options.size ?? 0.86) * (0.68 + stableUnitSeed(seed, i, "size") * 0.72) * pulse;
+        const fade = options.persistent ? 1 : Math.sin(clamp01(progress) * Math.PI);
+        drawElementSprite(x, y, size, jitterAngle + progress * Math.PI * (options.spin ?? 0.7), character, motif, alpha * fade * (0.34 + stableUnitSeed(seed, i, "alpha") * 0.5));
+      }
+    }
+
+    function drawElementCellTextureWash(cellsForEffect, character, progress, alpha = 1, options = {}) {
+      if (!cellsForEffect?.length) return;
+      const element = elementColorsFor(character);
+      ctx.save();
+      ctx.globalCompositeOperation = options.blend || "lighter";
+      cellsForEffect.forEach((cell, index) => {
+        const { x, y } = axialToPixel(cell);
+        const local = (progress + index * 0.037) % 1;
+        const radiusPx = cellSize * (options.radiusScale ?? 0.96);
+        const gradient = ctx.createRadialGradient(x, y, radiusPx * 0.08, x, y, radiusPx);
+        gradient.addColorStop(0, hexToRgba(element.glow, 0.2 * alpha));
+        gradient.addColorStop(0.46, hexToRgba(element.primary, 0.15 * alpha));
+        gradient.addColorStop(1, hexToRgba(element.deep, 0));
+        hexPath(x, y, cellSize * 0.96);
+        ctx.fillStyle = gradient;
+        ctx.fill();
+        if (index % 2 === 0) {
+          const motif = spriteMotifsFor(character)[stableVariantIndex(cell, index + Math.floor(local * 100), spriteMotifsFor(character).length)];
+          const angle = local * Math.PI * 2 + index;
+          drawElementSprite(x, y, cellSize * 1.24, angle, character, motif, alpha * 0.2, "source-over");
+        }
+      });
+      ctx.restore();
+      drawElementTextureParticles(cellsForEffect, character, progress, alpha, options);
+    }
+
+    function drawElementCircleTexture(x, y, radiusPx, progress, character, alpha = 1, options = {}) {
+      const motifs = spriteMotifsFor(character);
+      const count = Math.min(options.maxParticles ?? 120, Math.max(16, Math.floor(radiusPx / Math.max(1, cellSize) * (options.density ?? 18))));
+      const element = elementColorsFor(character);
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      const gradient = ctx.createRadialGradient(x, y, radiusPx * 0.05, x, y, radiusPx * 1.12);
+      gradient.addColorStop(0, hexToRgba(element.hot, 0.14 * alpha));
+      gradient.addColorStop(0.45, hexToRgba(element.primary, 0.1 * alpha));
+      gradient.addColorStop(1, hexToRgba(element.deep, 0));
+      ctx.beginPath();
+      ctx.arc(x, y, radiusPx * 1.12, 0, Math.PI * 2);
+      ctx.fillStyle = gradient;
+      ctx.fill();
+      ctx.restore();
+      for (let i = 0; i < count; i += 1) {
+        const seed = options.seed ?? character.id;
+        const angle = stableUnitSeed(seed, i, "circle-angle") * Math.PI * 2 + progress * Math.PI * (options.spin ?? 0.9);
+        const distance = radiusPx * Math.sqrt(stableUnitSeed(seed, i, "circle-distance")) * (0.18 + 0.92 * clamp01(progress + 0.12));
+        const orbit = angle + Math.sin(progress * Math.PI * 2 + i) * 0.22;
+        const px = x + Math.cos(orbit) * distance;
+        const py = y + Math.sin(orbit) * distance * (options.ellipse ?? 0.82);
+        const motif = motifs[i % motifs.length];
+        const size = cellSize * (options.size ?? 1.05) * (0.72 + stableUnitSeed(seed, i, "circle-size") * 0.88);
+        const fade = Math.sin(clamp01(progress) * Math.PI);
+        drawElementSprite(px, py, size, orbit + progress * Math.PI * 2, character, motif, alpha * fade * (0.32 + stableUnitSeed(seed, i, "circle-alpha") * 0.58));
+      }
+    }
+
+    function drawElementalBackdrop(now) {
+      if (!characters.length || !cells.length) return;
+      const activeCharacters = [characterFor("player"), characterFor("computer")].filter(Boolean);
+      const rect = playArea.getBoundingClientRect();
+      const maxRadius = Math.max(rect.width, rect.height);
+      activeCharacters.forEach((character, ownerIndex) => {
+        const element = elementColorsFor(character);
+        const phase = now / (ownerIndex ? 6800 : 7600);
+        ctx.save();
+        ctx.globalCompositeOperation = "lighter";
+        const gradient = ctx.createRadialGradient(
+          center.x + Math.cos(phase) * maxRadius * 0.16,
+          center.y + Math.sin(phase * 0.7) * maxRadius * 0.12,
+          maxRadius * 0.05,
+          center.x,
+          center.y,
+          maxRadius * 0.58
+        );
+        gradient.addColorStop(0, hexToRgba(element.glow, ownerIndex ? 0.055 : 0.07));
+        gradient.addColorStop(0.55, hexToRgba(element.primary, ownerIndex ? 0.04 : 0.05));
+        gradient.addColorStop(1, hexToRgba(element.deep, 0));
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, rect.width, rect.height);
+        ctx.restore();
+
+        const motifs = spriteMotifsFor(character);
+        for (let i = 0; i < 18; i += 1) {
+          const angle = stableUnitSeed(character.id, i, "backdrop-angle") * Math.PI * 2 + phase * (ownerIndex ? -0.45 : 0.38);
+          const distance = maxRadius * (0.12 + stableUnitSeed(character.id, i, "backdrop-distance") * 0.36);
+          const x = center.x + Math.cos(angle) * distance;
+          const y = center.y + Math.sin(angle * 1.17) * distance * 0.64;
+          const size = cellSize * (1.1 + stableUnitSeed(character.id, i, "backdrop-size") * 1.7);
+          drawElementSprite(x, y, size, angle, character, motifs[i % motifs.length], 0.055, "source-over");
+        }
+      });
     }
 
     function drawElementAura(x, y, radiusPx, progress, character, alpha = 1) {
@@ -11242,11 +11641,24 @@
         }
         if (projectile.kind === "line") {
           const progress = Math.min(1, Math.max(0, (now - projectile.createdAt) / (projectile.delay || baseAttackDelayMs)));
+          const lineTextureCells = cellsNearCells(projectile.lineCells, projectile.width, projectile.excludedCells);
           if ((projectile.visualType || "").startsWith("moray")) {
+            drawElementCellTextureWash(lineTextureCells, blastCharacter, progress, 0.58, {
+              seed: `${projectile.visualType}:${projectile.createdAt}`,
+              maxParticles: 64,
+              perCell: 1.6,
+              size: 0.9
+            });
             drawRailgunLine(projectile, progress, 0.64 + progress * 0.28, blastCharacter);
             return;
           }
           if ((projectile.visualType || "").startsWith("dragon")) {
+            drawElementCellTextureWash(lineTextureCells, blastCharacter, progress, 0.52, {
+              seed: `${projectile.visualType}:${projectile.createdAt}`,
+              maxParticles: 70,
+              perCell: 1.4,
+              size: 0.98
+            });
             const start = axialToPixel(projectile.source || projectile.lineCells[0]);
             const end = axialToPixel(projectile.target || projectile.lineCells[projectile.lineCells.length - 1]);
             const x = start.x + (end.x - start.x) * progress;
@@ -11257,7 +11669,13 @@
             return;
           }
           const alpha = 0.3 + progress * 0.48;
-          cellsNearCells(projectile.lineCells, projectile.width, projectile.excludedCells).forEach(cell => {
+          drawElementCellTextureWash(lineTextureCells, blastCharacter, progress, 0.5, {
+            seed: `${projectile.visualType}:${projectile.createdAt}`,
+            maxParticles: 78,
+            perCell: 1.45,
+            size: 0.86
+          });
+          lineTextureCells.forEach(cell => {
             const { x, y } = axialToPixel(cell);
             drawElementAura(x, y, cellSize * 0.7, progress + cell.q * 0.02, blastCharacter, 0.22);
             hexPath(x, y, cellSize * 0.88);
@@ -11343,6 +11761,13 @@
         if (hazard.kind === "radiation") {
           const { x, y } = axialToPixel(hazard.target);
           const radiusPx = cellSize * Math.max(1, hazard.radius || hazard.width || 1) * 1.52;
+          drawElementCircleTexture(x, y, radiusPx, progress, blastCharacter, 0.46, {
+            seed: `${hazard.visualType}:${hazard.startedAt}`,
+            density: 14,
+            size: 0.86,
+            maxParticles: 82,
+            spin: 0.34
+          });
           if ((hazard.visualType || "").startsWith("dragon-spirit")) {
             drawFrostMagicCircle(x, y, radiusPx, progress, blastCharacter, 0.92);
           } else if ((hazard.visualType || "").startsWith("lobster")) {
@@ -11352,7 +11777,17 @@
           }
           return;
         }
-        cellsNearCells(hazard.cells, hazard.width, hazard.visualExcludedCells || [], hazard.minDistance || 0).forEach(cell => {
+        const hazardCells = cellsNearCells(hazard.cells, hazard.width, hazard.visualExcludedCells || [], hazard.minDistance || 0);
+        drawElementCellTextureWash(hazardCells, blastCharacter, progress, 0.58 * (1 - progress * 0.18), {
+          seed: `${hazard.visualType}:${hazard.startedAt}`,
+          persistent: true,
+          maxParticles: 110,
+          perCell: 1.35,
+          size: 0.92,
+          drift: 0.18,
+          spin: 0.32
+        });
+        hazardCells.forEach(cell => {
           const { x, y } = axialToPixel(cell);
           if ((hazard.visualType || "").startsWith("quetzal")) {
             const variant = stableVariantIndex(cell, hazard.startedAt || 0, 64);
@@ -11371,6 +11806,13 @@
     }
 
     function drawLineBlast(blast, progress, alpha, character) {
+      const textureCells = cellsNearCells(blast.lineCells, blast.width, blast.excludedCells);
+      drawElementCellTextureWash(textureCells, character, progress, 0.62 * alpha, {
+        seed: `${blast.visualType}:${blast.startedAt}`,
+        maxParticles: 110,
+        perCell: 1.65,
+        size: 0.95
+      });
       if ((blast.visualType || "").startsWith("moray")) {
         drawRailgunLine(blast, progress, alpha, character);
         return;
@@ -11388,7 +11830,7 @@
         }
         return;
       }
-      cellsNearCells(blast.lineCells, blast.width, blast.excludedCells).forEach(cell => {
+      textureCells.forEach(cell => {
         const { x, y } = axialToPixel(cell);
         drawElementAura(x, y, cellSize * 0.86, progress + cell.r * 0.04, character, 0.32 * alpha);
         hexPath(x, y, cellSize * 0.94);
@@ -11404,6 +11846,14 @@
       const isBig = isUltimateVisualType(type);
       const element = elementColorsFor(character);
       const visualRadius = radiusPx * (isBig ? 1.18 : 1);
+      drawElementCircleTexture(x, y, visualRadius, progress, character, alpha * (isBig ? 0.78 : 0.42), {
+        seed: `${type}:${Math.round(x)}:${Math.round(y)}`,
+        density: isBig ? 22 : 12,
+        size: isBig ? 1.12 : 0.72,
+        maxParticles: isBig ? 130 : 48,
+        spin: type?.startsWith("gu_king") ? 1.5 : 0.86,
+        ellipse: type?.startsWith("sandworm") ? 0.58 : 0.82
+      });
       if (!isBig) {
         drawSmallImpactFrame(x, y, visualRadius, progress, character, alpha);
         return;
@@ -12456,11 +12906,23 @@
     characterStage.addEventListener("pointerleave", clearModuleHold);
 
     winnerPortrait.addEventListener("pointerdown", event => {
-      if (!event.target.closest("[data-portrait-select]")) return;
+      const swipeZone = event.target.closest("[data-portrait-swipe-owner]");
+      if (!swipeZone || !event.target.closest("[data-portrait-select]")) return;
       portraitSwipeStartX = event.clientX;
+      portraitSwipeOwner = swipeZone.dataset.portraitSwipeOwner === "computer" ? "computer" : "player";
+      portraitIntroDidSwipe = false;
     });
 
     winnerPortrait.addEventListener("click", event => {
+      if (portraitIntroDidSwipe) {
+        portraitIntroDidSwipe = false;
+        return;
+      }
+      const portraitShift = event.target.closest("[data-portrait-shift][data-portrait-owner]");
+      if (portraitShift) {
+        applyPortraitCharacter(portraitShift.dataset.portraitOwner, Number(portraitShift.dataset.portraitShift));
+        return;
+      }
       const resultPortrait = event.target.closest("[data-result-owner]");
       if (resultPortrait) {
         openGameOverCharacterSelect(resultPortrait.dataset.resultOwner);
@@ -12493,13 +12955,17 @@
     winnerPortrait.addEventListener("pointerup", event => {
       if (portraitSwipeStartX === null) return;
       const deltaX = event.clientX - portraitSwipeStartX;
+      const owner = portraitSwipeOwner;
       portraitSwipeStartX = null;
+      portraitSwipeOwner = null;
       if (Math.abs(deltaX) < 42) return;
-      applySelectedPortraitCharacter(deltaX < 0 ? 1 : -1);
+      portraitIntroDidSwipe = true;
+      applyPortraitCharacter(owner, deltaX < 0 ? 1 : -1);
     });
 
     winnerPortrait.addEventListener("pointercancel", () => {
       portraitSwipeStartX = null;
+      portraitSwipeOwner = null;
     });
 
     portraitLightboxClose.addEventListener("click", closePortraitLightbox);
