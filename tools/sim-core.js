@@ -511,6 +511,11 @@ function perceivedSnakeFor(state, observer, target) {
   return (target.lastVisibleSnake && target.lastVisibleSnake.length ? target.lastVisibleSnake : target.snake).map(segment => ({ ...segment }));
 }
 
+function perceivedDirectionFor(state, target) {
+  if (!isUnderground(target, state.now)) return target.dir;
+  return Number.isInteger(target.lastVisibleDir) ? target.lastVisibleDir : target.dir;
+}
+
 function isDebuffed(fighter, now) {
   return now < fighter.stunUntil || now < fighter.slowUntil || fighter.collisionParalysisMs > 0;
 }
@@ -518,8 +523,11 @@ function isDebuffed(fighter, now) {
 function hasResourcePressure(fighter, balance) {
   const stockCap = balance.resources.maxFoodStock;
   const nearStockCap = FOOD_TYPES.some(type => (fighter.stock[type] || 0) >= stockCap - 2);
-  const ammoFull = fighter.ammo >= balance.resources.maxAmmo && fighter.ammoCharge >= balance.resources.attackNeedTotal - 1;
-  return nearStockCap || ammoFull;
+  return nearStockCap || hasFullBombsAndNearFullEnergy(fighter, balance);
+}
+
+function hasFullBombsAndNearFullEnergy(fighter, balance) {
+  return fighter.ammo >= balance.resources.maxAmmo && fighter.ammoCharge >= balance.resources.attackNeedTotal - 1;
 }
 
 function strongestVisibleDamage(state, attacker, defender, balance, profile) {
@@ -548,7 +556,7 @@ function hasRoleBigOpportunity(state, fighter, opponent, balance) {
   if (profile.role === "control") return distance <= 5 || state.foods.some(food => hexDistance(food, perceived[0]) <= 2);
   if (profile.role === "status") return isDebuffed(opponent, state.now) || strongestVisibleDamage(state, fighter, opponent, balance, "small") > 0;
   if (profile.role === "melee") return distance <= 2;
-  if (profile.role === "burst") return hasResourcePressure(fighter, balance) || fighter.ammo >= balance.resources.maxAmmo;
+  if (profile.role === "burst") return hasResourcePressure(fighter, balance);
   return distance <= 3;
 }
 
@@ -573,7 +581,7 @@ function castTimingScore(state, fighter, opponent, balance, profile) {
   const distance = hexDistance(fighter.snake[0], perceived[0]);
   let score = 0;
   if (isLethalAttack(state, fighter, opponent, balance, profile)) score += weights.lethal * 3;
-  if (fighter.ammo >= balance.resources.maxAmmo || fighter.ammoCharge >= balance.resources.attackNeedTotal - 1) score += weights.nearFullEnergy;
+  if (hasFullBombsAndNearFullEnergy(fighter, balance)) score += weights.nearFullEnergy;
   if (isDebuffed(opponent, state.now)) score += weights.opponentDebuffed;
   if (opponentAlmostReady(opponent, balance)) score += weights.opponentAlmostReady;
   if (distance <= 3) score += weights.nearOpponent * (4 - distance) / 3;
@@ -657,12 +665,12 @@ function filterUnsafeFoodTargets(state, fighter, opponent, foods) {
   const occupied = movementOccupiedSet(state, fighter, opponent);
   const withRace = foods.map(food => ({
     food,
-    raceGap: wrappedDistance(state, opponent.snake[0], food) - wrappedDistance(state, fighter.snake[0], food),
+    opponentAdvantage: wrappedDistance(state, fighter.snake[0], food) - wrappedDistance(state, opponent.snake[0], food),
     reachable: reachableSpace(state, food, occupied, DEAD_END_MIN_SPACE)
   }));
-  const maxPositiveGap = Math.max(0, ...withRace.map(row => row.raceGap));
+  const maxOpponentAdvantage = Math.max(0, ...withRace.map(row => row.opponentAdvantage));
   const filtered = withRace
-    .filter(row => !(maxPositiveGap > 0 && row.raceGap === maxPositiveGap))
+    .filter(row => !(maxOpponentAdvantage > 0 && row.opponentAdvantage === maxOpponentAdvantage))
     .filter(row => row.reachable >= DEAD_END_MIN_SPACE)
     .map(row => row.food);
   return filtered.length ? filtered : foods;
@@ -671,6 +679,7 @@ function filterUnsafeFoodTargets(state, fighter, opponent, foods) {
 function directionToward(state, fighter, opponent, target) {
   const occupied = movementOccupiedSet(state, fighter, opponent);
   const perceivedOpponent = perceivedSnakeFor(state, fighter, opponent);
+  const opponentThreat = nextWrappedCell(perceivedOpponent[0], perceivedDirectionFor(state, opponent), state.radius);
   const options = [];
   DIRECTIONS.forEach((_, direction) => {
     if (!canTurn(fighter.snake, fighter.dir, direction)) return;
@@ -679,6 +688,7 @@ function directionToward(state, fighter, opponent, target) {
     const selfBlocked = fighter.snake.slice(0, -1).some(segment => keyOf(segment) === key);
     const opponentBlocked = perceivedOpponent.some(segment => keyOf(segment) === key);
     const blocked = selfBlocked || opponentBlocked || occupied.has(key);
+    const headThreat = keyOf(opponentThreat) === key;
     const reachable = reachableSpace(state, next, occupied, 10);
     const wallSpace = state.cells.filter(cell => hexDistance(cell, next) <= 1 && !occupied.has(keyOf(cell))).length;
     const expectedDamage = expectedDamageAt(state, fighter, next);
@@ -690,6 +700,7 @@ function directionToward(state, fighter, opponent, target) {
     options.push({
       direction,
       blocked,
+      headThreat,
       deadEnd,
       lethalThreat,
       risk,
@@ -700,8 +711,8 @@ function directionToward(state, fighter, opponent, target) {
     });
   });
   const viable = options.length ? options : [{ direction: fighter.dir, score: 0, blocked: false }];
-  const hardSafe = viable.filter(option => !option.blocked && !option.deadEnd && !option.lethalThreat);
-  const safe = hardSafe.length ? hardSafe : viable.filter(option => !option.blocked && !option.lethalThreat && option.risk < 20);
+  const hardSafe = viable.filter(option => !option.blocked && !option.headThreat && !option.deadEnd && !option.lethalThreat);
+  const safe = hardSafe.length ? hardSafe : viable.filter(option => !option.blocked && !option.headThreat && !option.lethalThreat && option.risk < 20);
   const candidates = safe.length ? safe : viable;
   candidates.sort((a, b) => a.score - b.score || a.risk - b.risk);
   if (state.rng.next() > fighter.policy.pathPrecision) return state.rng.item(viable).direction;
@@ -852,6 +863,12 @@ function chooseAiAttackProfile(state, fighter, opponent, balance) {
     .sort((a, b) => attackResourceCost(a, balance) - attackResourceCost(b, balance))[0];
   if (lethal) return lethal;
   if (fighter.policy.aiDifficulty === "low" && shouldUseBigAttack(state, fighter, opponent, balance)) return "big";
+  if (fighter.policy.aiDifficulty !== "high") {
+    if (shouldUseBigAttack(state, fighter, opponent, balance)) return "big";
+    if (canAttack(fighter, "small", balance)) return "small";
+    if (fighter.policy.aiDifficulty === "low" && canAttack(fighter, "big", balance)) return "big";
+    return null;
+  }
 
   const available = ["small", "big"].filter(profile => canAttack(fighter, profile, balance));
   if (!available.length) return null;
@@ -861,12 +878,15 @@ function chooseAiAttackProfile(state, fighter, opponent, balance) {
     const timingScore = castTimingScore(state, fighter, opponent, balance, profile);
     const legacyBoost = profile === "big" && shouldUseBigAttack(state, fighter, opponent, balance) ? 1.25 : 0;
     return { profile, score: allocationScore + timingScore + legacyBoost };
-  }).sort((a, b) => b.score - a.score);
+  });
 
-  const best = scored[0];
+  const bestScore = Math.max(...scored.map(row => row.score));
+  const bestOptions = scored.filter(row => row.score === bestScore);
+  const best = bestOptions.length > 1 ? state.rng.item(bestOptions) : bestOptions[0];
+  const tiedSmall = bestOptions.some(row => row.profile === "small");
   if (best.profile === "big") {
     if (fighter.policy.skillStrategy === "saveBurst") return best.score >= 2.1 ? "big" : null;
-    return best.score >= 1.8 ? "big" : canAttack(fighter, "small", balance) ? "small" : null;
+    return best.score >= (tiedSmall ? 0.9 : 1.8) ? "big" : canAttack(fighter, "small", balance) ? "small" : null;
   }
   if (best.score >= 0.9 || fighter.policy.aiDifficulty === "low") return best.profile;
   if (fighter.policy.aiDifficulty === "low" && canAttack(fighter, "big", balance)) return "big";
@@ -1392,6 +1412,19 @@ function moveFighters(state, movers, now, balance) {
     if (otherPlan && otherPlan.nextKey === keyOf(fighter.snake[0]) && plan.nextKey === keyOf(opponent.snake[0])) opponentHit = true;
     plan.collision = collisionSeverity(selfHit, opponentHit);
   });
+
+  for (let pass = 0; pass < 2; pass += 1) {
+    movers.forEach(owner => {
+      const fighter = state.fighters[owner];
+      const opponent = owner === "player" ? computer : player;
+      const plan = plans[owner];
+      const otherPlan = plans[opponent.owner];
+      if (!plan || plan.collision || !otherPlan?.collision) return;
+      if (opponent.snake.some(segment => keyOf(segment) === plan.nextKey)) {
+        plan.collision = collisionSeverity(false, true);
+      }
+    });
+  }
 
   movers.forEach(owner => {
     const fighter = state.fighters[owner];

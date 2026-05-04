@@ -75,7 +75,7 @@
     .topbar {
       min-height: 74px;
       display: grid;
-      grid-template-columns: minmax(280px, 1fr) minmax(360px, 0.95fr);
+      grid-template-columns: minmax(220px, 1fr) minmax(410px, 1fr);
       gap: 14px;
       align-items: stretch;
       padding: 12px 14px;
@@ -112,7 +112,7 @@
 
     .metrics {
       display: grid;
-      grid-template-columns: minmax(150px, 0.85fr) minmax(0, 1.15fr);
+      grid-template-columns: minmax(190px, 0.95fr) minmax(0, 1.05fr);
       gap: 8px;
       padding: 8px;
       align-items: stretch;
@@ -140,7 +140,7 @@
 
     .player-metric {
       display: grid;
-      grid-template-columns: auto minmax(0, 1fr) auto;
+      grid-template-columns: auto minmax(max-content, 1fr) auto;
       gap: 8px;
       align-items: center;
       text-align: left;
@@ -184,12 +184,27 @@
       white-space: nowrap;
     }
 
+    .player-metric strong {
+      overflow: visible;
+      text-overflow: clip;
+    }
+
     .match-metrics .metric {
       padding: 7px 8px;
     }
 
     .match-metrics .metric strong {
       font-size: 1rem;
+    }
+
+    @media (min-width: 901px) and (max-width: 1080px) {
+      .topbar {
+        grid-template-columns: 1fr;
+      }
+
+      .metrics {
+        grid-template-columns: minmax(210px, 0.82fr) minmax(0, 1.18fr);
+      }
     }
 
     .canvas-wrap {
@@ -6796,8 +6811,11 @@
     function hasResourcePressure(owner) {
       const stock = ownerStock(owner);
       const nearStockCap = foodTypes.some(type => stock[type.id] >= maxFoodStock - 2);
-      const ammoFull = ammoFor(owner) >= maxAmmo && ammoChargeFor(owner) >= attackNeedTotal - 1;
-      return nearStockCap || ammoFull;
+      return nearStockCap || hasFullBombsAndNearFullEnergy(owner);
+    }
+
+    function hasFullBombsAndNearFullEnergy(owner) {
+      return ammoFor(owner) >= maxAmmo && ammoChargeFor(owner) >= attackNeedTotal - 1;
     }
 
     function strongestVisibleDamage(owner, profile, now) {
@@ -6831,7 +6849,7 @@
       if (role === "control") return distance <= 5 || foods.some(food => hexDistance(food, perceivedSnakeFor(owner, opponent, now)[0]) <= 2);
       if (role === "status") return hasOpponentDebuff(owner, now) || strongestVisibleDamage(owner, "small", now) > 0;
       if (role === "melee") return distance <= 2;
-      if (role === "burst") return hasResourcePressure(owner) || ammoFor(owner) >= maxAmmo;
+      if (role === "burst") return hasResourcePressure(owner);
       return distance <= 3;
     }
 
@@ -6871,7 +6889,7 @@
       const distance = hexDistance(ownerHead(owner), perceivedSnakeFor(owner, opponent, now)[0]);
       let score = 0;
       if (isLethalAttack(owner, profile, now)) score += weights.lethal * 3;
-      if (ammoFor(owner) >= maxAmmo || ammoChargeFor(owner) >= attackNeedTotal - 1) score += weights.nearFullEnergy;
+      if (hasFullBombsAndNearFullEnergy(owner)) score += weights.nearFullEnergy;
       if (hasOpponentDebuff(owner, now)) score += weights.opponentDebuffed;
       if (opponentAlmostReady(owner)) score += weights.opponentAlmostReady;
       if (distance <= 3) score += weights.nearOpponent * (4 - distance) / 3;
@@ -6896,9 +6914,12 @@
           const timingScore = castTimingScore(owner, profile, now);
           const legacyBoost = profile === "big" && shouldUseBigAttack(owner, now) ? 1.25 : 0;
           return { profile, score: allocationScore + timingScore + legacyBoost };
-        }).sort((a, b) => b.score - a.score);
-        const best = scored[0];
-        if (best.profile === "big") return best.score >= 1.8 ? "big" : canAttack(owner, "small") ? "small" : null;
+        });
+        const bestScore = Math.max(...scored.map(row => row.score));
+        const bestOptions = scored.filter(row => row.score === bestScore);
+        const best = bestOptions.length > 1 ? randomItem(bestOptions) : bestOptions[0];
+        const tiedSmall = bestOptions.some(row => row.profile === "small");
+        if (best.profile === "big") return best.score >= (tiedSmall ? 0.9 : 1.8) ? "big" : canAttack(owner, "small") ? "small" : null;
         return best.score >= 0.9 ? best.profile : null;
       }
 
@@ -7140,12 +7161,12 @@
       const occupied = movementOccupiedSet(owner, opponent, now);
       const withRace = candidateFoods.map(food => ({
         food,
-        raceGap: wrappedDistance(ownerHead(opponent), food) - wrappedDistance(ownerHead(owner), food),
+        opponentAdvantage: wrappedDistance(ownerHead(owner), food) - wrappedDistance(ownerHead(opponent), food),
         reachable: reachableSpace(food, occupied, deadEndMinSpace)
       }));
-      const maxPositiveGap = Math.max(0, ...withRace.map(row => row.raceGap));
+      const maxOpponentAdvantage = Math.max(0, ...withRace.map(row => row.opponentAdvantage));
       const filtered = withRace
-        .filter(row => !(maxPositiveGap > 0 && row.raceGap === maxPositiveGap))
+        .filter(row => !(maxOpponentAdvantage > 0 && row.opponentAdvantage === maxOpponentAdvantage))
         .filter(row => row.reachable >= deadEndMinSpace)
         .map(row => row.food);
       return filtered.length ? filtered : candidateFoods;
@@ -7166,9 +7187,10 @@
         if (!canOwnerTurn(owner, candidate)) return;
         const next = nextWrappedCell(ownSnake[0], candidate);
         const nextKey = keyOf(next);
-        if (occupied.has(nextKey)) return;
 
-        const danger = keyOf(opponentThreat) === nextKey ? 20 : 0;
+        const blocked = occupied.has(nextKey);
+        const headThreat = keyOf(opponentThreat) === nextKey;
+        const danger = headThreat ? 20 : 0;
         const wallPressure = cells.filter(cell => hexDistance(cell, next) <= 1 && !occupied.has(keyOf(cell))).length;
         const pathDistance = shortestFoodDistance(next, occupied);
         const targetDistance = wrappedDistance(next, target);
@@ -7179,9 +7201,11 @@
         const deadEnd = reachableSpace(next, occupied, deadEndMinSpace) < deadEndMinSpace;
         const lethalThreat = expectedDamage >= ownerHp(owner);
         const weights = aiStrategyWeightsFor(owner).movement;
-        const risk = danger + trapRisk * 4 + expectedDamage;
+        const risk = (blocked ? 100 : 0) + danger + trapRisk * 4 + expectedDamage;
         options.push({
           direction: candidate,
+          blocked,
+          headThreat,
           deadEnd,
           lethalThreat,
           pathValue: Number.isFinite(pathDistance) ? pathDistance : nearestFoodDistance(next),
@@ -7194,8 +7218,8 @@
 
       if (!options.length) return currentDirection;
 
-      const hardSafe = options.filter(option => !option.deadEnd && !option.lethalThreat);
-      const rankedOptions = hardSafe.length ? hardSafe : options.filter(option => !option.lethalThreat);
+      const hardSafe = options.filter(option => !option.blocked && !option.headThreat && !option.deadEnd && !option.lethalThreat);
+      const rankedOptions = hardSafe.length ? hardSafe : options.filter(option => !option.blocked && !option.headThreat && !option.lethalThreat);
       const sortableOptions = rankedOptions.length ? rankedOptions : options;
       sortableOptions.sort((a, b) => {
         if (computerDifficulty === "high") return a.tacticalValue - b.tacticalValue;
@@ -7975,8 +7999,16 @@
         computerOpponentHit = true;
       }
 
-      const playerCollision = collisionSeverity(playerSelfHit, playerOpponentHit);
-      const computerCollision = collisionSeverity(computerSelfHit, computerOpponentHit);
+      let playerCollision = collisionSeverity(playerSelfHit, playerOpponentHit);
+      let computerCollision = collisionSeverity(computerSelfHit, computerOpponentHit);
+      if (computerCollision && !playerCollision && computerSnake.some(segment => keyOf(segment) === nextKey)) {
+        playerOpponentHit = true;
+        playerCollision = collisionSeverity(playerSelfHit, playerOpponentHit);
+      }
+      if (playerCollision && !computerCollision && snake.some(segment => keyOf(segment) === computerNextKey)) {
+        computerOpponentHit = true;
+        computerCollision = collisionSeverity(computerSelfHit, computerOpponentHit);
+      }
       const playerParalysisLimitReached = playerCollision && applyCollisionPenalty("player", playerCollision);
       const computerParalysisLimitReached = computerCollision && applyCollisionPenalty("computer", computerCollision);
       if (playerCollision || computerCollision) {

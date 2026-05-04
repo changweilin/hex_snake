@@ -335,12 +335,35 @@ test("movement hard rules avoid lethal incoming attack cells", () => {
   assert.notEqual(directionToward(state, computer, player, lethalCell), 2);
 });
 
-test("food hard rules skip the largest positive race-gap food", () => {
+test("movement hard rules avoid predicted head-on collision cells", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("dragon"),
+    computerCharacter: characterById.get("moray"),
+    seed: "avoid-head-on-collision",
+    computerModel: {
+      aiDifficulty: "high",
+      pathPrecision: 1,
+      strategyWeights: {
+        movement: { safePath: 0, leastDamage: 0, fastestArrival: 3 }
+      }
+    }
+  });
+  const computer = state.fighters.computer;
+  const player = state.fighters.player;
+  computer.snake = [{ q: 0, r: 0 }];
+  computer.dir = 2;
+  player.snake = [{ q: 2, r: 0 }];
+  player.dir = 5;
+  assert.notEqual(directionToward(state, computer, player, player.snake[0]), 2);
+});
+
+test("food hard rules keep nearby food when fighter has race advantage", () => {
   const state = createMatchState({
     balance,
     playerCharacter: characterById.get("dragon"),
     computerCharacter: characterById.get("quetzal"),
-    seed: "skip-race-gap-food",
+    seed: "keep-nearby-food",
     computerModel: { aiDifficulty: "medium", pathPrecision: 1 }
   });
   const computer = state.fighters.computer;
@@ -350,6 +373,26 @@ test("food hard rules skip the largest positive race-gap food", () => {
   state.foods = [
     { q: 1, r: 0, types: ["fiber"] },
     { q: 2, r: 0, types: ["fiber"] }
+  ];
+  computer.policy.strategyWeights.food = { fastestArrival: 3, ownDeficit: 0, opponentDeficit: 0, ownPreferred: 0, opponentPreferred: 0 };
+  assert.deepEqual(chooseFoodTarget(state, computer, player), state.foods[0]);
+});
+
+test("food hard rules skip food when opponent has the largest race advantage", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("dragon"),
+    computerCharacter: characterById.get("quetzal"),
+    seed: "skip-opponent-race-advantage-food",
+    computerModel: { aiDifficulty: "medium", pathPrecision: 1 }
+  });
+  const computer = state.fighters.computer;
+  const player = state.fighters.player;
+  computer.snake[0] = { q: 0, r: 0 };
+  player.snake[0] = { q: 3, r: 0 };
+  state.foods = [
+    { q: 2, r: 0, types: ["fiber"] },
+    { q: 0, r: 1, types: ["fiber"] }
   ];
   computer.policy.strategyWeights.food = { fastestArrival: 3, ownDeficit: 0, opponentDeficit: 0, ownPreferred: 0, opponentPreferred: 0 };
   assert.deepEqual(chooseFoodTarget(state, computer, player), state.foods[1]);
@@ -377,7 +420,7 @@ test("weighted food strategy can prefer arrival speed or character preference", 
     ownPreferred: 0,
     opponentPreferred: 0
   };
-  assert.deepEqual(chooseFoodTarget(state, state.fighters.computer, state.fighters.player), state.foods[1]);
+  assert.deepEqual(chooseFoodTarget(state, state.fighters.computer, state.fighters.player), state.foods[0]);
 
   state.fighters.computer.policy.strategyWeights.food = {
     fastestArrival: 0,
@@ -476,7 +519,7 @@ test("wrapped distance and stale food target switching affect food choices", () 
   const fighter = state.fighters.computer;
   const opponent = state.fighters.player;
   fighter.snake[0] = { q: 0, r: -state.radius };
-  opponent.snake[0] = { q: 0, r: state.radius };
+  opponent.snake[0] = { q: 5, r: -5 };
   state.foods = [
     { q: 0, r: state.radius, types: ["fiber"] },
     { q: 2, r: -2, types: ["fiber"] }
@@ -512,6 +555,78 @@ test("lethal attack opportunity overrides small or big skill preferences", () =>
   const player = state.fighters.player;
   player.hp = 1;
   assert.equal(chooseAttackProfile(state, computer, player, balance), "small");
+});
+
+test("near-full resource timing requires both bombs and energy to be near full", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("dragon"),
+    computerCharacter: characterById.get("moray"),
+    seed: "near-full-resource-timing",
+    computerModel: { aiDifficulty: "high", pathPrecision: 1, aimPrecision: 1 }
+  });
+  const computer = state.fighters.computer;
+  const player = state.fighters.player;
+  computer.stock = { protein: 1, fat: 1, fiber: 1, carb: 1 };
+  computer.policy.strategyWeights.skillAllocation = { preferSmall: 0, preferBig: 0 };
+  computer.policy.strategyWeights.castTiming = {
+    lethal: 0,
+    nearFullEnergy: 1,
+    opponentDebuffed: 0,
+    opponentAlmostReady: 0,
+    nearOpponent: 0,
+    farOpponent: 0
+  };
+  player.hp = 99;
+
+  computer.ammo = balance.resources.maxAmmo;
+  computer.ammoCharge = 0;
+  assert.equal(chooseAttackProfile(state, computer, player, balance), null);
+
+  computer.ammo = 0;
+  computer.ammoCharge = balance.resources.attackNeedTotal - 1;
+  assert.equal(chooseAttackProfile(state, computer, player, balance), null);
+
+  computer.ammo = balance.resources.maxAmmo;
+  computer.ammoCharge = balance.resources.attackNeedTotal - 1;
+  assert.equal(chooseAttackProfile(state, computer, player, balance), "small");
+});
+
+test("high difficulty randomly breaks tied small and big attack scores", () => {
+  const makeTiedState = picker => {
+    const state = createMatchState({
+      balance,
+      playerCharacter: characterById.get("dragon"),
+      computerCharacter: characterById.get("gu_king"),
+      seed: "tied-attack-score",
+      initialBombs: balance.attack.bigAttackBombCost,
+      initialStock: Object.fromEntries(FOOD_TYPES.map(type => [type, 6])),
+      computerModel: { aiDifficulty: "high", pathPrecision: 1, aimPrecision: 1 }
+    });
+    const computer = state.fighters.computer;
+    const player = state.fighters.player;
+    computer.snake = [{ q: 0, r: 0 }];
+    player.snake = [{ q: 5, r: -5 }];
+    player.hp = 100;
+    state.foods = [];
+    state.rng.item = picker;
+    computer.policy.strategyWeights.skillAllocation = { preferSmall: 1, preferBig: 1 };
+    computer.policy.strategyWeights.castTiming = {
+      lethal: 0,
+      nearFullEnergy: 0,
+      opponentDebuffed: 0,
+      opponentAlmostReady: 0,
+      nearOpponent: 0,
+      farOpponent: 0
+    };
+    return { state, computer, player };
+  };
+
+  const smallTie = makeTiedState(items => items[0]);
+  assert.equal(chooseAttackProfile(smallTie.state, smallTie.computer, smallTie.player, balance), "small");
+
+  const bigTie = makeTiedState(items => items[items.length - 1]);
+  assert.equal(chooseAttackProfile(bigTie.state, bigTie.computer, bigTie.player, balance), "big");
 });
 
 test("auto battle attack decisions are owner-mirrored under equal conditions", () => {
