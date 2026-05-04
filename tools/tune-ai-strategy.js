@@ -955,8 +955,13 @@ function runSearch(options = {}) {
 
 function main() {
   const args = parseArgs(process.argv.slice(2));
+  const selectedCharacters = args.character
+    ? loadCharacters(root).filter(character => character.id === String(args.character))
+    : undefined;
+  if (args.character && !selectedCharacters.length) throw new Error(`Unknown character id: ${args.character}`);
   const result = runSearch({
     algorithm: algorithmArg(args),
+    characters: selectedCharacters,
     seed: stringArg(args, "seed", `ai-strategy-${stamp()}`),
     durationHours: numberArg(args, "duration-hours", DEFAULT_DURATION_HOURS),
     mirrorRuns: numberArg(args, "mirror-runs", 1000),
