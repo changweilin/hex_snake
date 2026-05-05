@@ -1965,18 +1965,11 @@
       display: block;
       padding: 4px 8px;
       border: 1px solid color-mix(in srgb, var(--fighter-line), transparent 34%);
-      border-radius: 8px;
+      border-radius: 999px;
       background: color-mix(in srgb, var(--fighter-color), transparent 88%);
       color: color-mix(in srgb, var(--ink), var(--fighter-accent) 18%);
       font-size: 0.78rem;
       font-weight: 800;
-      line-height: 1.4;
-    }
-
-    .portrait-moves b {
-      display: block;
-      margin-bottom: 2px;
-      color: var(--ink);
     }
 
     @keyframes module-swim {
@@ -4763,15 +4756,12 @@
     }
 
     function characterStoryMarkup(character) {
-      const guide = moveGuideFor(character);
-      return `
-        <div class="portrait-moves" aria-label="${character.name}招式操作與食補效果">
-          <span><b>小招操作</b>${guide.small}</span>
-          <span><b>大招操作</b>${guide.big}</span>
-          <span><b>食補效果</b>${character.detail}</span>
-        </div>
-        <p class="portrait-motto">${guide.tip}</p>
-      `;
+      const motto = character.motto ? `<p class="portrait-motto">「${character.motto}」</p>` : "";
+      const moves = character.smallMove && character.bigMove
+        ? `<div class="portrait-moves" aria-label="${character.name}招式與食補效果"><span>小招：${character.smallMove}</span><span>大招：${character.bigMove}</span><span>食補效果：${character.detail}</span></div>`
+        : "";
+      const story = (character.story || []).map(paragraph => `<p>${paragraph}</p>`).join("");
+      return `${motto}${moves}${story}`;
     }
 
     function foodIconMarkup(typeOrId, extraClass = "") {
