@@ -34,9 +34,12 @@ const DEFAULT_RL_SAMPLES = 16;
 const DEFAULT_RL_RUNS = 1000;
 const DEFAULT_CROSS_RUNS = 1000;
 const DEFAULT_MIN_QUALIFIED = 8;
+const DEFAULT_MIN_QUALIFIED_PER_CHARACTER = 0;
 const DEFAULT_DIVERSITY_DISTANCE = 0.18;
 const DEFAULT_BASELINE_DISTANCE = 0.08;
 const DEFAULT_CYCLES = 1;
+const DEFAULT_GA_DURATION_HOURS = 0;
+const DEFAULT_RL_DURATION_HOURS = 0;
 const DEFAULT_RL_SIGMA = 0.42;
 const DEFAULT_RL_TEMPERATURE = 0.08;
 
@@ -364,6 +367,19 @@ function selectDiverse(rows, minDistance, limit = Infinity) {
   return selected;
 }
 
+function diverseQualifiedByCharacter(rows, characters, minDistance) {
+  return Object.fromEntries(characters.map(character => [
+    character.id,
+    selectDiverse(qualifiedRows(rows).filter(row => row.characterId === character.id), minDistance)
+  ]));
+}
+
+function perCharacterQualifiedComplete(rows, characters, minDistance, target) {
+  if (!target) return false;
+  const byCharacter = diverseQualifiedByCharacter(rows, characters, minDistance);
+  return characters.every(character => (byCharacter[character.id] || []).length >= target);
+}
+
 function nextGaPopulation(character, ranked, rng, size, eliteCount, round) {
   const elites = ranked.slice(0, Math.max(1, Math.min(eliteCount, ranked.length)))
     .map(row => makeStrategy(row.strategyId, row.strategyWeights));
@@ -386,14 +402,26 @@ function qualifiedRows(rows) {
   return rows.filter(row => row.passedGate && row.novelFromBaseline);
 }
 
-function runGaSearch({ balance, characters, seed, runs, rounds, populationSize, eliteCount, diversityDistance, baselineDistance, minQualified, outputDir }) {
+function runGaSearch({ balance, characters, seed, runs, rounds, populationSize, eliteCount, diversityDistance, baselineDistance, minQualified, minQualifiedPerCharacter, durationHours, outputDir }) {
   const rng = createRng(`${seed}:ga`);
   const populations = new Map(characters.map(character => [character.id, seedPopulation(character, rng, populationSize)]));
   const allRows = [];
   const history = [];
   const bestByCharacter = new Map();
+  const deadlineMs = durationHours ? Date.now() + durationHours * 60 * 60 * 1000 : null;
+  let roundIndex = 0;
+  let stopReason = "rounds";
 
-  for (let roundIndex = 1; roundIndex <= rounds; roundIndex += 1) {
+  while (roundIndex < rounds || (deadlineMs && Date.now() < deadlineMs)) {
+    if (deadlineMs && Date.now() >= deadlineMs) {
+      stopReason = "duration";
+      break;
+    }
+    if (minQualifiedPerCharacter && perCharacterQualifiedComplete(allRows, characters, diversityDistance, minQualifiedPerCharacter)) {
+      stopReason = "per-character-qualified";
+      break;
+    }
+    roundIndex += 1;
     characters.forEach(character => {
       const ranked = populations.get(character.id)
         .map(candidate => evaluateAgainstBasic({
@@ -420,24 +448,29 @@ function runGaSearch({ balance, characters, seed, runs, rounds, populationSize, 
       populations.set(character.id, nextGaPopulation(character, ranked, rng, populationSize, eliteCount, roundIndex));
     });
     const qualified = selectDiverse(qualifiedRows(allRows), diversityDistance);
-    console.log(`GA round ${roundIndex}/${rounds}: ${qualified.length} diverse qualified strategies`);
-    if (qualified.length >= minQualified && roundIndex >= Math.min(3, rounds)) {
-      // Keep running configured rounds for reproducible final rankings.
-    }
+    const perCharacter = diverseQualifiedByCharacter(allRows, characters, diversityDistance);
+    const perCharacterText = characters.map(character => `${character.id}:${perCharacter[character.id].length}`).join(" ");
+    console.log(`GA round ${roundIndex}${deadlineMs ? "" : `/${rounds}`}: ${qualified.length} diverse qualified strategies (${perCharacterText})`);
   }
 
   const diverseQualified = selectDiverse(qualifiedRows(allRows), diversityDistance);
+  const perCharacterQualified = diverseQualifiedByCharacter(allRows, characters, diversityDistance);
   writeJson(path.join(outputDir, "ga-history.json"), history);
   writeJson(path.join(outputDir, "ga-qualified.json"), {
     gate: "winRate = wins / (wins + losses + draws) > 0.5",
     diversityDistance,
     baselineDistance,
+    durationHours,
     minQualified,
+    minQualifiedPerCharacter,
+    stopReason,
+    rounds: roundIndex,
     qualifiedCount: diverseQualified.length,
+    perCharacterQualified: Object.fromEntries(Object.entries(perCharacterQualified).map(([characterId, rows]) => [characterId, rows.length])),
     strategies: diverseQualified
   });
   writeCsv(path.join(outputDir, "ga-qualified.csv"), rowsToCsv(diverseQualified));
-  return { allRows, diverseQualified, bestByCharacter, history };
+  return { allRows, diverseQualified, perCharacterQualified, bestByCharacter, history, stopReason, rounds: roundIndex };
 }
 
 function gaussian(rng) {
@@ -481,11 +514,12 @@ function sampleAroundVector(prefix, center, rng, sigma, count) {
   });
 }
 
-function runBanditRl({ balance, characters, gaRows, bestByCharacter, seed, runs, rounds, samples, sigma, temperature, outputDir }) {
+function runBanditRl({ balance, characters, gaRows, bestByCharacter, seed, runs, rounds, samples, sigma, temperature, durationHours, outputDir }) {
   const rng = createRng(`${seed}:rl`);
-  const bestStrategies = [];
   const history = [];
-  characters.forEach(character => {
+  const deadlineMs = durationHours ? Date.now() + durationHours * 60 * 60 * 1000 : null;
+  let stopReason = "rounds";
+  const states = new Map(characters.map(character => {
     const characterSeeds = gaRows
       .filter(row => row.characterId === character.id)
       .sort(compareRows)
@@ -497,14 +531,30 @@ function runBanditRl({ balance, characters, gaRows, bestByCharacter, seed, runs,
       strategyWeights: roleAdjustedBaseWeights(character),
       reward: 0
     }];
-    let center = averageVector(seedRows);
-    let currentSigma = sigma;
-    let best = null;
+    return [character.id, {
+      center: averageVector(seedRows),
+      sigma,
+      best: null,
+      rounds: 0
+    }];
+  }));
 
-    for (let roundIndex = 1; roundIndex <= rounds; roundIndex += 1) {
+  let roundIndex = 0;
+  while (roundIndex < rounds || (deadlineMs && Date.now() < deadlineMs)) {
+    if (deadlineMs && Date.now() >= deadlineMs && roundIndex >= rounds) {
+      stopReason = "duration";
+      break;
+    }
+    roundIndex += 1;
+    for (const character of characters) {
+      if (deadlineMs && Date.now() >= deadlineMs && roundIndex > rounds) {
+        stopReason = "duration";
+        break;
+      }
+      const state = states.get(character.id);
       const candidates = [
-        makeStrategy(`${character.id}-rl${roundIndex}-center`, vectorToWeights(center)),
-        ...sampleAroundVector(`${character.id}-rl${roundIndex}`, center, rng, currentSigma, samples)
+        makeStrategy(`${character.id}-rl${roundIndex}-center`, vectorToWeights(state.center)),
+        ...sampleAroundVector(`${character.id}-rl${roundIndex}`, state.center, rng, state.sigma, samples)
       ];
       const ranked = candidates.map(candidate => evaluateAgainstBasic({
         balance,
@@ -515,31 +565,48 @@ function runBanditRl({ balance, characters, gaRows, bestByCharacter, seed, runs,
         phase: `rl-round-${roundIndex}`
       })).map(row => annotateNovelty(row, 0)).sort(compareRows);
       writeJson(path.join(outputDir, "rl", `${character.id}-round-${roundIndex}.json`), ranked);
-      if (!best || compareRows(ranked[0], best) < 0) best = ranked[0];
+      if (!state.best || compareRows(ranked[0], state.best) < 0) state.best = ranked[0];
       const updateRows = ranked.slice(0, Math.max(2, Math.ceil(ranked.length / 2)));
-      center = weightedMean(updateRows, softmaxWeights(updateRows, temperature));
+      state.center = weightedMean(updateRows, softmaxWeights(updateRows, temperature));
       const improved = ranked[0].reward >= updateRows[Math.min(updateRows.length - 1, 1)].reward;
-      currentSigma = clamp(currentSigma * (improved ? 0.92 : 1.08), 0.035, 0.9);
+      state.sigma = clamp(state.sigma * (improved ? 0.92 : 1.08), 0.035, 0.9);
+      state.rounds = roundIndex;
       history.push({
         characterId: character.id,
         round: roundIndex,
         bestStrategyId: ranked[0].strategyId,
         bestWinRate: ranked[0].winRate,
         bestReward: ranked[0].reward,
-        sigma: round(currentSigma, 4)
+        sigma: round(state.sigma, 4)
       });
-      console.log(`RL ${character.id} round ${roundIndex}/${rounds}: winRate ${(ranked[0].winRate * 100).toFixed(1)}%`);
+      console.log(`RL ${character.id} round ${roundIndex}${deadlineMs ? "" : `/${rounds}`}: winRate ${(ranked[0].winRate * 100).toFixed(1)}%`);
     }
-    bestStrategies.push({
+  }
+
+  const bestStrategies = characters.map(character => {
+    const state = states.get(character.id);
+    const best = state.best || annotateNovelty(evaluateAgainstBasic({
+      balance,
+      character,
+      candidate: makeStrategy(`${character.id}-rl-fallback`, vectorToWeights(state.center)),
+      runs,
+      seed,
+      phase: "rl-fallback"
+    }), 0);
+    return {
       ...best,
       characterName: character.name,
       phase: "rl-best"
-    });
+    };
   });
   writeJson(path.join(outputDir, "rl-history.json"), history);
-  writeJson(path.join(outputDir, "rl-best-strategies.json"), bestStrategies);
+  writeJson(path.join(outputDir, "rl-best-strategies.json"), {
+    durationHours,
+    stopReason,
+    strategies: bestStrategies
+  });
   writeCsv(path.join(outputDir, "rl-best-strategies.csv"), rowsToCsv(bestStrategies));
-  return { bestStrategies, history };
+  return { bestStrategies, history, stopReason };
 }
 
 function buildStrategyFile(rows, characters, source) {
@@ -744,8 +811,11 @@ function runOptimization(options = {}) {
     rlRuns: Math.max(1, Math.floor(options.rlRuns ?? DEFAULT_RL_RUNS)),
     crossRuns: Math.max(1, Math.floor(options.crossRuns ?? DEFAULT_CROSS_RUNS)),
     minQualified: Math.max(1, Math.floor(options.minQualified ?? DEFAULT_MIN_QUALIFIED)),
+    minQualifiedPerCharacter: Math.max(0, Math.floor(options.minQualifiedPerCharacter ?? DEFAULT_MIN_QUALIFIED_PER_CHARACTER)),
     diversityDistance: Number(options.diversityDistance ?? DEFAULT_DIVERSITY_DISTANCE),
     baselineDistance: Number(options.baselineDistance ?? DEFAULT_BASELINE_DISTANCE),
+    gaDurationHours: Number(options.gaDurationHours ?? DEFAULT_GA_DURATION_HOURS),
+    rlDurationHours: Number(options.rlDurationHours ?? DEFAULT_RL_DURATION_HOURS),
     rlSigma: Number(options.rlSigma ?? DEFAULT_RL_SIGMA),
     rlTemperature: Number(options.rlTemperature ?? DEFAULT_RL_TEMPERATURE),
     characterIds: characters.map(character => character.id)
@@ -764,6 +834,8 @@ function runOptimization(options = {}) {
     diversityDistance: config.diversityDistance,
     baselineDistance: config.baselineDistance,
     minQualified: config.minQualified,
+    minQualifiedPerCharacter: config.minQualifiedPerCharacter,
+    durationHours: config.gaDurationHours,
     outputDir
   });
   const gaRowsForRl = qualifiedRows(ga.allRows);
@@ -778,6 +850,7 @@ function runOptimization(options = {}) {
     samples: config.rlSamples,
     sigma: config.rlSigma,
     temperature: config.rlTemperature,
+    durationHours: config.rlDurationHours,
     outputDir
   });
 
@@ -815,10 +888,16 @@ function runOptimization(options = {}) {
     characters
   });
   fs.writeFileSync(path.join(outputDir, "comparison.md"), `${markdown}\n`, "utf8");
+  const perCharacterComplete = config.minQualifiedPerCharacter
+    ? Object.values(ga.perCharacterQualified).every(rows => rows.length >= config.minQualifiedPerCharacter)
+    : true;
   const manifest = {
     generatedAt: new Date().toISOString(),
-    status: ga.diverseQualified.length >= config.minQualified ? "completed" : "completed-insufficient-qualified",
+    status: ga.diverseQualified.length >= config.minQualified && perCharacterComplete ? "completed" : "completed-insufficient-qualified",
     config,
+    gaStopReason: ga.stopReason,
+    rlStopReason: rl.stopReason,
+    perCharacterQualified: Object.fromEntries(Object.entries(ga.perCharacterQualified).map(([characterId, rows]) => [characterId, rows.length])),
     outputs: {
       directory: outputDir,
       gaQualified: path.join(outputDir, "ga-qualified.json"),
@@ -935,8 +1014,11 @@ function main() {
     rlRuns: integerArg(args, "rl-runs", DEFAULT_RL_RUNS),
     crossRuns: integerArg(args, "cross-runs", DEFAULT_CROSS_RUNS),
     minQualified: integerArg(args, "min-qualified", DEFAULT_MIN_QUALIFIED),
+    minQualifiedPerCharacter: integerArg(args, "min-qualified-per-character", DEFAULT_MIN_QUALIFIED_PER_CHARACTER),
     diversityDistance: numberArg(args, "diversity-distance", DEFAULT_DIVERSITY_DISTANCE),
     baselineDistance: numberArg(args, "baseline-distance", DEFAULT_BASELINE_DISTANCE),
+    gaDurationHours: numberArg(args, "ga-duration-hours", DEFAULT_GA_DURATION_HOURS),
+    rlDurationHours: numberArg(args, "rl-duration-hours", DEFAULT_RL_DURATION_HOURS),
     rlSigma: numberArg(args, "rl-sigma", DEFAULT_RL_SIGMA),
     rlTemperature: numberArg(args, "rl-temperature", DEFAULT_RL_TEMPERATURE)
   };

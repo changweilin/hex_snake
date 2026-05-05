@@ -3906,6 +3906,7 @@
     let targetMaxHex = 6;
     let maxMatchMs = 240000;
     let gameOverRestartDelayMs = 700;
+    const gameOverContinuousVisualMaxWaitMs = 1000;
     const smallAttackDelayScale = 0.31;
     const smallAttackCooldownScale = 0.29;
     const sandwormRevealBeforeImpactMs = 200;
@@ -4155,6 +4156,7 @@
     let relayRestartTimer = null;
     let gameOverRelayStartOptions = null;
     let gameOverSettlementPending = false;
+    let gameOverContinuousVisualDeadlineAt = 0;
     let gameOver = false;
     let lastPlayerStep = 0;
     let lastComputerStep = 0;
@@ -4211,6 +4213,7 @@
     let portraitSwipeStartY = null;
     let portraitSwipeOwner = null;
     let portraitInfoSwipeStartX = null;
+    let portraitInfoSwipeStartY = null;
     let portraitIntroDidSwipe = false;
     let portraitLightboxDidSwipe = false;
     const portraitVariantModes = ["human", "beast", "chibi"];
@@ -6713,6 +6716,7 @@
     function clearGameOverSettlementTimer() {
       gameOverSettlementPending = false;
       gameOverRelayStartOptions = null;
+      gameOverContinuousVisualDeadlineAt = 0;
     }
 
     function resetRelayScore() {
@@ -8368,10 +8372,21 @@
         triggerBoardShake(hazard.visualType || attackVisualType(hazard.owner, "big"), now);
         hazard.shaken = true;
       });
-      return projectiles.some(projectile => now < projectile.impactAt)
-        || blasts.some(blast => now <= blast.endAt)
-        || hazards.some(hazard => now <= hazard.endAt)
-        || now < boardShakeUntil;
+      const projectilesActive = projectiles.some(projectile => now < projectile.impactAt);
+      const blastsActive = blasts.some(blast => now <= blast.endAt);
+      const continuousSkillVisualsActive = hazards.some(hazard => now <= hazard.endAt);
+      const boardShakeActive = now < boardShakeUntil;
+      if (
+        continuousSkillVisualsActive
+        && gameOverContinuousVisualDeadlineAt
+        && now >= gameOverContinuousVisualDeadlineAt
+        && !projectilesActive
+        && !blastsActive
+        && !boardShakeActive
+      ) {
+        return false;
+      }
+      return projectilesActive || blastsActive || continuousSkillVisualsActive || boardShakeActive;
     }
 
     function showGameOverSettlement() {
@@ -8618,6 +8633,7 @@
       playerAutoMode = false;
       computerBattleManualOverride = false;
       gameOver = true;
+      gameOverContinuousVisualDeadlineAt = gameOverAt + gameOverContinuousVisualMaxWaitMs;
       updateAutoBattleControls();
       restartUnlockAt = gameOverAt + gameOverRestartDelayMs;
       setSettingsLocked(false);
@@ -13422,12 +13438,14 @@
       const swipeZone = event.target.closest("[data-portrait-swipe-owner]");
       if (swipeZone && (event.target.closest("[data-portrait-select]") || event.target.closest(".intro-avatar-gate"))) {
         portraitSwipeStartX = event.clientX;
+        portraitSwipeStartY = event.clientY;
         portraitSwipeOwner = swipeZone.dataset.portraitSwipeOwner === "computer" ? "computer" : "player";
         portraitIntroDidSwipe = false;
         return;
       }
       if (event.target.closest(".portrait-copy") && event.target.closest("[data-portrait-select]")) {
         portraitInfoSwipeStartX = event.clientX;
+        portraitInfoSwipeStartY = event.clientY;
         portraitIntroDidSwipe = false;
       }
     });
@@ -13474,9 +13492,19 @@
     winnerPortrait.addEventListener("pointerup", event => {
       if (portraitSwipeStartX !== null) {
         const deltaX = event.clientX - portraitSwipeStartX;
+        const deltaY = event.clientY - portraitSwipeStartY;
         const owner = portraitSwipeOwner;
         portraitSwipeStartX = null;
+        portraitSwipeStartY = null;
         portraitSwipeOwner = null;
+        if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) >= 42) {
+          portraitIntroDidSwipe = true;
+          setTimeout(() => {
+            portraitIntroDidSwipe = false;
+          }, 160);
+          shiftPortraitVariantMode(deltaY < 0 ? -1 : 1);
+          return;
+        }
         if (Math.abs(deltaX) < 42) return;
         portraitIntroDidSwipe = true;
         setTimeout(() => {
@@ -13487,7 +13515,17 @@
       }
       if (portraitInfoSwipeStartX !== null) {
         const deltaX = event.clientX - portraitInfoSwipeStartX;
+        const deltaY = event.clientY - portraitInfoSwipeStartY;
         portraitInfoSwipeStartX = null;
+        portraitInfoSwipeStartY = null;
+        if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) >= 42) {
+          portraitIntroDidSwipe = true;
+          setTimeout(() => {
+            portraitIntroDidSwipe = false;
+          }, 160);
+          shiftPortraitVariantMode(deltaY < 0 ? -1 : 1);
+          return;
+        }
         if (Math.abs(deltaX) < 42) return;
         portraitIntroDidSwipe = true;
         setTimeout(() => {
@@ -13499,8 +13537,10 @@
 
     winnerPortrait.addEventListener("pointercancel", () => {
       portraitSwipeStartX = null;
+      portraitSwipeStartY = null;
       portraitSwipeOwner = null;
       portraitInfoSwipeStartX = null;
+      portraitInfoSwipeStartY = null;
     });
 
     portraitLightboxClose.addEventListener("click", closePortraitLightbox);
