@@ -7519,12 +7519,16 @@
       return chooseAiDirection(owner);
     }
 
+    function setDirectionButtonHighlight(direction = null) {
+      hexDirButtons.forEach(button => button.classList.toggle("active", Number(button.dataset.dir) === direction));
+    }
+
     function setDirection(newDir, options = {}) {
       if (!Number.isInteger(newDir) || newDir < 0 || newDir > 5) return;
       if (canTurn(newDir)) {
         const changed = nextDir !== newDir;
         nextDir = newDir;
-        hexDirButtons.forEach(button => button.classList.toggle("active", Number(button.dataset.dir) === newDir));
+        setDirectionButtonHighlight(newDir);
         if (changed) triggerTouchFeedback(options.feedbackEvent, options.feedbackStrength ?? 6);
         updateHud();
       }
@@ -8037,7 +8041,11 @@
       const profile = chooseAiAttackProfile("computer", now);
       if (!profile) return;
       const target = chooseAiAttackTarget("computer", profile, now);
-      const options = profile === "big" ? { aimDirection: chooseAiAttackDirection("computer", target, now), aimOrigin: computerSnake[0] } : {};
+      const computerCharacter = characterFor("computer");
+      const options = profile === "big" ? {
+        aimDirection: chooseAiAttackDirection("computer", target, now),
+        aimOrigin: computerCharacter.id === "moray" ? target : computerSnake[0]
+      } : {};
       if (launchAttack("computer", target, now, profile, options)) {
         setStatus(profile === "small" ? "P2 施放小招。" : "P2 施放大招，2 秒後落地。");
       }
@@ -8056,7 +8064,11 @@
       const profile = chooseAiAttackProfile("player", now);
       if (!profile) return;
       const target = chooseAiAttackTarget("player", profile, now);
-      const options = profile === "big" ? { aimDirection: chooseAiAttackDirection("player", target, now), aimOrigin: snake[0] } : {};
+      const playerCharacter = characterFor("player");
+      const options = profile === "big" ? {
+        aimDirection: chooseAiAttackDirection("player", target, now),
+        aimOrigin: playerCharacter.id === "moray" ? target : snake[0]
+      } : {};
       if (launchAttack("player", target, now, profile, options)) flashAttackButton(profile, 150);
     }
 
@@ -8407,7 +8419,7 @@
     function step(headCollisionOrder = "simultaneous") {
       if (isPlayerAutoControlActive()) {
         nextDir = chooseAutoDirection("player");
-        hexDirButtons.forEach(button => button.classList.toggle("active", Number(button.dataset.dir) === nextDir));
+        setDirectionButtonHighlight(nextDir);
       }
       dir = nextDir;
       computerDir = chooseComputerDirection();
@@ -8515,7 +8527,7 @@
     function stepPlayerOnly() {
       if (isPlayerAutoControlActive()) {
         nextDir = chooseAutoDirection("player");
-        hexDirButtons.forEach(button => button.classList.toggle("active", Number(button.dataset.dir) === nextDir));
+        setDirectionButtonHighlight(nextDir);
       }
       dir = nextDir;
       const next = nextWrappedCell(snake[0], dir);
@@ -13034,6 +13046,7 @@
       movePointerId = null;
       moveStickEngaged = false;
       joyZone.querySelector(".joystick").classList.remove("locked");
+      setDirectionButtonHighlight(null);
       stick.classList.add("is-rebounding");
       stick.style.transform = "translate(0, 0)";
       if (moveStickReboundTimer) clearTimeout(moveStickReboundTimer);
