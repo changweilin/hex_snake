@@ -146,6 +146,47 @@
       text-align: left;
     }
 
+    .health-readout {
+      min-width: 0;
+      display: grid;
+      gap: 4px;
+    }
+
+    .health-bar {
+      position: relative;
+      width: 100%;
+      height: 7px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(7, 10, 16, 0.62);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.36);
+    }
+
+    .health-bar-fill {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, color-mix(in srgb, var(--health-color), black 12%), var(--health-color));
+      box-shadow: 0 0 10px color-mix(in srgb, var(--health-color), transparent 58%);
+      transform: scaleX(var(--health-ratio, 1));
+      transform-origin: left center;
+      transition: transform 140ms ease, background 140ms ease, box-shadow 140ms ease;
+    }
+
+    .player-metric[data-owner="player"] {
+      --health-color: var(--p1-color);
+    }
+
+    .player-metric[data-owner="computer"] {
+      --health-color: var(--p2-color);
+    }
+
+    .player-metric.is-low-health {
+      --health-color: var(--danger);
+    }
+
     .player-speed {
       color: var(--ink);
       font-size: 1rem;
@@ -2885,6 +2926,14 @@
         text-align: center;
       }
 
+      .health-readout {
+        gap: 2px;
+      }
+
+      .health-bar {
+        height: 5px;
+      }
+
       .player-speed {
         font-size: clamp(0.72rem, 3.1vw, 0.95rem);
       }
@@ -3486,8 +3535,8 @@
         </div>
         <div class="metrics" aria-label="P1 P2 狀態">
           <div class="player-status-list" aria-label="P1 P2 狀態">
-            <div class="metric player-metric"><span><span class="owner-name is-p1">P1</span></span><strong id="score">0</strong><span class="player-speed" id="playerSpeed">1x</span></div>
-            <div class="metric player-metric"><span><span class="owner-name is-p2">P2</span></span><strong id="computerScore">0</strong><span class="player-speed" id="computerSpeed">1x</span></div>
+            <div class="metric player-metric" data-owner="player"><span><span class="owner-name is-p1">P1</span></span><div class="health-readout"><strong id="score">0</strong><div class="health-bar" id="playerHealthBar" role="meter" aria-label="P1 HP" aria-valuemin="0"><span class="health-bar-fill" id="playerHealthFill"></span></div></div><span class="player-speed" id="playerSpeed">1x</span></div>
+            <div class="metric player-metric" data-owner="computer"><span><span class="owner-name is-p2">P2</span></span><div class="health-readout"><strong id="computerScore">0</strong><div class="health-bar" id="computerHealthBar" role="meter" aria-label="P2 HP" aria-valuemin="0"><span class="health-bar-fill" id="computerHealthFill"></span></div></div><span class="player-speed" id="computerSpeed">1x</span></div>
           </div>
           <div class="match-metrics" aria-label="對戰資訊">
             <div class="metric"><span>最佳</span><strong id="best">0</strong></div>
@@ -3841,6 +3890,8 @@
     const statusEl = document.querySelector("#status");
     const scoreEl = document.querySelector("#score");
     const computerScoreEl = document.querySelector("#computerScore");
+    const playerHealthBar = document.querySelector("#playerHealthBar");
+    const computerHealthBar = document.querySelector("#computerHealthBar");
     const bestEl = document.querySelector("#best");
     const playerSpeedEl = document.querySelector("#playerSpeed");
     const computerSpeedEl = document.querySelector("#computerSpeed");
@@ -6749,9 +6800,26 @@
       });
     }
 
+    function updateHealthBar(owner, hp, maxHp) {
+      const bar = owner === "player" ? playerHealthBar : computerHealthBar;
+      if (!bar) return;
+      const safeMax = Math.max(1, maxHp);
+      const safeHp = Math.max(0, Math.min(safeMax, hp));
+      const ratio = safeHp / safeMax;
+      bar.style.setProperty("--health-ratio", ratio.toFixed(4));
+      bar.setAttribute("aria-valuenow", String(Math.ceil(safeHp)));
+      bar.setAttribute("aria-valuemax", String(safeMax));
+      bar.setAttribute("aria-valuetext", `${Math.ceil(safeHp)}/${safeMax}`);
+      bar.closest(".player-metric")?.classList.toggle("is-low-health", ratio <= 0.3);
+    }
+
     function updateHud() {
-      scoreEl.textContent = `HP ${Math.max(0, Math.ceil(playerHp))}/${snake.length * 2}`;
-      computerScoreEl.textContent = `HP ${Math.max(0, Math.ceil(computerHp))}/${computerSnake.length * 2}`;
+      const playerMaxHp = snake.length * 2;
+      const computerMaxHp = computerSnake.length * 2;
+      scoreEl.textContent = `HP ${Math.max(0, Math.ceil(playerHp))}/${playerMaxHp}`;
+      computerScoreEl.textContent = `HP ${Math.max(0, Math.ceil(computerHp))}/${computerMaxHp}`;
+      updateHealthBar("player", playerHp, playerMaxHp);
+      updateHealthBar("computer", computerHp, computerMaxHp);
       bestEl.textContent = best;
       totalTimeEl.textContent = formatTime(totalElapsedMs);
       lastFeedTimeEl.textContent = formatTime(lastFeedElapsedMs);

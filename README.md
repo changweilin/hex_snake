@@ -85,7 +85,7 @@ npm start
 │   ├── balance.json        # 遊戲平衡、初始值、資源與攻擊參數
 │   ├── characters.json     # 角色資料、技能文案、肖像路徑
 │   └── high-ai-strategies.json
-├── doc/                    # 平衡快照、角色技能與美術提示文件
+├── doc/                    # 後續清單、角色技能與美術提示文件
 ├── reports/                # 模擬與調校輸出
 ├── skills/                 # Codex 專案技能說明
 ├── tools/                  # 測試、模擬、平衡與 AI 策略工具
@@ -142,7 +142,6 @@ npm run simulate
 
 ## 文件
 
-- `doc/current-balance.md`：最近一次平衡模擬快照。
+- `doc/follow-up-execution-list.md`：後續開發與驗收清單。
 - `doc/character-move-details.md`：角色技能規則草稿與設計資料。
 - `doc/chibi-portrait-effect-prompts.md`：角色肖像與效果提示詞。
-
