@@ -582,6 +582,7 @@ function runBanditRl({ balance, characters, gaRows, bestByCharacter, seed, runs,
       console.log(`RL ${character.id} round ${roundIndex}${deadlineMs ? "" : `/${rounds}`}: winRate ${(ranked[0].winRate * 100).toFixed(1)}%`);
     }
   }
+  if (deadlineMs && Date.now() >= deadlineMs && roundIndex >= rounds) stopReason = "duration";
 
   const bestStrategies = characters.map(character => {
     const state = states.get(character.id);
