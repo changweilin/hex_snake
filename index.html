@@ -3906,6 +3906,7 @@
     let targetMaxHex = 6;
     let maxMatchMs = 240000;
     let gameOverRestartDelayMs = 700;
+    const gameOverContinuousVisualMaxWaitMs = 1000;
     const smallAttackDelayScale = 0.31;
     const smallAttackCooldownScale = 0.29;
     const sandwormRevealBeforeImpactMs = 200;
@@ -4155,6 +4156,7 @@
     let relayRestartTimer = null;
     let gameOverRelayStartOptions = null;
     let gameOverSettlementPending = false;
+    let gameOverContinuousVisualDeadlineAt = 0;
     let gameOver = false;
     let lastPlayerStep = 0;
     let lastComputerStep = 0;
@@ -6714,6 +6716,7 @@
     function clearGameOverSettlementTimer() {
       gameOverSettlementPending = false;
       gameOverRelayStartOptions = null;
+      gameOverContinuousVisualDeadlineAt = 0;
     }
 
     function resetRelayScore() {
@@ -8369,10 +8372,21 @@
         triggerBoardShake(hazard.visualType || attackVisualType(hazard.owner, "big"), now);
         hazard.shaken = true;
       });
-      return projectiles.some(projectile => now < projectile.impactAt)
-        || blasts.some(blast => now <= blast.endAt)
-        || hazards.some(hazard => now <= hazard.endAt)
-        || now < boardShakeUntil;
+      const projectilesActive = projectiles.some(projectile => now < projectile.impactAt);
+      const blastsActive = blasts.some(blast => now <= blast.endAt);
+      const continuousSkillVisualsActive = hazards.some(hazard => now <= hazard.endAt);
+      const boardShakeActive = now < boardShakeUntil;
+      if (
+        continuousSkillVisualsActive
+        && gameOverContinuousVisualDeadlineAt
+        && now >= gameOverContinuousVisualDeadlineAt
+        && !projectilesActive
+        && !blastsActive
+        && !boardShakeActive
+      ) {
+        return false;
+      }
+      return projectilesActive || blastsActive || continuousSkillVisualsActive || boardShakeActive;
     }
 
     function showGameOverSettlement() {
@@ -8619,6 +8633,7 @@
       playerAutoMode = false;
       computerBattleManualOverride = false;
       gameOver = true;
+      gameOverContinuousVisualDeadlineAt = gameOverAt + gameOverContinuousVisualMaxWaitMs;
       updateAutoBattleControls();
       restartUnlockAt = gameOverAt + gameOverRestartDelayMs;
       setSettingsLocked(false);
