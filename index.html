@@ -198,6 +198,14 @@
       --health-color: var(--p2-color);
     }
 
+    .player-metric[data-owner="player"] .health-readout strong {
+      color: var(--p1-color);
+    }
+
+    .player-metric[data-owner="computer"] .health-readout strong {
+      color: var(--p2-color);
+    }
+
     .player-metric.is-low-health {
       --health-color: var(--danger);
     }
@@ -1316,6 +1324,18 @@
     .resource-board {
       display: grid;
       gap: 12px;
+    }
+
+    .resource-board:empty {
+      min-height: 0;
+    }
+
+    .resource-board {
+      margin-top: 0;
+    }
+
+    .section:has(> .resource-board) > h2 {
+      display: none;
     }
 
     .character-picks {
@@ -2496,8 +2516,8 @@
 
     .attack-actions {
       position: relative;
-      width: 104px;
-      height: 104px;
+      width: 118px;
+      height: 118px;
       justify-self: center;
     }
 
@@ -2926,7 +2946,7 @@
       .app {
         grid-template-columns: 1fr;
         grid-template-rows: minmax(0, 1fr) auto;
-        gap: 6px;
+        gap: 4px;
         width: 100%;
         height: calc(100dvh - max(6px, env(safe-area-inset-top)) - max(6px, env(safe-area-inset-bottom)));
         min-height: 0;
@@ -2936,15 +2956,15 @@
       .stage {
         min-height: 0;
         grid-template-rows: auto minmax(0, 1fr);
-        gap: 6px;
+        gap: 4px;
         overflow: hidden;
       }
 
       .topbar {
         grid-template-columns: 1fr;
         min-height: 0;
-        gap: 6px;
-        padding: 8px;
+        gap: 4px;
+        padding: 6px;
       }
 
       .report-panel,
@@ -3028,7 +3048,7 @@
 
       .side {
         min-height: 0;
-        padding: 6px;
+        padding: 4px;
         border-radius: 8px;
         background: rgba(32, 38, 51, 0.72);
         border: 1px solid rgba(255, 255, 255, 0.1);
@@ -3036,7 +3056,7 @@
         backdrop-filter: blur(10px);
         display: grid;
         grid-template-rows: auto auto auto;
-        gap: 4px;
+        gap: 3px;
         overflow: visible;
         position: relative;
         z-index: 40;
@@ -3044,7 +3064,7 @@
 
       .side .section {
         margin-top: 0;
-        padding: 4px;
+        padding: 3px;
         border: 0;
         border-radius: 7px;
         background: rgba(15, 23, 36, 0.22);
@@ -3142,7 +3162,7 @@
       .side .settings-section .settings-toggle {
         width: 100%;
         min-width: 0;
-        min-height: 38px;
+        min-height: 34px;
         padding: 0;
         display: inline-grid;
         place-items: center;
@@ -3153,12 +3173,12 @@
       }
 
       .side .settings-section .settings-toggle {
-        min-height: 38px;
+        min-height: 34px;
         padding: 0;
       }
 
       .side .settings-section .settings-actions button {
-        min-height: 38px;
+        min-height: 34px;
         padding: 0;
         font-size: 0;
       }
@@ -3331,9 +3351,9 @@
 
       .resource-panel {
         grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 4px;
+        gap: 3px;
         min-width: 0;
-        padding: 5px;
+        padding: 4px;
       }
 
       .resource-title {
@@ -3384,7 +3404,7 @@
         display: grid;
         grid-template-columns: 1fr;
         place-items: center;
-        min-height: 22px;
+        min-height: 19px;
         border-radius: 6px;
         border: 1px solid var(--food-line);
         background: var(--food-color);
@@ -3419,7 +3439,7 @@
 
       .side .section:nth-of-type(3) {
         order: 3;
-        padding: 4px;
+        padding: 2px 3px;
       }
 
       .side .section:nth-of-type(3) h2 {
@@ -3429,24 +3449,40 @@
       .control-row {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 6px;
+        gap: 4px;
       }
 
       .control-card {
         width: 100%;
-        gap: 4px;
+        gap: 2px;
         font-size: 0.68rem;
       }
 
+      .action-panel {
+        min-height: 108px;
+      }
+
+      .attack-actions {
+        width: 108px;
+        height: 108px;
+      }
+
+      .attack-actions .attack-button,
+      .attack-actions .attack-button.secondary {
+        width: 34px;
+        height: 34px;
+        font-size: 0.6rem;
+      }
+
       .joystick {
-        width: clamp(92px, 24dvh, 132px);
+        width: clamp(82px, 21dvh, 112px);
         min-width: 0;
         border: 2px solid rgba(243, 245, 247, 0.42);
         opacity: 0.8;
       }
 
       .stick {
-        width: clamp(34px, 9dvh, 50px);
+        width: clamp(30px, 7.5dvh, 42px);
         min-width: 0;
         border: 2px solid rgba(255, 255, 255, 0.58);
       }
@@ -3614,7 +3650,7 @@
       }
 
       .joystick {
-        width: clamp(84px, 22dvh, 118px);
+        width: clamp(76px, 19dvh, 104px);
       }
 
       .stick {
@@ -8961,7 +8997,12 @@
           ? "computer"
           : null;
       const resultText = winnerOwner === "player" ? "P1獲勝" : winnerOwner === "computer" ? "P2獲勝" : "平手";
-      overlayTitle.textContent = `${resultText}！ P1:P2 = ${score}:${computerScore}`;
+      const resultTitleHtml = winnerOwner === "player"
+        ? `<span class="owner-name is-p1">P1</span>獲勝！ <span class="owner-name is-p1">P1</span>:<span class="owner-name is-p2">P2</span> = ${score}:${computerScore}`
+        : winnerOwner === "computer"
+          ? `<span class="owner-name is-p2">P2</span>獲勝！ <span class="owner-name is-p1">P1</span>:<span class="owner-name is-p2">P2</span> = ${score}:${computerScore}`
+          : `平手！ <span class="owner-name is-p1">P1</span>:<span class="owner-name is-p2">P2</span> = ${score}:${computerScore}`;
+      overlayTitle.innerHTML = resultTitleHtml;
       playCharacterSfx("player", winnerOwner === "player" ? "victory" : "defeat", { gainScale: winnerOwner ? 1 : 0.82 });
       playCharacterSfx("computer", winnerOwner === "computer" ? "victory" : "defeat", { delay: winnerOwner ? 0.08 : 0.12, gainScale: winnerOwner ? 1 : 0.82 });
       if (shouldContinueRelay) {
