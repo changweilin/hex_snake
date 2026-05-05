@@ -4288,6 +4288,7 @@
     let sfxUnlocked = false;
     let sfxMuted = localStorage.getItem("hexSnakeSfxMuted") === "1";
     const sfxLastPlayedAt = new Map();
+    const sfxAssetCache = new Map();
 
     const sfxVariantProfiles = {
       beast: { pitch: 0.82, noise: 1.2, attack: 1.15, decay: 0.9, color: 0.9 },
@@ -4541,6 +4542,61 @@
       return sfxContext ? sfxContext.currentTime : 0;
     }
 
+    function sfxAssetMode() {
+      return portraitVariantMode === "human" ? "human" : "beast";
+    }
+
+    function sfxAssetUrl(character, eventName) {
+      const characterId = character?.id || "dragon";
+      return `assets/audio/characters/${sfxAssetMode()}/${characterId}_${eventName}.wav`;
+    }
+
+    function getSfxAssetBuffer(url) {
+      const cached = sfxAssetCache.get(url);
+      if (cached?.buffer) return cached.buffer;
+      if (cached?.failed) return null;
+      if (cached?.pending) return null;
+      const context = ensureAudioContext();
+      if (!context) return null;
+      const entry = { buffer: null, pending: true, failed: false };
+      sfxAssetCache.set(url, entry);
+      fetch(url)
+        .then(response => {
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          return response.arrayBuffer();
+        })
+        .then(arrayBuffer => context.decodeAudioData(arrayBuffer))
+        .then(audioBuffer => {
+          entry.buffer = audioBuffer;
+          entry.pending = false;
+        })
+        .catch(() => {
+          entry.pending = false;
+          entry.failed = true;
+        });
+      return null;
+    }
+
+    function playSfxAssetBuffer(buffer, time, gain, pan) {
+      const context = ensureAudioContext();
+      if (!context || !sfxMaster || !buffer) return false;
+      const source = context.createBufferSource();
+      const envelope = context.createGain();
+      const stereo = context.createStereoPanner ? context.createStereoPanner() : null;
+      source.buffer = buffer;
+      envelope.gain.value = Math.min(0.82, gain * 2.9);
+      source.connect(envelope);
+      if (stereo) {
+        stereo.pan.value = Math.max(-1, Math.min(1, pan));
+        envelope.connect(stereo);
+        stereo.connect(sfxMaster);
+      } else {
+        envelope.connect(sfxMaster);
+      }
+      source.start(time);
+      return true;
+    }
+
     function sfxGainForOwner(owner, eventName) {
       if (owner !== "computer") return 1;
       return eventName === "victory" || eventName === "defeat" ? 0.7 : 0.45;
@@ -4659,6 +4715,8 @@
       const duration = eventProfile.duration * profile.decayScale;
       const gain = eventProfile.gain * sfxGainForOwner(owner, eventName) * (options.gainScale || 1);
       const time = sfxNow() + (options.delay || 0);
+      const assetBuffer = getSfxAssetBuffer(sfxAssetUrl(character, eventName));
+      if (playSfxAssetBuffer(assetBuffer, time, gain, owner === "computer" ? 0.24 : -0.08)) return;
       const toneType = eventName === "big" && profile.wave === "square" ? "sawtooth" : profile.wave;
       const bright = profile.colorScale;
       const noiseGain = gain * 0.42 * profile.noiseScale;

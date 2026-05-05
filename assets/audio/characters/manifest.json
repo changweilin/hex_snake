@@ -1,0 +1,438 @@
+{
+  "sampleRate": 44100,
+  "generatedAt": "2026-05-05T10:08:39.798Z",
+  "files": [
+    {
+      "mode": "beast",
+      "character": "dragon",
+      "event": "select",
+      "path": "assets/audio/characters/beast/dragon_select.wav"
+    },
+    {
+      "mode": "beast",
+      "character": "dragon",
+      "event": "start",
+      "path": "assets/audio/characters/beast/dragon_start.wav"
+    },
+    {
+      "mode": "beast",
+      "character": "dragon",
+      "event": "small",
+      "path": "assets/audio/characters/beast/dragon_small.wav"
+    },
+    {
+      "mode": "beast",
+      "character": "dragon",
+      "event": "big",
+      "path": "assets/audio/characters/beast/dragon_big.wav"
+    },
+    {
+      "mode": "beast",
+      "character": "dragon",
+      "event": "victory",
+      "path": "assets/audio/characters/beast/dragon_victory.wav"
+    },
+    {
+      "mode": "beast",
+      "character": "dragon",
+      "event": "defeat",
+      "path": "assets/audio/characters/beast/dragon_defeat.wav"
+    },
+    {
+      "mode": "beast",
+      "character": "moray",
+      "event": "select",
+      "path": "assets/audio/characters/beast/moray_select.wav"
+    },
+    {
+      "mode": "beast",
+      "character": "moray",
+      "event": "start",
+      "path": "assets/audio/characters/beast/moray_start.wav"
+    },
+    {
+      "mode": "beast",
+      "character": "moray",
+      "event": "small",
+      "path": "assets/audio/characters/beast/moray_small.wav"
+    },
+    {
+      "mode": "beast",
+      "character": "moray",
+      "event": "big",
+      "path": "assets/audio/characters/beast/moray_big.wav"
+    },
+    {
+      "mode": "beast",
+      "character": "moray",
+      "event": "victory",
+      "path": "assets/audio/characters/beast/moray_victory.wav"
+    },
+    {
+      "mode": "beast",
+      "character": "moray",
+      "event": "defeat",
+      "path": "assets/audio/characters/beast/moray_defeat.wav"
+    },
+    {
+      "mode": "beast",
+      "character": "lobster",
+      "event": "select",
+      "path": "assets/audio/characters/beast/lobster_select.wav"
+    },
+    {
+      "mode": "beast",
+      "character": "lobster",
+      "event": "start",
+      "path": "assets/audio/characters/beast/lobster_start.wav"
+    },
+    {
+      "mode": "beast",
+      "character": "lobster",
+      "event": "small",
+      "path": "assets/audio/characters/beast/lobster_small.wav"
+    },
+    {
+      "mode": "beast",
+      "character": "lobster",
+      "event": "big",
+      "path": "assets/audio/characters/beast/lobster_big.wav"
+    },
+    {
+      "mode": "beast",
+      "character": "lobster",
+      "event": "victory",
+      "path": "assets/audio/characters/beast/lobster_victory.wav"
+    },
+    {
+      "mode": "beast",
+      "character": "lobster",
+      "event": "defeat",
+      "path": "assets/audio/characters/beast/lobster_defeat.wav"
+    },
+    {
+      "mode": "beast",
+      "character": "sandworm",
+      "event": "select",
+      "path": "assets/audio/characters/beast/sandworm_select.wav"
+    },
+    {
+      "mode": "beast",
+      "character": "sandworm",
+      "event": "start",
+      "path": "assets/audio/characters/beast/sandworm_start.wav"
+    },
+    {
+      "mode": "beast",
+      "character": "sandworm",
+      "event": "small",
+      "path": "assets/audio/characters/beast/sandworm_small.wav"
+    },
+    {
+      "mode": "beast",
+      "character": "sandworm",
+      "event": "big",
+      "path": "assets/audio/characters/beast/sandworm_big.wav"
+    },
+    {
+      "mode": "beast",
+      "character": "sandworm",
+      "event": "victory",
+      "path": "assets/audio/characters/beast/sandworm_victory.wav"
+    },
+    {
+      "mode": "beast",
+      "character": "sandworm",
+      "event": "defeat",
+      "path": "assets/audio/characters/beast/sandworm_defeat.wav"
+    },
+    {
+      "mode": "beast",
+      "character": "quetzal",
+      "event": "select",
+      "path": "assets/audio/characters/beast/quetzal_select.wav"
+    },
+    {
+      "mode": "beast",
+      "character": "quetzal",
+      "event": "start",
+      "path": "assets/audio/characters/beast/quetzal_start.wav"
+    },
+    {
+      "mode": "beast",
+      "character": "quetzal",
+      "event": "small",
+      "path": "assets/audio/characters/beast/quetzal_small.wav"
+    },
+    {
+      "mode": "beast",
+      "character": "quetzal",
+      "event": "big",
+      "path": "assets/audio/characters/beast/quetzal_big.wav"
+    },
+    {
+      "mode": "beast",
+      "character": "quetzal",
+      "event": "victory",
+      "path": "assets/audio/characters/beast/quetzal_victory.wav"
+    },
+    {
+      "mode": "beast",
+      "character": "quetzal",
+      "event": "defeat",
+      "path": "assets/audio/characters/beast/quetzal_defeat.wav"
+    },
+    {
+      "mode": "beast",
+      "character": "gu_king",
+      "event": "select",
+      "path": "assets/audio/characters/beast/gu_king_select.wav"
+    },
+    {
+      "mode": "beast",
+      "character": "gu_king",
+      "event": "start",
+      "path": "assets/audio/characters/beast/gu_king_start.wav"
+    },
+    {
+      "mode": "beast",
+      "character": "gu_king",
+      "event": "small",
+      "path": "assets/audio/characters/beast/gu_king_small.wav"
+    },
+    {
+      "mode": "beast",
+      "character": "gu_king",
+      "event": "big",
+      "path": "assets/audio/characters/beast/gu_king_big.wav"
+    },
+    {
+      "mode": "beast",
+      "character": "gu_king",
+      "event": "victory",
+      "path": "assets/audio/characters/beast/gu_king_victory.wav"
+    },
+    {
+      "mode": "beast",
+      "character": "gu_king",
+      "event": "defeat",
+      "path": "assets/audio/characters/beast/gu_king_defeat.wav"
+    },
+    {
+      "mode": "human",
+      "character": "dragon",
+      "event": "select",
+      "path": "assets/audio/characters/human/dragon_select.wav"
+    },
+    {
+      "mode": "human",
+      "character": "dragon",
+      "event": "start",
+      "path": "assets/audio/characters/human/dragon_start.wav"
+    },
+    {
+      "mode": "human",
+      "character": "dragon",
+      "event": "small",
+      "path": "assets/audio/characters/human/dragon_small.wav"
+    },
+    {
+      "mode": "human",
+      "character": "dragon",
+      "event": "big",
+      "path": "assets/audio/characters/human/dragon_big.wav"
+    },
+    {
+      "mode": "human",
+      "character": "dragon",
+      "event": "victory",
+      "path": "assets/audio/characters/human/dragon_victory.wav"
+    },
+    {
+      "mode": "human",
+      "character": "dragon",
+      "event": "defeat",
+      "path": "assets/audio/characters/human/dragon_defeat.wav"
+    },
+    {
+      "mode": "human",
+      "character": "moray",
+      "event": "select",
+      "path": "assets/audio/characters/human/moray_select.wav"
+    },
+    {
+      "mode": "human",
+      "character": "moray",
+      "event": "start",
+      "path": "assets/audio/characters/human/moray_start.wav"
+    },
+    {
+      "mode": "human",
+      "character": "moray",
+      "event": "small",
+      "path": "assets/audio/characters/human/moray_small.wav"
+    },
+    {
+      "mode": "human",
+      "character": "moray",
+      "event": "big",
+      "path": "assets/audio/characters/human/moray_big.wav"
+    },
+    {
+      "mode": "human",
+      "character": "moray",
+      "event": "victory",
+      "path": "assets/audio/characters/human/moray_victory.wav"
+    },
+    {
+      "mode": "human",
+      "character": "moray",
+      "event": "defeat",
+      "path": "assets/audio/characters/human/moray_defeat.wav"
+    },
+    {
+      "mode": "human",
+      "character": "lobster",
+      "event": "select",
+      "path": "assets/audio/characters/human/lobster_select.wav"
+    },
+    {
+      "mode": "human",
+      "character": "lobster",
+      "event": "start",
+      "path": "assets/audio/characters/human/lobster_start.wav"
+    },
+    {
+      "mode": "human",
+      "character": "lobster",
+      "event": "small",
+      "path": "assets/audio/characters/human/lobster_small.wav"
+    },
+    {
+      "mode": "human",
+      "character": "lobster",
+      "event": "big",
+      "path": "assets/audio/characters/human/lobster_big.wav"
+    },
+    {
+      "mode": "human",
+      "character": "lobster",
+      "event": "victory",
+      "path": "assets/audio/characters/human/lobster_victory.wav"
+    },
+    {
+      "mode": "human",
+      "character": "lobster",
+      "event": "defeat",
+      "path": "assets/audio/characters/human/lobster_defeat.wav"
+    },
+    {
+      "mode": "human",
+      "character": "sandworm",
+      "event": "select",
+      "path": "assets/audio/characters/human/sandworm_select.wav"
+    },
+    {
+      "mode": "human",
+      "character": "sandworm",
+      "event": "start",
+      "path": "assets/audio/characters/human/sandworm_start.wav"
+    },
+    {
+      "mode": "human",
+      "character": "sandworm",
+      "event": "small",
+      "path": "assets/audio/characters/human/sandworm_small.wav"
+    },
+    {
+      "mode": "human",
+      "character": "sandworm",
+      "event": "big",
+      "path": "assets/audio/characters/human/sandworm_big.wav"
+    },
+    {
+      "mode": "human",
+      "character": "sandworm",
+      "event": "victory",
+      "path": "assets/audio/characters/human/sandworm_victory.wav"
+    },
+    {
+      "mode": "human",
+      "character": "sandworm",
+      "event": "defeat",
+      "path": "assets/audio/characters/human/sandworm_defeat.wav"
+    },
+    {
+      "mode": "human",
+      "character": "quetzal",
+      "event": "select",
+      "path": "assets/audio/characters/human/quetzal_select.wav"
+    },
+    {
+      "mode": "human",
+      "character": "quetzal",
+      "event": "start",
+      "path": "assets/audio/characters/human/quetzal_start.wav"
+    },
+    {
+      "mode": "human",
+      "character": "quetzal",
+      "event": "small",
+      "path": "assets/audio/characters/human/quetzal_small.wav"
+    },
+    {
+      "mode": "human",
+      "character": "quetzal",
+      "event": "big",
+      "path": "assets/audio/characters/human/quetzal_big.wav"
+    },
+    {
+      "mode": "human",
+      "character": "quetzal",
+      "event": "victory",
+      "path": "assets/audio/characters/human/quetzal_victory.wav"
+    },
+    {
+      "mode": "human",
+      "character": "quetzal",
+      "event": "defeat",
+      "path": "assets/audio/characters/human/quetzal_defeat.wav"
+    },
+    {
+      "mode": "human",
+      "character": "gu_king",
+      "event": "select",
+      "path": "assets/audio/characters/human/gu_king_select.wav"
+    },
+    {
+      "mode": "human",
+      "character": "gu_king",
+      "event": "start",
+      "path": "assets/audio/characters/human/gu_king_start.wav"
+    },
+    {
+      "mode": "human",
+      "character": "gu_king",
+      "event": "small",
+      "path": "assets/audio/characters/human/gu_king_small.wav"
+    },
+    {
+      "mode": "human",
+      "character": "gu_king",
+      "event": "big",
+      "path": "assets/audio/characters/human/gu_king_big.wav"
+    },
+    {
+      "mode": "human",
+      "character": "gu_king",
+      "event": "victory",
+      "path": "assets/audio/characters/human/gu_king_victory.wav"
+    },
+    {
+      "mode": "human",
+      "character": "gu_king",
+      "event": "defeat",
+      "path": "assets/audio/characters/human/gu_king_defeat.wav"
+    }
+  ]
+}
