@@ -802,6 +802,18 @@ test("same seed produces same series result", () => {
   assert.deepEqual(runSeries(options), runSeries(options));
 });
 
+test("empty tick skipping preserves fixed tick match results", () => {
+  const options = {
+    balance,
+    playerCharacter: characterById.get("sandworm"),
+    computerCharacter: characterById.get("lobster"),
+    seed: "skip-empty-ticks-equivalence",
+    playerModel: { aiDifficulty: "high", pathPrecision: 1, aimPrecision: 1, skillStrategy: "preferBig", foodStrategy: "balanced" },
+    computerModel: { aiDifficulty: "high", pathPrecision: 1, aimPrecision: 1, skillStrategy: "preferBig", foodStrategy: "balanced" }
+  };
+  assert.deepEqual(simulateMatch({ ...options, skipEmptyTicks: false }), simulateMatch(options));
+});
+
 test("100 match smoke test completes with valid metrics", () => {
   const result = runSeries({
     balance,
