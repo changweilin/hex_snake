@@ -189,8 +189,8 @@
         },
         "castDirection": {
           "selfHeadToOpponentHead": 0,
-          "opponentBodyLongestAxis": 0,
-          "opponentHeadToNearestFood": 3
+          "opponentBodyLongestAxis": 3,
+          "opponentHeadToNearestFood": 0
         }
       }
     },
@@ -236,9 +236,9 @@
           "targetNearestFood": 0
         },
         "castDirection": {
-          "selfHeadToOpponentHead": 0,
+          "selfHeadToOpponentHead": 3,
           "opponentBodyLongestAxis": 0,
-          "opponentHeadToNearestFood": 3
+          "opponentHeadToNearestFood": 0
         }
       }
     },

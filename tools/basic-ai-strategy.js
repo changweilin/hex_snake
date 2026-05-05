@@ -4,7 +4,29 @@ function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
-function basicStrategyWeights() {
+function castDirectionWeightsFor(characterId) {
+  if (characterId === "moray") {
+    return {
+      selfHeadToOpponentHead: 0,
+      opponentBodyLongestAxis: 3,
+      opponentHeadToNearestFood: 0
+    };
+  }
+  if (characterId === "lobster") {
+    return {
+      selfHeadToOpponentHead: 3,
+      opponentBodyLongestAxis: 0,
+      opponentHeadToNearestFood: 0
+    };
+  }
+  return {
+    selfHeadToOpponentHead: 0,
+    opponentBodyLongestAxis: 0,
+    opponentHeadToNearestFood: 3
+  };
+}
+
+function basicStrategyWeights(characterId = null) {
   return {
     movement: { safePath: 0, leastDamage: 0, fastestArrival: 3 },
     food: {
@@ -24,11 +46,7 @@ function basicStrategyWeights() {
       farOpponent: 0
     },
     castTarget: { targetHead: 3, bodyCluster: 0, targetNearestFood: 0 },
-    castDirection: {
-      selfHeadToOpponentHead: 0,
-      opponentBodyLongestAxis: 0,
-      opponentHeadToNearestFood: 3
-    }
+    castDirection: castDirectionWeightsFor(characterId)
   };
 }
 
@@ -48,7 +66,7 @@ function makeBasicPolicy(characterId, id = BASIC_STRATEGY_ID) {
     foodStrategy: "balanced",
     strategyId: id,
     characterStrategyId: `${characterId}:${id}`,
-    strategyWeights: clone(basicStrategyWeights())
+    strategyWeights: clone(basicStrategyWeights(characterId))
   };
 }
 

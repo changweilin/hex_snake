@@ -4190,6 +4190,7 @@
     let targetCell = null;
     let targetActive = false;
     let moduleHoldTimer = null;
+    let attackPointerLongPressTimer = null;
     let portraitPoseTimers = {};
     let attackCalloutTimers = {};
     let selectedPortraitOwner = "player";
@@ -6834,7 +6835,7 @@
         skillAllocation: { preferSmall: 1, preferBig: 1 },
         castTiming: { lethal: 3, nearFullEnergy: 3, opponentDebuffed: 3, opponentAlmostReady: 0, nearOpponent: 0, farOpponent: 0 },
         castTarget: { targetHead: 3, bodyCluster: 0, targetNearestFood: 0 },
-        castDirection: { selfHeadToOpponentHead: 0, opponentBodyLongestAxis: 0, opponentHeadToNearestFood: 3 }
+        castDirection: { selfHeadToOpponentHead: 0, opponentBodyLongestAxis: 3, opponentHeadToNearestFood: 0 }
       },
       lobster: {
         movement: { safePath: 0, leastDamage: 0, fastestArrival: 3 },
@@ -6842,7 +6843,7 @@
         skillAllocation: { preferSmall: 1, preferBig: 1 },
         castTiming: { lethal: 3, nearFullEnergy: 3, opponentDebuffed: 3, opponentAlmostReady: 0, nearOpponent: 0, farOpponent: 0 },
         castTarget: { targetHead: 3, bodyCluster: 0, targetNearestFood: 0 },
-        castDirection: { selfHeadToOpponentHead: 0, opponentBodyLongestAxis: 0, opponentHeadToNearestFood: 3 }
+        castDirection: { selfHeadToOpponentHead: 3, opponentBodyLongestAxis: 0, opponentHeadToNearestFood: 0 }
       },
       gu_king: {
         movement: { safePath: 0, leastDamage: 0, fastestArrival: 3 },
@@ -11842,18 +11843,24 @@
       });
     }
 
+    function activeAttackPreviewProfile() {
+      if (controlAttackPointer) return "big";
+      return attackPointer?.previewProfile || selectedAttackProfile;
+    }
+
     function drawTarget() {
       if (replayMode && !targetActive) return;
       if (!targetCell || !snake) return;
-      if (!targetActive && !canAttack("player", selectedAttackProfile)) return;
-      if (selectedAttackProfile === "big" && characterFor("player").id === "sandworm") return;
+      const profile = activeAttackPreviewProfile();
+      if (!targetActive && !canAttack("player", profile)) return;
+      if (profile === "big" && characterFor("player").id === "sandworm") return;
       const { x, y } = axialToPixel(targetCell);
       ctx.beginPath();
-      const previewRadius = Math.max(1, blastRadius(playerStock) + (selectedAttackProfile === "small" ? -1 : 0));
+      const previewRadius = Math.max(1, blastRadius(playerStock) + (profile === "small" ? -1 : 0));
       ctx.arc(x, y, cellSize * previewRadius * 1.52, 0, Math.PI * 2);
-      ctx.fillStyle = canAttack("player", selectedAttackProfile) ? "rgba(245,158,11,0.1)" : "rgba(168,179,194,0.08)";
+      ctx.fillStyle = canAttack("player", profile) ? "rgba(245,158,11,0.1)" : "rgba(168,179,194,0.08)";
       ctx.fill();
-      ctx.strokeStyle = canAttack("player", selectedAttackProfile) ? "rgba(253,230,138,0.78)" : "rgba(168,179,194,0.36)";
+      ctx.strokeStyle = canAttack("player", profile) ? "rgba(253,230,138,0.78)" : "rgba(168,179,194,0.36)";
       ctx.lineWidth = 2;
       ctx.setLineDash([6, 6]);
       ctx.stroke();
@@ -11867,26 +11874,31 @@
     function directionalPreviewState() {
       if (!snake?.length) return null;
       const character = characterFor("player");
-      if (selectedAttackProfile !== "big" || !bigAttackUsesDrawnDirection(character.id)) return null;
+      if (activeAttackPreviewProfile() !== "big" || !bigAttackUsesDrawnDirection(character.id)) return null;
       if (controlAttackPointer) {
         return {
           character,
           direction: controlAttackPointer.direction,
           origin: snake[0],
-          target: directionalAttackTarget(controlAttackPointer.direction),
+          target: opponentHeadTarget(),
           fromControlPad: true
         };
       }
       if (!attackPointer) return null;
-      const target = attackPointer.currentCell || attackPointer.startCell;
+      const target = character.id === "moray" && attackPointer.moved
+        ? attackPointer.currentCell
+        : opponentHeadTarget();
       const direction = attackPointer.moved
-        ? directionFromSourceToTarget(attackPointer.startCell, target, ownerDirection("player"))
+        ? directionFromSourceToTarget(attackPointer.startCell, attackPointer.currentCell, directionFromSourceToTarget(snake[0], target, ownerDirection("player")))
         : directionFromSourceToTarget(snake[0], target, ownerDirection("player"));
+      const origin = character.id === "moray" && attackPointer.moved ? target : snake[0];
       return {
         character,
         direction,
-        origin: attackPointer.moved ? attackPointer.startCell : snake[0],
-        target
+        origin,
+        target,
+        dragStart: attackPointer.moved ? attackPointer.startCell : null,
+        dragTarget: attackPointer.moved ? attackPointer.currentCell : null
       };
     }
 
@@ -11905,6 +11917,90 @@
         path.push({ q: cursor.q, r: cursor.r });
       }
       return path;
+    }
+
+    function directionBetweenCells(source, target, fallbackDirection = 0) {
+      if (!source || !target) return fallbackDirection;
+      for (let direction = 0; direction < directions.length; direction += 1) {
+        if (keyOf(nextWrappedCell(source, direction)) === keyOf(target)) return direction;
+      }
+      return fallbackDirection;
+    }
+
+    function lobsterFistTurnPathIndex() {
+      const maxSteps = Math.max(1, Math.ceil((radius * 2 + 1) / 2));
+      return Math.ceil(maxSteps / 2);
+    }
+
+    function drawDirectionalPreviewArrow(cell, direction, lineColor, canCast) {
+      if (!cell || !Number.isInteger(direction)) return;
+      const point = axialToPixel(cell);
+      const angle = directionScreenAngle(direction);
+      ctx.save();
+      ctx.translate(point.x, point.y);
+      ctx.rotate(angle * Math.PI / 180);
+      ctx.beginPath();
+      ctx.moveTo(cellSize * 0.5, 0);
+      ctx.lineTo(-cellSize * 0.2, -cellSize * 0.32);
+      ctx.lineTo(-cellSize * 0.08, 0);
+      ctx.lineTo(-cellSize * 0.2, cellSize * 0.32);
+      ctx.closePath();
+      ctx.fillStyle = hexToRgba(lineColor, canCast ? 0.9 : 0.56);
+      ctx.fill();
+      ctx.strokeStyle = hexToRgba("#ffffff", canCast ? 0.72 : 0.34);
+      ctx.lineWidth = Math.max(1.2, cellSize * 0.035);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawDirectionalPreviewArrows(preview, path, lineColor, canCast) {
+      if (preview.character.id !== "lobster") {
+        drawDirectionalPreviewArrow(path[path.length - 1] || preview.target || preview.origin, preview.direction, lineColor, canCast);
+        return;
+      }
+      const turnIndex = lobsterFistTurnPathIndex();
+      const firstArrowIndex = Math.min(path.length - 1, Math.max(0, Math.floor(Math.max(1, turnIndex) / 2)));
+      drawDirectionalPreviewArrow(path[firstArrowIndex], preview.direction, lineColor, canCast);
+      if (turnIndex < path.length) {
+        const beforeTurn = turnIndex > 0 ? path[turnIndex - 1] : preview.origin;
+        const turnDirection = directionBetweenCells(beforeTurn, path[turnIndex], preview.direction);
+        drawDirectionalPreviewArrow(path[turnIndex], turnDirection, lineColor, canCast);
+      }
+    }
+
+    function drawDragDirectionLine(preview, lineColor, fillColor, canCast, now = performance.now()) {
+      if (!["lobster", "moray"].includes(preview.character.id) || !preview.dragStart || !preview.dragTarget) return;
+      const start = axialToPixel(preview.dragStart);
+      const end = axialToPixel(preview.dragTarget);
+      const dx = end.x - start.x;
+      const dy = end.y - start.y;
+      const distance = Math.hypot(dx, dy);
+      if (distance < cellSize * 0.25) return;
+      const pulse = waveValue(now / 680);
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      ctx.beginPath();
+      ctx.moveTo(start.x, start.y);
+      ctx.lineTo(end.x, end.y);
+      ctx.strokeStyle = hexToRgba(lineColor, canCast ? 0.72 + pulse * 0.16 : 0.36);
+      ctx.lineWidth = Math.max(2, cellSize * 0.07);
+      ctx.lineCap = "round";
+      ctx.setLineDash([cellSize * 0.18, cellSize * 0.14]);
+      ctx.lineDashOffset = -now / 38;
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      [start, end].forEach((point, index) => {
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, cellSize * (index ? 0.22 : 0.18), 0, Math.PI * 2);
+        ctx.fillStyle = hexToRgba(fillColor, index ? 0.42 : 0.26);
+        ctx.fill();
+        ctx.strokeStyle = hexToRgba("#ffffff", index ? 0.5 : 0.34);
+        ctx.lineWidth = Math.max(1, cellSize * 0.026);
+        ctx.stroke();
+      });
+
+      ctx.restore();
     }
 
     function drawDirectionalAttackPreview(now = performance.now()) {
@@ -11939,8 +12035,6 @@
       });
 
       const sourcePoint = axialToPixel(preview.origin);
-      const endCell = path[path.length - 1] || preview.target || preview.origin;
-      const endPoint = axialToPixel(endCell);
       ctx.beginPath();
       ctx.moveTo(sourcePoint.x, sourcePoint.y);
       path.forEach(cell => {
@@ -11956,22 +12050,8 @@
       ctx.stroke();
       ctx.setLineDash([]);
 
-      const angle = directionScreenAngle(preview.direction);
-      ctx.save();
-      ctx.translate(endPoint.x, endPoint.y);
-      ctx.rotate(angle * Math.PI / 180);
-      ctx.beginPath();
-      ctx.moveTo(cellSize * 0.5, 0);
-      ctx.lineTo(-cellSize * 0.2, -cellSize * 0.32);
-      ctx.lineTo(-cellSize * 0.08, 0);
-      ctx.lineTo(-cellSize * 0.2, cellSize * 0.32);
-      ctx.closePath();
-      ctx.fillStyle = hexToRgba(lineColor, canCast ? 0.9 : 0.56);
-      ctx.fill();
-      ctx.strokeStyle = hexToRgba("#ffffff", canCast ? 0.72 : 0.34);
-      ctx.lineWidth = Math.max(1.2, cellSize * 0.035);
-      ctx.stroke();
-      ctx.restore();
+      drawDragDirectionLine(preview, lineColor, fillColor, canCast, now);
+      drawDirectionalPreviewArrows(preview, path, lineColor, canCast);
 
       ctx.beginPath();
       ctx.arc(sourcePoint.x, sourcePoint.y, cellSize * 0.42, 0, Math.PI * 2);
@@ -12827,6 +12907,12 @@
       moveStickHoldTimer = null;
     }
 
+    function clearAttackPointerLongPressTimer() {
+      if (!attackPointerLongPressTimer) return;
+      clearTimeout(attackPointerLongPressTimer);
+      attackPointerLongPressTimer = null;
+    }
+
     function pointerNearMoveCenter(event) {
       const rect = joyZone.getBoundingClientRect();
       const cx = rect.left + rect.width / 2;
@@ -12890,6 +12976,53 @@
       targetActive = false;
     }
 
+    function opponentHeadTarget() {
+      return computerSnake?.[0] || snake?.[0] || targetCell;
+    }
+
+    function playerDirectAttackTarget(profile = "small", pointer = null) {
+      const character = characterFor("player");
+      if (profile === "big" && pointer && character.id === "moray") {
+        return pointer.currentCell || pointer.startCell || opponentHeadTarget();
+      }
+      if (profile === "big" && pointer && !bigAttackUsesDrawnDirection(character.id)) {
+        return pointer.currentCell || pointer.startCell || opponentHeadTarget();
+      }
+      return opponentHeadTarget();
+    }
+
+    function playerGestureAttackDirection(pointer, fallbackTarget) {
+      if (pointer?.moved) {
+        return directionFromSourceToTarget(pointer.startCell, pointer.currentCell, directionFromSourceToTarget(snake[0], fallbackTarget, ownerDirection("player")));
+      }
+      return directionFromSourceToTarget(snake[0], fallbackTarget, ownerDirection("player"));
+    }
+
+    function playerDirectAttackOptions(profile = "small", pointer = null) {
+      const target = playerDirectAttackTarget(profile, pointer);
+      const character = characterFor("player");
+      if (profile === "big" && bigAttackUsesDrawnDirection(character.id) && snake?.length) {
+        return {
+          aimDirection: playerGestureAttackDirection(pointer, target),
+          aimOrigin: character.id === "moray" && pointer?.moved ? target : snake[0]
+        };
+      }
+      return {};
+    }
+
+    function previewDirectAttack(profile = "small", pointer = null) {
+      selectedAttackProfile = profile === "big" ? "big" : "small";
+      updateAttackButtons();
+      targetCell = playerDirectAttackTarget(profile, pointer);
+      targetActive = Boolean(targetCell);
+      draw();
+    }
+
+    function launchDirectPlayerAttack(profile = "small", pointer = null) {
+      const target = playerDirectAttackTarget(profile, pointer);
+      return launchPlayerAttack(target, profile, playerDirectAttackOptions(profile, pointer));
+    }
+
     function playerAttackFailureReason(target, profile = selectedAttackProfile, now = performance.now()) {
       const moveName = profile === "small" ? characterFor("player").smallMove : characterFor("player").bigMove;
       if (replayMode) return "正在播放重播，不能施放招式。";
@@ -12951,7 +13084,7 @@
       if (!running || gameOver) {
         if (!autoStartGame()) return false;
       }
-      return launchPlayerAttack(directionalAttackTarget(direction), profile, { aimDirection: direction, aimOrigin: snake[0] });
+      return launchPlayerAttack(opponentHeadTarget(), profile, { aimDirection: direction, aimOrigin: snake[0] });
     }
 
     function performModuleAttack() {
@@ -13017,10 +13150,21 @@
         pointerId: event.pointerId,
         startCell: { ...cell },
         currentCell: { ...cell },
-        moved: false
+        startedAt: performance.now(),
+        startX: event.clientX,
+        startY: event.clientY,
+        moved: false,
+        longPressed: false,
+        previewProfile: "small"
       };
-      targetCell = { ...cell };
-      targetActive = true;
+      previewDirectAttack("small", attackPointer);
+      clearAttackPointerLongPressTimer();
+      attackPointerLongPressTimer = setTimeout(() => {
+        if (!attackPointer || attackPointer.pointerId !== event.pointerId) return;
+        attackPointer.longPressed = true;
+        attackPointer.previewProfile = "big";
+        previewDirectAttack("big", attackPointer);
+      }, 460);
       try {
         canvas.setPointerCapture(event.pointerId);
       } catch (error) {
@@ -13034,9 +13178,15 @@
       event.preventDefault();
       const cell = boardCellFromPointer(event);
       attackPointer.currentCell = { ...cell };
-      attackPointer.moved = attackPointer.moved || keyOf(cell) !== keyOf(attackPointer.startCell);
-      targetCell = { ...cell };
-      targetActive = true;
+      const dragDistance = Math.hypot(event.clientX - attackPointer.startX, event.clientY - attackPointer.startY);
+      attackPointer.moved = attackPointer.moved || dragDistance > Math.max(8, cellSize * 0.28) || keyOf(cell) !== keyOf(attackPointer.startCell);
+      if (attackPointer.moved) {
+        clearAttackPointerLongPressTimer();
+        attackPointer.previewProfile = "big";
+        previewDirectAttack("big", attackPointer);
+        return;
+      }
+      previewDirectAttack(attackPointer.previewProfile, attackPointer);
       draw();
     }
 
@@ -13044,22 +13194,19 @@
       if (!attackPointer || event.pointerId !== attackPointer.pointerId) return;
       event.preventDefault();
       const pointer = attackPointer;
+      pointer.currentCell = boardCellFromPointer(event);
       attackPointer = null;
+      clearAttackPointerLongPressTimer();
       if (canvas.hasPointerCapture?.(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
-      const target = pointer.currentCell || pointer.startCell;
-      const options = {};
-      if (selectedAttackProfile === "big" && bigAttackUsesDrawnDirection(characterFor("player").id)) {
-        options.aimDirection = pointer.moved
-          ? directionFromSourceToTarget(pointer.startCell, target, ownerDirection("player"))
-          : directionFromSourceToTarget(snake[0], target, ownerDirection("player"));
-        options.aimOrigin = pointer.moved ? pointer.startCell : snake[0];
-      }
-      launchPlayerAttack(target, selectedAttackProfile, options);
+      const heldLongEnough = performance.now() - pointer.startedAt >= 460;
+      const profile = pointer.moved || pointer.longPressed || heldLongEnough ? "big" : "small";
+      launchDirectPlayerAttack(profile, pointer);
     }
 
     function cancelBoardAttackPointer(event) {
       if (!attackPointer || event.pointerId !== attackPointer.pointerId) return;
       attackPointer = null;
+      clearAttackPointerLongPressTimer();
       targetActive = false;
       if (canvas.hasPointerCapture?.(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
       draw();
@@ -13485,13 +13632,15 @@
     function handleAttackButtonDown(event, profile) {
       event.preventDefault();
       event.stopPropagation();
-      selectAttackProfile(profile);
+      smallAttackButton.classList.toggle("is-selected", profile === "small");
+      bigAttackButton.classList.toggle("is-selected", profile === "big");
+      previewDirectAttack(profile);
     }
 
     function handleAttackButtonUp(event, profile) {
       event.preventDefault();
       event.stopPropagation();
-      selectAttackProfile(profile);
+      launchDirectPlayerAttack(profile);
     }
 
     smallAttackButton.addEventListener("pointerdown", event => handleAttackButtonDown(event, "small"));
@@ -13502,7 +13651,7 @@
     bigAttackButton.addEventListener("click", event => event.preventDefault());
     controlRow.addEventListener("pointerdown", event => {
       if (joyZone.contains(event.target)) return;
-      if (event.target.closest("#bigAttackButton")) selectAttackProfile("big");
+      if (event.target.closest("#bigAttackButton")) previewDirectAttack("big");
     });
     leftHandModeInput.addEventListener("change", () => setLeftHandMode(leftHandModeInput.checked));
     sfxMuteToggle.addEventListener("change", () => setSfxMuted(sfxMuteToggle.checked));
@@ -13891,7 +14040,7 @@
       if (pressedKey === keybinds.smallAttack || pressedKey === keybinds.bigAttack) {
         event.preventDefault();
         const profile = pressedKey === keybinds.smallAttack ? "small" : "big";
-        selectAttackProfile(profile);
+        launchDirectPlayerAttack(profile);
         return;
       }
       if (keyToDir.has(pressedKey)) {

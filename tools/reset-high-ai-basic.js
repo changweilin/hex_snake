@@ -29,7 +29,7 @@ function main() {
     wins: 0,
     losses: 0,
     draws: 0,
-    strategyWeights: basicStrategyWeights()
+    strategyWeights: basicStrategyWeights(character.id)
   }));
   const strategyData = buildStrategyData(rows, characters, "tools/reset-high-ai-basic.js");
   writeJson(strategyDataPath, strategyData);

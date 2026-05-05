@@ -74,6 +74,18 @@ const characters = loadCharacters(root);
 const characterById = buildCharacterMap(characters);
 
 const tests = [];
+const quickMode = process.argv.includes("--quick");
+const slowTestPatterns = [
+  /100 match smoke test/,
+  /each character big attack/,
+  /scheduled /,
+  /balance tuner/,
+  /AI strategy tuner/,
+  /AI strategy gate/,
+  /high difficulty applies character-specific/,
+  /simulate-balance strategy files/,
+  /apply-ai-strategy/
+];
 
 function test(name, fn) {
   tests.push({ name, fn });
@@ -1051,6 +1063,16 @@ test("basic strategy weights are fixed and not role-adjusted", () => {
   });
   assert.deepEqual(makeBasicPolicy("gu_king").strategyWeights, weights);
   assert.deepEqual(makeBasicPolicy("dragon").strategyWeights, weights);
+  assert.deepEqual(makeBasicPolicy("moray").strategyWeights.castDirection, {
+    selfHeadToOpponentHead: 0,
+    opponentBodyLongestAxis: 3,
+    opponentHeadToNearestFood: 0
+  });
+  assert.deepEqual(makeBasicPolicy("lobster").strategyWeights.castDirection, {
+    selfHeadToOpponentHead: 3,
+    opponentBodyLongestAxis: 0,
+    opponentHeadToNearestFood: 0
+  });
 });
 
 test("AI strategy gate falls back to the basic baseline when no candidate wins decisively", () => {
@@ -1125,7 +1147,11 @@ test("apply-ai-strategy builds complete character strategy data", () => {
 });
 
 let failed = 0;
-tests.forEach(({ name, fn }) => {
+const selectedTests = quickMode
+  ? tests.filter(({ name }) => !slowTestPatterns.some(pattern => pattern.test(name)))
+  : tests;
+
+selectedTests.forEach(({ name, fn }) => {
   try {
     fn();
     console.log(`ok - ${name}`);
@@ -1137,7 +1163,8 @@ tests.forEach(({ name, fn }) => {
 });
 
 if (failed) {
-  process.exitCode = 1;
+  process.exit(1);
 } else {
-  console.log(`${tests.length} tests passed.`);
+  console.log(`${selectedTests.length}${quickMode ? `/${tests.length}` : ""} tests passed.`);
+  process.exit(0);
 }
