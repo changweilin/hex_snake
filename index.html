@@ -299,11 +299,11 @@
       width: 100%;
       max-width: 100%;
       padding: 8px;
-      border: 1px solid rgba(255, 255, 255, 0.18);
+      border: 1px solid rgba(255, 255, 255, 0.13);
       border-radius: 8px;
-      background: rgba(21, 27, 37, 0.58);
-      box-shadow: 0 14px 42px rgba(0, 0, 0, 0.28);
-      backdrop-filter: blur(12px);
+      background: rgba(21, 27, 37, 0.34);
+      box-shadow: 0 14px 42px rgba(0, 0, 0, 0.18);
+      backdrop-filter: blur(7px);
       pointer-events: auto;
     }
 
@@ -457,7 +457,7 @@
       min-height: 30px;
       padding: 6px 9px;
       border: 1px solid rgba(255, 255, 255, 0.12);
-      background: rgba(17, 23, 32, 0.72);
+      background: rgba(17, 23, 32, 0.5);
       color: var(--ink);
       border-radius: 8px;
       font: inherit;
@@ -517,9 +517,9 @@
       padding: 6px;
       border-radius: 8px;
       border: 1px solid rgba(255, 255, 255, 0.16);
-      background: rgba(17, 23, 32, 0.82);
-      box-shadow: 0 14px 38px rgba(0, 0, 0, 0.34);
-      backdrop-filter: blur(12px);
+      background: rgba(17, 23, 32, 0.56);
+      box-shadow: 0 14px 38px rgba(0, 0, 0, 0.24);
+      backdrop-filter: blur(7px);
     }
 
     .auto-speed-menu[hidden] {
@@ -553,11 +553,11 @@
       width: 100%;
       max-width: 100%;
       padding: 8px 10px;
-      border: 1px solid rgba(255, 255, 255, 0.18);
+      border: 1px solid rgba(255, 255, 255, 0.13);
       border-radius: 8px;
-      background: rgba(21, 27, 37, 0.58);
-      box-shadow: 0 14px 42px rgba(0, 0, 0, 0.28);
-      backdrop-filter: blur(12px);
+      background: rgba(21, 27, 37, 0.34);
+      box-shadow: 0 14px 42px rgba(0, 0, 0, 0.18);
+      backdrop-filter: blur(7px);
       pointer-events: auto;
     }
 
@@ -1965,11 +1965,18 @@
       display: block;
       padding: 4px 8px;
       border: 1px solid color-mix(in srgb, var(--fighter-line), transparent 34%);
-      border-radius: 999px;
+      border-radius: 8px;
       background: color-mix(in srgb, var(--fighter-color), transparent 88%);
       color: color-mix(in srgb, var(--ink), var(--fighter-accent) 18%);
       font-size: 0.78rem;
       font-weight: 800;
+      line-height: 1.4;
+    }
+
+    .portrait-moves b {
+      display: block;
+      margin-bottom: 2px;
+      color: var(--ink);
     }
 
     @keyframes module-swim {
@@ -2366,6 +2373,10 @@
       z-index: 3;
     }
 
+    .stick.is-rebounding {
+      transition: transform 150ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
     .target-stick {
       background: var(--accent);
     }
@@ -2552,6 +2563,12 @@
       margin-top: 4px;
     }
 
+    .rule-move-line {
+      display: block;
+      margin-top: 4px;
+      line-height: 1.45;
+    }
+
     .food-icon-group {
       display: inline-flex;
       align-items: center;
@@ -2654,16 +2671,6 @@
       border-radius: 8px;
       background: rgba(15, 23, 36, 0.48);
       border: 1px solid rgba(255, 255, 255, 0.08);
-    }
-
-    .rules-character-story {
-      display: grid;
-      gap: 6px;
-      margin-top: 8px;
-    }
-
-    .rules-character-story p {
-      margin: 0;
     }
 
     @media (min-width: 901px) and (max-height: 760px) {
@@ -4186,6 +4193,7 @@
     let movePointerStartY = 0;
     let movePointerMoved = false;
     let attackPointer = null;
+    let attackButtonPointerId = null;
     let controlAttackPointer = null;
     let targetCell = null;
     let targetActive = false;
@@ -4194,6 +4202,9 @@
     let portraitPoseTimers = {};
     let attackCalloutTimers = {};
     let selectedPortraitOwner = "player";
+    let highlightedAttackProfile = null;
+    let attackHighlightReleaseTimer = null;
+    let moveStickReboundTimer = null;
     let introDetailsOpen = false;
     let portraitLightboxOwner = "player";
     let portraitSwipeStartX = null;
@@ -4707,13 +4718,57 @@
       return `--fighter-color:${character.color};--fighter-line:${character.line};--fighter-accent:${character.accent};${ownerVars}`;
     }
 
+    const characterMoveGuides = {
+      dragon: {
+        small: "按小招鍵、點「小招」，或在棋盤短點一下；會自動鎖定敵方頭部並在短延遲後爆破。",
+        big: "按大招鍵或點「大招」會快速朝敵方頭部施放；也可在棋盤長按指定落點。白龍會放出繞場靈息彈，沿路命中敵方蛇身時爆發，最後在路徑終點再爆發一次。",
+        tip: "長按棋盤可把終點放在敵方蛇身密集處；快速施放則適合追擊頭部。"
+      },
+      sandworm: {
+        small: "按小招鍵、點「小招」，或在棋盤短點一下；會自動鎖定敵方頭部並在短延遲後爆破。",
+        big: "按大招鍵或點「大招」會快速朝敵方頭部施放；也可在棋盤長按指定突襲格。沙蟲會潛地延遲突襲，命中頭部可直接擊倒，命中身體會造成麻痺。",
+        tip: "長按棋盤可預判敵方頭部下一步；施放後有短暫潛地時間，可用來躲開危險。"
+      },
+      quetzal: {
+        small: "按小招鍵、點「小招」，或在棋盤短點一下；會自動鎖定敵方頭部並在短延遲後爆破。",
+        big: "按大招鍵、點「大招」，或在棋盤長按都會施放；羽蛇會沿自身蛇身留下持續傷害的藤沼區域，不需要指定落點。",
+        tip: "適合在敵方靠近你身體或追逐時施放，用身體路徑封鎖空間。"
+      },
+      moray: {
+        small: "按小招鍵、點「小招」，或在棋盤短點一下；會自動鎖定敵方頭部並在短延遲後爆破。",
+        big: "在棋盤拖曳可指定電擊起點與方向，放開施放；按大招鍵或點「大招」則快速朝敵方頭部方向施放。大招模式下也可按方向盤方向鍵施放直線電擊。",
+        tip: "棋盤拖曳時，拖曳方向比落點更重要；沿敵方身體長軸掃線最容易命中多段。"
+      },
+      lobster: {
+        small: "按小招鍵、點「小招」，或在棋盤短點一下；會自動鎖定敵方頭部並在短延遲後爆破。",
+        big: "在棋盤拖曳可指定出拳方向，放開施放；按大招鍵或點「大招」則快速朝敵方頭部方向施放。大招模式下也可按方向盤方向鍵打出連拳路徑。",
+        tip: "拖曳方向從自己頭部出拳；對準敵方頭部或彎折蛇身，連續兩波更容易打滿。"
+      },
+      gu_king: {
+        small: "按小招鍵、點「小招」，或在棋盤短點一下；會自動鎖定敵方頭部並在短延遲後爆破。",
+        big: "按大招鍵或點「大招」會快速朝敵方頭部施放；也可在棋盤長按指定毒爆中心。蠱王會在同一目標連續落下三段毒爆。",
+        tip: "長按棋盤可瞄準敵方必經格或被迫轉向的位置，讓連續三段覆蓋逃跑路線。"
+      }
+    };
+
+    function moveGuideFor(character) {
+      return characterMoveGuides[character.id] || {
+        small: "按小招鍵、點「小招」，或在棋盤短點一下；會自動鎖定敵方頭部並在短延遲後爆破。",
+        big: "按大招鍵或點「大招」會快速朝敵方頭部施放；也可在棋盤長按或拖曳觸發角色大招。",
+        tip: "觀察敵方路線後再決定快速施放或手動指定，命中率會更高。"
+      };
+    }
+
     function characterStoryMarkup(character) {
-      const motto = character.motto ? `<p class="portrait-motto">「${character.motto}」</p>` : "";
-      const moves = character.smallMove && character.bigMove
-        ? `<div class="portrait-moves" aria-label="${character.name}招式與食補效果"><span>小招：${character.smallMove}</span><span>大招：${character.bigMove}</span><span>食補效果：${character.detail}</span></div>`
-        : "";
-      const story = (character.story || []).map(paragraph => `<p>${paragraph}</p>`).join("");
-      return `${motto}${moves}${story}`;
+      const guide = moveGuideFor(character);
+      return `
+        <div class="portrait-moves" aria-label="${character.name}招式操作與食補效果">
+          <span><b>小招操作</b>${guide.small}</span>
+          <span><b>大招操作</b>${guide.big}</span>
+          <span><b>食補效果</b>${character.detail}</span>
+        </div>
+        <p class="portrait-motto">${guide.tip}</p>
+      `;
     }
 
     function foodIconMarkup(typeOrId, extraClass = "") {
@@ -4752,15 +4807,14 @@
         </li>
       `;
       const characterLegend = characters.map(character => {
-        const story = (character.story || []).map(paragraph => `<p>${paragraph}</p>`).join("");
+        const guide = moveGuideFor(character);
         return `
           <li>
             <b>${character.name}</b> / ${character.foodLabel}<br>
-            小招：${character.smallMove}<br>
-            大招：${character.bigMove}<br>
+            <span class="rule-move-line"><b>小招操作：</b>${guide.small}</span>
+            <span class="rule-move-line"><b>大招操作：</b>${guide.big}</span>
+            <span class="rule-move-line"><b>實戰重點：</b>${guide.tip}</span>
             <span class="rule-food-effect">食補效果：${weightedFoodIconMarkup(character)}<span>${character.detail}</span></span><br>
-            「${character.motto}」
-            <div class="rules-character-story">${story}</div>
           </li>
         `;
       }).join("");
@@ -4777,7 +4831,8 @@
           <ul class="rules-list">
             <li><b>鍵盤</b>：預設 W/E/D/X/Z/A 對應六方向；Q 小招、R 大招、空白鍵暫停、T 投降，可在設定中改鍵。</li>
             <li><b>觸控</b>：點六邊方向鍵可直接轉向；長按中心後拖曳可用搖桿控制方向。</li>
-            <li><b>瞄準</b>：點棋盤可改招式瞄準位置；小招與大招會攻擊目前目標。</li>
+            <li><b>棋盤手勢</b>：短點棋盤會施放小招並鎖定敵方頭部；長按棋盤會施放大招，拖曳棋盤也會切成大招。可指定落點的角色會使用手勢位置，方向型大招會使用拖曳方向。</li>
+            <li><b>快速施放</b>：按小招鍵 / 大招鍵，或點「小招」/「大招」按鈕，會直接以敵方頭部為快速目標。電鰻與智蝦的大招也可在大招模式下按方向盤方向鍵，沿該方向施放。</li>
           </ul>
         </section>
         <section class="rules-block">
@@ -5944,11 +5999,40 @@
       return true;
     }
 
+    function triggerTouchFeedback(event, strength = 8) {
+      if (event?.pointerType === "mouse") return;
+      if (!navigator.vibrate) return;
+      navigator.vibrate(strength);
+    }
+
+    function setAttackButtonHighlight(profile = null) {
+      if (attackHighlightReleaseTimer) {
+        clearTimeout(attackHighlightReleaseTimer);
+        attackHighlightReleaseTimer = null;
+      }
+      highlightedAttackProfile = profile === "small" || profile === "big" ? profile : null;
+      updateAttackButtons();
+    }
+
+    function releaseAttackButtonHighlight(delayMs = 90) {
+      if (attackHighlightReleaseTimer) clearTimeout(attackHighlightReleaseTimer);
+      attackHighlightReleaseTimer = setTimeout(() => {
+        attackHighlightReleaseTimer = null;
+        highlightedAttackProfile = null;
+        updateAttackButtons();
+      }, delayMs);
+    }
+
+    function flashAttackButton(profile, delayMs = 120) {
+      setAttackButtonHighlight(profile);
+      releaseAttackButtonHighlight(delayMs);
+    }
+
     function updateAttackButtons() {
-      smallAttackButton.classList.toggle("is-selected", selectedAttackProfile === "small");
-      bigAttackButton.classList.toggle("is-selected", selectedAttackProfile === "big");
-      smallAttackButton.classList.toggle("secondary", selectedAttackProfile !== "small");
-      bigAttackButton.classList.toggle("secondary", selectedAttackProfile !== "big");
+      smallAttackButton.classList.toggle("is-selected", highlightedAttackProfile === "small");
+      bigAttackButton.classList.toggle("is-selected", highlightedAttackProfile === "big");
+      smallAttackButton.classList.toggle("secondary", highlightedAttackProfile !== "small");
+      bigAttackButton.classList.toggle("secondary", highlightedAttackProfile !== "big");
     }
 
     function selectAttackProfile(profile) {
@@ -7435,11 +7519,13 @@
       return chooseAiDirection(owner);
     }
 
-    function setDirection(newDir) {
+    function setDirection(newDir, options = {}) {
       if (!Number.isInteger(newDir) || newDir < 0 || newDir > 5) return;
       if (canTurn(newDir)) {
+        const changed = nextDir !== newDir;
         nextDir = newDir;
         hexDirButtons.forEach(button => button.classList.toggle("active", Number(button.dataset.dir) === newDir));
+        if (changed) triggerTouchFeedback(options.feedbackEvent, options.feedbackStrength ?? 6);
         updateHud();
       }
     }
@@ -7971,7 +8057,7 @@
       if (!profile) return;
       const target = chooseAiAttackTarget("player", profile, now);
       const options = profile === "big" ? { aimDirection: chooseAiAttackDirection("player", target, now), aimOrigin: snake[0] } : {};
-      launchAttack("player", target, now, profile, options);
+      if (launchAttack("player", target, now, profile, options)) flashAttackButton(profile, 150);
     }
 
     function damageSnake(parts, target, radius, damageScale) {
@@ -12836,6 +12922,7 @@
         pointerId: event.pointerId,
         direction: Number.isInteger(direction) ? direction : ownerDirection("player")
       };
+      triggerTouchFeedback(event, 10);
       targetCell = directionalAttackTarget(controlAttackPointer.direction);
       targetActive = true;
       try {
@@ -12851,9 +12938,11 @@
       if (!controlAttackPointer || event.pointerId !== controlAttackPointer.pointerId) return;
       event.preventDefault();
       const direction = controlPadDirectionFromEvent(event);
+      const previousDirection = controlAttackPointer.direction;
       if (direction !== null) controlAttackPointer.direction = direction;
       targetCell = directionalAttackTarget(controlAttackPointer.direction);
       targetActive = true;
+      if (controlAttackPointer.direction !== previousDirection) triggerTouchFeedback(event, 5);
       draw();
     }
 
@@ -12863,6 +12952,7 @@
       const direction = controlAttackPointer.direction;
       controlAttackPointer = null;
       if (controlRow.hasPointerCapture?.(event.pointerId)) controlRow.releasePointerCapture(event.pointerId);
+      triggerTouchFeedback(event, 6);
       launchPlayerAttackDirection(direction, "big");
     }
 
@@ -12875,6 +12965,7 @@
     }
 
     function moveStick(event) {
+      clearMoveStickRebound();
       const rect = joyZone.getBoundingClientRect();
       const cx = rect.left + rect.width / 2;
       const cy = rect.top + rect.height / 2;
@@ -12886,7 +12977,7 @@
       const newDir = pointerToDirection(event, rect);
       if (newDir !== null) {
         movePointerMoved = true;
-        setDirection(newDir);
+        setDirection(newDir, { feedbackEvent: event, feedbackStrength: 5 });
       }
     }
 
@@ -12897,6 +12988,7 @@
       if (!locked) {
         movePointerId = null;
         moveStickEngaged = false;
+        clearMoveStickRebound();
         stick.style.transform = "translate(0, 0)";
       }
     }
@@ -12905,6 +12997,14 @@
       if (!moveStickHoldTimer) return;
       clearTimeout(moveStickHoldTimer);
       moveStickHoldTimer = null;
+    }
+
+    function clearMoveStickRebound() {
+      if (moveStickReboundTimer) {
+        clearTimeout(moveStickReboundTimer);
+        moveStickReboundTimer = null;
+      }
+      stick.classList.remove("is-rebounding");
     }
 
     function clearAttackPointerLongPressTimer() {
@@ -12934,7 +13034,13 @@
       movePointerId = null;
       moveStickEngaged = false;
       joyZone.querySelector(".joystick").classList.remove("locked");
+      stick.classList.add("is-rebounding");
       stick.style.transform = "translate(0, 0)";
+      if (moveStickReboundTimer) clearTimeout(moveStickReboundTimer);
+      moveStickReboundTimer = setTimeout(() => {
+        moveStickReboundTimer = null;
+        stick.classList.remove("is-rebounding");
+      }, 180);
     }
 
     function moveTargetStick(event) {
@@ -13012,7 +13118,6 @@
 
     function previewDirectAttack(profile = "small", pointer = null) {
       selectedAttackProfile = profile === "big" ? "big" : "small";
-      updateAttackButtons();
       targetCell = playerDirectAttackTarget(profile, pointer);
       targetActive = Boolean(targetCell);
       draw();
@@ -13067,6 +13172,7 @@
       if (launchAttack("player", target, now, profile, options)) {
         targetCell = { ...target };
         targetActive = true;
+        flashAttackButton(profile);
         draw();
         setTimeout(() => {
           targetActive = false;
@@ -13632,21 +13738,41 @@
     function handleAttackButtonDown(event, profile) {
       event.preventDefault();
       event.stopPropagation();
-      smallAttackButton.classList.toggle("is-selected", profile === "small");
-      bigAttackButton.classList.toggle("is-selected", profile === "big");
+      attackButtonPointerId = event.pointerId;
+      setAttackButtonHighlight(profile);
+      triggerTouchFeedback(event, profile === "big" ? 12 : 8);
+      try {
+        event.currentTarget.setPointerCapture(event.pointerId);
+      } catch (error) {
+        // Pointer capture keeps the visual press state paired with release/cancel.
+      }
       previewDirectAttack(profile);
     }
 
     function handleAttackButtonUp(event, profile) {
       event.preventDefault();
       event.stopPropagation();
+      if (attackButtonPointerId !== null && event.pointerId !== attackButtonPointerId) return;
+      attackButtonPointerId = null;
+      if (event.currentTarget.hasPointerCapture?.(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+      releaseAttackButtonHighlight();
+      triggerTouchFeedback(event, 5);
       launchDirectPlayerAttack(profile);
+    }
+
+    function handleAttackButtonCancel(event) {
+      if (attackButtonPointerId !== null && event.pointerId !== attackButtonPointerId) return;
+      attackButtonPointerId = null;
+      if (event.currentTarget.hasPointerCapture?.(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+      setAttackButtonHighlight(null);
     }
 
     smallAttackButton.addEventListener("pointerdown", event => handleAttackButtonDown(event, "small"));
     bigAttackButton.addEventListener("pointerdown", event => handleAttackButtonDown(event, "big"));
     smallAttackButton.addEventListener("pointerup", event => handleAttackButtonUp(event, "small"));
     bigAttackButton.addEventListener("pointerup", event => handleAttackButtonUp(event, "big"));
+    smallAttackButton.addEventListener("pointercancel", handleAttackButtonCancel);
+    bigAttackButton.addEventListener("pointercancel", handleAttackButtonCancel);
     smallAttackButton.addEventListener("click", event => event.preventDefault());
     bigAttackButton.addEventListener("click", event => event.preventDefault());
     controlRow.addEventListener("pointerdown", event => {
@@ -13902,12 +14028,14 @@
       const dirButton = event.target.closest("[data-dir-button]");
       if (dirButton) {
         event.preventDefault();
-        setDirection(Number(dirButton.dataset.dir));
+        triggerTouchFeedback(event, 7);
+        setDirection(Number(dirButton.dataset.dir), { feedbackEvent: event, feedbackStrength: 5 });
         return;
       }
       if (!pointerNearMoveCenter(event)) {
         return;
       }
+      triggerTouchFeedback(event, 5);
       movePointerId = event.pointerId;
       movePointerStartedAt = performance.now();
       movePointerStartX = event.clientX;

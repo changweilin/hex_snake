@@ -35,6 +35,8 @@ const DEFAULT_RL_RUNS = 1000;
 const DEFAULT_CROSS_RUNS = 1000;
 const DEFAULT_MIN_QUALIFIED = 8;
 const DEFAULT_DIVERSITY_DISTANCE = 0.18;
+const DEFAULT_BASELINE_DISTANCE = 0.08;
+const DEFAULT_CYCLES = 1;
 const DEFAULT_RL_SIGMA = 0.42;
 const DEFAULT_RL_TEMPERATURE = 0.08;
 
@@ -326,6 +328,15 @@ function evaluateAgainstBasic({ balance, character, candidate, runs, seed, phase
   return finalizeTotals(totals, candidate.strategyWeights);
 }
 
+function annotateNovelty(row, baselineDistance) {
+  const distance = normalizedDistance(row.strategyWeights, makeBasicStrategy().strategyWeights);
+  return {
+    ...row,
+    baselineDistance: round(distance),
+    novelFromBaseline: distance >= baselineDistance
+  };
+}
+
 function compareRows(a, b) {
   return b.winRate - a.winRate
     || b.reward - a.reward
@@ -371,7 +382,11 @@ function nextGaPopulation(character, ranked, rng, size, eliteCount, round) {
   return next;
 }
 
-function runGaSearch({ balance, characters, seed, runs, rounds, populationSize, eliteCount, diversityDistance, minQualified, outputDir }) {
+function qualifiedRows(rows) {
+  return rows.filter(row => row.passedGate && row.novelFromBaseline);
+}
+
+function runGaSearch({ balance, characters, seed, runs, rounds, populationSize, eliteCount, diversityDistance, baselineDistance, minQualified, outputDir }) {
   const rng = createRng(`${seed}:ga`);
   const populations = new Map(characters.map(character => [character.id, seedPopulation(character, rng, populationSize)]));
   const allRows = [];
@@ -389,6 +404,7 @@ function runGaSearch({ balance, characters, seed, runs, rounds, populationSize, 
           seed,
           phase: `ga-round-${roundIndex}`
         }))
+        .map(row => annotateNovelty(row, baselineDistance))
         .sort(compareRows);
       ranked.forEach(row => allRows.push({ ...row, phase: "ga", round: roundIndex }));
       writeJson(path.join(outputDir, "ga", `${character.id}-round-${roundIndex}.json`), ranked);
@@ -399,22 +415,23 @@ function runGaSearch({ balance, characters, seed, runs, rounds, populationSize, 
         characterId: character.id,
         bestStrategyId: ranked[0]?.strategyId,
         bestWinRate: ranked[0]?.winRate,
-        qualified: ranked.filter(row => row.passedGate).length
+        qualified: qualifiedRows(ranked).length
       });
       populations.set(character.id, nextGaPopulation(character, ranked, rng, populationSize, eliteCount, roundIndex));
     });
-    const qualified = selectDiverse(allRows.filter(row => row.passedGate), diversityDistance);
+    const qualified = selectDiverse(qualifiedRows(allRows), diversityDistance);
     console.log(`GA round ${roundIndex}/${rounds}: ${qualified.length} diverse qualified strategies`);
     if (qualified.length >= minQualified && roundIndex >= Math.min(3, rounds)) {
       // Keep running configured rounds for reproducible final rankings.
     }
   }
 
-  const diverseQualified = selectDiverse(allRows.filter(row => row.passedGate), diversityDistance);
+  const diverseQualified = selectDiverse(qualifiedRows(allRows), diversityDistance);
   writeJson(path.join(outputDir, "ga-history.json"), history);
   writeJson(path.join(outputDir, "ga-qualified.json"), {
     gate: "winRate = wins / (wins + losses + draws) > 0.5",
     diversityDistance,
+    baselineDistance,
     minQualified,
     qualifiedCount: diverseQualified.length,
     strategies: diverseQualified
@@ -496,7 +513,7 @@ function runBanditRl({ balance, characters, gaRows, bestByCharacter, seed, runs,
         runs,
         seed,
         phase: `rl-round-${roundIndex}`
-      })).sort(compareRows);
+      })).map(row => annotateNovelty(row, 0)).sort(compareRows);
       writeJson(path.join(outputDir, "rl", `${character.id}-round-${roundIndex}.json`), ranked);
       if (!best || compareRows(ranked[0], best) < 0) best = ranked[0];
       const updateRows = ranked.slice(0, Math.max(2, Math.ceil(ranked.length / 2)));
@@ -674,6 +691,8 @@ function rowsToCsv(rows) {
       "outcomeWinRate",
       "reward",
       "passedGate",
+      "baselineDistance",
+      "novelFromBaseline",
       "averageDurationMs",
       "averageHpDiff",
       "averageScoreDiff",
@@ -693,6 +712,8 @@ function rowsToCsv(rows) {
       row.outcomeWinRate,
       row.reward,
       row.passedGate,
+      row.baselineDistance ?? "",
+      row.novelFromBaseline ?? "",
       row.averageDurationMs,
       row.averageHpDiff,
       row.averageScoreDiff,
@@ -724,6 +745,7 @@ function runOptimization(options = {}) {
     crossRuns: Math.max(1, Math.floor(options.crossRuns ?? DEFAULT_CROSS_RUNS)),
     minQualified: Math.max(1, Math.floor(options.minQualified ?? DEFAULT_MIN_QUALIFIED)),
     diversityDistance: Number(options.diversityDistance ?? DEFAULT_DIVERSITY_DISTANCE),
+    baselineDistance: Number(options.baselineDistance ?? DEFAULT_BASELINE_DISTANCE),
     rlSigma: Number(options.rlSigma ?? DEFAULT_RL_SIGMA),
     rlTemperature: Number(options.rlTemperature ?? DEFAULT_RL_TEMPERATURE),
     characterIds: characters.map(character => character.id)
@@ -740,10 +762,11 @@ function runOptimization(options = {}) {
     populationSize: config.gaPopulation,
     eliteCount: config.gaElites,
     diversityDistance: config.diversityDistance,
+    baselineDistance: config.baselineDistance,
     minQualified: config.minQualified,
     outputDir
   });
-  const gaRowsForRl = ga.allRows.filter(row => row.passedGate);
+  const gaRowsForRl = qualifiedRows(ga.allRows);
   const rl = runBanditRl({
     balance,
     characters,
@@ -810,12 +833,99 @@ function runOptimization(options = {}) {
   return { manifest, ga, rl, baselineCross, bestCross };
 }
 
+function averageCrossWinRate(cross) {
+  const rows = cross.matrix.averages;
+  return rows.length ? rows.reduce((sum, row) => sum + row.averageWinRate, 0) / rows.length : 0;
+}
+
+function cycleSummaryRows(cycleResults) {
+  return cycleResults.map((result, index) => {
+    const baselineAverage = averageCrossWinRate(result.baselineCross);
+    const bestAverage = averageCrossWinRate(result.bestCross);
+    return {
+      cycle: index + 1,
+      status: result.manifest.status,
+      seed: result.manifest.config.seed,
+      directory: result.manifest.outputs.directory,
+      qualifiedCount: result.ga.diverseQualified.length,
+      rlBestCount: result.rl.bestStrategies.length,
+      baselineAverage,
+      bestAverage,
+      delta: bestAverage - baselineAverage
+    };
+  });
+}
+
+function writeCycleSummary(outputDir, rows) {
+  writeJson(path.join(outputDir, "cycles-summary.json"), {
+    generatedAt: new Date().toISOString(),
+    cycles: rows
+  });
+  writeCsv(path.join(outputDir, "cycles-summary.csv"), [
+    ["cycle", "status", "seed", "qualifiedCount", "rlBestCount", "baselineAverage", "bestAverage", "delta", "directory"],
+    ...rows.map(row => [
+      row.cycle,
+      row.status,
+      row.seed,
+      row.qualifiedCount,
+      row.rlBestCount,
+      round(row.baselineAverage),
+      round(row.bestAverage),
+      round(row.delta),
+      row.directory
+    ])
+  ]);
+  const lines = [
+    "# Strategy Optimization Cycles",
+    "",
+    "| Cycle | Status | Qualified | RL Best | Baseline Avg | Best Avg | Delta |",
+    "| --- | --- | ---: | ---: | ---: | ---: | ---: |",
+    ...rows.map(row => `| ${row.cycle} | ${row.status} | ${row.qualifiedCount} | ${row.rlBestCount} | ${percent(row.baselineAverage)} | ${percent(row.bestAverage)} | ${percent(row.delta)} |`)
+  ];
+  fs.writeFileSync(path.join(outputDir, "cycles-summary.md"), `${lines.join("\n")}\n`, "utf8");
+}
+
+function runMultiCycleOptimization(options = {}) {
+  const cycles = Math.max(1, Math.floor(options.cycles ?? DEFAULT_CYCLES));
+  if (cycles === 1) return runOptimization(options);
+  const seed = String(options.seed || DEFAULT_SEED);
+  const outputDir = options.outputDir || path.join(reportsDir, `strategy-cycles-${stamp()}-${seed.replace(/[^a-zA-Z0-9]+/g, "-").slice(0, 32)}`);
+  ensureDir(outputDir);
+  const cycleResults = [];
+  for (let cycle = 1; cycle <= cycles; cycle += 1) {
+    const cycleSeed = `${seed}-cycle-${cycle}`;
+    console.log(`Cycle ${cycle}/${cycles}: ${cycleSeed}`);
+    cycleResults.push(runOptimization({
+      ...options,
+      cycles: 1,
+      seed: cycleSeed,
+      outputDir: path.join(outputDir, `cycle-${cycle}`)
+    }));
+  }
+  const rows = cycleSummaryRows(cycleResults);
+  writeCycleSummary(outputDir, rows);
+  const manifest = {
+    generatedAt: new Date().toISOString(),
+    status: rows.every(row => row.status === "completed") ? "completed" : "completed-with-insufficient-cycles",
+    cycles,
+    outputs: {
+      directory: outputDir,
+      summaryJson: path.join(outputDir, "cycles-summary.json"),
+      summaryCsv: path.join(outputDir, "cycles-summary.csv"),
+      summaryMarkdown: path.join(outputDir, "cycles-summary.md")
+    }
+  };
+  writeJson(path.join(outputDir, "manifest.json"), manifest);
+  return { manifest, cycles: cycleResults, cycleSummary: rows };
+}
+
 function main() {
   const args = parseArgs(process.argv.slice(2));
-  const result = runOptimization({
+  const options = {
     seed: stringArg(args, "seed", DEFAULT_SEED),
     characterId: args.character ? String(args.character) : undefined,
     outputDir: args.output ? path.resolve(root, args.output) : undefined,
+    cycles: integerArg(args, "cycles", DEFAULT_CYCLES),
     gaPopulation: integerArg(args, "ga-population", DEFAULT_GA_POPULATION),
     gaRounds: integerArg(args, "ga-rounds", DEFAULT_GA_ROUNDS),
     gaElites: integerArg(args, "ga-elites", DEFAULT_GA_ELITES),
@@ -826,14 +936,22 @@ function main() {
     crossRuns: integerArg(args, "cross-runs", DEFAULT_CROSS_RUNS),
     minQualified: integerArg(args, "min-qualified", DEFAULT_MIN_QUALIFIED),
     diversityDistance: numberArg(args, "diversity-distance", DEFAULT_DIVERSITY_DISTANCE),
+    baselineDistance: numberArg(args, "baseline-distance", DEFAULT_BASELINE_DISTANCE),
     rlSigma: numberArg(args, "rl-sigma", DEFAULT_RL_SIGMA),
     rlTemperature: numberArg(args, "rl-temperature", DEFAULT_RL_TEMPERATURE)
-  });
+  };
+  const result = runMultiCycleOptimization(options);
   console.log(`Manifest: ${result.manifest.outputs.directory}\\manifest.json`);
-  console.log(`GA qualified: ${result.ga.diverseQualified.length}`);
-  result.rl.bestStrategies.forEach(row => {
-    console.log(`${row.characterId}: ${(row.winRate * 100).toFixed(2)}% win (${row.wins}/${row.games}), draws ${row.draws}`);
-  });
+  if (result.cycleSummary) {
+    result.cycleSummary.forEach(row => {
+      console.log(`cycle ${row.cycle}: qualified ${row.qualifiedCount}, delta ${(row.delta * 100).toFixed(2)}%`);
+    });
+  } else {
+    console.log(`GA qualified: ${result.ga.diverseQualified.length}`);
+    result.rl.bestStrategies.forEach(row => {
+      console.log(`${row.characterId}: ${(row.winRate * 100).toFixed(2)}% win (${row.wins}/${row.games}), draws ${row.draws}`);
+    });
+  }
 }
 
 if (require.main === module) {
@@ -850,8 +968,10 @@ module.exports = {
   compareRows,
   evaluateAgainstBasic,
   normalizedDistance,
+  qualifiedRows,
   runBanditRl,
   runGaSearch,
+  runMultiCycleOptimization,
   runOptimization,
   selectDiverse,
   weightsToVector
