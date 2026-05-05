@@ -1493,6 +1493,15 @@ function sampleStock(fighter) {
   fighter.stats.stockSamples += 1;
 }
 
+function sampleStockTicks(state, ticks) {
+  if (ticks <= 0) return;
+  Object.values(state.fighters).forEach(fighter => {
+    const total = FOOD_TYPES.reduce((sum, type) => sum + (fighter.stock[type] || 0), 0);
+    fighter.stats.totalStock += total * ticks;
+    fighter.stats.stockSamples += ticks;
+  });
+}
+
 function createMatchState(options) {
   const balance = options.balance;
   if (!balance.highAiStrategies) {
@@ -1531,13 +1540,91 @@ function createMatchState(options) {
   return state;
 }
 
+function ceilToTick(value, tickMs) {
+  if (!Number.isFinite(value)) return Number.POSITIVE_INFINITY;
+  return Math.ceil(Math.max(0, value) / tickMs) * tickMs;
+}
+
+function nextProjectileTick(state, tickMs) {
+  return state.projectiles.reduce((soonest, projectile) => Math.min(soonest, ceilToTick(projectile.impactAt, tickMs)), Number.POSITIVE_INFINITY);
+}
+
+function nextHazardTick(state, tickMs) {
+  return state.hazards.reduce((soonest, hazard) => {
+    if (state.now > hazard.endAt) return soonest;
+    return Math.min(soonest, ceilToTick(Math.max(hazard.startedAt, hazard.nextTickAt), tickMs));
+  }, Number.POSITIVE_INFINITY);
+}
+
+function nextAttackCheckTick(state, fighter, balance, tickMs) {
+  if (!canAttack(fighter, "small", balance) && !canAttack(fighter, "big", balance)) return Number.POSITIVE_INFINITY;
+  const nextSequentialTick = state.now + tickMs;
+  const candidates = [];
+  if (canAttack(fighter, "small", balance)) {
+    candidates.push(fighter.lastAttack + attackCooldown(fighter.stock, balance) * SMALL_ATTACK_COOLDOWN_SCALE);
+  }
+  if (canAttack(fighter, "big", balance)) {
+    candidates.push(fighter.lastAttack + attackCooldown(fighter.stock, balance));
+  }
+  candidates.push(nextSequentialTick, fighter.stunUntil);
+  const ticks = [...new Set(candidates
+    .filter(Number.isFinite)
+    .map(candidate => Math.max(nextSequentialTick, ceilToTick(Math.max(candidate, fighter.stunUntil), tickMs))))]
+    .sort((left, right) => left - right);
+  return ticks.find(tick => (
+    tick >= fighter.stunUntil &&
+    (
+      canAttack(fighter, "small", balance) && tick - fighter.lastAttack >= attackCooldown(fighter.stock, balance) * SMALL_ATTACK_COOLDOWN_SCALE ||
+      canAttack(fighter, "big", balance) && tick - fighter.lastAttack >= attackCooldown(fighter.stock, balance)
+    )
+  )) ?? Number.POSITIVE_INFINITY;
+}
+
+function nextMoveTick(state, fighter, balance, tickMs) {
+  const nextSequentialTick = state.now + tickMs;
+  const candidates = [
+    nextSequentialTick,
+    fighter.stunUntil,
+    fighter.slowUntil,
+    fighter.lastStep + moveInterval(fighter, balance, nextSequentialTick),
+    fighter.lastStep + moveInterval(fighter, balance, Math.max(fighter.slowUntil, nextSequentialTick))
+  ];
+  const ticks = [...new Set(candidates
+    .filter(Number.isFinite)
+    .map(candidate => Math.max(nextSequentialTick, ceilToTick(Math.max(candidate, fighter.stunUntil), tickMs))))]
+    .sort((left, right) => left - right);
+  return ticks.find(tick => tick >= fighter.stunUntil && tick - fighter.lastStep >= moveInterval(fighter, balance, tick)) ?? Number.POSITIVE_INFINITY;
+}
+
+function nextMeaningfulTick(state, balance, tickMs, maxMatchMs) {
+  const nextSequentialTick = Math.min(maxMatchMs, state.now + tickMs);
+  const eventTicks = [
+    nextProjectileTick(state, tickMs),
+    nextHazardTick(state, tickMs)
+  ];
+  Object.values(state.fighters).forEach(fighter => {
+    eventTicks.push(nextAttackCheckTick(state, fighter, balance, tickMs));
+    eventTicks.push(nextMoveTick(state, fighter, balance, tickMs));
+  });
+  const soonest = Math.min(...eventTicks.filter(value => Number.isFinite(value) && value > state.now));
+  if (!Number.isFinite(soonest)) return maxMatchMs;
+  return Math.min(maxMatchMs, Math.max(nextSequentialTick, soonest));
+}
+
 function simulateMatch(options) {
   const state = createMatchState(options);
   const balance = state.balance;
   const maxMatchMs = options.maxMatchMs ?? balance.simulation.maxMatchMs;
   const tickMs = options.tickMs ?? balance.simulation.tickMs;
+  const skipEmptyTicks = options.skipEmptyTicks !== false;
   while (state.now < maxMatchMs && state.fighters.player.hp > 0 && state.fighters.computer.hp > 0) {
-    state.now = Math.min(maxMatchMs, state.now + tickMs);
+    const previousNow = state.now;
+    const nextNow = skipEmptyTicks
+      ? nextMeaningfulTick(state, balance, tickMs, maxMatchMs)
+      : Math.min(maxMatchMs, state.now + tickMs);
+    const skippedTicks = Math.max(0, Math.round((nextNow - previousNow) / tickMs) - 1);
+    sampleStockTicks(state, skippedTicks);
+    state.now = nextNow;
     resolveProjectiles(state, state.now, balance);
     resolveHazards(state, state.now, balance);
     updateVisibleMemory(state);

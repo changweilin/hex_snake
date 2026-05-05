@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
+const { Worker, isMainThread, parentPort, workerData } = require("worker_threads");
 const {
   loadBalance,
   loadCharacters,
@@ -146,35 +148,87 @@ function highModel(strategyFile, characterId) {
   return { aiDifficulty: "high", pathPrecision: 1, aimPrecision: 1, skillStrategy: "preferBig", foodStrategy: "denyOpponent" };
 }
 
-function runCrossPlay(options = {}) {
-  const balance = options.balance || loadBalance(root);
-  const characters = options.characters || loadCharacters(root);
-  const runs = Math.max(1, Math.floor(Number(options.runs ?? 1000)));
-  const seed = String(options.seed || `ai-cross-${stamp()}`);
-  const strategyFile = options.strategyFile || readJsonIfPresent("data/high-ai-strategies.json");
-  const outputBase = options.outputBase || path.join(reportsDir, `ai-cross-${stamp()}-${seed.replace(/[^a-zA-Z0-9]+/g, "-").slice(0, 32)}`);
-  const results = [];
-
+function buildOrderedPairs(characters) {
+  const pairs = [];
   characters.forEach(playerCharacter => {
     characters.forEach(computerCharacter => {
       if (playerCharacter.id === computerCharacter.id) return;
-      results.push(runSeries({
-        balance,
-        playerCharacter,
-        computerCharacter,
-        seed: `${seed}:${playerCharacter.id}:vs:${computerCharacter.id}`,
-        runs,
-        playerModel: highModel(strategyFile, playerCharacter.id),
-        computerModel: highModel(strategyFile, computerCharacter.id)
-      }));
+      pairs.push({ playerCharacter, computerCharacter });
     });
   });
+  return pairs;
+}
+
+function runPair({ balance, strategyFile, seed, runs, pair }) {
+  const { playerCharacter, computerCharacter } = pair;
+  return runSeries({
+    balance,
+    playerCharacter,
+    computerCharacter,
+    seed: `${seed}:${playerCharacter.id}:vs:${computerCharacter.id}`,
+    runs,
+    playerModel: highModel(strategyFile, playerCharacter.id),
+    computerModel: highModel(strategyFile, computerCharacter.id)
+  });
+}
+
+function chunkItems(items, chunkCount) {
+  const chunks = Array.from({ length: chunkCount }, () => []);
+  items.forEach((item, index) => chunks[index % chunkCount].push(item));
+  return chunks.filter(chunk => chunk.length);
+}
+
+function runPairsSync({ balance, strategyFile, seed, runs, indexedPairs }) {
+  return indexedPairs.map(({ index, pair }) => ({
+    index,
+    result: runPair({ balance, strategyFile, seed, runs, pair })
+  }));
+}
+
+function runPairsInWorker(payload) {
+  return new Promise((resolve, reject) => {
+    const worker = new Worker(__filename, { workerData: payload });
+    worker.on("message", resolve);
+    worker.on("error", reject);
+    worker.on("exit", code => {
+      if (code !== 0) reject(new Error(`AI cross worker exited with code ${code}.`));
+    });
+  });
+}
+
+async function runPairs({ balance, strategyFile, seed, runs, pairs, jobs }) {
+  const indexedPairs = pairs.map((pair, index) => ({ index, pair }));
+  if (jobs <= 1 || indexedPairs.length <= 1) return runPairsSync({ balance, strategyFile, seed, runs, indexedPairs });
+  const workerCount = Math.min(jobs, indexedPairs.length);
+  const chunks = chunkItems(indexedPairs, workerCount);
+  const rows = await Promise.all(chunks.map(chunk => runPairsInWorker({
+    balance,
+    strategyFile,
+    seed,
+    runs,
+    indexedPairs: chunk
+  })));
+  return rows.flat().sort((left, right) => left.index - right.index);
+}
+
+async function runCrossPlay(options = {}) {
+  const balance = options.balance || loadBalance(root);
+  const characters = options.characters || loadCharacters(root);
+  const runs = Math.max(1, Math.floor(Number(options.runs ?? 1)));
+  const cpuCount = typeof os.availableParallelism === "function" ? os.availableParallelism() : os.cpus().length;
+  const jobs = Math.max(1, Math.floor(Number(options.jobs ?? cpuCount)));
+  const seed = String(options.seed || `ai-cross-${stamp()}`);
+  const strategyFile = options.strategyFile || readJsonIfPresent("data/high-ai-strategies.json");
+  const outputBase = options.outputBase || path.join(reportsDir, `ai-cross-${stamp()}-${seed.replace(/[^a-zA-Z0-9]+/g, "-").slice(0, 32)}`);
+  const pairs = buildOrderedPairs(characters);
+  const results = (await runPairs({ balance, strategyFile, seed, runs, pairs, jobs })).map(row => row.result);
 
   const report = {
     generatedAt: new Date().toISOString(),
     config: {
       seed,
       runs,
+      jobs,
       orderedPairs: results.length,
       skipMirror: true,
       strategySource: options.strategySource || "data/high-ai-strategies.json"
@@ -193,12 +247,13 @@ function runCrossPlay(options = {}) {
   return { report, jsonPath, csvPath, matrixCsvPath, markdownPath };
 }
 
-function main() {
+async function main() {
   const args = parseArgs(process.argv.slice(2));
   const strategyPath = stringArg(args, "strategy-file", "data/high-ai-strategies.json");
   const outputBase = args.output ? path.resolve(root, args.output) : undefined;
-  const result = runCrossPlay({
-    runs: numberArg(args, "runs", 1000),
+  const result = await runCrossPlay({
+    runs: numberArg(args, "runs", 1),
+    jobs: numberArg(args, "jobs", typeof os.availableParallelism === "function" ? os.availableParallelism() : os.cpus().length),
     seed: stringArg(args, "seed", `ai-cross-${stamp()}`),
     strategyFile: readJsonIfPresent(strategyPath),
     strategySource: strategyPath,
@@ -209,17 +264,27 @@ function main() {
   console.log(`Matrix CSV: ${result.matrixCsvPath}`);
   console.log(`Markdown: ${result.markdownPath}`);
   console.log(`Pairs: ${result.report.results.length}`);
+  console.log(`Jobs: ${result.report.config.jobs}`);
 }
 
-if (require.main === module) {
+function workerMain() {
   try {
-    main();
+    parentPort.postMessage(runPairsSync(workerData));
   } catch (error) {
-    console.error(error.message);
-    process.exitCode = 1;
+    throw error;
   }
 }
 
+if (!isMainThread) {
+  workerMain();
+} else if (require.main === module) {
+  main().catch(error => {
+    console.error(error.message);
+    process.exitCode = 1;
+  });
+}
+
 module.exports = {
+  buildOrderedPairs,
   runCrossPlay
 };

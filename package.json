@@ -19,6 +19,7 @@
     "apply:ai-strategy": "node tools/apply-ai-strategy.js",
     "simulate:ai-cross": "node tools/run-ai-cross-play.js",
     "optimize:strategy": "node tools/run-strategy-optimization.js",
+    "generate:sfx": "node tools/generate-character-sfx.js",
     "test": "node tools/run-tests.js",
     "test:quick": "node tools/run-tests.js --quick"
   }
