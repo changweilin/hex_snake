@@ -18,6 +18,7 @@
     "reset:high-ai-basic": "node tools/reset-high-ai-basic.js",
     "apply:ai-strategy": "node tools/apply-ai-strategy.js",
     "simulate:ai-cross": "node tools/run-ai-cross-play.js",
+    "optimize:strategy": "node tools/run-strategy-optimization.js",
     "test": "node tools/run-tests.js"
   }
 }
