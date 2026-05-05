@@ -4,26 +4,118 @@
     "slug": "white_dragon",
     "name": "白龍",
     "representColor": "#f8fafc",
-    "appearance": "曾墜入低谷的雲海白龍，銀白鱗片、淡藍光痕與金色角冠交錯，姿態像重新躍門的古老王者。",
-    "avatar": "assets/portraits/sm/white_dragon_intro.png",
+    "appearance": "曾墜入低谷的雲海白龍，銀白鱗片、淡藍潮痕與金色角冠交錯，姿態像重新破浪的古老王者。",
+    "avatar": "assets/portraits/sm/white_dragon_chibi.png",
     "portraits": {
-      "opening": { "full": "assets/portraits/white_dragon_intro.png", "md": "assets/portraits/md/white_dragon_intro.png", "sm": "assets/portraits/sm/white_dragon_intro.png" },
-      "intro": { "full": "assets/portraits/white_dragon_idle.png", "md": "assets/portraits/md/white_dragon_idle.png", "sm": "assets/portraits/sm/white_dragon_idle.png" },
-      "small": { "full": "assets/portraits/white_dragon_attack.png", "md": "assets/portraits/md/white_dragon_attack.png", "sm": "assets/portraits/sm/white_dragon_attack.png" },
-      "big": { "full": "assets/portraits/white_dragon_attack.png", "md": "assets/portraits/md/white_dragon_attack.png", "sm": "assets/portraits/sm/white_dragon_attack.png" },
-      "victory": { "full": "assets/portraits/white_dragon_victory.png", "md": "assets/portraits/md/white_dragon_victory.png", "sm": "assets/portraits/sm/white_dragon_victory.png" },
-      "defeat": { "full": "assets/portraits/white_dragon_defeat.png", "md": "assets/portraits/md/white_dragon_defeat.png", "sm": "assets/portraits/sm/white_dragon_defeat.png" }
+      "opening": {
+        "full": "assets/portraits/white_dragon_chibi.png",
+        "md": "assets/portraits/md/white_dragon_chibi.png",
+        "sm": "assets/portraits/sm/white_dragon_chibi.png"
+      },
+      "intro": {
+        "full": "assets/portraits/white_dragon_chibi.png",
+        "md": "assets/portraits/md/white_dragon_chibi.png",
+        "sm": "assets/portraits/sm/white_dragon_chibi.png"
+      },
+      "small": {
+        "full": "assets/portraits/white_dragon_chibi.png",
+        "md": "assets/portraits/md/white_dragon_chibi.png",
+        "sm": "assets/portraits/sm/white_dragon_chibi.png"
+      },
+      "big": {
+        "full": "assets/portraits/white_dragon_chibi.png",
+        "md": "assets/portraits/md/white_dragon_chibi.png",
+        "sm": "assets/portraits/sm/white_dragon_chibi.png"
+      },
+      "victory": {
+        "full": "assets/portraits/white_dragon_chibi.png",
+        "md": "assets/portraits/md/white_dragon_chibi.png",
+        "sm": "assets/portraits/sm/white_dragon_chibi.png"
+      },
+      "defeat": {
+        "full": "assets/portraits/white_dragon_chibi.png",
+        "md": "assets/portraits/md/white_dragon_chibi.png",
+        "sm": "assets/portraits/sm/white_dragon_chibi.png"
+      }
     },
     "foodEffect": "均衡型角色；白龍吃食後補出的新食物有 50% 機率為雙色，提供更彈性的資源路線。",
     "story": [
-      "昔日雲海之上的白龍，曾以一息定潮、一爪開天。直到龍鱗失色，墜入低谷，連逐浪的犬影都敢在牠身後吠叫。",
-      "牠吞下屈辱，也吞下每一口能重築筋骨的食糧。今日再入六角戰場，不求憐憫，只求一躍越門，讓失去的王座重新記起牠的名字。"
+      "白龍昔日盤踞雲海之上，曾以一息定潮、一爪開浪。直到龍鱗失色，名字被風雨沖淡，牠墜入低谷，像誤入異界湯屋的河神，連逐浪的犬影都敢在牠身後吠叫。",
+      "牠吞下屈辱，也吞下每一口能重築筋骨的食糧；在霧氣、橋影與湍急水聲之間，慢慢找回被奪走的真名。今日再入六角戰場，牠不求憐憫，只求一躍破浪，讓失去的王座重新記起牠的名字，也讓雲與水再次知道該往何處奔流。"
     ],
-    "motto": "墜落不是終點，躍門才是回聲。",
-    "smallMove": "雲鱗回旋",
-    "bigMove": "越門龍息",
-    "colors": { "body": "#cbd5e1", "line": "#bae6fd", "accent": "#fbbf24" },
-    "foodPreference": "balanced"
+    "motto": "真名重喚雲開路，白浪歸朝水認龍。",
+    "smallMove": "銀鱗旋擊",
+    "bigMove": "冰霜極光龍息彈",
+    "colors": {
+      "body": "#cbd5e1",
+      "line": "#bae6fd",
+      "accent": "#fbbf24"
+    },
+    "foodPreference": "balanced",
+    "archivedPortraits": {
+      "opening": {
+        "full": "assets/portraits/white_dragon_intro.png",
+        "md": "assets/portraits/md/white_dragon_intro.png",
+        "sm": "assets/portraits/sm/white_dragon_intro.png"
+      },
+      "intro": {
+        "full": "assets/portraits/white_dragon_idle.png",
+        "md": "assets/portraits/md/white_dragon_idle.png",
+        "sm": "assets/portraits/sm/white_dragon_idle.png"
+      },
+      "small": {
+        "full": "assets/portraits/white_dragon_attack.png",
+        "md": "assets/portraits/md/white_dragon_attack.png",
+        "sm": "assets/portraits/sm/white_dragon_attack.png"
+      },
+      "big": {
+        "full": "assets/portraits/white_dragon_attack.png",
+        "md": "assets/portraits/md/white_dragon_attack.png",
+        "sm": "assets/portraits/sm/white_dragon_attack.png"
+      },
+      "victory": {
+        "full": "assets/portraits/white_dragon_victory.png",
+        "md": "assets/portraits/md/white_dragon_victory.png",
+        "sm": "assets/portraits/sm/white_dragon_victory.png"
+      },
+      "defeat": {
+        "full": "assets/portraits/white_dragon_defeat.png",
+        "md": "assets/portraits/md/white_dragon_defeat.png",
+        "sm": "assets/portraits/sm/white_dragon_defeat.png"
+      }
+    },
+    "humanPortraits": {
+      "opening": {
+        "full": "assets/portraits/human/white_dragon_human.png",
+        "md": "assets/portraits/human/md/white_dragon_human.png",
+        "sm": "assets/portraits/human/sm/white_dragon_human.png"
+      },
+      "intro": {
+        "full": "assets/portraits/human/white_dragon_human.png",
+        "md": "assets/portraits/human/md/white_dragon_human.png",
+        "sm": "assets/portraits/human/sm/white_dragon_human.png"
+      },
+      "small": {
+        "full": "assets/portraits/human/white_dragon_human.png",
+        "md": "assets/portraits/human/md/white_dragon_human.png",
+        "sm": "assets/portraits/human/sm/white_dragon_human.png"
+      },
+      "big": {
+        "full": "assets/portraits/human/white_dragon_human.png",
+        "md": "assets/portraits/human/md/white_dragon_human.png",
+        "sm": "assets/portraits/human/sm/white_dragon_human.png"
+      },
+      "victory": {
+        "full": "assets/portraits/human/white_dragon_human.png",
+        "md": "assets/portraits/human/md/white_dragon_human.png",
+        "sm": "assets/portraits/human/sm/white_dragon_human.png"
+      },
+      "defeat": {
+        "full": "assets/portraits/human/white_dragon_human.png",
+        "md": "assets/portraits/human/md/white_dragon_human.png",
+        "sm": "assets/portraits/human/sm/white_dragon_human.png"
+      }
+    }
   },
   {
     "id": "sandworm",
@@ -31,103 +123,471 @@
     "name": "沙蟲",
     "representColor": "#facc15",
     "appearance": "伏在貧瘠沙層下的巨蟲，金黃甲節、褐色利齒與沙暴般的輪廓充滿翻身的壓迫感。",
-    "avatar": "assets/portraits/sm/sandworm_intro.png",
+    "avatar": "assets/portraits/sm/sandworm_chibi.png",
     "portraits": {
-      "opening": { "full": "assets/portraits/sandworm_intro.png", "md": "assets/portraits/md/sandworm_intro.png", "sm": "assets/portraits/sm/sandworm_intro.png" },
-      "intro": { "full": "assets/portraits/sandworm_idle.png", "md": "assets/portraits/md/sandworm_idle.png", "sm": "assets/portraits/sm/sandworm_idle.png" },
-      "small": { "full": "assets/portraits/sandworm_attack.png", "md": "assets/portraits/md/sandworm_attack.png", "sm": "assets/portraits/sm/sandworm_attack.png" },
-      "big": { "full": "assets/portraits/sandworm_attack.png", "md": "assets/portraits/md/sandworm_attack.png", "sm": "assets/portraits/sm/sandworm_attack.png" },
-      "victory": { "full": "assets/portraits/sandworm_victory.png", "md": "assets/portraits/md/sandworm_victory.png", "sm": "assets/portraits/sm/sandworm_victory.png" },
-      "defeat": { "full": "assets/portraits/sandworm_defeat.png", "md": "assets/portraits/md/sandworm_defeat.png", "sm": "assets/portraits/sm/sandworm_defeat.png" }
+      "opening": {
+        "full": "assets/portraits/sandworm_chibi.png",
+        "md": "assets/portraits/md/sandworm_chibi.png",
+        "sm": "assets/portraits/sm/sandworm_chibi.png"
+      },
+      "intro": {
+        "full": "assets/portraits/sandworm_chibi.png",
+        "md": "assets/portraits/md/sandworm_chibi.png",
+        "sm": "assets/portraits/sm/sandworm_chibi.png"
+      },
+      "small": {
+        "full": "assets/portraits/sandworm_chibi.png",
+        "md": "assets/portraits/md/sandworm_chibi.png",
+        "sm": "assets/portraits/sm/sandworm_chibi.png"
+      },
+      "big": {
+        "full": "assets/portraits/sandworm_chibi.png",
+        "md": "assets/portraits/md/sandworm_chibi.png",
+        "sm": "assets/portraits/sm/sandworm_chibi.png"
+      },
+      "victory": {
+        "full": "assets/portraits/sandworm_chibi.png",
+        "md": "assets/portraits/md/sandworm_chibi.png",
+        "sm": "assets/portraits/sm/sandworm_chibi.png"
+      },
+      "defeat": {
+        "full": "assets/portraits/sandworm_chibi.png",
+        "md": "assets/portraits/md/sandworm_chibi.png",
+        "sm": "assets/portraits/sm/sandworm_chibi.png"
+      }
     },
-    "foodEffect": "偏好黃色脂肪；食物生成較容易偏向黃色，但吃食收益與其他角色相同。",
+    "foodEffect": "偏好黃色脂肪；食物生成傾向黃色脂肪。",
     "story": [
-      "沙蟲沒有豐饒的故鄉，只有乾裂的土、稀薄的獵物，和比牠龐大得多的陰影。牠學會把身形藏進貧瘠，把心跳壓到沙粒之下。",
-      "每一次伏擊都是賭局，每一次吞食都是翻身的籌碼。牠相信階層不是天命，只要咬得夠準，最底層的沙也能埋葬巨獸。"
+      "沙蟲沒有豐饒的故鄉，只有乾裂的土、稀薄的獵物，和比牠龐大得多的陰影。牠學會把身形藏進貧瘠，把心跳壓到沙粒之下，在無垠沙海裡等待每一次錯踏的震動。",
+      "每一次伏擊都是賭局，每一次吞食都是翻身的籌碼。牠在漫長等待裡聽懂風暴的預言：王座不必立在高牆上，也能從沙浪深處升起。當巨口破土，階層便開始崩塌，最底層的沙也能埋葬巨獸。"
     ],
-    "motto": "在最低的沙裡，也藏著翻天的牙。",
-    "smallMove": "潛沙突咬",
-    "bigMove": "貧土潛襲",
-    "colors": { "body": "#ca8a04", "line": "#fef08a", "accent": "#92400e" },
-    "foodPreference": "fat"
+    "motto": "巨影臨沙之日，卑土亦將掀翻王座。",
+    "smallMove": "潛沙絞殺",
+    "bigMove": "沙海地葬",
+    "colors": {
+      "body": "#ca8a04",
+      "line": "#fef08a",
+      "accent": "#92400e"
+    },
+    "foodPreference": "fat",
+    "archivedPortraits": {
+      "opening": {
+        "full": "assets/portraits/sandworm_intro.png",
+        "md": "assets/portraits/md/sandworm_intro.png",
+        "sm": "assets/portraits/sm/sandworm_intro.png"
+      },
+      "intro": {
+        "full": "assets/portraits/sandworm_idle.png",
+        "md": "assets/portraits/md/sandworm_idle.png",
+        "sm": "assets/portraits/sm/sandworm_idle.png"
+      },
+      "small": {
+        "full": "assets/portraits/sandworm_attack.png",
+        "md": "assets/portraits/md/sandworm_attack.png",
+        "sm": "assets/portraits/sm/sandworm_attack.png"
+      },
+      "big": {
+        "full": "assets/portraits/sandworm_attack.png",
+        "md": "assets/portraits/md/sandworm_attack.png",
+        "sm": "assets/portraits/sm/sandworm_attack.png"
+      },
+      "victory": {
+        "full": "assets/portraits/sandworm_victory.png",
+        "md": "assets/portraits/md/sandworm_victory.png",
+        "sm": "assets/portraits/sm/sandworm_victory.png"
+      },
+      "defeat": {
+        "full": "assets/portraits/sandworm_defeat.png",
+        "md": "assets/portraits/md/sandworm_defeat.png",
+        "sm": "assets/portraits/sm/sandworm_defeat.png"
+      }
+    },
+    "humanPortraits": {
+      "opening": {
+        "full": "assets/portraits/human/sandworm_human.png",
+        "md": "assets/portraits/human/md/sandworm_human.png",
+        "sm": "assets/portraits/human/sm/sandworm_human.png"
+      },
+      "intro": {
+        "full": "assets/portraits/human/sandworm_human.png",
+        "md": "assets/portraits/human/md/sandworm_human.png",
+        "sm": "assets/portraits/human/sm/sandworm_human.png"
+      },
+      "small": {
+        "full": "assets/portraits/human/sandworm_human.png",
+        "md": "assets/portraits/human/md/sandworm_human.png",
+        "sm": "assets/portraits/human/sm/sandworm_human.png"
+      },
+      "big": {
+        "full": "assets/portraits/human/sandworm_human.png",
+        "md": "assets/portraits/human/md/sandworm_human.png",
+        "sm": "assets/portraits/human/sm/sandworm_human.png"
+      },
+      "victory": {
+        "full": "assets/portraits/human/sandworm_human.png",
+        "md": "assets/portraits/human/md/sandworm_human.png",
+        "sm": "assets/portraits/human/sm/sandworm_human.png"
+      },
+      "defeat": {
+        "full": "assets/portraits/human/sandworm_human.png",
+        "md": "assets/portraits/human/md/sandworm_human.png",
+        "sm": "assets/portraits/human/sm/sandworm_human.png"
+      }
+    }
   },
   {
     "id": "quetzal",
     "slug": "quetzalcoatl",
-    "name": "羽蛇神",
+    "name": "羽蛇",
     "representColor": "#22c55e",
-    "appearance": "翠羽與蛇身交織的古神，羽冠像風中祭旗，青綠光芒守住不願消失的祖語。",
-    "avatar": "assets/portraits/sm/quetzalcoatl_intro.png",
+    "appearance": "翠羽與蛇身交織的古老羽蛇，羽冠像風中祭旗，青綠光芒守住不願消失的祖語。",
+    "avatar": "assets/portraits/sm/quetzalcoatl_chibi.png",
     "portraits": {
-      "opening": { "full": "assets/portraits/quetzalcoatl_intro.png", "md": "assets/portraits/md/quetzalcoatl_intro.png", "sm": "assets/portraits/sm/quetzalcoatl_intro.png" },
-      "intro": { "full": "assets/portraits/quetzalcoatl_idle.png", "md": "assets/portraits/md/quetzalcoatl_idle.png", "sm": "assets/portraits/sm/quetzalcoatl_idle.png" },
-      "small": { "full": "assets/portraits/quetzalcoatl_attack.png", "md": "assets/portraits/md/quetzalcoatl_attack.png", "sm": "assets/portraits/sm/quetzalcoatl_attack.png" },
-      "big": { "full": "assets/portraits/quetzalcoatl_attack.png", "md": "assets/portraits/md/quetzalcoatl_attack.png", "sm": "assets/portraits/sm/quetzalcoatl_attack.png" },
-      "victory": { "full": "assets/portraits/quetzalcoatl_victory.png", "md": "assets/portraits/md/quetzalcoatl_victory.png", "sm": "assets/portraits/sm/quetzalcoatl_victory.png" },
-      "defeat": { "full": "assets/portraits/quetzalcoatl_defeat.png", "md": "assets/portraits/md/quetzalcoatl_defeat.png", "sm": "assets/portraits/sm/quetzalcoatl_defeat.png" }
+      "opening": {
+        "full": "assets/portraits/quetzalcoatl_chibi.png",
+        "md": "assets/portraits/md/quetzalcoatl_chibi.png",
+        "sm": "assets/portraits/sm/quetzalcoatl_chibi.png"
+      },
+      "intro": {
+        "full": "assets/portraits/quetzalcoatl_chibi.png",
+        "md": "assets/portraits/md/quetzalcoatl_chibi.png",
+        "sm": "assets/portraits/sm/quetzalcoatl_chibi.png"
+      },
+      "small": {
+        "full": "assets/portraits/quetzalcoatl_chibi.png",
+        "md": "assets/portraits/md/quetzalcoatl_chibi.png",
+        "sm": "assets/portraits/sm/quetzalcoatl_chibi.png"
+      },
+      "big": {
+        "full": "assets/portraits/quetzalcoatl_chibi.png",
+        "md": "assets/portraits/md/quetzalcoatl_chibi.png",
+        "sm": "assets/portraits/sm/quetzalcoatl_chibi.png"
+      },
+      "victory": {
+        "full": "assets/portraits/quetzalcoatl_chibi.png",
+        "md": "assets/portraits/md/quetzalcoatl_chibi.png",
+        "sm": "assets/portraits/sm/quetzalcoatl_chibi.png"
+      },
+      "defeat": {
+        "full": "assets/portraits/quetzalcoatl_chibi.png",
+        "md": "assets/portraits/md/quetzalcoatl_chibi.png",
+        "sm": "assets/portraits/sm/quetzalcoatl_chibi.png"
+      }
     },
-    "foodEffect": "偏好綠色纖維；食物生成較容易偏向綠色，但吃食收益與其他角色相同。",
+    "foodEffect": "偏好綠色纖維；食物生成傾向綠色纖維。",
     "story": [
-      "羽蛇神在強權的夾縫間展翼：一邊是鐵與旗幟，一邊是被迫噤聲的祖語。祂帶著少數族裔的記憶飛行，不讓祭歌被風沙磨滅。",
-      "祂追尋的勝利不只是疆界，而是心靈仍能命名自身。當翠羽劃開戰場，古老信仰便在新世界裡重新發光。"
+      "羽蛇在強權的夾縫間展翼：一邊是鐵與旗幟，一邊是被迫噤聲的祖語。牠帶著少數族裔的記憶飛行，讓翠羽掠過金字塔、曆石與祭壇，不讓祭歌被風沙磨滅。",
+      "牠追尋的勝利不只是疆界，而是心靈仍能命名自身；像古老神話裡教人耕作、曉以風與星辰的羽蛇神，牠把失落的名字一片片銜回天光之下。當翠羽劃開戰場，古老信仰便在新世界裡重新發光。"
     ],
-    "motto": "名字不滅，羽翼就不會折。",
-    "smallMove": "祖語翠羽",
-    "bigMove": "祖語沼界",
-    "colors": { "body": "#15803d", "line": "#bbf7d0", "accent": "#67e8f9" },
-    "foodPreference": "fiber"
+    "motto": "祖語未歇，翠羽猶聞祭歌。",
+    "smallMove": "翠羽裂風",
+    "bigMove": "萬藤沼界",
+    "colors": {
+      "body": "#15803d",
+      "line": "#bbf7d0",
+      "accent": "#67e8f9"
+    },
+    "foodPreference": "fiber",
+    "archivedPortraits": {
+      "opening": {
+        "full": "assets/portraits/quetzalcoatl_intro.png",
+        "md": "assets/portraits/md/quetzalcoatl_intro.png",
+        "sm": "assets/portraits/sm/quetzalcoatl_intro.png"
+      },
+      "intro": {
+        "full": "assets/portraits/quetzalcoatl_idle.png",
+        "md": "assets/portraits/md/quetzalcoatl_idle.png",
+        "sm": "assets/portraits/sm/quetzalcoatl_idle.png"
+      },
+      "small": {
+        "full": "assets/portraits/quetzalcoatl_attack.png",
+        "md": "assets/portraits/md/quetzalcoatl_attack.png",
+        "sm": "assets/portraits/sm/quetzalcoatl_attack.png"
+      },
+      "big": {
+        "full": "assets/portraits/quetzalcoatl_attack.png",
+        "md": "assets/portraits/md/quetzalcoatl_attack.png",
+        "sm": "assets/portraits/sm/quetzalcoatl_attack.png"
+      },
+      "victory": {
+        "full": "assets/portraits/quetzalcoatl_victory.png",
+        "md": "assets/portraits/md/quetzalcoatl_victory.png",
+        "sm": "assets/portraits/sm/quetzalcoatl_victory.png"
+      },
+      "defeat": {
+        "full": "assets/portraits/quetzalcoatl_defeat.png",
+        "md": "assets/portraits/md/quetzalcoatl_defeat.png",
+        "sm": "assets/portraits/sm/quetzalcoatl_defeat.png"
+      }
+    },
+    "humanPortraits": {
+      "opening": {
+        "full": "assets/portraits/human/quetzalcoatl_human.png",
+        "md": "assets/portraits/human/md/quetzalcoatl_human.png",
+        "sm": "assets/portraits/human/sm/quetzalcoatl_human.png"
+      },
+      "intro": {
+        "full": "assets/portraits/human/quetzalcoatl_human.png",
+        "md": "assets/portraits/human/md/quetzalcoatl_human.png",
+        "sm": "assets/portraits/human/sm/quetzalcoatl_human.png"
+      },
+      "small": {
+        "full": "assets/portraits/human/quetzalcoatl_human.png",
+        "md": "assets/portraits/human/md/quetzalcoatl_human.png",
+        "sm": "assets/portraits/human/sm/quetzalcoatl_human.png"
+      },
+      "big": {
+        "full": "assets/portraits/human/quetzalcoatl_human.png",
+        "md": "assets/portraits/human/md/quetzalcoatl_human.png",
+        "sm": "assets/portraits/human/sm/quetzalcoatl_human.png"
+      },
+      "victory": {
+        "full": "assets/portraits/human/quetzalcoatl_human.png",
+        "md": "assets/portraits/human/md/quetzalcoatl_human.png",
+        "sm": "assets/portraits/human/sm/quetzalcoatl_human.png"
+      },
+      "defeat": {
+        "full": "assets/portraits/human/quetzalcoatl_human.png",
+        "md": "assets/portraits/human/md/quetzalcoatl_human.png",
+        "sm": "assets/portraits/human/sm/quetzalcoatl_human.png"
+      }
+    }
   },
   {
     "id": "moray",
     "slug": "moray_eel",
-    "name": "海鰻",
+    "name": "電鰻",
     "representColor": "#3b82f6",
-    "appearance": "暗潮中竄出的藍色海鰻，電光沿背脊閃爍，眼神像正等待鉤索落水的逆浪。",
-    "avatar": "assets/portraits/sm/moray_eel_intro.png",
+    "appearance": "暗潮中竄出的藍色電鰻，電光沿背脊閃爍，眼神像正等待鉤索落水的逆浪。",
+    "avatar": "assets/portraits/sm/moray_eel_chibi.png",
     "portraits": {
-      "opening": { "full": "assets/portraits/moray_eel_intro.png", "md": "assets/portraits/md/moray_eel_intro.png", "sm": "assets/portraits/sm/moray_eel_intro.png" },
-      "intro": { "full": "assets/portraits/moray_eel_idle.png", "md": "assets/portraits/md/moray_eel_idle.png", "sm": "assets/portraits/sm/moray_eel_idle.png" },
-      "small": { "full": "assets/portraits/moray_eel_attack.png", "md": "assets/portraits/md/moray_eel_attack.png", "sm": "assets/portraits/sm/moray_eel_attack.png" },
-      "big": { "full": "assets/portraits/moray_eel_attack.png", "md": "assets/portraits/md/moray_eel_attack.png", "sm": "assets/portraits/sm/moray_eel_attack.png" },
-      "victory": { "full": "assets/portraits/moray_eel_victory.png", "md": "assets/portraits/md/moray_eel_victory.png", "sm": "assets/portraits/sm/moray_eel_victory.png" },
-      "defeat": { "full": "assets/portraits/moray_eel_defeat.png", "md": "assets/portraits/md/moray_eel_defeat.png", "sm": "assets/portraits/sm/moray_eel_defeat.png" }
+      "opening": {
+        "full": "assets/portraits/moray_eel_chibi.png",
+        "md": "assets/portraits/md/moray_eel_chibi.png",
+        "sm": "assets/portraits/sm/moray_eel_chibi.png"
+      },
+      "intro": {
+        "full": "assets/portraits/moray_eel_chibi.png",
+        "md": "assets/portraits/md/moray_eel_chibi.png",
+        "sm": "assets/portraits/sm/moray_eel_chibi.png"
+      },
+      "small": {
+        "full": "assets/portraits/moray_eel_chibi.png",
+        "md": "assets/portraits/md/moray_eel_chibi.png",
+        "sm": "assets/portraits/sm/moray_eel_chibi.png"
+      },
+      "big": {
+        "full": "assets/portraits/moray_eel_chibi.png",
+        "md": "assets/portraits/md/moray_eel_chibi.png",
+        "sm": "assets/portraits/sm/moray_eel_chibi.png"
+      },
+      "victory": {
+        "full": "assets/portraits/moray_eel_chibi.png",
+        "md": "assets/portraits/md/moray_eel_chibi.png",
+        "sm": "assets/portraits/sm/moray_eel_chibi.png"
+      },
+      "defeat": {
+        "full": "assets/portraits/moray_eel_chibi.png",
+        "md": "assets/portraits/md/moray_eel_chibi.png",
+        "sm": "assets/portraits/sm/moray_eel_chibi.png"
+      }
     },
-    "foodEffect": "偏好藍色碳水；食物生成較容易偏向藍色，但吃食收益與其他角色相同。",
+    "foodEffect": "偏好藍色碳水；食物生成傾向藍色碳水。",
     "story": [
-      "海鰻生於被網線割裂的暗潮。牠看見族群被燈火引誘、被冰艙沉默，於是把恐懼磨成電流，把逆流當作宣戰。",
-      "牠不是守護者口中的純善英雄，而是人類船影下的惡名。只要貪婪的鉤索還垂進海裡，牠就會咬穿浪峰，讓捕獵者也學會窒息。"
+      "電鰻生於被網線割裂的暗潮。牠看見族群被燈火引誘、被冰艙沉默，也看見黑帆、魚叉與哭聲一再碾過海面，把鐵鍊、牢籠與低鳴拖向遠方；於是牠把恐懼磨成電流，把逆流當作宣戰。",
+      "牠不是守護者口中的純善英雄，而是人類船影下的惡名。只要貪婪的鉤索還垂進海裡，只要航線仍把生命標成貨物、把巨獸刻成油脂，牠就會咬穿浪峰，讓捕獵者、掠奪者與掌舵者都學會窒息。"
     ],
-    "motto": "讓垂鉤者，先學會窒息。",
-    "smallMove": "暗潮電咬",
-    "bigMove": "逆潮電磁砲",
-    "colors": { "body": "#1d4ed8", "line": "#bfdbfe", "accent": "#93c5fd" },
-    "foodPreference": "carb"
+    "motto": "鉤索一日不絕，逆潮便一日不肯退去。",
+    "smallMove": "雷牙狂咬",
+    "bigMove": "逆潮雷脈砲",
+    "colors": {
+      "body": "#1d4ed8",
+      "line": "#bfdbfe",
+      "accent": "#93c5fd"
+    },
+    "foodPreference": "carb",
+    "archivedPortraits": {
+      "opening": {
+        "full": "assets/portraits/moray_eel_intro.png",
+        "md": "assets/portraits/md/moray_eel_intro.png",
+        "sm": "assets/portraits/sm/moray_eel_intro.png"
+      },
+      "intro": {
+        "full": "assets/portraits/moray_eel_idle.png",
+        "md": "assets/portraits/md/moray_eel_idle.png",
+        "sm": "assets/portraits/sm/moray_eel_idle.png"
+      },
+      "small": {
+        "full": "assets/portraits/moray_eel_attack.png",
+        "md": "assets/portraits/md/moray_eel_attack.png",
+        "sm": "assets/portraits/sm/moray_eel_attack.png"
+      },
+      "big": {
+        "full": "assets/portraits/moray_eel_attack.png",
+        "md": "assets/portraits/md/moray_eel_attack.png",
+        "sm": "assets/portraits/sm/moray_eel_attack.png"
+      },
+      "victory": {
+        "full": "assets/portraits/moray_eel_victory.png",
+        "md": "assets/portraits/md/moray_eel_victory.png",
+        "sm": "assets/portraits/sm/moray_eel_victory.png"
+      },
+      "defeat": {
+        "full": "assets/portraits/moray_eel_defeat.png",
+        "md": "assets/portraits/md/moray_eel_defeat.png",
+        "sm": "assets/portraits/sm/moray_eel_defeat.png"
+      }
+    },
+    "humanPortraits": {
+      "opening": {
+        "full": "assets/portraits/human/moray_eel_human.png",
+        "md": "assets/portraits/human/md/moray_eel_human.png",
+        "sm": "assets/portraits/human/sm/moray_eel_human.png"
+      },
+      "intro": {
+        "full": "assets/portraits/human/moray_eel_human.png",
+        "md": "assets/portraits/human/md/moray_eel_human.png",
+        "sm": "assets/portraits/human/sm/moray_eel_human.png"
+      },
+      "small": {
+        "full": "assets/portraits/human/moray_eel_human.png",
+        "md": "assets/portraits/human/md/moray_eel_human.png",
+        "sm": "assets/portraits/human/sm/moray_eel_human.png"
+      },
+      "big": {
+        "full": "assets/portraits/human/moray_eel_human.png",
+        "md": "assets/portraits/human/md/moray_eel_human.png",
+        "sm": "assets/portraits/human/sm/moray_eel_human.png"
+      },
+      "victory": {
+        "full": "assets/portraits/human/moray_eel_human.png",
+        "md": "assets/portraits/human/md/moray_eel_human.png",
+        "sm": "assets/portraits/human/sm/moray_eel_human.png"
+      },
+      "defeat": {
+        "full": "assets/portraits/human/moray_eel_human.png",
+        "md": "assets/portraits/human/md/moray_eel_human.png",
+        "sm": "assets/portraits/human/sm/moray_eel_human.png"
+      }
+    }
   },
   {
     "id": "lobster",
     "slug": "ghost_lobster",
-    "name": "龍蝦",
+    "name": "智蝦",
     "representColor": "#ef4444",
-    "appearance": "深海裂縫裡醒來的赤螯龍蝦，紅甲厚重、古螯發亮，像渾沌終於長出節奏。",
-    "avatar": "assets/portraits/sm/ghost_lobster_intro.png",
+    "appearance": "深海裂縫裡醒來的赤螯智蝦，紅甲厚重、古螯發亮，像渾沌終於長出節奏。",
+    "avatar": "assets/portraits/sm/ghost_lobster_chibi.png",
     "portraits": {
-      "opening": { "full": "assets/portraits/ghost_lobster_intro.png", "md": "assets/portraits/md/ghost_lobster_intro.png", "sm": "assets/portraits/sm/ghost_lobster_intro.png" },
-      "intro": { "full": "assets/portraits/ghost_lobster_idle.png", "md": "assets/portraits/md/ghost_lobster_idle.png", "sm": "assets/portraits/sm/ghost_lobster_idle.png" },
-      "small": { "full": "assets/portraits/ghost_lobster_attack.png", "md": "assets/portraits/md/ghost_lobster_attack.png", "sm": "assets/portraits/sm/ghost_lobster_attack.png" },
-      "big": { "full": "assets/portraits/ghost_lobster_attack.png", "md": "assets/portraits/md/ghost_lobster_attack.png", "sm": "assets/portraits/sm/ghost_lobster_attack.png" },
-      "victory": { "full": "assets/portraits/ghost_lobster_victory.png", "md": "assets/portraits/md/ghost_lobster_victory.png", "sm": "assets/portraits/sm/ghost_lobster_victory.png" },
-      "defeat": { "full": "assets/portraits/ghost_lobster_defeat.png", "md": "assets/portraits/md/ghost_lobster_defeat.png", "sm": "assets/portraits/sm/ghost_lobster_defeat.png" }
+      "opening": {
+        "full": "assets/portraits/ghost_lobster_chibi.png",
+        "md": "assets/portraits/md/ghost_lobster_chibi.png",
+        "sm": "assets/portraits/sm/ghost_lobster_chibi.png"
+      },
+      "intro": {
+        "full": "assets/portraits/ghost_lobster_chibi.png",
+        "md": "assets/portraits/md/ghost_lobster_chibi.png",
+        "sm": "assets/portraits/sm/ghost_lobster_chibi.png"
+      },
+      "small": {
+        "full": "assets/portraits/ghost_lobster_chibi.png",
+        "md": "assets/portraits/md/ghost_lobster_chibi.png",
+        "sm": "assets/portraits/sm/ghost_lobster_chibi.png"
+      },
+      "big": {
+        "full": "assets/portraits/ghost_lobster_chibi.png",
+        "md": "assets/portraits/md/ghost_lobster_chibi.png",
+        "sm": "assets/portraits/sm/ghost_lobster_chibi.png"
+      },
+      "victory": {
+        "full": "assets/portraits/ghost_lobster_chibi.png",
+        "md": "assets/portraits/md/ghost_lobster_chibi.png",
+        "sm": "assets/portraits/sm/ghost_lobster_chibi.png"
+      },
+      "defeat": {
+        "full": "assets/portraits/ghost_lobster_chibi.png",
+        "md": "assets/portraits/md/ghost_lobster_chibi.png",
+        "sm": "assets/portraits/sm/ghost_lobster_chibi.png"
+      }
     },
-    "foodEffect": "偏好紅色蛋白質；食物生成較容易偏向紅色，但吃食收益與其他角色相同。",
+    "foodEffect": "偏好紅色蛋白質；食物生成傾向紅色蛋白質。",
     "story": [
-      "龍蝦的魂魄曾只是一團渾沌，在深海裂縫裡隨時間漂流。潮汐沖刷牠，壓力鍛造牠，孤獨反覆敲打牠的甲殼。",
-      "萬次揮螯之後，混亂開始有了節奏；萬年沉默之後，節奏終於長出智慧。牠踏上戰場時，每一步都像古老意志醒來。"
+      "智蝦的魂魄曾只是一團渾沌，在深海裂縫裡隨時間漂流。潮汐沖刷牠，壓力鍛造牠，孤獨反覆敲打牠的巨螯；近來萬流皆言智慧，連海面翻湧的赤潮，也化作一圈圈回聲，洗滌牠厚重的厚甲。",
+      "萬次揮螯之後，混亂開始有了節奏；萬年沉默之後，節奏終於長出智慧。牠在暗流與深溝之間緩緩推演，不曾回應世界的混沌變化。當牠嶄露在世人眼前時，每一步都像古老意志醒來，每一拳都是深海回應的答案。"
     ],
-    "motto": "混沌若有節奏，沉默也會成王。",
-    "smallMove": "古螯斷浪",
+    "motto": "萬螯既律，混沌自明。",
+    "smallMove": "赤螯重擊",
     "bigMove": "混沌爆螯",
-    "colors": { "body": "#b91c1c", "line": "#fecaca", "accent": "#f97316" },
-    "foodPreference": "protein"
+    "colors": {
+      "body": "#b91c1c",
+      "line": "#fecaca",
+      "accent": "#f97316"
+    },
+    "foodPreference": "protein",
+    "archivedPortraits": {
+      "opening": {
+        "full": "assets/portraits/ghost_lobster_intro.png",
+        "md": "assets/portraits/md/ghost_lobster_intro.png",
+        "sm": "assets/portraits/sm/ghost_lobster_intro.png"
+      },
+      "intro": {
+        "full": "assets/portraits/ghost_lobster_idle.png",
+        "md": "assets/portraits/md/ghost_lobster_idle.png",
+        "sm": "assets/portraits/sm/ghost_lobster_idle.png"
+      },
+      "small": {
+        "full": "assets/portraits/ghost_lobster_attack.png",
+        "md": "assets/portraits/md/ghost_lobster_attack.png",
+        "sm": "assets/portraits/sm/ghost_lobster_attack.png"
+      },
+      "big": {
+        "full": "assets/portraits/ghost_lobster_attack.png",
+        "md": "assets/portraits/md/ghost_lobster_attack.png",
+        "sm": "assets/portraits/sm/ghost_lobster_attack.png"
+      },
+      "victory": {
+        "full": "assets/portraits/ghost_lobster_victory.png",
+        "md": "assets/portraits/md/ghost_lobster_victory.png",
+        "sm": "assets/portraits/sm/ghost_lobster_victory.png"
+      },
+      "defeat": {
+        "full": "assets/portraits/ghost_lobster_defeat.png",
+        "md": "assets/portraits/md/ghost_lobster_defeat.png",
+        "sm": "assets/portraits/sm/ghost_lobster_defeat.png"
+      }
+    },
+    "humanPortraits": {
+      "opening": {
+        "full": "assets/portraits/human/ghost_lobster_human.png",
+        "md": "assets/portraits/human/md/ghost_lobster_human.png",
+        "sm": "assets/portraits/human/sm/ghost_lobster_human.png"
+      },
+      "intro": {
+        "full": "assets/portraits/human/ghost_lobster_human.png",
+        "md": "assets/portraits/human/md/ghost_lobster_human.png",
+        "sm": "assets/portraits/human/sm/ghost_lobster_human.png"
+      },
+      "small": {
+        "full": "assets/portraits/human/ghost_lobster_human.png",
+        "md": "assets/portraits/human/md/ghost_lobster_human.png",
+        "sm": "assets/portraits/human/sm/ghost_lobster_human.png"
+      },
+      "big": {
+        "full": "assets/portraits/human/ghost_lobster_human.png",
+        "md": "assets/portraits/human/md/ghost_lobster_human.png",
+        "sm": "assets/portraits/human/sm/ghost_lobster_human.png"
+      },
+      "victory": {
+        "full": "assets/portraits/human/ghost_lobster_human.png",
+        "md": "assets/portraits/human/md/ghost_lobster_human.png",
+        "sm": "assets/portraits/human/sm/ghost_lobster_human.png"
+      },
+      "defeat": {
+        "full": "assets/portraits/human/ghost_lobster_human.png",
+        "md": "assets/portraits/human/md/ghost_lobster_human.png",
+        "sm": "assets/portraits/human/sm/ghost_lobster_human.png"
+      }
+    }
   },
   {
     "id": "gu_king",
@@ -135,25 +595,117 @@
     "name": "蠱王",
     "representColor": "#050505",
     "appearance": "不見天日的黑色蜈蚣，甲節如冷鐵相扣，毒足密布，像從地底王座爬出的先手暴君。",
-    "avatar": "assets/portraits/sm/gu_king_icon.png",
+    "avatar": "assets/portraits/sm/gu_king_chibi.png",
     "portraits": {
-      "opening": { "full": "assets/portraits/gu_king_intro.png", "md": "assets/portraits/md/gu_king_intro.png", "sm": "assets/portraits/sm/gu_king_intro.png" },
-      "intro": { "full": "assets/portraits/gu_king_idle.png", "md": "assets/portraits/md/gu_king_idle.png", "sm": "assets/portraits/sm/gu_king_idle.png" },
-      "small": { "full": "assets/portraits/gu_king_attack.png", "md": "assets/portraits/md/gu_king_attack.png", "sm": "assets/portraits/sm/gu_king_attack.png" },
-      "big": { "full": "assets/portraits/gu_king_attack.png", "md": "assets/portraits/md/gu_king_attack.png", "sm": "assets/portraits/sm/gu_king_attack.png" },
-      "victory": { "full": "assets/portraits/gu_king_victory.png", "md": "assets/portraits/md/gu_king_victory.png", "sm": "assets/portraits/sm/gu_king_victory.png" },
-      "defeat": { "full": "assets/portraits/gu_king_defeat.png", "md": "assets/portraits/md/gu_king_defeat.png", "sm": "assets/portraits/sm/gu_king_defeat.png" }
+      "opening": {
+        "full": "assets/portraits/gu_king_chibi.png",
+        "md": "assets/portraits/md/gu_king_chibi.png",
+        "sm": "assets/portraits/sm/gu_king_chibi.png"
+      },
+      "intro": {
+        "full": "assets/portraits/gu_king_chibi.png",
+        "md": "assets/portraits/md/gu_king_chibi.png",
+        "sm": "assets/portraits/sm/gu_king_chibi.png"
+      },
+      "small": {
+        "full": "assets/portraits/gu_king_chibi.png",
+        "md": "assets/portraits/md/gu_king_chibi.png",
+        "sm": "assets/portraits/sm/gu_king_chibi.png"
+      },
+      "big": {
+        "full": "assets/portraits/gu_king_chibi.png",
+        "md": "assets/portraits/md/gu_king_chibi.png",
+        "sm": "assets/portraits/sm/gu_king_chibi.png"
+      },
+      "victory": {
+        "full": "assets/portraits/gu_king_chibi.png",
+        "md": "assets/portraits/md/gu_king_chibi.png",
+        "sm": "assets/portraits/sm/gu_king_chibi.png"
+      },
+      "defeat": {
+        "full": "assets/portraits/gu_king_chibi.png",
+        "md": "assets/portraits/md/gu_king_chibi.png",
+        "sm": "assets/portraits/sm/gu_king_chibi.png"
+      }
     },
     "foodEffect": "黑色蜈蚣的食補能力；蠱王吃食後補出的新食物有 1/3 機率成為黑色食物。黑色食物不會自然產出，吃下後紅黃綠藍隨機一種庫存 +1，並獲得 3 點能量。",
     "story": [
-      "蠱王出生在不見天日的甕底。那裡沒有仁慈，只有先咬住對手的人，才有資格活到下一次飢餓。",
-      "牠把弱肉強食磨成本能，把先下手為強刻進每一節黑甲。槍桿子出政權，毒足踏過的地方，就是牠臨時又絕對的王朝。"
+      "蠱王出生在強敵環伺的甕底。那裡沒有仁慈，只有頂住高壓、先咬住對手的人，才有資格活到下一次飢餓。",
+      "牠學會在赤血翻湧時昂首，也學會在碧影下沉時伏低；每一次撲殺與蜷伏，都被牠磨成活下去的本能。當眾多競爭者一個個沉入甕底，牠終於攀上至險至高之位。毒足所至，群聲止息，自此之後旁人不敢直呼其名諱，只於王座之下低稱：蠱王。"
     ],
-    "motto": "先手不是選擇，是活下去的本能。",
-    "smallMove": "毒足先斬",
-    "bigMove": "甕底毒煙令",
-    "colors": { "body": "#111827", "line": "#9ca3af", "accent": "#a3e635" },
+    "motto": "甕底群蠱藏，赤血照寒芒。碧影沉千敵，諱名稱蠱王。",
+    "smallMove": "百足毒斬",
+    "bigMove": "萬蠱蝕界令",
+    "colors": {
+      "body": "#111827",
+      "line": "#9ca3af",
+      "accent": "#a3e635"
+    },
     "foodPreference": "black",
-    "specialFood": "black"
+    "specialFood": "black",
+    "archivedPortraits": {
+      "opening": {
+        "full": "assets/portraits/gu_king_intro.png",
+        "md": "assets/portraits/md/gu_king_intro.png",
+        "sm": "assets/portraits/sm/gu_king_intro.png"
+      },
+      "intro": {
+        "full": "assets/portraits/gu_king_idle.png",
+        "md": "assets/portraits/md/gu_king_idle.png",
+        "sm": "assets/portraits/sm/gu_king_idle.png"
+      },
+      "small": {
+        "full": "assets/portraits/gu_king_attack.png",
+        "md": "assets/portraits/md/gu_king_attack.png",
+        "sm": "assets/portraits/sm/gu_king_attack.png"
+      },
+      "big": {
+        "full": "assets/portraits/gu_king_attack.png",
+        "md": "assets/portraits/md/gu_king_attack.png",
+        "sm": "assets/portraits/sm/gu_king_attack.png"
+      },
+      "victory": {
+        "full": "assets/portraits/gu_king_victory.png",
+        "md": "assets/portraits/md/gu_king_victory.png",
+        "sm": "assets/portraits/sm/gu_king_victory.png"
+      },
+      "defeat": {
+        "full": "assets/portraits/gu_king_defeat.png",
+        "md": "assets/portraits/md/gu_king_defeat.png",
+        "sm": "assets/portraits/sm/gu_king_defeat.png"
+      }
+    },
+    "humanPortraits": {
+      "opening": {
+        "full": "assets/portraits/human/gu_king_human.png",
+        "md": "assets/portraits/human/md/gu_king_human.png",
+        "sm": "assets/portraits/human/sm/gu_king_human.png"
+      },
+      "intro": {
+        "full": "assets/portraits/human/gu_king_human.png",
+        "md": "assets/portraits/human/md/gu_king_human.png",
+        "sm": "assets/portraits/human/sm/gu_king_human.png"
+      },
+      "small": {
+        "full": "assets/portraits/human/gu_king_human.png",
+        "md": "assets/portraits/human/md/gu_king_human.png",
+        "sm": "assets/portraits/human/sm/gu_king_human.png"
+      },
+      "big": {
+        "full": "assets/portraits/human/gu_king_human.png",
+        "md": "assets/portraits/human/md/gu_king_human.png",
+        "sm": "assets/portraits/human/sm/gu_king_human.png"
+      },
+      "victory": {
+        "full": "assets/portraits/human/gu_king_human.png",
+        "md": "assets/portraits/human/md/gu_king_human.png",
+        "sm": "assets/portraits/human/sm/gu_king_human.png"
+      },
+      "defeat": {
+        "full": "assets/portraits/human/gu_king_human.png",
+        "md": "assets/portraits/human/md/gu_king_human.png",
+        "sm": "assets/portraits/human/sm/gu_king_human.png"
+      }
+    }
   }
 ]

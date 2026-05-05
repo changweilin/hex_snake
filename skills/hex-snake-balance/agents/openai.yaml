@@ -1,0 +1,8 @@
+interface:
+  display_name: "Hex Snake Balance"
+  short_description: "Run seeded battle simulations and compare Hex Snake balance changes."
+  brand_color: "#22C55E"
+  default_prompt: "Use $hex-snake-balance to evaluate this Hex Snake balance change with seeded simulations."
+
+policy:
+  allow_implicit_invocation: true

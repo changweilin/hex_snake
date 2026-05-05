@@ -6,6 +6,20 @@
   "scripts": {
     "dev": "node server.js",
     "build": "node build.js",
-    "start": "node server.js --dist"
+    "start": "node server.js --dist",
+    "simulate": "node tools/simulate-balance.js",
+    "simulate:scheduled": "node tools/sim-scheduler.js start",
+    "simulate:run": "node tools/sim-scheduler.js run",
+    "simulate:jobs": "node tools/sim-scheduler.js list",
+    "tune:balance": "node tools/tune-balance.js",
+    "tune:dragon-draw": "node tools/tune-dragon-draw.js",
+    "tune:ai-strategy": "node tools/tune-ai-strategy.js",
+    "evaluate:basic-gate": "node tools/evaluate-basic-gate.js",
+    "reset:high-ai-basic": "node tools/reset-high-ai-basic.js",
+    "apply:ai-strategy": "node tools/apply-ai-strategy.js",
+    "simulate:ai-cross": "node tools/run-ai-cross-play.js",
+    "optimize:strategy": "node tools/run-strategy-optimization.js",
+    "test": "node tools/run-tests.js",
+    "test:quick": "node tools/run-tests.js --quick"
   }
 }

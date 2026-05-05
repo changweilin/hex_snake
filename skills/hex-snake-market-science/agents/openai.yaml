@@ -1,0 +1,4 @@
+interface:
+  display_name: "Hex Snake Market Science"
+  short_description: "Analyze Hex Snake audience, competitors, and product hypotheses."
+  default_prompt: "Use $hex-snake-market-science to turn market analysis into testable Hex Snake product recommendations."
