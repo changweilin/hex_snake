@@ -1234,24 +1234,25 @@
 
     .tutorial-copy {
       display: grid;
-      gap: 4px;
+      gap: 8px;
       width: min(1000px, 100%);
       min-width: 0;
       justify-self: center;
-      padding: 14px 16px;
+      padding: 16px 18px;
       border-radius: 8px;
       border: 1px solid rgba(255, 255, 255, 0.12);
       background: rgba(32, 38, 51, 0.88);
       color: var(--muted);
-      line-height: 1.45;
+      line-height: 1.42;
     }
 
     .tutorial-copy > strong {
       color: var(--ink);
       font-size: 1.12rem;
+      line-height: 1.15;
     }
 
-    .tutorial-copy p strong {
+    .tutorial-copy strong {
       color: #fbbf24;
       font-weight: 950;
     }
@@ -1260,14 +1261,60 @@
       margin: 0;
     }
 
-    .tutorial-copy small {
-      color: color-mix(in srgb, var(--muted), var(--ink) 18%);
-      font-weight: 700;
+    .tutorial-lead {
+      font-size: 0.95rem;
+      font-weight: 800;
     }
 
-    .tutorial-copy small strong {
+    .tutorial-line {
+      display: grid;
+      gap: 2px;
+      position: relative;
+      padding-left: 18px;
+      font-size: 0.9rem;
+      font-weight: 760;
+    }
+
+    .tutorial-line::before {
+      content: "";
+      position: absolute;
+      left: 1px;
+      top: 0.64em;
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: #fbbf24;
+      box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.14);
+      transform: translateY(-50%);
+    }
+
+    .tutorial-line b {
       color: #fbbf24;
-      font-weight: 950;
+      font-size: 0.9rem;
+      line-height: 1.2;
+    }
+
+    .tutorial-line span,
+    .tutorial-line small {
+      color: color-mix(in srgb, var(--muted), var(--ink) 14%);
+      font-size: 0.84rem;
+      font-weight: 740;
+      line-height: 1.32;
+    }
+
+    .tutorial-line small {
+      color: color-mix(in srgb, var(--muted), var(--ink) 28%);
+    }
+
+    .tutorial-note {
+      margin-top: 2px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .tutorial-note span {
+      color: color-mix(in srgb, var(--muted), var(--ink) 18%);
+      font-weight: 700;
     }
 
     .tutorial-actions {
@@ -1693,7 +1740,7 @@
       }
 
       .tutorial-copy {
-        gap: 2px;
+        gap: 5px;
         padding: 8px 10px;
         font-size: 0.82rem;
       }
@@ -1702,9 +1749,32 @@
         font-size: 0.98rem;
       }
 
-      .tutorial-copy small {
+      .tutorial-lead,
+      .tutorial-line,
+      .tutorial-line span,
+      .tutorial-line small {
+        font-size: 0.74rem;
+        line-height: 1.28;
+      }
+
+      .tutorial-line {
+        gap: 1px;
+        padding-left: 14px;
+      }
+
+      .tutorial-line::before {
+        width: 5px;
+        height: 5px;
+      }
+
+      .tutorial-line b {
+        font-size: 0.76rem;
+      }
+
+      .tutorial-note {
         font-size: 0.72rem;
         line-height: 1.28;
+        padding-top: 5px;
       }
 
       .tutorial-actions {
@@ -4970,7 +5040,7 @@
       }
 
       .tutorial-copy {
-        gap: 2px;
+        gap: 5px;
         padding: 8px 10px;
         font-size: 0.82rem;
       }
@@ -4979,9 +5049,32 @@
         font-size: 0.98rem;
       }
 
-      .tutorial-copy small {
+      .tutorial-lead,
+      .tutorial-line,
+      .tutorial-line span,
+      .tutorial-line small {
+        font-size: 0.74rem;
+        line-height: 1.28;
+      }
+
+      .tutorial-line {
+        gap: 1px;
+        padding-left: 14px;
+      }
+
+      .tutorial-line::before {
+        width: 5px;
+        height: 5px;
+      }
+
+      .tutorial-line b {
+        font-size: 0.76rem;
+      }
+
+      .tutorial-note {
         font-size: 0.72rem;
         line-height: 1.28;
+        padding-top: 5px;
       }
 
       .tutorial-actions {

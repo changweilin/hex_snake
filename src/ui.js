@@ -523,22 +523,54 @@
         title: "六角移動",
         visual: "move",
         tag: "移動 + 虛擬搖桿區",
-        text: "<strong>六角棋盤</strong>有六個方向。先看自己的蛇頭位置，再用<strong>虛擬搖桿區</strong>或<strong>方向快捷鍵</strong>選下一格，往<strong>食物</strong>移動。",
-        detail: "食物會出現在蛇頭前方附近，先確認中間空格安全，再選方向前進。目標是邊吃食物邊避開自己的身體與敵方路線；撞到會被<strong>麻痺與減速</strong>，容易被追擊。"
+        lead: "目標是把敵方 <strong>HP 歸零</strong>。先看自己的蛇頭，再決定下一格與交戰距離。",
+        sections: [
+          {
+            title: "移動方式",
+            text: "用<strong>虛擬搖桿區</strong>或 <strong>W/E/D/X/Z/A</strong> 選六角方向；往食物移動、拉開路線，逐步累積出招資源。"
+          },
+          {
+            title: "控制效果",
+            text: `攻擊命中後有 ${Math.round(baseAttackStunChance * 100)}% 基礎機率暈眩，藍色庫存會提高暈眩率；暈眩會讓對手短時間無法順利走位。`
+          },
+          {
+            title: "撞擊懲罰",
+            text: `撞到另一方會停止 ${collisionStunMs / 1000} 秒，再減速 ${collisionSlowMs / 1000} 秒；撞到自己懲罰加倍，累積停止時間超過 ${maxCollisionParalysisMs / 1000} 秒會落敗。`
+          }
+        ]
       },
       {
         title: "食物資源",
         visual: "resources",
         tag: "食物 + 資源圖表",
-        text: "吃<strong>食物</strong>會加分、長身體、補<strong>各色庫存</strong>並增加<strong>能量</strong>。資源圖表會顯示紅黃綠藍四種材料、能量與炸彈。",
-        detail: "<strong>小招</strong>與<strong>大招</strong>都需要食物累積的各色庫存和<strong>炸彈</strong>。遊戲目標是讓敵方 <strong>HP 歸零</strong>。"
+        lead: "吃食物會加分、長身體，並補充施放招式需要的庫存與能量。",
+        points: [
+          "單色食物補同色 <strong>2 點</strong>，雙色食物補兩色各 <strong>1 點</strong>。",
+          `每吃 1 個食物獲得 <strong>2 點能量</strong>；集滿 ${attackNeedTotal} 點會轉成 1 枚炸彈。`
+        ],
+        note: `資源圖表會顯示紅黃綠藍庫存、能量與炸彈；炸彈最多 ${maxAmmo} 枚。`
       },
       {
         title: "小招操作",
         visual: "small",
         tag: "小招 + 技能按鍵區",
-        text: "<strong>Q</strong> 或技能按鍵區的<strong>小招</strong>按鈕會依 <strong>X</strong> 鍵選到的目標施放；短點棋盤也能快速出手。",
-        detail: "先用 <strong>X</strong> 切換小招目標，再按 <strong>Q</strong> 或小招按鈕施放。<strong>小招</strong>需要各色庫存和炸彈；<strong>大招</strong>需要更多炸彈，效果依角色不同。"
+        lead: "先選目標，再施放招式；小招適合快速出手，大招適合抓準時機收尾。",
+        sections: [
+          {
+            title: "小招操作",
+            text: "按 <strong>X</strong> 切換小招目標，再按<strong>鍵盤Q</strong> 或<strong>小招</strong>按鈕施放；短點棋盤也偏向小招。",
+            cost: "成本：紅、黃、綠、藍四種庫存各 1 點；資源不足或冷卻未好不會施放。"
+          },
+          {
+            title: "大招操作",
+            text: "按 <strong>Y</strong> 切換大招目標，再按<strong>鍵盤R</strong> 或<strong>大招</strong>按鈕施放；長按或拖曳棋盤偏向大招。",
+            cost: `成本：${bigAttackBombCost} 枚炸彈，且紅、黃、綠、藍四種庫存各 2 點。`
+          },
+          {
+            title: "瞄準細節",
+            text: "X 控制小招目標，Y 控制大招目標，可在敵方頭部、敵方中心、離敵方最近的食物之間循環；方向型大招會改為切換施放方向，並使用拖曳方向。"
+          }
+        ]
       }
     ];
     let tutorialMoveCue = null;
@@ -799,11 +831,11 @@
         <div class="tutorial-resource-guide" aria-label="資源說明">
           <div class="tutorial-resource-guide-panel">
             <strong>各色庫存</strong>
-            <span>吃紅、黃、綠、藍食物會補對應庫存；招式施放前先看四種庫存是否都足夠。</span>
+            <span>紅、黃、綠、藍是招式材料；單色補同色 2 點，雙色補兩色各 1 點，每色最多 ${maxFoodStock} 點。</span>
           </div>
           <div class="tutorial-resource-guide-panel">
             <strong>能量與炸彈</strong>
-            <span>吃食物會累積能量；能量滿格後轉成炸彈，炸彈是施放招式的重要資源。</span>
+            <span>吃食物會累積能量；能量滿 ${attackNeedTotal} 點轉成炸彈，炸彈最多 ${maxAmmo} 枚，是大招的主要消耗。</span>
           </div>
         </div>
       `;
@@ -842,8 +874,19 @@
           ${tutorialVisualMarkup(slide)}
           <div class="tutorial-copy">
             <strong class="tutorial-title">${slide.title}</strong>
-            <p>${slide.text}</p>
-            <small>${slide.detail}</small>
+            <p class="tutorial-lead">${slide.lead}</p>
+            ${slide.sections ? `
+              ${slide.sections.map(section => `
+                <p class="tutorial-line">
+                  <b>${section.title}</b>
+                  <span>${section.text}</span>
+                  ${section.cost ? `<small>${section.cost}</small>` : ""}
+                </p>
+              `).join("")}
+            ` : `
+              ${slide.points.map(point => `<p class="tutorial-line"><span>${point}</span></p>`).join("")}
+              <p class="tutorial-line tutorial-note"><span>${slide.note}</span></p>
+            `}
           </div>
           <div class="tutorial-actions">
             <button class="secondary" type="button" data-tutorial-action="skip">Skip</button>
@@ -956,19 +999,9 @@
           <button class="secondary" type="button" data-open-tutorial>觀看新手教學</button>
         </section>
         <section class="rules-block">
-          <h3>對戰補充</h3>
+          <h3>進階對戰</h3>
           <ul class="rules-list">
-            <li><b>勝負</b>：被攻擊命中會扣除 HP，HP 歸零才會結束本局；撞擊不會直接死亡，而是造成麻痺與減速。</li>
-            <li><b>控制效果</b>：攻擊命中後有 ${Math.round(baseAttackStunChance * 100)}% 基礎機率暈眩，藍色庫存會提高暈眩率；撞到自己懲罰加倍。</li>
             <li><b>按鍵自訂</b>：小招、大招、暫停、投降與六方向鍵都可在開局設定中修改；若方向鍵與 X / Y 目標鍵相同，X / Y 目標鍵會優先作用。</li>
-          </ul>
-        </section>
-        <section class="rules-block">
-          <h3>瞄準細節</h3>
-          <ul class="rules-list">
-            <li><b>X / Y 目標鍵</b>：X 切換小招按鍵目標，Y 切換大招按鍵目標；可在敵方頭部、敵方中心、離敵方最近的食物之間循環。方向型大招會改為循環施放方向。</li>
-            <li><b>手勢瞄準</b>：短點棋盤偏向小招，長按或拖曳棋盤偏向大招；可指定落點的角色使用手勢位置，方向型大招使用拖曳方向。</li>
-            <li><b>小招補充</b>：${commonSmallMoveGuide}若資源不足或冷卻未好，招式不會施放。</li>
           </ul>
         </section>
         <section class="rules-block">
@@ -976,11 +1009,7 @@
           <ul class="rules-list">
             ${foodLegend}
             ${specialFoodLegend}
-            <li><b>食物收益</b>：單色食物給同色庫存 2 點；雙色食物給兩色各 1 點；每次吃食仍只增加 1 分與 1 段蛇身。</li>
-            <li><b>能量</b>：每吃 1 個食物獲得 2 點能量，集滿 ${attackNeedTotal} 點獲得 1 枚炸彈；炸彈最多 ${maxAmmo} 枚，也是大招施放資源。若炸彈已滿，滿格能量會保留，直到施放消耗炸彈的招式後立即轉為 1 枚炸彈。</li>
-            <li><b>施放成本</b>：小招需紅黃綠藍四種庫存各至少 1 點，施放後各消耗 1；大招需 ${bigAttackBombCost} 枚炸彈，且四種庫存各至少 2 點，施放後消耗 ${bigAttackBombCost} 枚炸彈並使四種庫存各消耗 2。</li>
             <li><b>庫存上限</b>：每種食物最多累積 ${maxFoodStock} 點；一般專精角色只影響補貨偏好，特殊角色可能產出專屬食物。</li>
-            <li><b>撞擊懲罰</b>：撞到另一方會停止 ${collisionStunMs / 1000} 秒，再減速 ${collisionSlowMs / 1000} 秒；撞到自己懲罰加倍，累積停止時間超過 ${maxCollisionParalysisMs / 1000} 秒會落敗。</li>
           </ul>
         </section>
         <section class="rules-block">
