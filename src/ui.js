@@ -609,7 +609,7 @@
 
     function tutorialMoveFoodCell() {
       const head = snake?.[0] || { q: 0, r: 0 };
-      return nextWrappedCell(nextWrappedCell(head, 4), 4);
+      return nextWrappedCell(nextWrappedCell(head, 1), 1);
     }
 
     function tutorialCaptureUrl(type) {
@@ -630,7 +630,7 @@
           lastVisiblePlayerSnake = snake.map(segment => ({ ...segment }));
           const targetFood = tutorialMoveFoodCell();
           tutorialMoveCue = { head: { ...snake[0] }, food: { ...targetFood } };
-          foods = [{ q: targetFood.q, r: targetFood.r, types: ["protein"] }];
+          foods = [{ q: targetFood.q, r: targetFood.r, types: ["fiber"] }];
         } else {
           tutorialMoveCue = null;
         }
