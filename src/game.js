@@ -2523,17 +2523,19 @@
     function targetModeIconSvg(mode, directionAngle = 0) {
       if (mode === "food") {
         return targetModeCrosshairSvg(`
-          <path d="M16 8.5 24 23.2H8Z" fill="#f8fafc" stroke="#e5e7eb" stroke-width="1.3" stroke-linejoin="round"></path>
-          <rect x="13" y="17" width="6" height="6.8" rx="1.2" fill="#14532d"></rect>
-          <circle cx="16" cy="16" r="2.1" fill="#facc15" stroke="#422006" stroke-width="0.8"></circle>
+          <path d="M16 6.2 25.6 24.6H6.4Z" fill="#f8fafc" stroke="#e5e7eb" stroke-width="1.5" stroke-linejoin="round"></path>
+          <path d="M11.4 16.4h9.2v8.2h-9.2z" fill="#14532d" stroke="#052e16" stroke-width="0.7" stroke-linejoin="round"></path>
+          <path d="M13.2 18.1h5.6v5.1h-5.6z" fill="#166534"></path>
+          <circle cx="16" cy="14.8" r="2.3" fill="#facc15" stroke="#422006" stroke-width="0.8"></circle>
         `);
       }
       if (mode === "body") {
         return targetModeCrosshairSvg(`
-          <path d="M5.5 16c3.2-5.3 7.4 5.4 10.5 0s7.1 5.2 10.5 0" fill="none" stroke="#34d399" stroke-width="5.2" stroke-linecap="round"></path>
-          <path d="M5.5 16c3.2-5.3 7.4 5.4 10.5 0s7.1 5.2 10.5 0" fill="none" stroke="#a7f3d0" stroke-width="2.7" stroke-linecap="round"></path>
-          <circle cx="24.2" cy="11.5" r="4.5" fill="#fca5a5" stroke="#fecaca" stroke-width="1.2"></circle>
-          <circle cx="25.5" cy="10.4" r="0.9" fill="#111827"></circle>
+          <path d="M7 20.5c3.7-6 7.1 5.2 10.8-0.7 1.8-2.8 3.4-4.2 5.7-4.2" fill="none" stroke="#34d399" stroke-width="5.2" stroke-linecap="round"></path>
+          <path d="M7 20.5c3.7-6 7.1 5.2 10.8-0.7 1.8-2.8 3.4-4.2 5.7-4.2" fill="none" stroke="#a7f3d0" stroke-width="2.7" stroke-linecap="round"></path>
+          <circle cx="24.6" cy="13.2" r="4.3" fill="#fca5a5" stroke="#fecaca" stroke-width="1.2"></circle>
+          <circle cx="25.8" cy="12.1" r="0.9" fill="#111827"></circle>
+          <path d="M22.4 9.8 20.5 7.7M22.8 16.6l-2.4 1.2" stroke="#fecaca" stroke-width="1.1" stroke-linecap="round"></path>
         `);
       }
       if (mode === "direction") {
@@ -2550,10 +2552,11 @@
         `;
       }
       return targetModeCrosshairSvg(`
-        <path d="M6.8 20.8c3.2-5.6 7.1 4.8 10.2 0 2.4-3.8 5.1-.4 7.2-1.8" fill="none" stroke="#34d399" stroke-width="4.4" stroke-linecap="round"></path>
-        <path d="M6.8 20.8c3.2-5.6 7.1 4.8 10.2 0 2.4-3.8 5.1-.4 7.2-1.8" fill="none" stroke="#a7f3d0" stroke-width="2.2" stroke-linecap="round"></path>
-        <circle cx="16" cy="16" r="5.2" fill="#fca5a5" stroke="#fecaca" stroke-width="1.3"></circle>
-        <circle cx="17.7" cy="14.8" r="1" fill="#111827"></circle>
+        <path d="M5.8 21.7c3.3-5.2 6.3 4.8 9.2-0.4 1.2-2.1 2.1-3.1 3.3-3.8" fill="none" stroke="#34d399" stroke-width="4.6" stroke-linecap="round"></path>
+        <path d="M5.8 21.7c3.3-5.2 6.3 4.8 9.2-0.4 1.2-2.1 2.1-3.1 3.3-3.8" fill="none" stroke="#a7f3d0" stroke-width="2.3" stroke-linecap="round"></path>
+        <circle cx="16" cy="16" r="5.4" fill="#fca5a5" stroke="#fecaca" stroke-width="1.4"></circle>
+        <circle cx="17.6" cy="14.7" r="1" fill="#111827"></circle>
+        <path d="M13.3 12.1 11.3 9.7M13 18.9l-2.5 1.1" stroke="#fecaca" stroke-width="1.1" stroke-linecap="round"></path>
       `);
     }
 

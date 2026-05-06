@@ -340,6 +340,7 @@
     let lastPlayerAttackMs = -Infinity;
     let lastComputerAttackMs = -Infinity;
     let rafId = 0;
+    let previewDrawRafId = 0;
     let movePointerId = null;
     let targetPointerId = null;
     let moveStickLocked = false;
@@ -354,6 +355,8 @@
     let controlAttackPointer = null;
     let targetCell = null;
     let targetActive = false;
+    let directionalPreviewCacheKey = null;
+    let directionalPreviewCache = null;
     let moduleHoldTimer = null;
     let attackPointerLongPressTimer = null;
     let portraitPoseTimers = {};

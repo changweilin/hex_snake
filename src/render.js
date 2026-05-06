@@ -3356,6 +3356,14 @@
       ctx.restore();
     }
 
+    function requestPreviewDraw() {
+      if (previewDrawRafId) return;
+      previewDrawRafId = requestAnimationFrame(() => {
+        previewDrawRafId = 0;
+        draw();
+      });
+    }
+
     function drawDirectionalPreviewArrows(preview, path, lineColor, canCast) {
       if (preview.character.id !== "lobster") {
         drawDirectionalPreviewArrow(path[path.length - 1] || preview.target || preview.origin, preview.direction, lineColor, canCast);
