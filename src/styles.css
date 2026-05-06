@@ -3995,6 +3995,105 @@
       font-weight: 800;
     }
 
+    .rules-about-me {
+      padding: 14px;
+      border-radius: 8px;
+      border: 1px solid rgba(96, 165, 250, 0.28);
+      background:
+        linear-gradient(135deg, rgba(96, 165, 250, 0.12), rgba(15, 23, 36, 0.68) 58%),
+        radial-gradient(circle at 26px 22px, rgba(251, 191, 36, 0.18), transparent 46%);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+    }
+
+    .rules-about-heading {
+      display: grid;
+      gap: 4px;
+      align-items: start;
+    }
+
+    .rules-about-name {
+      color: #dbeafe;
+      font-size: 1rem;
+      line-height: 1.2;
+    }
+
+    .rules-about-line {
+      color: var(--ink);
+      font-weight: 800;
+    }
+
+    .rules-about-quote {
+      display: grid;
+      gap: 4px;
+      margin: 0;
+      padding: 2px 0 2px 12px;
+      border-left: 3px solid rgba(251, 191, 36, 0.66);
+    }
+
+    .rules-about-quote p {
+      margin: 0;
+      color: #e5e7eb;
+      font-size: 0.96rem;
+    }
+
+    .rules-about-quote cite {
+      color: var(--muted);
+      font-size: 0.84rem;
+      font-style: normal;
+    }
+
+    .rules-about-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 2px;
+    }
+
+    .rules-about-link {
+      display: inline-grid;
+      grid-template-columns: 22px auto;
+      align-items: center;
+      gap: 8px;
+      min-height: 34px;
+      max-width: 100%;
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      background: rgba(15, 23, 42, 0.58);
+      color: var(--ink);
+      font-size: 0.86rem;
+      font-weight: 900;
+      line-height: 1.15;
+      text-decoration: none;
+    }
+
+    .rules-about-link:hover,
+    .rules-about-link:focus-visible {
+      border-color: rgba(251, 191, 36, 0.62);
+      background: rgba(30, 41, 59, 0.82);
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.14);
+    }
+
+    .rules-about-icon {
+      width: 22px;
+      height: 22px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      background: #dbeafe;
+      color: #111720;
+      font-size: 0.62rem;
+      font-weight: 950;
+      line-height: 1;
+    }
+
+    @media (max-width: 520px) {
+      .rules-about-link {
+        flex: 1 1 100%;
+      }
+    }
+
     @media (min-width: 901px) and (max-height: 760px) {
       .overlay.intro-details {
         padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
