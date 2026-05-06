@@ -524,7 +524,7 @@
         visual: "move",
         tag: "移動 + 虛擬搖桿區",
         text: "<strong>六角棋盤</strong>有六個方向。先看自己的蛇頭位置，再用<strong>虛擬搖桿區</strong>或<strong>方向快捷鍵</strong>選下一格，往<strong>食物</strong>移動。",
-        detail: "目標是邊吃食物邊避開自己的身體與敵方路線。撞到不會立刻死亡，但會被<strong>麻痺與減速</strong>，容易被追擊。"
+        detail: "食物會出現在蛇頭前方附近，先確認中間空格安全，再選方向前進。目標是邊吃食物邊避開自己的身體與敵方路線；撞到會被<strong>麻痺與減速</strong>，容易被追擊。"
       },
       {
         title: "食物資源",
@@ -538,7 +538,7 @@
         visual: "small",
         tag: "小招 + 技能按鍵區",
         text: "<strong>Q</strong> 或技能按鍵區的<strong>小招</strong>按鈕會依 <strong>X</strong> 鍵選到的目標施放；短點棋盤也能快速出手。",
-        detail: "<strong>小招</strong>需要各色庫存和炸彈；<strong>大招</strong>也需要各色庫存和更多炸彈。大招效果依角色不同，細節看角色說明。"
+        detail: "先用 <strong>X</strong> 切換小招目標，再按 <strong>Q</strong> 或小招按鈕施放。<strong>小招</strong>需要各色庫存和炸彈；<strong>大招</strong>需要更多炸彈，效果依角色不同。"
       }
     ];
     let tutorialMoveCue = null;
@@ -595,6 +595,14 @@
 
     function tutorialMoveArrowMarkup(cue) {
       const { from, to } = tutorialPathPoints("move", cue.head, cue.food);
+      const start = {
+        x: from.x + (to.x - from.x) * 0.42,
+        y: from.y + (to.y - from.y) * 0.42
+      };
+      const end = {
+        x: from.x + (to.x - from.x) * 0.88,
+        y: from.y + (to.y - from.y) * 0.88
+      };
       return `
         <svg class="tutorial-path-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
           <defs>
@@ -602,7 +610,7 @@
               <path d="M0,0 L7,3.5 L0,7 Z"></path>
             </marker>
           </defs>
-          <line x1="${from.x.toFixed(1)}" y1="${from.y.toFixed(1)}" x2="${to.x.toFixed(1)}" y2="${to.y.toFixed(1)}"></line>
+          <line x1="${start.x.toFixed(1)}" y1="${start.y.toFixed(1)}" x2="${end.x.toFixed(1)}" y2="${end.y.toFixed(1)}"></line>
         </svg>
       `;
     }
@@ -628,6 +636,9 @@
           dir = 1;
           snake = createStartingSnake({ q: 0, r: 0 }, dir, Math.max(3, defaultSettings.initialLength));
           lastVisiblePlayerSnake = snake.map(segment => ({ ...segment }));
+          computerSnake = [];
+          lastVisibleComputerSnake = [];
+          blasts = [];
           const targetFood = tutorialMoveFoodCell();
           tutorialMoveCue = { head: { ...snake[0] }, food: { ...targetFood } };
           foods = [{ q: targetFood.q, r: targetFood.r, types: ["fiber"] }];
@@ -720,13 +731,7 @@
     }
 
     function tutorialAnnotations(type) {
-      if (type === "small") {
-        return "";
-      }
-      const cue = tutorialMoveCue || { head: snake?.[0] || { q: 0, r: 0 }, food: tutorialMoveFoodCell() };
-      return `
-        ${tutorialMoveArrowMarkup(cue)}
-      `;
+      return "";
     }
 
     function tutorialBoardDiagramMarkup(type) {
