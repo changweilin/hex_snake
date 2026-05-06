@@ -26,5 +26,12 @@ if (fs.existsSync(dataSource)) {
   fs.cpSync(dataSource, dataTarget, { recursive: true });
 }
 
+const srcSource = path.resolve(__dirname, "src");
+const srcTarget = path.join(outDir, "src");
+
+if (fs.existsSync(srcSource)) {
+  fs.cpSync(srcSource, srcTarget, { recursive: true });
+}
+
 const bytes = fs.statSync(target).size;
 console.log(`Built dist/index.html (${bytes} bytes)`);

@@ -110,6 +110,8 @@ npm run evaluate:basic-gate  # 評估基礎 AI 門檻
 npm run reset:high-ai-basic  # 重設高階 AI 基礎策略
 npm run apply:ai-strategy    # 套用 AI 策略
 npm run generate:sfx         # 產生角色音效
+npm run characters:show      # 在 Windows PowerShell 正確讀取角色 JSON
+npm run data:check           # 檢查 data/ 與 dist/data/ 的 UTF-8 JSON
 ```
 
 ## 遊戲與資料設定
@@ -123,7 +125,14 @@ npm run generate:sfx         # 產生角色音效
 修改資料後建議先跑快速測試：
 
 ```bash
+npm run data:check
 npm run test:quick
+```
+
+Windows PowerShell 5.x 的預設 code page 可能會把無 BOM 的 UTF-8 誤判成系統碼頁，導致 `Get-Content data/characters.json` 看起來像亂碼。檔案仍應維持 UTF-8 without BOM，以免 Node 腳本直接 `JSON.parse` 時遇到 BOM；讀取角色資料請用：
+
+```powershell
+npm run characters:show
 ```
 
 如果改動影響戰鬥規則、AI 或平衡參數，再補跑：
