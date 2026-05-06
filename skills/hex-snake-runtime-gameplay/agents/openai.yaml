@@ -1,0 +1,4 @@
+interface:
+  display_name: "Hex Snake Runtime Gameplay"
+  short_description: "Maintain Hex Snake match rules, AI, replay, and simulator parity."
+  default_prompt: "Use $hex-snake-runtime-gameplay to inspect or change Hex Snake gameplay behavior."

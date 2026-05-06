@@ -1,4 +1,4 @@
 interface:
   display_name: "Hex Snake UI Events"
-  short_description: "Maintain Hex Snake UI state, input, and event flows."
-  default_prompt: "Use $hex-snake-ui-events to inspect or change Hex Snake UI event logic."
+  short_description: "Maintain Hex Snake UI state, DOM wiring, and input flows."
+  default_prompt: "Use $hex-snake-ui-events to inspect or change Hex Snake UI event and DOM logic."

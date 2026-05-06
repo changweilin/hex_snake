@@ -1,50 +1,54 @@
 ---
 name: hex-snake-director
-description: Use for Hex Snake cross-functional coordination: decompose broad requests, choose the right specialist skill or sub-agent, sequence market, UI, data, balance, and localization work, define acceptance criteria, and integrate final validation across this project.
+description: Coordinate Hex Snake work across project-local specialist skills and sub-agents. Use for broad requests, task routing, ownership boundaries, sequencing UI, render, gameplay, data, balance, audio, replay, localization, and final validation after the src/ module split.
 ---
 
 # Hex Snake Director
 
-Use this skill when a request spans multiple domains or needs task routing before implementation. Act as the coordinator for specialist skills and keep the final plan or execution coherent.
+Use this skill to decompose requests, choose owners, and integrate results. Keep direct edits small; delegate bounded work by file ownership when parallel work helps.
 
 ## Specialist Map
 
-- `$hex-snake-market-science`: Market, audience, product hypotheses, prioritization, measurable experiments.
-- `$hex-snake-ui-events`: `index.html` UI state, event listeners, keyboard/touch controls, modals, game lifecycle.
-- `$hex-snake-data-steward`: `data/characters.json`, `data/balance.json`, portrait paths, ids, schema consistency.
-- `$hex-snake-balance`: Combat tuning, seeded simulations, matchup matrices, resource and skill efficiency.
-- `$hex-snake-i18n-localization`: Text inventory, translation, terminology, language keys, UTF-8 protection.
+- `$hex-snake-ui-events`: UI state, DOM bindings, controls, overlays, settings, localStorage.
+- `$hex-snake-render-visuals`: Canvas drawing, board visuals, character effects, responsive visual layout.
+- `$hex-snake-runtime-gameplay`: Runtime rules, match lifecycle, AI behavior, replay interactions, simulator parity.
+- `$hex-snake-data-steward`: Character records, balance config shape, ids, portrait paths, JSON integrity.
+- `$hex-snake-balance`: Numeric tuning, matchup simulations, combat metrics.
+- `$hex-snake-i18n-localization`: UI copy, Traditional Chinese text, terminology, UTF-8 safety.
+- `$hex-snake-market-science`: Product hypotheses, audience, prioritization, experiments.
+
+## Sub-Agent Assignment
+
+- UI worker: own `src/ui.js`, `src/dom.js`, `index.html`, and visual-only `src/styles.css` changes tied to UI controls.
+- Render worker: own `src/render.js`, canvas effects, board drawing, character visuals, and narrow CSS needed for visual layout.
+- Gameplay worker: own `src/game.js`, `src/ai.js`, runtime rules, match flow, and `tools/sim-core.js` parity when rules change.
+- Data/Balance worker: own `data/*.json`, `tools/sim-*`, `tools/sim-core.js`, reports, and balance evidence.
+- Audio/Replay worker: own `src/audio.js` and `src/replay.js` only when the request directly touches those systems.
+
+Tell workers they are not alone in the codebase. Give each worker a disjoint write scope and ask them not to revert unrelated edits.
 
 ## Routing Workflow
 
-1. Classify the request by primary risk:
-   - User behavior or market fit: market first.
-   - Controls, screens, or state flow: UI first.
-   - Character or config records: data first.
-   - Win rates, damage, speed, costs, or food values: balance first.
-   - Copy, language, or text extraction: localization first.
-2. Identify dependencies. Common order:
-   - Market hypothesis -> UI event change -> data update -> balance validation -> localization pass.
-   - New character -> data steward -> balance simulation -> UI check -> localization pass.
-   - Numeric tuning -> balance baseline -> data edit -> balance comparison -> UI copy update if rules changed.
-3. Define acceptance criteria before delegating. Include files, commands, metrics, and non-goals.
-4. Integrate outputs by checking that each specialist preserved adjacent contracts.
+1. Classify the primary risk: product, UI, render, gameplay, data, balance, localization, audio, or replay.
+2. Assign one owner for the main change and sidecar owners only for independent work.
+3. Define acceptance criteria before work begins: files, commands, metrics, and non-goals.
+4. Integrate by checking runtime/data/simulator drift and adjacent UI flows.
 
-## Project Facts
+## Examples
 
-- Main runtime is `index.html`.
-- Rule parameters live in `data/balance.json`.
-- Character content lives in `data/characters.json`.
-- Simulation core is `tools/sim-core.js`.
-- Simulation CLI is `tools/simulate-balance.js`.
-- Prefer `npm.cmd test` on Windows to avoid PowerShell `npm.ps1` execution policy issues.
+- New character with balance impact -> Data Steward -> Balance -> UI smoke -> Director validation.
+- New ultimate visual -> Render worker owns `src/render.js`; Gameplay worker joins only if hit logic changes.
+- Stun rule change -> Gameplay worker updates runtime and simulator parity; Balance validates matchup impact.
+
+## Validation
+
+Prefer:
+```bash
+npm.cmd test
+```
+
+Use targeted simulation commands when balance or simulator parity changes. Use browser inspection when UI or render behavior changes.
 
 ## Output
 
-For coordination tasks, report:
-
-- Selected specialist order.
-- Task boundaries for each specialist.
-- Files or data surfaces each specialist may touch.
-- Acceptance criteria and validation commands.
-- Integration risks, especially runtime/data/simulation drift.
+Report selected owners, file boundaries, validation commands, remaining risks, and any intentional non-goals.
