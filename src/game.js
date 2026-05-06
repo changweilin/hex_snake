@@ -2007,11 +2007,12 @@
         ].filter(Boolean));
       }
 
+      if (!playerCollision && running && !paused) maybeAutoBattlePlayerAttack(now);
       if (!computerCollision && running && !paused) maybeComputerAttack(now);
       updateHud();
     }
 
-    function stepPlayerOnly() {
+    function stepPlayerOnly(now = performance.now()) {
       if (isPlayerAutoControlActive()) {
         nextDir = chooseAutoDirection("player");
         setDirectionButtonHighlight(nextDir);
@@ -2050,6 +2051,7 @@
       } else {
         snake.pop();
       }
+      if (running && !paused) maybeAutoBattlePlayerAttack(now);
       updateHud();
     }
 
@@ -2189,7 +2191,6 @@
         resolveProjectiles(now);
         resolveHazards(now);
         updateAiVisibilityMemory(now);
-        maybeAutoBattlePlayerAttack(now);
       }
       if (running && !paused) {
         const playerDue = !isMovementStunned("player", now) && now - lastPlayerStep >= moveIntervalFor("player", now);
@@ -2204,7 +2205,7 @@
           lastPlayerStep = now;
           lastComputerStep = now;
         } else if (playerDue) {
-          stepPlayerOnly();
+          stepPlayerOnly(now);
           lastPlayerStep = now;
         } else if (computerDue) {
           stepComputerOnly(now);
