@@ -1030,15 +1030,15 @@ function buildRulesContent() {
           </blockquote>
           <div class="rules-about-links" aria-label="About Me links">
             <a class="rules-about-link" href="https://github.com/changweilin" target="_blank" rel="noopener noreferrer" aria-label="Chang Wei Lin GitHub">
-              <span class="rules-about-icon" aria-hidden="true">GH</span>
+              <img class="rules-about-icon" src="https://github.com/favicon.ico" alt="" aria-hidden="true" decoding="async" loading="eager">
               <span>GitHub</span>
             </a>
             <a class="rules-about-link" href="https://www.linkedin.com/in/wei-lin-chang-ba38049a/" target="_blank" rel="noopener noreferrer" aria-label="Chang Wei Lin LinkedIn">
-              <span class="rules-about-icon" aria-hidden="true">in</span>
+              <img class="rules-about-icon" src="https://www.linkedin.com/favicon.ico" alt="" aria-hidden="true" decoding="async" loading="eager">
               <span>LinkedIn</span>
             </a>
             <a class="rules-about-link" href="https://changweilin.github.io/demo_link/" target="_blank" rel="noopener noreferrer" aria-label="Chang Wei Lin demo link">
-              <span class="rules-about-icon" aria-hidden="true">↗</span>
+              <img class="rules-about-icon" src="https://changweilin.github.io/demo_link/favicon-32.png" alt="" aria-hidden="true" decoding="async" loading="eager">
               <span>Demo</span>
             </a>
           </div>
