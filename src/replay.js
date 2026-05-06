@@ -11,6 +11,8 @@
     let replayReturnState = null;
     let replayRafId = 0;
     let replaySurrendered = false;
+    HexSnakeState.replay.mode = replayMode;
+    HexSnakeState.replay.surrendered = replaySurrendered;
 
     function replayClone(value) {
       return JSON.parse(JSON.stringify(value));
@@ -462,6 +464,7 @@
       clearRelayRestartTimer();
       replayReturnState = captureReplayReturnState();
       replayMode = true;
+      HexSnakeState.replay.mode = replayMode;
       running = false;
       paused = true;
       gameOver = false;
@@ -493,8 +496,71 @@
       cancelAnimationFrame(replayRafId);
       replayMode = false;
       replayPlayback = null;
+      HexSnakeState.replay.mode = replayMode;
       replayControls.hidden = true;
       setSettingsLocked(false);
       restoreReplayReturnState(replayReturnState);
       replayReturnState = null;
     }
+
+    const HexSnakeReplay = Object.freeze({
+      get playback() {
+        return replayPlayback;
+      },
+      get playbackSpeeds() {
+        return replayPlaybackSpeeds;
+      },
+      isPlaybackMode() {
+        return replayMode;
+      },
+      resetSurrendered() {
+        replaySurrendered = false;
+        HexSnakeState.replay.surrendered = replaySurrendered;
+      },
+      markSurrendered() {
+        replaySurrendered = true;
+        HexSnakeState.replay.surrendered = replaySurrendered;
+      },
+      startRecording: startReplayRecording,
+      recordSnapshot: recordReplaySnapshot,
+      finishRecording: finishReplayRecording,
+      openModal: openReplayModal,
+      closeModal: closeReplayModal,
+      findRecord: findReplayRecord,
+      toggleFavorite: toggleReplayFavorite,
+      deleteRecord: deleteReplayRecord,
+      startPlayback: startReplayPlayback,
+      exitPlayback: exitReplayPlayback,
+      updateControls: updateReplayControls,
+      togglePlaybackPaused() {
+        if (!replayPlayback) return false;
+        replayPlayback.paused = !replayPlayback.paused;
+        replayPlayback.lastFrameAt = performance.now();
+        updateReplayControls();
+        return true;
+      },
+      reversePlayback() {
+        if (!replayPlayback) return false;
+        replayPlayback.direction *= -1;
+        replayPlayback.paused = false;
+        replayPlayback.lastFrameAt = performance.now();
+        updateReplayControls();
+        return true;
+      },
+      setPlaybackSpeed(value) {
+        if (!replayPlayback) return false;
+        const speed = Number(value);
+        replayPlayback.speed = replayPlaybackSpeeds.includes(speed) ? speed : 1;
+        replayPlayback.lastFrameAt = performance.now();
+        return true;
+      },
+      seekPlayback(value) {
+        if (!replayPlayback) return false;
+        replayPlayback.time = Number(value) || 0;
+        replayPlayback.paused = true;
+        replayPlayback.lastFrameAt = performance.now();
+        applyReplaySnapshot(snapshotForReplayTime(replayPlayback.record, replayPlayback.time), replayPlayback.record);
+        updateReplayControls();
+        return true;
+      }
+    });

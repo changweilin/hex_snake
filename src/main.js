@@ -1,6 +1,6 @@
 async function loadLegacyModules() {
   // Keep the legacy script in one evaluated scope while the source is split into smaller files.
-  const sources = ["src/state.js", "src/ui.js", "src/audio.js", "src/replay.js", "src/game.js"];
+  const sources = ["src/state.js", "src/dom.js", "src/ui.js", "src/characters.js", "src/audio.js", "src/replay.js", "src/ai.js", "src/render.js", "src/game.js"];
   const parts = await Promise.all(sources.map(async source => {
     const response = await fetch(source);
     if (!response.ok) throw new Error(`Failed to load ${source}: ${response.status}`);
