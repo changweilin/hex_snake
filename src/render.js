@@ -3238,6 +3238,7 @@
 
     function activeAttackPreviewProfile() {
       if (controlAttackPointer) return "big";
+      if (keyboardAttackPreview) return keyboardAttackPreview.profile || selectedAttackProfile;
       return attackPointer?.previewProfile || selectedAttackProfile;
     }
 
@@ -3268,6 +3269,15 @@
       if (!snake?.length) return null;
       const character = characterFor("player");
       if (activeAttackPreviewProfile() !== "big" || !bigAttackUsesDrawnDirection(character.id)) return null;
+      if (keyboardAttackPreview?.profile === "big" && Number.isInteger(keyboardAttackPreview.direction)) {
+        return {
+          character,
+          direction: keyboardAttackPreview.direction,
+          origin: keyboardAttackPreview.origin || snake[0],
+          target: keyboardAttackPreview.target || opponentHeadTarget(),
+          fromKeyboard: true
+        };
+      }
       if (controlAttackPointer) {
         return {
           character,

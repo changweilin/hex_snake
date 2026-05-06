@@ -124,7 +124,7 @@
         clearTimeout(attackHighlightReleaseTimer);
         attackHighlightReleaseTimer = null;
       }
-      highlightedAttackProfile = profile === "small" || profile === "big" ? profile : null;
+      highlightedAttackProfile = ["small", "big", "smallAim", "bigAim"].includes(profile) ? profile : null;
       updateAttackButtons();
     }
 
@@ -145,8 +145,13 @@
     function updateAttackButtons() {
       smallAttackButton.classList.toggle("is-selected", highlightedAttackProfile === "small");
       bigAttackButton.classList.toggle("is-selected", highlightedAttackProfile === "big");
+      keyboardSmallAimButton.classList.toggle("is-selected", highlightedAttackProfile === "smallAim");
+      keyboardBigAimButton.classList.toggle("is-selected", highlightedAttackProfile === "bigAim");
+      targetModeSmallIndicator.classList.toggle("is-active", highlightedAttackProfile === "smallAim");
+      targetModeBigIndicator.classList.toggle("is-active", highlightedAttackProfile === "bigAim");
       smallAttackButton.classList.toggle("secondary", highlightedAttackProfile !== "small");
       bigAttackButton.classList.toggle("secondary", highlightedAttackProfile !== "big");
+      updateTargetModeIndicator();
     }
 
     function selectAttackProfile(profile) {
@@ -554,6 +559,15 @@
       boardShakeUntil = 0;
       boardShakeStartedAt = 0;
       boardShakeStrength = 0;
+      keyboardAttackAim.small = { targetModeIndex: 0, direction: dir };
+      keyboardAttackAim.big = { targetModeIndex: 0, direction: dir };
+      keyboardAttackPreview = null;
+      keyboardAimHeldKeys.clear();
+      if (keyboardAttackPreviewTimer) {
+        clearTimeout(keyboardAttackPreviewTimer);
+        keyboardAttackPreviewTimer = null;
+      }
+      updateTargetModeIndicator();
       targetCell = { ...snake[0] };
       targetActive = false;
       totalElapsedMs = 0;
@@ -2429,6 +2443,231 @@
       return computerSnake?.[0] || snake?.[0] || targetCell;
     }
 
+    function opponentCentroidTarget() {
+      if (!computerSnake?.length) return opponentHeadTarget();
+      const average = computerSnake.reduce((total, segment) => ({
+        q: total.q + segment.q / computerSnake.length,
+        r: total.r + segment.r / computerSnake.length
+      }), { q: 0, r: 0 });
+      return nearestInsideCell(roundAxial(average.q, average.r));
+    }
+
+    function opponentNearestFoodTarget() {
+      const head = opponentHeadTarget();
+      if (!foods.length || !head) return head;
+      return [...foods].sort((a, b) => hexDistance(head, a) - hexDistance(head, b))[0] || head;
+    }
+
+    function keyboardTargetMode(profile = "small") {
+      const aim = keyboardAttackAim[profile] || keyboardAttackAim.small;
+      return keyboardTargetModes[aim.targetModeIndex % keyboardTargetModes.length] || "head";
+    }
+
+    function keyboardAttackTarget(profile = "small") {
+      if (keyboardAttackUsesDirection(profile)) return opponentHeadTarget();
+      const mode = keyboardTargetMode(profile);
+      if (mode === "centroid") return opponentCentroidTarget();
+      if (mode === "food") return opponentNearestFoodTarget();
+      return opponentHeadTarget();
+    }
+
+    function keyboardAttackUsesDirection(profile = "small") {
+      return profile === "big" && bigAttackUsesDrawnDirection(characterFor("player").id);
+    }
+
+    function keyboardAttackDirection(profile = "big") {
+      const aim = keyboardAttackAim[profile] || keyboardAttackAim.big;
+      return Number.isInteger(aim.direction) ? aim.direction : ownerDirection("player");
+    }
+
+    function keyboardAttackOptions(profile = "small", target = null) {
+      if (!keyboardAttackUsesDirection(profile) || !snake?.length) return {};
+      const character = characterFor("player");
+      const direction = keyboardAttackDirection(profile);
+      return {
+        aimDirection: direction,
+        aimOrigin: character.id === "moray" ? (target || opponentHeadTarget()) : snake[0]
+      };
+    }
+
+    function clearKeyboardAttackPreviewTimer() {
+      if (!keyboardAttackPreviewTimer) return;
+      clearTimeout(keyboardAttackPreviewTimer);
+      keyboardAttackPreviewTimer = null;
+    }
+
+    function keyboardAttackHintLabel(profile = "small") {
+      if (keyboardAttackUsesDirection(profile)) {
+        const direction = directions[keyboardAttackDirection(profile)];
+        return direction ? direction.label : "目前方向";
+      }
+      return keyboardTargetModeLabels[keyboardTargetMode(profile)] || "目標頭部";
+    }
+
+    function currentKeyboardAimProfile() {
+      return selectedAttackProfile === "big" ? "big" : "small";
+    }
+
+    function targetModeCrosshairSvg(content) {
+      return `
+        <svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+          <g fill="none" stroke="#fde68a" stroke-width="2.2" stroke-linecap="round">
+            <circle cx="16" cy="16" r="11.2"></circle>
+            <path d="M16 3.8v6.2M16 22v6.2M3.8 16h6.2M22 16h6.2"></path>
+          </g>
+          ${content}
+        </svg>
+      `;
+    }
+
+    function targetModeIconSvg(mode, directionAngle = 0) {
+      if (mode === "food") {
+        return targetModeCrosshairSvg(`
+          <path d="M16 8.5 24 23.2H8Z" fill="#f8fafc" stroke="#e5e7eb" stroke-width="1.3" stroke-linejoin="round"></path>
+          <rect x="13" y="17" width="6" height="6.8" rx="1.2" fill="#14532d"></rect>
+          <circle cx="16" cy="16" r="2.1" fill="#facc15" stroke="#422006" stroke-width="0.8"></circle>
+        `);
+      }
+      if (mode === "body") {
+        return targetModeCrosshairSvg(`
+          <path d="M5.5 16c3.2-5.3 7.4 5.4 10.5 0s7.1 5.2 10.5 0" fill="none" stroke="#34d399" stroke-width="5.2" stroke-linecap="round"></path>
+          <path d="M5.5 16c3.2-5.3 7.4 5.4 10.5 0s7.1 5.2 10.5 0" fill="none" stroke="#a7f3d0" stroke-width="2.7" stroke-linecap="round"></path>
+          <circle cx="24.2" cy="11.5" r="4.5" fill="#fca5a5" stroke="#fecaca" stroke-width="1.2"></circle>
+          <circle cx="25.5" cy="10.4" r="0.9" fill="#111827"></circle>
+        `);
+      }
+      if (mode === "direction") {
+        return `
+          <svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+            <circle cx="16" cy="16" r="12.8" fill="rgba(253, 230, 138, 0.1)" stroke="#fde68a" stroke-width="1.6"></circle>
+            <g transform="rotate(${directionAngle} 16 16)" fill="none" stroke="#fde68a" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M7 16H23.2" stroke-width="4.2"></path>
+              <path d="M18 9.8 24.5 16 18 22.2" stroke-width="4.2"></path>
+              <path d="M7 16H23.2" stroke="#f59e0b" stroke-width="1.7"></path>
+              <path d="M18 9.8 24.5 16 18 22.2" stroke="#f59e0b" stroke-width="1.7"></path>
+            </g>
+          </svg>
+        `;
+      }
+      return targetModeCrosshairSvg(`
+        <path d="M6.8 20.8c3.2-5.6 7.1 4.8 10.2 0 2.4-3.8 5.1-.4 7.2-1.8" fill="none" stroke="#34d399" stroke-width="4.4" stroke-linecap="round"></path>
+        <path d="M6.8 20.8c3.2-5.6 7.1 4.8 10.2 0 2.4-3.8 5.1-.4 7.2-1.8" fill="none" stroke="#a7f3d0" stroke-width="2.2" stroke-linecap="round"></path>
+        <circle cx="16" cy="16" r="5.2" fill="#fca5a5" stroke="#fecaca" stroke-width="1.3"></circle>
+        <circle cx="17.7" cy="14.8" r="1" fill="#111827"></circle>
+      `);
+    }
+
+    function updateTargetModeIndicatorFor(profile = "small", indicator = null, icon = null) {
+      if (!indicator || !icon) return;
+      const isDirection = keyboardAttackUsesDirection(profile);
+      const mode = isDirection ? "direction" : keyboardTargetMode(profile);
+      const iconMode = mode === "centroid" ? "body" : mode;
+      icon.dataset.mode = iconMode;
+      const directionAngle = isDirection ? directionScreenAngle(keyboardAttackDirection(profile)) : 0;
+      if (isDirection) {
+        icon.style.setProperty("--target-direction-angle", `${directionAngle}deg`);
+      } else {
+        icon.style.removeProperty("--target-direction-angle");
+      }
+      icon.innerHTML = targetModeIconSvg(iconMode, directionAngle);
+      const label = `${profile === "big" ? "大招" : "小招"}：${keyboardAttackHintLabel(profile)}`;
+      indicator.title = label;
+      indicator.setAttribute("aria-label", `顯示${label}位置提示`);
+    }
+
+    function updateTargetModeIndicator() {
+      updateTargetModeIndicatorFor("small", targetModeSmallIndicator, targetModeSmallIcon);
+      updateTargetModeIndicatorFor("big", targetModeBigIndicator, targetModeBigIcon);
+    }
+
+    function showKeyboardAttackHint(profile = "small") {
+      const target = keyboardAttackTarget(profile);
+      const preview = {
+        profile,
+        target,
+        startedAt: performance.now(),
+        endAt: performance.now() + 900
+      };
+      if (keyboardAttackUsesDirection(profile)) {
+        preview.direction = keyboardAttackDirection(profile);
+        preview.origin = characterFor("player").id === "moray" ? target : snake?.[0];
+      }
+      keyboardAttackPreview = preview;
+      targetCell = target;
+      targetActive = Boolean(target);
+      selectedAttackProfile = profile;
+      updateTargetModeIndicator();
+      draw();
+      clearKeyboardAttackPreviewTimer();
+      keyboardAttackPreviewTimer = setTimeout(() => {
+        keyboardAttackPreviewTimer = null;
+        if (keyboardAttackPreview === preview) keyboardAttackPreview = null;
+        targetActive = false;
+        draw();
+      }, 900);
+      setStatus(`${profile === "big" ? "大招" : "小招"}按鍵目標：${keyboardAttackHintLabel(profile)}`);
+    }
+
+    function cycleKeyboardAttackAim(profile = "small") {
+      if (!running || gameOver) {
+        if (!autoStartGame()) return false;
+      }
+      const aim = keyboardAttackAim[profile] || keyboardAttackAim.small;
+      if (keyboardAttackUsesDirection(profile)) {
+        aim.direction = (keyboardAttackDirection(profile) + 1) % directions.length;
+      } else {
+        aim.targetModeIndex = (aim.targetModeIndex + 1) % keyboardTargetModes.length;
+      }
+      keyboardAttackAim[profile] = aim;
+      selectedAttackProfile = profile;
+      showKeyboardAttackHint(profile);
+      return true;
+    }
+
+    function handleKeyboardAimKeyDown(event, profile = "small", key = "") {
+      event.preventDefault();
+      if (event.repeat) return true;
+      if (keyboardAimHeldKeys.has(key)) {
+        keyboardAimHeldKeys.delete(key);
+        setAttackButtonHighlight(null);
+      }
+      keyboardAimHeldKeys.add(key);
+      setAttackButtonHighlight(profile === "big" ? "bigAim" : "smallAim");
+      triggerTouchFeedback(event, profile === "big" ? 12 : 8);
+      cycleKeyboardAttackAim(profile);
+      return true;
+    }
+
+    function handleKeyboardAimKeyUp(event, key = "") {
+      if (!keyboardAimHeldKeys.has(key)) return false;
+      event.preventDefault();
+      keyboardAimHeldKeys.delete(key);
+      releaseAttackButtonHighlight();
+      triggerTouchFeedback(event, 5);
+      return true;
+    }
+
+    function clearKeyboardAimKeyLocks() {
+      if (!keyboardAimHeldKeys.size) return;
+      keyboardAimHeldKeys.clear();
+      setAttackButtonHighlight(null);
+    }
+
+    function launchKeyboardPlayerAttack(profile = "small") {
+      const target = keyboardAttackTarget(profile);
+      return launchPlayerAttack(target, profile, keyboardAttackOptions(profile, target));
+    }
+
+    function remindKeyboardAttackTarget(profile = currentKeyboardAimProfile(), event = null) {
+      event?.preventDefault?.();
+      event?.stopPropagation?.();
+      const indicator = profile === "big" ? targetModeBigIndicator : targetModeSmallIndicator;
+      indicator.classList.add("is-active");
+      triggerTouchFeedback(event, profile === "big" ? 12 : 8);
+      showKeyboardAttackHint(profile);
+      setTimeout(() => indicator.classList.remove("is-active"), 140);
+    }
+
     function playerDirectAttackTarget(profile = "small", pointer = null) {
       const character = characterFor("player");
       if (profile === "big" && pointer && character.id === "moray") {
@@ -2513,6 +2752,8 @@
       }
       const now = performance.now();
       if (launchAttack("player", target, now, profile, options)) {
+        keyboardAttackPreview = null;
+        clearKeyboardAttackPreviewTimer();
         targetCell = { ...target };
         targetActive = true;
         flashAttackButton(profile);
@@ -3134,14 +3375,54 @@
       setAttackButtonHighlight(null);
     }
 
+    function handleKeyboardAimButtonDown(event, profile) {
+      event.preventDefault();
+      event.stopPropagation();
+      attackButtonPointerId = event.pointerId;
+      try {
+        event.currentTarget.setPointerCapture(event.pointerId);
+      } catch (error) {
+        // Pointer capture keeps the visual press state paired with release/cancel.
+      }
+      handleKeyboardAimKeyDown(event, profile, `button-${profile}`);
+    }
+
+    function handleKeyboardAimButtonUp(event, profile) {
+      event.preventDefault();
+      event.stopPropagation();
+      if (attackButtonPointerId !== null && event.pointerId !== attackButtonPointerId) return;
+      attackButtonPointerId = null;
+      if (event.currentTarget.hasPointerCapture?.(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+      handleKeyboardAimKeyUp(event, `button-${profile}`);
+    }
+
+    function handleKeyboardAimButtonCancel(event) {
+      if (attackButtonPointerId !== null && event.pointerId !== attackButtonPointerId) return;
+      attackButtonPointerId = null;
+      if (event.currentTarget.hasPointerCapture?.(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+      clearKeyboardAimKeyLocks();
+    }
+
     smallAttackButton.addEventListener("pointerdown", event => handleAttackButtonDown(event, "small"));
     bigAttackButton.addEventListener("pointerdown", event => handleAttackButtonDown(event, "big"));
+    keyboardSmallAimButton.addEventListener("pointerdown", event => handleKeyboardAimButtonDown(event, "small"));
+    keyboardBigAimButton.addEventListener("pointerdown", event => handleKeyboardAimButtonDown(event, "big"));
     smallAttackButton.addEventListener("pointerup", event => handleAttackButtonUp(event, "small"));
     bigAttackButton.addEventListener("pointerup", event => handleAttackButtonUp(event, "big"));
+    keyboardSmallAimButton.addEventListener("pointerup", event => handleKeyboardAimButtonUp(event, "small"));
+    keyboardBigAimButton.addEventListener("pointerup", event => handleKeyboardAimButtonUp(event, "big"));
     smallAttackButton.addEventListener("pointercancel", handleAttackButtonCancel);
     bigAttackButton.addEventListener("pointercancel", handleAttackButtonCancel);
+    keyboardSmallAimButton.addEventListener("pointercancel", handleKeyboardAimButtonCancel);
+    keyboardBigAimButton.addEventListener("pointercancel", handleKeyboardAimButtonCancel);
     smallAttackButton.addEventListener("click", event => event.preventDefault());
     bigAttackButton.addEventListener("click", event => event.preventDefault());
+    keyboardSmallAimButton.addEventListener("click", event => event.preventDefault());
+    keyboardBigAimButton.addEventListener("click", event => event.preventDefault());
+    targetModeSmallIndicator.addEventListener("pointerdown", event => remindKeyboardAttackTarget("small", event));
+    targetModeBigIndicator.addEventListener("pointerdown", event => remindKeyboardAttackTarget("big", event));
+    targetModeSmallIndicator.addEventListener("click", event => event.preventDefault());
+    targetModeBigIndicator.addEventListener("click", event => event.preventDefault());
     controlRow.addEventListener("pointerdown", event => {
       if (joyZone.contains(event.target)) return;
       if (event.target.closest("#bigAttackButton")) previewDirectAttack("big");
@@ -3515,10 +3796,14 @@
         surrenderGame();
         return;
       }
+      if (pressedKey === "x" || pressedKey === "y") {
+        handleKeyboardAimKeyDown(event, pressedKey === "x" ? "small" : "big", pressedKey);
+        return;
+      }
       if (pressedKey === keybinds.smallAttack || pressedKey === keybinds.bigAttack) {
         event.preventDefault();
         const profile = pressedKey === keybinds.smallAttack ? "small" : "big";
-        launchDirectPlayerAttack(profile);
+        launchKeyboardPlayerAttack(profile);
         return;
       }
       if (keyToDir.has(pressedKey)) {
@@ -3570,6 +3855,17 @@
         setDirection(keyToDir.get(key));
         return;
       }
+    });
+
+    window.addEventListener("keyup", event => {
+      const pressedKey = event.key === " " ? " " : event.key.toLowerCase();
+      if (pressedKey === "x" || pressedKey === "y") {
+        handleKeyboardAimKeyUp(event, pressedKey);
+      }
+    });
+    window.addEventListener("blur", clearKeyboardAimKeyLocks);
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) clearKeyboardAimKeyLocks();
     });
 
     window.addEventListener("resize", resize);

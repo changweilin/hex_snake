@@ -242,6 +242,19 @@
     };
     let keybinds = loadKeybinds();
     let selectedAttackProfile = "small";
+    const keyboardTargetModes = ["head", "centroid", "food"];
+    const keyboardTargetModeLabels = {
+      head: "目標頭部",
+      centroid: "目標身體",
+      food: "目標最近食物"
+    };
+    let keyboardAttackAim = {
+      small: { targetModeIndex: 0, direction: 0 },
+      big: { targetModeIndex: 0, direction: 0 }
+    };
+    let keyboardAttackPreview = null;
+    let keyboardAttackPreviewTimer = null;
+    let keyboardAimHeldKeys = new Set();
     let cells = [];
     let resourceEls = new Map();
 

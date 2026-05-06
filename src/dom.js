@@ -1,6 +1,10 @@
     const canvas = document.querySelector("#game");
     const ctx = canvas.getContext("2d");
     const playArea = document.querySelector("#playArea");
+    const targetModeSmallIndicator = document.querySelector("#targetModeSmallIndicator");
+    const targetModeBigIndicator = document.querySelector("#targetModeBigIndicator");
+    const targetModeSmallIcon = document.querySelector("#targetModeSmallIcon");
+    const targetModeBigIcon = document.querySelector("#targetModeBigIcon");
     const overlay = document.querySelector("#overlay");
     const overlayTitle = document.querySelector("#overlayTitle");
     const overlayText = document.querySelector("#overlayText");
@@ -52,6 +56,8 @@
     const controlRow = document.querySelector("#controlRow");
     const smallAttackButton = document.querySelector("#smallAttackButton");
     const bigAttackButton = document.querySelector("#bigAttackButton");
+    const keyboardSmallAimButton = document.querySelector("#keyboardSmallAimButton");
+    const keyboardBigAimButton = document.querySelector("#keyboardBigAimButton");
     const leftHandModeInput = document.querySelector("#leftHandMode");
     const sfxMuteToggle = document.querySelector("#sfxMuteToggle");
     const surrenderButton = document.querySelector("#surrenderButton");

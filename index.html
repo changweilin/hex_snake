@@ -31,6 +31,12 @@
 
       <div class="canvas-wrap" id="playArea">
         <canvas id="game" aria-label="六角貪食蛇棋盤"></canvas>
+        <button class="target-mode-indicator" id="targetModeSmallIndicator" type="button" data-profile-label="小" aria-label="顯示小招目標提示" title="小招目標">
+          <span class="target-mode-icon" id="targetModeSmallIcon" aria-hidden="true"></span>
+        </button>
+        <button class="target-mode-indicator" id="targetModeBigIndicator" type="button" data-profile-label="大" aria-label="顯示大招目標提示" title="大招目標">
+          <span class="target-mode-icon" id="targetModeBigIcon" aria-hidden="true"></span>
+        </button>
         <div class="character-stage" id="characterStage"></div>
         <div class="overlay show" id="overlay">
           <div class="dialog">
@@ -264,8 +270,8 @@
           </div>
           <div class="control-card action-panel">
             <div class="attack-actions" aria-label="攻擊招式">
-              <button class="attack-button secondary is-placeholder" type="button" data-pad-pos="top" disabled>Y</button>
-              <button class="attack-button secondary is-placeholder" type="button" data-pad-pos="right" disabled>X</button>
+              <button class="attack-button secondary" id="keyboardBigAimButton" type="button" data-keyboard-aim-profile="big" data-pad-pos="top" aria-label="切換大招按鍵目標">Y</button>
+              <button class="attack-button secondary" id="keyboardSmallAimButton" type="button" data-keyboard-aim-profile="small" data-pad-pos="right" aria-label="切換小招按鍵目標">X</button>
               <button class="attack-button is-selected" id="smallAttackButton" type="button" data-attack-profile="small" data-pad-pos="bottom">小招</button>
               <button class="attack-button secondary" id="bigAttackButton" type="button" data-attack-profile="big" data-pad-pos="left">大招</button>
             </div>
