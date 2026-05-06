@@ -320,6 +320,10 @@
     let lastComputerFoodAt = 0;
     const deadEndMinSpace = 5;
     let lastTimerFrame = 0;
+    const hudFrameIntervalMs = 100;
+    const replayRecordCheckIntervalMs = 100;
+    let lastHudFrameAt = -Infinity;
+    let lastReplayRecordCheckAt = -Infinity;
     let lastPlayerAttackMs = -Infinity;
     let lastComputerAttackMs = -Infinity;
     let rafId = 0;
@@ -958,7 +962,8 @@
         resourceBoard.append(panel);
       });
       resourceBoard.querySelectorAll("[data-count], [data-fill]").forEach(el => {
-        resourceEls.set(el.dataset.count || el.dataset.fill || el.dataset.total, el);
+        if (el.dataset.count) resourceEls.set(`${el.dataset.count}-count`, el);
+        if (el.dataset.fill) resourceEls.set(`${el.dataset.fill}-fill`, el);
       });
       resourceBoard.querySelectorAll("[data-energy-chip], [data-energy-track], [data-energy-fill], [data-energy-value], [data-bomb-chip], [data-bomb-track], [data-bomb-fill], [data-bomb-value]").forEach(el => {
         const entry = Object.entries(el.dataset)[0];

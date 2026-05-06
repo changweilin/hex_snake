@@ -559,6 +559,8 @@
       totalElapsedMs = 0;
       lastFeedElapsedMs = 0;
       lastTimerFrame = 0;
+      lastHudFrameAt = -Infinity;
+      lastReplayRecordCheckAt = -Infinity;
       lastPlayerStep = 0;
       lastComputerStep = 0;
       playerStunUntil = 0;
@@ -779,8 +781,8 @@
       if (bombValue) bombValue.textContent = `${ammo}/${maxAmmo}`;
       foodTypes.forEach(type => {
         const count = Math.max(0, Math.min(maxFoodStock, Math.round(stock[type.id] || 0)));
-        const countEl = resourceBoard.querySelector(`[data-count="${owner}-${type.id}"]`);
-        const fill = resourceBoard.querySelector(`[data-fill="${owner}-${type.id}"]`);
+        const countEl = resourceEls.get(`${owner}-${type.id}-count`);
+        const fill = resourceEls.get(`${owner}-${type.id}-fill`);
         if (countEl) countEl.textContent = count;
         if (fill) fill.style.width = `${Math.min(100, count / maxFoodStock * 100)}%`;
       });
@@ -800,6 +802,7 @@
     }
 
     function updateHud() {
+      lastHudFrameAt = performance.now();
       const playerMaxHp = snake.length * 2;
       const computerMaxHp = computerSnake.length * 2;
       scoreEl.textContent = `HP ${Math.max(0, Math.ceil(playerHp))}/${playerMaxHp}`;
@@ -820,6 +823,17 @@
       keyEls.forEach(el => el.classList.toggle("active", Number(el.dataset.dir) === nextDir));
       updateStockHud("player", playerStock, playerAmmo, playerAmmoCharge);
       updateStockHud("computer", computerStock, computerAmmo, computerAmmoCharge);
+    }
+
+    function updateHudThrottled(now = performance.now()) {
+      if (now - lastHudFrameAt < hudFrameIntervalMs) return;
+      updateHud();
+    }
+
+    function recordReplaySnapshotThrottled(now) {
+      if (now - lastReplayRecordCheckAt < replayRecordCheckIntervalMs) return;
+      lastReplayRecordCheckAt = now;
+      HexSnakeReplay.recordSnapshot(now);
     }
 
     function setStatus(text) {
@@ -1888,7 +1902,7 @@
       if (playerHp <= 0 || computerHp <= 0) endGame(playerHp <= 0, computerHp <= 0);
     }
 
-    function step(headCollisionOrder = "simultaneous") {
+    function step(headCollisionOrder = "simultaneous", now = performance.now()) {
       if (isPlayerAutoControlActive()) {
         nextDir = chooseAutoDirection("player");
         setDirectionButtonHighlight(nextDir);
@@ -1993,6 +2007,7 @@
         ].filter(Boolean));
       }
 
+      if (!computerCollision && running && !paused) maybeComputerAttack(now);
       updateHud();
     }
 
@@ -2038,7 +2053,7 @@
       updateHud();
     }
 
-    function stepComputerOnly() {
+    function stepComputerOnly(now = performance.now()) {
       computerDir = chooseComputerDirection();
       const computerNext = nextWrappedCell(computerSnake[0], computerDir);
       const computerNextKey = keyOf(computerNext);
@@ -2074,6 +2089,7 @@
       } else {
         computerSnake.pop();
       }
+      if (running && !paused) maybeComputerAttack(now);
       updateHud();
     }
 
@@ -2174,7 +2190,6 @@
         resolveHazards(now);
         updateAiVisibilityMemory(now);
         maybeAutoBattlePlayerAttack(now);
-        maybeComputerAttack(now);
       }
       if (running && !paused) {
         const playerDue = !isMovementStunned("player", now) && now - lastPlayerStep >= moveIntervalFor("player", now);
@@ -2185,21 +2200,21 @@
           const headCollisionOrder = Math.abs(playerDueAt - computerDueAt) < 0.001
             ? "simultaneous"
             : playerDueAt < computerDueAt ? "playerFirst" : "computerFirst";
-          step(headCollisionOrder);
+          step(headCollisionOrder, now);
           lastPlayerStep = now;
           lastComputerStep = now;
         } else if (playerDue) {
           stepPlayerOnly();
           lastPlayerStep = now;
         } else if (computerDue) {
-          stepComputerOnly();
+          stepComputerOnly(now);
           lastComputerStep = now;
         }
       }
       blasts = blasts.filter(blast => now <= blast.endAt);
       hazards = hazards.filter(hazard => now <= hazard.endAt);
-      updateHud();
-      HexSnakeReplay.recordSnapshot(now);
+      updateHudThrottled(now);
+      recordReplaySnapshotThrottled(now);
       updateAutoBattleControls();
       draw();
       rafId = requestAnimationFrame(loop);
