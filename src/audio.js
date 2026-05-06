@@ -106,6 +106,20 @@
       return null;
     }
 
+    function preloadCharacterSfx(character, events = ["small", "big"]) {
+      if (!character) return;
+      events.forEach(eventName => getSfxAssetBuffer(sfxAssetUrl(character, eventName)));
+    }
+
+    function warmupSfx(charactersToPreload = []) {
+      if (sfxMuted) return false;
+      const context = ensureAudioContext();
+      if (!context) return false;
+      sfxNoise();
+      charactersToPreload.forEach(character => preloadCharacterSfx(character));
+      return true;
+    }
+
     function playSfxAssetBuffer(buffer, time, gain, pan) {
       const context = ensureAudioContext();
       if (!context || !sfxMaster || !buffer) return false;
@@ -304,6 +318,8 @@
       ensureContext: ensureAudioContext,
       unlock: unlockSfx,
       setMuted: setSfxMuted,
+      warmup: warmupSfx,
+      preloadCharacter: preloadCharacterSfx,
       playCharacter: playCharacterSfx,
       now: sfxNow,
       get muted() {

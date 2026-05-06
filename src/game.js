@@ -617,6 +617,7 @@
       saveGmSettings();
       resolveCharacterChoicesForStart();
       resetGame();
+      HexSnakeAudio.warmup([characterFor("player"), characterFor("computer")]);
       HexSnakeAudio.playCharacter("player", "start", { unlock: true });
       HexSnakeAudio.playCharacter("computer", "start", { delay: 0.08, gainScale: 0.75 });
       running = true;
@@ -747,6 +748,35 @@
           </span>
         `;
       }
+      const now = performance.now();
+      const energyFlashing = now < (owner === "player" ? playerEnergyFlashUntil : computerEnergyFlashUntil);
+      const bombFlashing = now < (owner === "player" ? playerBombFlashUntil : computerBombFlashUntil);
+      const energyRatio = Math.max(0, Math.min(1, ammoCharge / Math.max(1, attackNeedTotal)));
+      const bombRatio = Math.max(0, Math.min(1, ammo / Math.max(1, maxAmmo)));
+      const energyChip = resourceEls.get(`${owner}-energyChip`);
+      const energyTrack = resourceEls.get(`${owner}-energyTrack`);
+      const energyFill = resourceEls.get(`${owner}-energyFill`);
+      const energyValue = resourceEls.get(`${owner}-energyValue`);
+      const bombChip = resourceEls.get(`${owner}-bombChip`);
+      const bombTrack = resourceEls.get(`${owner}-bombTrack`);
+      const bombFill = resourceEls.get(`${owner}-bombFill`);
+      const bombValue = resourceEls.get(`${owner}-bombValue`);
+      energyChip?.classList.toggle("is-flashing", energyFlashing);
+      bombChip?.classList.toggle("is-flashing", bombFlashing);
+      if (energyTrack) {
+        energyTrack.setAttribute("aria-valuenow", String(ammoCharge));
+        energyTrack.setAttribute("aria-valuemax", String(attackNeedTotal));
+        energyTrack.setAttribute("aria-valuetext", `${ammoCharge}/${attackNeedTotal}`);
+      }
+      if (bombTrack) {
+        bombTrack.setAttribute("aria-valuenow", String(ammo));
+        bombTrack.setAttribute("aria-valuemax", String(maxAmmo));
+        bombTrack.setAttribute("aria-valuetext", `${ammo}/${maxAmmo}`);
+      }
+      if (energyFill) energyFill.style.setProperty("--resource-ratio", energyRatio.toFixed(4));
+      if (bombFill) bombFill.style.setProperty("--resource-ratio", bombRatio.toFixed(4));
+      if (energyValue) energyValue.textContent = `${ammoCharge}/${attackNeedTotal}`;
+      if (bombValue) bombValue.textContent = `${ammo}/${maxAmmo}`;
       foodTypes.forEach(type => {
         const count = Math.max(0, Math.min(maxFoodStock, Math.round(stock[type.id] || 0)));
         const countEl = resourceBoard.querySelector(`[data-count="${owner}-${type.id}"]`);

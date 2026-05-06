@@ -900,7 +900,27 @@
         const panel = document.createElement("div");
         panel.className = "resource-panel";
         panel.dataset.owner = group.owner;
-        panel.innerHTML = `<div class="resource-title"><span class="resource-owner"><span class="owner-name ${group.owner === "player" ? "is-p1" : "is-p2"}">${group.title}</span></span><span class="resource-counters" data-total="${group.owner}"></span></div>`;
+        panel.innerHTML = `
+          <div class="resource-title">
+            <span class="resource-owner"><span class="owner-name ${group.owner === "player" ? "is-p1" : "is-p2"}">${group.title}</span></span>
+            <span class="resource-counters" data-total="${group.owner}">
+              <span class="resource-chip" data-energy-chip="${group.owner}" title="?賡?">
+                <span class="resource-icon energy-icon" aria-hidden="true"></span>
+                <span class="resource-chip-track" data-energy-track="${group.owner}" role="meter" aria-label="?賡?" aria-valuemin="0">
+                  <span class="resource-chip-fill" data-energy-fill="${group.owner}"></span>
+                </span>
+                <span class="resource-chip-value" data-energy-value="${group.owner}">0/0</span>
+              </span>
+              <span class="resource-chip" data-bomb-chip="${group.owner}" title="?詨?">
+                <span class="resource-icon missile-icon" aria-hidden="true"></span>
+                <span class="resource-chip-track" data-bomb-track="${group.owner}" role="meter" aria-label="?詨?" aria-valuemin="0">
+                  <span class="resource-chip-fill" data-bomb-fill="${group.owner}" style="--resource-chip-color: #facc15"></span>
+                </span>
+                <span class="resource-chip-value" data-bomb-value="${group.owner}">0/0</span>
+              </span>
+            </span>
+          </div>
+        `;
         foodTypes.forEach(type => {
           const row = document.createElement("div");
           row.className = "resource-row";
@@ -915,8 +935,14 @@
         });
         resourceBoard.append(panel);
       });
-      resourceBoard.querySelectorAll("[data-count], [data-fill], [data-total]").forEach(el => {
+      resourceBoard.querySelectorAll("[data-count], [data-fill]").forEach(el => {
         resourceEls.set(el.dataset.count || el.dataset.fill || el.dataset.total, el);
+      });
+      resourceBoard.querySelectorAll("[data-energy-chip], [data-energy-track], [data-energy-fill], [data-energy-value], [data-bomb-chip], [data-bomb-track], [data-bomb-fill], [data-bomb-value]").forEach(el => {
+        const entry = Object.entries(el.dataset)[0];
+        if (!entry) return;
+        const [key, owner] = entry;
+        resourceEls.set(`${owner}-${key}`, el);
       });
     }
 

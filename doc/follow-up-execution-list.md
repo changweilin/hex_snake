@@ -2,58 +2,95 @@
 
 這份清單整理目前較值得排入後續開發的事項。`doc/current-balance.md` 已刪除，平衡判斷請改以最新 `reports/` 輸出或重新執行模擬結果為準。
 
+## Current Progress
+
+- 已完成保守拆分 `index.html`
+  - `index.html` 現在只保留 HTML 骨架、CSS link，以及 `src/main.js` 入口。
+  - CSS 已搬到 `src/styles.css`。
+  - JS 已拆成：
+    - `src/main.js`：legacy loader，維持拆檔後仍在同一個執行 scope。
+    - `src/state.js`：共用狀態入口，目前先接 `audio` / `replay` 低風險狀態。
+    - `src/dom.js`：集中 DOM query。
+    - `src/ui.js`：UI、HUD、設定面板、事件輔助。
+    - `src/characters.js`：角色資料載入、角色選擇、立繪 URL / srcset。
+    - `src/audio.js`：音效狀態、音效 profile、播放 facade `HexSnakeAudio`。
+    - `src/replay.js`：重播紀錄、播放控制 facade `HexSnakeReplay`。
+    - `src/ai.js`：電腦 / 自動對戰決策、食物目標評分、攻擊選擇。
+    - `src/render.js`：主要畫布繪製、技能特效、蛇身、食物、projectile / hazard / blast 繪製。
+    - `src/game.js`：核心流程、攻擊結算、移動、輸入事件、loop、bootstrap。
+  - `build.js` 已更新，build 會複製 `src/` 到 `dist/src/`。
+  - 已驗證：
+    - 各拆分 JS 檔 `node --check` 通過。
+    - 合併後語法檢查通過。
+    - `npm.cmd run build` 通過。
+    - in-app browser 載入、開始遊戲、settings、replay modal smoke test 無 console error。
+
 ## P0
 
-- 修正文字編碼與文案資料
-  - 範圍：`README.md`、`data/characters.json`、`doc/` 中的角色與說明文案。
-  - 目標：確保繁體中文在瀏覽器、終端、Git diff 與文件中都能穩定顯示。
-  - 驗收：角色選單、規則、README、角色文件不出現亂碼。
+- 補 smoke test script
+  - 範圍：新增一個簡單瀏覽器 smoke test，固定檢查首頁載入、開始遊戲、開 settings、開 replay modal。
+  - 目標：後續繼續拆 `game.js` / 轉 ES modules 時，有快速保護網。
+  - 驗收：可用 `npm.cmd run test:smoke` 或類似指令執行，失敗時輸出 console error 與失敗步驟。
 
-- 建立新手引導
-  - 範圍：首次進入遊戲、角色選擇、移動、食物資源、小招、大招、勝敗條件。
-  - 目標：讓新玩家不讀文件也能完成第一場對戰。
-  - 驗收：首次啟動會出現簡短教學；玩家可略過，略過偏好會保存到 `localStorage`。
+- 修正或重建亂碼文件
+  - 範圍：檢查 `README.md`、`doc/` 和 UI 字串中是否仍有 mojibake。
+  - 目標：避免設計文件與使用者可見文字繼續累積亂碼。
+  - 驗收：重要文件可讀，必要時新增編碼檢查或文件規範。
 
 ## P1
 
-- 建立最新平衡基線
-  - 範圍：重新執行模擬，產生新的角色勝率、對戰矩陣與摘要。
-  - 目標：不要再引用舊的 `doc/current-balance.md`，改由最新報告判斷角色強弱。
-  - 驗收：`reports/` 有新的輸出檔，並整理一份短摘要供後續調整使用。
+- 繼續收斂 `game.js`
+  - 範圍：把剩餘核心邏輯再分成較小檔案，例如 `combat.js`、`movement.js`、`input.js`、`loop.js`。
+  - 目標：讓 `game.js` 只負責 bootstrap 與高階流程協調。
+  - 驗收：拆分後 build 與 smoke test 通過，遊戲開始、移動、攻擊、結束流程正常。
 
-- 強化手機操作手感
-  - 範圍：虛擬搖桿、攻擊按鈕、攻擊預覽、左手模式、小螢幕 HUD。
-  - 目標：降低誤觸，讓移動與放招的意圖更清楚。
-  - 驗收：手機寬度下控制區不遮擋棋盤，攻擊預覽與按鈕狀態清楚可辨。
+- 將 facade 轉成明確 API
+  - 範圍：整理 `HexSnakeAudio`、`HexSnakeReplay`，後續補 `HexSnakeAI`、`HexSnakeRenderer`。
+  - 目標：為真正 ES module `import/export` 做準備。
+  - 驗收：外部呼叫點不再直接操作 replay/audio 內部變數。
 
-- 製作角色展示 / 圖鑑模式
-  - 範圍：角色立繪、人型 / 幻獸 / Q 版切換、技能名稱、偏好食物、音效預覽。
-  - 目標：讓既有角色素材能被完整瀏覽，也作為玩家理解角色差異的入口。
-  - 驗收：可從遊戲主畫面開啟圖鑑，並瀏覽所有角色與主要素材。
+- 補 replay 回歸測試
+  - 範圍：建立可重複的 replay 記錄、播放、暫停、倒放、seek 測試。
+  - 目標：避免 replay facade 或後續狀態整理造成回放壞掉。
+  - 驗收：replay modal 和播放控制可以自動化驗證。
 
 ## P2
 
-- 拆分 `index.html`
-  - 範圍：將大型單檔逐步拆成遊戲核心、UI、音效、重播、資料載入等模組。
-  - 目標：降低後續維護成本，不改變現有遊戲行為。
-  - 驗收：拆分後 `npm run test:quick` 通過，瀏覽器可正常啟動與遊玩。
+- 轉真正 ES modules
+  - 範圍：逐步移除 `src/main.js` 的 `eval` loader，改成 `import/export`。
+  - 目標：讓模組邊界由語言層級保護，而不是只靠載入順序。
+  - 驗收：`<script type="module" src="src/main.js">` 直接 import 各模組，無 global scope 隱性依賴。
 
-- 建立測試 / 報告儀表板
-  - 範圍：讀取 `reports/` 中的 csv/json，顯示角色勝率、對戰矩陣、策略比較。
-  - 目標：讓平衡與 AI 調整可以視覺化追蹤。
-  - 驗收：本機可開啟 dashboard，選擇報告後看到摘要表格與矩陣。
+- 拆分 `render.js`
+  - 範圍：把大型特效函式再拆成 `effects.js`、`projectiles-render.js`、`board-render.js`、`snake-render.js`。
+  - 目標：降低單檔 200KB 以上的視覺邏輯維護成本。
+  - 驗收：effect comparison mode、一般戰鬥畫面、技能特效均正常。
+
+- 平衡與 AI 報表整理
+  - 範圍：整理 `reports/` 的 csv/json 輸出，建立簡短摘要格式。
+  - 目標：讓 AI 與平衡調整可以基於可讀報表，不只看 raw output。
+  - 驗收：每次模擬後有摘要可供後續調整使用。
 
 ## Routine Checks
 
-後續每次改動資料、技能、AI 或平衡時，至少執行：
+每次改動資料、技能、AI、渲染或平衡時，至少執行：
 
 ```bash
+npm.cmd run build
 npm.cmd run test:quick
 ```
 
-若改動碰撞、攻擊、AI 決策或模擬核心，再執行：
+涉及 AI 或平衡時，追加：
 
 ```bash
 npm.cmd test
 npm.cmd run simulate
 ```
+
+涉及前端互動或拆模組時，追加瀏覽器 smoke test：
+
+```bash
+npm.cmd run test:smoke
+```
+
+目前 `test:smoke` 尚未建立，列為 P0 任務。
