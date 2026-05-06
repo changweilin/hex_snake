@@ -3439,6 +3439,9 @@
     surrenderButton.addEventListener("click", surrenderGame);
     rulesButton.addEventListener("click", openRulesModal);
     rulesCloseButton.addEventListener("click", closeRulesModal);
+    rulesContent.addEventListener("click", event => {
+      if (event.target.closest("[data-open-tutorial]")) showTutorial(0);
+    });
     replayArchiveButton.addEventListener("click", HexSnakeReplay.openModal);
     settingsReplayButton.addEventListener("click", HexSnakeReplay.openModal);
     replayModalClose.addEventListener("click", HexSnakeReplay.closeModal);
@@ -3510,6 +3513,36 @@
     introCloseButton.addEventListener("click", () => {
       renderIntroPortraits(false);
       overlay.classList.add("show");
+    });
+
+    winnerPortrait.addEventListener("click", event => {
+      const button = event.target.closest("[data-tutorial-action]");
+      if (!button) return;
+      const action = button.dataset.tutorialAction;
+      if (action === "next") {
+        moveTutorial(1);
+      } else if (action === "prev") {
+        moveTutorial(-1);
+      } else if (action === "skip" || action === "done") {
+        finishTutorial(true);
+      }
+    });
+
+    winnerPortrait.addEventListener("pointerdown", event => {
+      if (!isTutorialOpen()) return;
+      tutorialSwipeStartX = event.clientX;
+      tutorialSwipeStartY = event.clientY;
+    });
+
+    winnerPortrait.addEventListener("pointerup", event => {
+      if (!isTutorialOpen() || tutorialSwipeStartX === null) return;
+      const deltaX = event.clientX - tutorialSwipeStartX;
+      const deltaY = event.clientY - tutorialSwipeStartY;
+      tutorialSwipeStartX = null;
+      tutorialSwipeStartY = null;
+      if (Math.max(Math.abs(deltaX), Math.abs(deltaY)) < 42) return;
+      if (Math.abs(deltaX) > Math.abs(deltaY)) moveTutorial(deltaX < 0 ? 1 : -1);
+      else moveTutorial(deltaY < 0 ? 1 : -1);
     });
 
     startButton.addEventListener("click", () => {
@@ -3758,6 +3791,23 @@
         if (event.key === "Escape" || event.key === "Esc") closeRulesModal();
         return;
       }
+      if (isTutorialOpen()) {
+        if (event.key === "Escape" || event.key === "Esc") {
+          event.preventDefault();
+          finishTutorial(true);
+          return;
+        }
+        if (event.key === "PageDown" || event.key === "ArrowDown" || event.key === "ArrowRight") {
+          event.preventDefault();
+          moveTutorial(1);
+          return;
+        }
+        if (event.key === "PageUp" || event.key === "ArrowUp" || event.key === "ArrowLeft") {
+          event.preventDefault();
+          moveTutorial(-1);
+          return;
+        }
+      }
       if (!replayModal.hidden) {
         if (event.key === "Escape" || event.key === "Esc") HexSnakeReplay.closeModal();
         return;
@@ -3908,6 +3958,7 @@
       resetGame();
       resize();
       renderIntroPortraits(false);
+      if (shouldShowTutorial()) showTutorial(0);
       preloadPortraitsFor("player");
       preloadPortraitsFor("computer");
       if (isEffectComparisonMode()) {

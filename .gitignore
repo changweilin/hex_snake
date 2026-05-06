@@ -2,3 +2,6 @@ dev.log
 dev.err.log
 dist/
 reports/
+node_modules/
+.env
+*.env

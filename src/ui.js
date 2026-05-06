@@ -366,6 +366,10 @@
     let attackHighlightReleaseTimer = null;
     let moveStickReboundTimer = null;
     let introDetailsOpen = false;
+    let tutorialStepIndex = 0;
+    const tutorialSeenKey = "hexSnakeTutorialSeen";
+    let tutorialSwipeStartX = null;
+    let tutorialSwipeStartY = null;
     let portraitLightboxOwner = "player";
     let portraitSwipeStartX = null;
     let portraitSwipeStartY = null;
@@ -458,43 +462,37 @@
       return `--fighter-color:${character.color};--fighter-line:${character.line};--fighter-accent:${character.accent};${ownerVars}`;
     }
 
+    const commonSmallMoveGuide = "小招是所有角色共用的基本爆破：按小招鍵或點「小招」時，會依 X 鍵選擇的小招目標施放；在棋盤短點一下則以手勢位置輔助瞄準。";
     const characterMoveGuides = {
       dragon: {
-        small: "按小招鍵、點「小招」，或在棋盤短點一下；會自動鎖定敵方頭部並在短延遲後爆破。",
-        big: "按大招鍵或點「大招」會快速朝敵方頭部施放；也可在棋盤長按指定落點。白龍會放出繞場靈息彈，沿路命中敵方蛇身時爆發，最後在路徑終點再爆發一次。",
-        tip: "長按棋盤可把終點放在敵方蛇身密集處；快速施放則適合追擊頭部。"
+        big: "按大招鍵或點「大招」會依 Y 鍵選擇的大招目標快速施放；也可在棋盤長按指定落點。白龍會在目標格降下<strong>靈息爆發</strong>，命中後留下<strong>持續 4 秒</strong>的靈息傷害區。",
+        tip: "長按棋盤可把落點放在敵方必經路線；爆發傷害較低，但持續區域能逼迫對手轉向。"
       },
       sandworm: {
-        small: "按小招鍵、點「小招」，或在棋盤短點一下；會自動鎖定敵方頭部並在短延遲後爆破。",
-        big: "按大招鍵或點「大招」會快速朝敵方頭部施放；也可在棋盤長按指定突襲格。沙蟲會潛地延遲突襲，命中頭部可直接擊倒，命中身體會造成麻痺。",
-        tip: "長按棋盤可預判敵方頭部下一步；施放後有短暫潛地時間，可用來躲開危險。"
+        big: "按大招鍵或點「大招」會依 Y 鍵選擇的大招目標快速施放；也可在棋盤長按指定突襲格。沙蟲會<strong>潛地延遲突襲</strong>，命中頭部可<strong>直接擊倒</strong>，命中身體會造成<strong>麻痺</strong>。",
+        tip: "長按棋盤可預判敵方頭部下一步；施放後接近命中時會短暫潛地，可用來躲開危險。"
       },
       quetzal: {
-        small: "按小招鍵、點「小招」，或在棋盤短點一下；會自動鎖定敵方頭部並在短延遲後爆破。",
-        big: "按大招鍵、點「大招」，或在棋盤長按都會施放；羽蛇會沿自身蛇身留下持續傷害的藤沼區域，不需要指定落點。",
+        big: "按大招鍵、點「大招」，或在棋盤長按都會施放；羽蛇會沿自身蛇身留下<strong>持續 3 秒</strong>的<strong>藤沼區域</strong>，不需要指定落點，紅色庫存越高外擴傷害越完整。",
         tip: "適合在敵方靠近你身體或追逐時施放，用身體路徑封鎖空間。"
       },
       moray: {
-        small: "按小招鍵、點「小招」，或在棋盤短點一下；會自動鎖定敵方頭部並在短延遲後爆破。",
-        big: "在棋盤拖曳可指定電擊起點與方向，放開施放；按大招鍵或點「大招」則快速朝敵方頭部方向施放。大招模式下也可按方向盤方向鍵施放直線電擊。",
+        big: "在棋盤拖曳可指定電擊起點與方向，放開施放；按大招鍵或點「大招」則依 Y 鍵選擇的大招方向施放。電鰻會打出貫穿棋盤的<strong>直線電擊</strong>，命中可<strong>堆疊暈眩</strong>。",
         tip: "棋盤拖曳時，拖曳方向比落點更重要；沿敵方身體長軸掃線最容易命中多段。"
       },
       lobster: {
-        small: "按小招鍵、點「小招」，或在棋盤短點一下；會自動鎖定敵方頭部並在短延遲後爆破。",
-        big: "在棋盤拖曳可指定出拳方向，放開施放；按大招鍵或點「大招」則快速朝敵方頭部方向施放。大招模式下也可按方向盤方向鍵打出連拳路徑。",
-        tip: "拖曳方向從自己頭部出拳；對準敵方頭部或彎折蛇身，連續兩波更容易打滿。"
+        big: "在棋盤拖曳可指定出拳方向，放開施放；按大招鍵或點「大招」則依 Y 鍵選擇的大招方向施放。智蝦會從頭部打出<strong>兩波追蹤連拳</strong>，拳路遇到第一個敵方蛇身會<strong>停下並爆發</strong>。",
+        tip: "拖曳方向從自己頭部出拳；對準敵方頭部或彎折蛇身，兩波連拳更容易打滿。"
       },
       gu_king: {
-        small: "按小招鍵、點「小招」，或在棋盤短點一下；會自動鎖定敵方頭部並在短延遲後爆破。",
-        big: "按大招鍵或點「大招」會快速朝敵方頭部施放；也可在棋盤長按指定毒爆中心。蠱王會在同一目標連續落下三段毒爆。",
-        tip: "長按棋盤可瞄準敵方必經格或被迫轉向的位置，讓連續三段覆蓋逃跑路線。"
+        big: "按大招鍵或點「大招」會依 Y 鍵選擇的大招目標快速施放；也可在棋盤長按指定毒爆中心。蠱王會在同一目標連續落下<strong>三段毒爆</strong>。",
+        tip: "長按棋盤可瞄準敵方必經格或被迫轉向的位置，讓三段毒爆覆蓋逃跑路線。"
       }
     };
 
     function moveGuideFor(character) {
       return characterMoveGuides[character.id] || {
-        small: "按小招鍵、點「小招」，或在棋盤短點一下；會自動鎖定敵方頭部並在短延遲後爆破。",
-        big: "按大招鍵或點「大招」會快速朝敵方頭部施放；也可在棋盤長按或拖曳觸發角色大招。",
+        big: "按大招鍵或點「大招」會依 Y 鍵選擇的大招目標快速施放；也可在棋盤長按或拖曳觸發<strong>角色大招</strong>。",
         tip: "觀察敵方路線後再決定快速施放或手動指定，命中率會更高。"
       };
     }
@@ -518,6 +516,381 @@
       const ids = Array.isArray(typeIds) ? typeIds : [typeIds];
       const icons = ids.map(id => foodIconMarkup(id)).join("");
       return `<span class="food-icon-group" aria-label="${label}">${icons}</span>`;
+    }
+
+    const tutorialSlides = [
+      {
+        title: "六角移動",
+        visual: "move",
+        tag: "移動 + 虛擬搖桿區",
+        text: "<strong>六角棋盤</strong>有六個方向。先看自己的蛇頭位置，再用<strong>虛擬搖桿區</strong>或<strong>方向快捷鍵</strong>選下一格，往<strong>食物</strong>移動。",
+        detail: "目標是邊吃食物邊避開自己的身體與敵方路線。撞到不會立刻死亡，但會被<strong>麻痺與減速</strong>，容易被追擊。"
+      },
+      {
+        title: "食物資源",
+        visual: "resources",
+        tag: "食物 + 資源圖表",
+        text: "吃<strong>食物</strong>會加分、長身體、補<strong>各色庫存</strong>並增加<strong>能量</strong>。資源圖表會顯示紅黃綠藍四種材料、能量與炸彈。",
+        detail: "<strong>小招</strong>與<strong>大招</strong>都需要食物累積的各色庫存和<strong>炸彈</strong>。遊戲目標是讓敵方 <strong>HP 歸零</strong>。"
+      },
+      {
+        title: "小招操作",
+        visual: "small",
+        tag: "小招 + 技能按鍵區",
+        text: "<strong>Q</strong> 或技能按鍵區的<strong>小招</strong>按鈕會依 <strong>X</strong> 鍵選到的目標施放；短點棋盤也能快速出手。",
+        detail: "<strong>小招</strong>需要各色庫存和炸彈；<strong>大招</strong>也需要各色庫存和更多炸彈。大招效果依角色不同，細節看角色說明。"
+      }
+    ];
+    let tutorialMoveCue = null;
+
+    function tutorialCaptureCrop(type) {
+      const width = canvas.width || 1;
+      const height = canvas.height || 1;
+      const shortSide = Math.min(width, height);
+      if (type === "move") {
+        return {
+          x: Math.max(0, width * 0.5 - shortSide * 0.34),
+          y: Math.max(0, height * 0.5 - shortSide * 0.34),
+          w: Math.min(width, shortSide * 0.68),
+          h: Math.min(height, shortSide * 0.68)
+        };
+      }
+      if (type === "food") {
+        return {
+          x: Math.max(0, width * 0.5 - shortSide * 0.43),
+          y: Math.max(0, height * 0.5 - shortSide * 0.36),
+          w: Math.min(width, shortSide * 0.86),
+          h: Math.min(height, shortSide * 0.62)
+        };
+      }
+      return {
+        x: Math.max(0, width * 0.5 - shortSide * 0.38),
+        y: Math.max(0, height * 0.5 - shortSide * 0.38),
+        w: Math.min(width, shortSide * 0.76),
+        h: Math.min(height, shortSide * 0.76)
+      };
+    }
+
+    function tutorialCropPoint(cell, type) {
+      const crop = tutorialCaptureCrop(type);
+      const point = axialToPixel(cell);
+      const rect = playArea.getBoundingClientRect();
+      const scaleX = rect.width ? canvas.width / rect.width : 1;
+      const scaleY = rect.height ? canvas.height / rect.height : 1;
+      const canvasPoint = {
+        x: point.x * scaleX,
+        y: point.y * scaleY
+      };
+      return {
+        x: ((canvasPoint.x - crop.x) / crop.w) * 100,
+        y: ((canvasPoint.y - crop.y) / crop.h) * 100
+      };
+    }
+
+    function tutorialPathPoints(type, fromCell, toCell) {
+      const from = tutorialCropPoint(fromCell, type);
+      const to = tutorialCropPoint(toCell, type);
+      return { from, to };
+    }
+
+    function tutorialMoveArrowMarkup(cue) {
+      const { from, to } = tutorialPathPoints("move", cue.head, cue.food);
+      return `
+        <svg class="tutorial-path-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <marker id="tutorialMoveArrowHead" markerWidth="7" markerHeight="7" refX="6.2" refY="3.5" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L7,3.5 L0,7 Z"></path>
+            </marker>
+          </defs>
+          <line x1="${from.x.toFixed(1)}" y1="${from.y.toFixed(1)}" x2="${to.x.toFixed(1)}" y2="${to.y.toFixed(1)}"></line>
+        </svg>
+      `;
+    }
+
+    function tutorialMoveFoodCell() {
+      const head = snake?.[0] || { q: 0, r: 0 };
+      return nextWrappedCell(nextWrappedCell(head, 4), 4);
+    }
+
+    function tutorialCaptureUrl(type) {
+      if (!canvas.width || !canvas.height) return "";
+      const now = performance.now();
+      const originalBlasts = blasts;
+      const originalFoods = foods;
+      const originalComputerSnake = computerSnake;
+      const originalLastVisibleComputerSnake = lastVisibleComputerSnake;
+      const originalComputerDir = computerDir;
+      const originalPlayerSnake = snake;
+      const originalLastVisiblePlayerSnake = lastVisiblePlayerSnake;
+      const originalDir = dir;
+      try {
+        if (type === "move" && snake?.[0]) {
+          dir = 1;
+          snake = createStartingSnake({ q: 0, r: 0 }, dir, Math.max(3, defaultSettings.initialLength));
+          lastVisiblePlayerSnake = snake.map(segment => ({ ...segment }));
+          const targetFood = tutorialMoveFoodCell();
+          tutorialMoveCue = { head: { ...snake[0] }, food: { ...targetFood } };
+          foods = [{ q: targetFood.q, r: targetFood.r, types: ["protein"] }];
+        } else {
+          tutorialMoveCue = null;
+        }
+        if (type === "small" && computerSnake?.[0]) {
+          const hitHead = { q: 0, r: 0 };
+          computerDir = 2;
+          computerSnake = createStartingSnake(hitHead, computerDir, Math.max(4, defaultSettings.initialLength + 1));
+          lastVisibleComputerSnake = computerSnake.map(segment => ({ ...segment }));
+          snake = createStartingSnake({ q: -2, r: 1 }, 1, Math.max(3, defaultSettings.initialLength));
+          lastVisiblePlayerSnake = snake.map(segment => ({ ...segment }));
+          foods = [];
+          blasts = [
+            ...blasts,
+            {
+              kind: "circle",
+              target: { q: computerSnake[0].q, r: computerSnake[0].r },
+              owner: "player",
+              radius: Math.max(3.1, blastRadius(playerStock || initialStock) + 1.1),
+              visualType: attackVisualType("player", "small"),
+              startedAt: now - blastDurationMs * 0.02,
+              endAt: now + blastDurationMs * 0.98
+            }
+          ];
+        }
+        draw();
+        const crop = tutorialCaptureCrop(type);
+        const out = document.createElement("canvas");
+        const targetWidth = Math.max(1, Math.round(crop.w));
+        const targetHeight = Math.max(1, Math.round(crop.h));
+        out.width = targetWidth;
+        out.height = targetHeight;
+        const outCtx = out.getContext("2d");
+        outCtx.imageSmoothingEnabled = true;
+        outCtx.imageSmoothingQuality = "high";
+        outCtx.fillStyle = "#111720";
+        outCtx.fillRect(0, 0, targetWidth, targetHeight);
+        outCtx.drawImage(canvas, crop.x, crop.y, crop.w, crop.h, 0, 0, targetWidth, targetHeight);
+        if (type === "small") {
+          const hitPoint = axialToPixel({ q: 0, r: 0 });
+          const x = hitPoint.x - crop.x;
+          const y = hitPoint.y - crop.y;
+          const radiusPx = cellSize * 3.35;
+          outCtx.save();
+          outCtx.globalCompositeOperation = "screen";
+          const gradient = outCtx.createRadialGradient(x, y, cellSize * 0.35, x, y, radiusPx);
+          gradient.addColorStop(0, "rgba(255,255,255,0.95)");
+          gradient.addColorStop(0.24, "rgba(251,191,36,0.82)");
+          gradient.addColorStop(0.58, "rgba(249,115,22,0.44)");
+          gradient.addColorStop(1, "rgba(249,115,22,0)");
+          outCtx.fillStyle = gradient;
+          outCtx.beginPath();
+          outCtx.arc(x, y, radiusPx, 0, Math.PI * 2);
+          outCtx.fill();
+          outCtx.globalCompositeOperation = "source-over";
+          outCtx.strokeStyle = "rgba(255,255,255,0.9)";
+          outCtx.lineWidth = Math.max(3, cellSize * 0.08);
+          [0.54, 0.78, 1].forEach(scale => {
+            outCtx.beginPath();
+            outCtx.arc(x, y, radiusPx * scale, 0, Math.PI * 2);
+            outCtx.stroke();
+          });
+          outCtx.strokeStyle = "rgba(251,191,36,0.95)";
+          outCtx.lineWidth = Math.max(2, cellSize * 0.06);
+          for (let i = 0; i < 12; i += 1) {
+            const angle = i * Math.PI * 2 / 12;
+            outCtx.beginPath();
+            outCtx.moveTo(x + Math.cos(angle) * radiusPx * 0.35, y + Math.sin(angle) * radiusPx * 0.35);
+            outCtx.lineTo(x + Math.cos(angle) * radiusPx * 1.12, y + Math.sin(angle) * radiusPx * 1.12);
+            outCtx.stroke();
+          }
+          outCtx.restore();
+        }
+        return out.toDataURL("image/png");
+      } catch (error) {
+        console.warn(`Tutorial capture failed: ${error.message}`);
+        return "";
+      } finally {
+        blasts = originalBlasts;
+        foods = originalFoods;
+        computerSnake = originalComputerSnake;
+        lastVisibleComputerSnake = originalLastVisibleComputerSnake;
+        computerDir = originalComputerDir;
+        snake = originalPlayerSnake;
+        lastVisiblePlayerSnake = originalLastVisiblePlayerSnake;
+        dir = originalDir;
+      }
+    }
+
+    function tutorialAnnotations(type) {
+      if (type === "small") {
+        return "";
+      }
+      const cue = tutorialMoveCue || { head: snake?.[0] || { q: 0, r: 0 }, food: tutorialMoveFoodCell() };
+      return `
+        ${tutorialMoveArrowMarkup(cue)}
+      `;
+    }
+
+    function tutorialBoardDiagramMarkup(type) {
+      if (type === "move") {
+        return `
+          <div class="tutorial-board-diagram is-move-demo" aria-label="蛇頭往食物移動示意">
+            <span class="tutorial-demo-hex is-body" style="--col:2;--row:2;"></span>
+            <span class="tutorial-demo-hex is-body" style="--col:2;--row:3;"></span>
+            <span class="tutorial-demo-hex is-head" style="--col:3;--row:2;">蛇頭</span>
+            <span class="tutorial-demo-hex is-food" style="--col:5;--row:1;">食物</span>
+            <span class="tutorial-demo-arrow" aria-hidden="true"></span>
+          </div>
+        `;
+      }
+      return `
+        <div class="tutorial-board-diagram is-small-demo" aria-label="小招命中目標示意">
+          <span class="tutorial-demo-hex is-player" style="--col:2;--row:3;">我方</span>
+          <span class="tutorial-demo-hex is-enemy" style="--col:5;--row:2;">目標</span>
+          <span class="tutorial-demo-hex is-enemy-body" style="--col:5;--row:3;"></span>
+          <span class="tutorial-demo-blast" aria-hidden="true"></span>
+        </div>
+      `;
+    }
+
+    function sanitizedTutorialClone(selector) {
+      const source = document.querySelector(selector);
+      if (!source) return "";
+      const clone = source.cloneNode(true);
+      clone.querySelectorAll("[id]").forEach(node => node.removeAttribute("id"));
+      clone.removeAttribute("id");
+      clone.querySelectorAll("button, input, select, textarea").forEach(node => {
+        node.setAttribute("tabindex", "-1");
+        node.setAttribute("aria-hidden", "true");
+      });
+      return clone.outerHTML;
+    }
+
+    function tutorialSnapshotMarkup(type) {
+      if (type === "move") {
+        return `
+          <div class="tutorial-ui-snapshot is-joystick" aria-label="虛擬搖桿區截圖">
+            <div class="tutorial-snapshot-label"><strong>虛擬搖桿區</strong><span>W/E/D/X/Z/A 六方向</span></div>
+            <div class="tutorial-snapshot-frame">${sanitizedTutorialClone("#joyZone")}</div>
+          </div>
+        `;
+      }
+      if (type === "resources") {
+        return `
+          <div class="tutorial-ui-snapshot is-resources" aria-label="資源圖表截圖">
+            <div class="tutorial-snapshot-label"><strong>資源圖表</strong><span>庫存、能量、炸彈</span></div>
+            <div class="tutorial-snapshot-frame">${sanitizedTutorialClone("#resourceBoard")}</div>
+          </div>
+        `;
+      }
+      return `
+        <div class="tutorial-ui-snapshot is-skills" aria-label="技能按鍵區截圖">
+          <div class="tutorial-snapshot-label"><strong>技能按鍵區</strong><span>X / Y 選目標，小招 / 大招施放</span></div>
+          <div class="tutorial-snapshot-frame">${sanitizedTutorialClone(".attack-actions")}</div>
+        </div>
+      `;
+    }
+
+    function tutorialResourceGuideMarkup() {
+      return `
+        <div class="tutorial-resource-guide" aria-label="資源說明">
+          <div class="tutorial-resource-guide-panel">
+            <strong>各色庫存</strong>
+            <span>吃紅、黃、綠、藍食物會補對應庫存；招式施放前先看四種庫存是否都足夠。</span>
+          </div>
+          <div class="tutorial-resource-guide-panel">
+            <strong>能量與炸彈</strong>
+            <span>吃食物會累積能量；能量滿格後轉成炸彈，炸彈是施放招式的重要資源。</span>
+          </div>
+        </div>
+      `;
+    }
+
+    function tutorialVisualMarkup(slide) {
+      if (slide.visual === "resources") {
+        return `
+          <figure class="tutorial-visual is-resource-guide" aria-label="${slide.title}資源說明">
+            ${tutorialSnapshotMarkup(slide.visual)}
+            ${tutorialResourceGuideMarkup()}
+          </figure>
+        `;
+      }
+      const captureUrl = tutorialCaptureUrl(slide.visual);
+      const snapshot = tutorialSnapshotMarkup(slide.visual);
+      const capture = `
+        <div class="tutorial-capture-stage">
+          ${captureUrl ? `<img src="${captureUrl}" alt="">` : ""}
+          ${tutorialAnnotations(slide.visual)}
+        </div>
+      `;
+      return `
+        <figure class="tutorial-visual is-capture is-${slide.visual}" aria-label="${slide.title}高清遊戲畫面裁切">
+          ${slide.visual === "move" ? `${snapshot}${capture}` : `${capture}${snapshot}`}
+        </figure>
+      `;
+    }
+
+    function renderTutorialSlide() {
+      const slide = tutorialSlides[tutorialStepIndex] || tutorialSlides[0];
+      winnerPortrait.hidden = false;
+      winnerPortrait.innerHTML = `
+        <div class="tutorial-card" role="group" tabindex="0" aria-label="新手教學 ${tutorialStepIndex + 1} / ${tutorialSlides.length}">
+            <div class="tutorial-progress">${tutorialSlides.map((_, index) => `<span class="${index === tutorialStepIndex ? "is-active" : ""}"></span>`).join("")}</div>
+          ${tutorialVisualMarkup(slide)}
+          <div class="tutorial-copy">
+            <strong class="tutorial-title">${slide.title}</strong>
+            <p>${slide.text}</p>
+            <small>${slide.detail}</small>
+          </div>
+          <div class="tutorial-actions">
+            <button class="secondary" type="button" data-tutorial-action="skip">Skip</button>
+            <button class="secondary" type="button" data-tutorial-action="prev" ${tutorialStepIndex === 0 ? "disabled" : ""}>上一頁</button>
+            <button type="button" data-tutorial-action="${tutorialStepIndex === tutorialSlides.length - 1 ? "done" : "next"}">${tutorialStepIndex === tutorialSlides.length - 1 ? "完成" : "下一頁"}</button>
+          </div>
+        </div>
+      `;
+      winnerPortrait.querySelector(".tutorial-card")?.focus();
+    }
+
+    function setTutorialChrome() {
+      overlay.classList.remove("intro-details");
+      overlay.classList.add("tutorial-open");
+      overlayTitle.hidden = true;
+      overlayText.hidden = true;
+      startButton.hidden = true;
+      computerBattleButton.hidden = true;
+      replayArchiveButton.hidden = true;
+      introCloseButton.hidden = true;
+    }
+
+    function showTutorial(startIndex = 0) {
+      if (!rulesModal.hidden) closeRulesModal();
+      tutorialStepIndex = Math.max(0, Math.min(tutorialSlides.length - 1, startIndex));
+      setTutorialChrome();
+      overlay.classList.add("show");
+      characterStage.hidden = true;
+      renderTutorialSlide();
+    }
+
+    function finishTutorial(markSeen = true) {
+      if (markSeen) localStorage.setItem(tutorialSeenKey, "1");
+      overlay.classList.remove("tutorial-open");
+      renderIntroPortraits(false);
+      overlay.classList.add("show");
+    }
+
+    function shouldShowTutorial() {
+      return localStorage.getItem(tutorialSeenKey) !== "1";
+    }
+
+    function isTutorialOpen() {
+      return overlay.classList.contains("show") && overlay.classList.contains("tutorial-open");
+    }
+
+    function moveTutorial(delta) {
+      const nextIndex = Math.max(0, Math.min(tutorialSlides.length - 1, tutorialStepIndex + delta));
+      if (nextIndex === tutorialStepIndex) return false;
+      tutorialStepIndex = nextIndex;
+      renderTutorialSlide();
+      return true;
     }
 
     function weightedFoodIconMarkup(character) {
@@ -564,8 +937,7 @@
                 <b>${character.name}</b>
                 <span class="rules-character-role">${character.foodLabel}專精</span>
               </span>
-              <span class="rule-move-line"><b>小招操作：</b>${guide.small}</span>
-              <span class="rule-move-line"><b>大招操作：</b>${guide.big}</span>
+              <span class="rule-move-line"><b>角色大招：</b>${guide.big}</span>
               <span class="rule-move-line"><b>實戰重點：</b>${guide.tip}</span>
               <span class="rule-food-effect">食補效果：${weightedFoodIconMarkup(character)}<span>${character.detail}</span></span>
             </span>
@@ -573,24 +945,29 @@
         `;
       }).join("");
       rulesContent.innerHTML = `
+        <section class="rules-block rules-tutorial-callout">
+          <h3>新手試玩教學</h3>
+          <p>想先用圖片快速看懂移動、食物資源與小招操作，可以從這裡重新開啟教學頁。</p>
+          <button class="secondary" type="button" data-open-tutorial>觀看新手教學</button>
+        </section>
         <section class="rules-block">
-          <h3>遊戲流程</h3>
+          <h3>對戰補充</h3>
           <ul class="rules-list">
-            <li>P1 與 P2 會在六角棋盤上持續前進，吃食物累積分數、食物庫存與能量。</li>
-            <li>被炸彈爆炸命中會扣除 HP，並有 ${Math.round(baseAttackStunChance * 100)}% 基礎機率暈眩；HP 歸零才會結束本局。撞擊不會直接死亡，而是造成麻痺與減速。</li>
+            <li><b>勝負</b>：被攻擊命中會扣除 HP，HP 歸零才會結束本局；撞擊不會直接死亡，而是造成麻痺與減速。</li>
+            <li><b>控制效果</b>：攻擊命中後有 ${Math.round(baseAttackStunChance * 100)}% 基礎機率暈眩，藍色庫存會提高暈眩率；撞到自己懲罰加倍。</li>
+            <li><b>按鍵自訂</b>：小招、大招、暫停、投降與六方向鍵都可在開局設定中修改；若方向鍵與 X / Y 目標鍵相同，X / Y 目標鍵會優先作用。</li>
           </ul>
         </section>
         <section class="rules-block">
-          <h3>操作</h3>
+          <h3>瞄準細節</h3>
           <ul class="rules-list">
-            <li><b>鍵盤</b>：預設 W/E/D/X/Z/A 對應六方向；Q 小招、R 大招、空白鍵暫停、T 投降，可在設定中改鍵。</li>
-            <li><b>觸控</b>：點六邊方向鍵可直接轉向；長按中心後拖曳可用搖桿控制方向。</li>
-            <li><b>棋盤手勢</b>：短點棋盤會施放小招並鎖定敵方頭部；長按棋盤會施放大招，拖曳棋盤也會切成大招。可指定落點的角色會使用手勢位置，方向型大招會使用拖曳方向。</li>
-            <li><b>快速施放</b>：按小招鍵 / 大招鍵，或點「小招」/「大招」按鈕，會直接以敵方頭部為快速目標。電鰻與智蝦的大招也可在大招模式下按方向盤方向鍵，沿該方向施放。</li>
+            <li><b>X / Y 目標鍵</b>：X 切換小招按鍵目標，Y 切換大招按鍵目標；可在敵方頭部、敵方中心、離敵方最近的食物之間循環。方向型大招會改為循環施放方向。</li>
+            <li><b>手勢瞄準</b>：短點棋盤偏向小招，長按或拖曳棋盤偏向大招；可指定落點的角色使用手勢位置，方向型大招使用拖曳方向。</li>
+            <li><b>小招補充</b>：${commonSmallMoveGuide}若資源不足或冷卻未好，招式不會施放。</li>
           </ul>
         </section>
         <section class="rules-block">
-          <h3>食物與資源</h3>
+          <h3>食物與資源細節</h3>
           <ul class="rules-list">
             ${foodLegend}
             ${specialFoodLegend}
@@ -602,7 +979,7 @@
           </ul>
         </section>
         <section class="rules-block">
-          <h3>角色</h3>
+          <h3>角色大招</h3>
           <ul class="rules-character-list">
             ${characterLegend}
           </ul>
@@ -625,7 +1002,7 @@
     }
 
     function setOverlayChromeVisible(visible) {
-      overlay.classList.remove("intro-details");
+      overlay.classList.remove("intro-details", "tutorial-open");
       overlayTitle.hidden = !visible;
       overlayText.hidden = !visible;
       startButton.hidden = !visible;
@@ -635,7 +1012,7 @@
     }
 
     function setIntroLobbyChrome() {
-      overlay.classList.remove("intro-details");
+      overlay.classList.remove("intro-details", "tutorial-open");
       overlayTitle.hidden = true;
       overlayText.hidden = true;
       startButton.hidden = false;
@@ -647,6 +1024,7 @@
 
     function setIntroDetailsChrome() {
       overlay.classList.add("intro-details");
+      overlay.classList.remove("tutorial-open");
       overlayTitle.hidden = true;
       overlayText.hidden = true;
       startButton.hidden = true;
