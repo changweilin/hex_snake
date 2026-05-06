@@ -2286,7 +2286,7 @@
       } catch (error) {
         // Window-level pointer listeners still finish the attack gesture.
       }
-      draw();
+      requestPreviewDraw();
       return true;
     }
 
@@ -2299,7 +2299,7 @@
       targetCell = directionalAttackTarget(controlAttackPointer.direction);
       targetActive = true;
       if (controlAttackPointer.direction !== previousDirection) triggerTouchFeedback(event, 5);
-      draw();
+      requestPreviewDraw();
     }
 
     function finishControlPadAttackPointer(event) {
@@ -2317,7 +2317,7 @@
       controlAttackPointer = null;
       targetActive = false;
       if (controlRow.hasPointerCapture?.(event.pointerId)) controlRow.releasePointerCapture(event.pointerId);
-      draw();
+      requestPreviewDraw();
     }
 
     function moveStick(event) {
@@ -2423,7 +2423,7 @@
       };
       targetCell = nearestInsideCell(pixelToAxial(targetPixel.x, targetPixel.y));
       targetActive = true;
-      draw();
+      requestPreviewDraw();
     }
 
     function releaseTargetStick() {
@@ -2523,19 +2523,19 @@
     function targetModeIconSvg(mode, directionAngle = 0) {
       if (mode === "food") {
         return targetModeCrosshairSvg(`
-          <path d="M16 6.2 25.6 24.6H6.4Z" fill="#f8fafc" stroke="#e5e7eb" stroke-width="1.5" stroke-linejoin="round"></path>
-          <path d="M11.4 16.4h9.2v8.2h-9.2z" fill="#14532d" stroke="#052e16" stroke-width="0.7" stroke-linejoin="round"></path>
-          <path d="M13.2 18.1h5.6v5.1h-5.6z" fill="#166534"></path>
-          <circle cx="16" cy="14.8" r="2.3" fill="#facc15" stroke="#422006" stroke-width="0.8"></circle>
+          <path d="M16 3.6 27.8 26.8H4.2Z" fill="#f8fafc" stroke="#e5e7eb" stroke-width="1.6" stroke-linejoin="round"></path>
+          <path d="M10.3 15.8h11.4v10.8H10.3z" fill="#14532d" stroke="#052e16" stroke-width="0.8" stroke-linejoin="round"></path>
+          <path d="M12.4 18h7.2v7h-7.2z" fill="#166534"></path>
+          <circle cx="16" cy="13.6" r="2.6" fill="#facc15" stroke="#422006" stroke-width="0.8"></circle>
         `);
       }
       if (mode === "body") {
         return targetModeCrosshairSvg(`
-          <path d="M7 20.5c3.7-6 7.1 5.2 10.8-0.7 1.8-2.8 3.4-4.2 5.7-4.2" fill="none" stroke="#34d399" stroke-width="5.2" stroke-linecap="round"></path>
-          <path d="M7 20.5c3.7-6 7.1 5.2 10.8-0.7 1.8-2.8 3.4-4.2 5.7-4.2" fill="none" stroke="#a7f3d0" stroke-width="2.7" stroke-linecap="round"></path>
-          <circle cx="24.6" cy="13.2" r="4.3" fill="#fca5a5" stroke="#fecaca" stroke-width="1.2"></circle>
-          <circle cx="25.8" cy="12.1" r="0.9" fill="#111827"></circle>
-          <path d="M22.4 9.8 20.5 7.7M22.8 16.6l-2.4 1.2" stroke="#fecaca" stroke-width="1.1" stroke-linecap="round"></path>
+          <path d="M3.8 22.8c4.6-7.4 8.6 6.3 13.1-0.9 2.2-3.4 4.2-5.2 7.2-5.2" fill="none" stroke="#34d399" stroke-width="6.4" stroke-linecap="round"></path>
+          <path d="M3.8 22.8c4.6-7.4 8.6 6.3 13.1-0.9 2.2-3.4 4.2-5.2 7.2-5.2" fill="none" stroke="#a7f3d0" stroke-width="3.2" stroke-linecap="round"></path>
+          <circle cx="25.8" cy="13.5" r="5.1" fill="#fca5a5" stroke="#fecaca" stroke-width="1.3"></circle>
+          <circle cx="27.3" cy="12.1" r="1.05" fill="#111827"></circle>
+          <path d="M23.1 9.4 20.8 6.8M23.3 17.5l-3 1.5" stroke="#fecaca" stroke-width="1.2" stroke-linecap="round"></path>
         `);
       }
       if (mode === "direction") {
@@ -2543,20 +2543,20 @@
           <svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">
             <circle cx="16" cy="16" r="12.8" fill="rgba(253, 230, 138, 0.1)" stroke="#fde68a" stroke-width="1.6"></circle>
             <g transform="rotate(${directionAngle} 16 16)" fill="none" stroke="#fde68a" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M7 16H23.2" stroke-width="4.2"></path>
-              <path d="M18 9.8 24.5 16 18 22.2" stroke-width="4.2"></path>
-              <path d="M7 16H23.2" stroke="#f59e0b" stroke-width="1.7"></path>
-              <path d="M18 9.8 24.5 16 18 22.2" stroke="#f59e0b" stroke-width="1.7"></path>
+              <path d="M3.8 16H27.8" stroke-width="5"></path>
+              <path d="M20 7.8 29.2 16 20 24.2" stroke-width="5"></path>
+              <path d="M3.8 16H27.8" stroke="#f59e0b" stroke-width="2"></path>
+              <path d="M20 7.8 29.2 16 20 24.2" stroke="#f59e0b" stroke-width="2"></path>
             </g>
           </svg>
         `;
       }
       return targetModeCrosshairSvg(`
-        <path d="M5.8 21.7c3.3-5.2 6.3 4.8 9.2-0.4 1.2-2.1 2.1-3.1 3.3-3.8" fill="none" stroke="#34d399" stroke-width="4.6" stroke-linecap="round"></path>
-        <path d="M5.8 21.7c3.3-5.2 6.3 4.8 9.2-0.4 1.2-2.1 2.1-3.1 3.3-3.8" fill="none" stroke="#a7f3d0" stroke-width="2.3" stroke-linecap="round"></path>
-        <circle cx="16" cy="16" r="5.4" fill="#fca5a5" stroke="#fecaca" stroke-width="1.4"></circle>
-        <circle cx="17.6" cy="14.7" r="1" fill="#111827"></circle>
-        <path d="M13.3 12.1 11.3 9.7M13 18.9l-2.5 1.1" stroke="#fecaca" stroke-width="1.1" stroke-linecap="round"></path>
+        <path d="M2.8 23.3c4.1-6.4 7.7 5.8 11.4-0.5 1.5-2.7 2.6-3.8 4.2-4.7" fill="none" stroke="#34d399" stroke-width="5.5" stroke-linecap="round"></path>
+        <path d="M2.8 23.3c4.1-6.4 7.7 5.8 11.4-0.5 1.5-2.7 2.6-3.8 4.2-4.7" fill="none" stroke="#a7f3d0" stroke-width="2.8" stroke-linecap="round"></path>
+        <circle cx="16" cy="16" r="6.4" fill="#fca5a5" stroke="#fecaca" stroke-width="1.5"></circle>
+        <circle cx="18.1" cy="14.4" r="1.15" fill="#111827"></circle>
+        <path d="M12.8 11.3 10.3 8.4M12.5 19.4l-3.1 1.4" stroke="#fecaca" stroke-width="1.2" stroke-linecap="round"></path>
       `);
     }
 
@@ -2600,13 +2600,13 @@
       targetActive = Boolean(target);
       selectedAttackProfile = profile;
       updateTargetModeIndicator();
-      draw();
+      requestPreviewDraw();
       clearKeyboardAttackPreviewTimer();
       keyboardAttackPreviewTimer = setTimeout(() => {
         keyboardAttackPreviewTimer = null;
         if (keyboardAttackPreview === preview) keyboardAttackPreview = null;
         targetActive = false;
-        draw();
+        requestPreviewDraw();
       }, 900);
       setStatus(`${profile === "big" ? "大招" : "小招"}按鍵目標：${keyboardAttackHintLabel(profile)}`);
     }
@@ -2705,7 +2705,7 @@
       selectedAttackProfile = profile === "big" ? "big" : "small";
       targetCell = playerDirectAttackTarget(profile, pointer);
       targetActive = Boolean(targetCell);
-      draw();
+      requestPreviewDraw();
     }
 
     function launchDirectPlayerAttack(profile = "small", pointer = null) {
@@ -2863,7 +2863,7 @@
       } catch (error) {
         // Pointer capture is a convenience; window-level listeners still finish the drag.
       }
-      draw();
+      requestPreviewDraw();
     }
 
     function moveBoardAttackPointer(event) {
@@ -2880,7 +2880,7 @@
         return;
       }
       previewDirectAttack(attackPointer.previewProfile, attackPointer);
-      draw();
+      requestPreviewDraw();
     }
 
     function finishBoardAttackPointer(event) {
@@ -2902,7 +2902,7 @@
       clearAttackPointerLongPressTimer();
       targetActive = false;
       if (canvas.hasPointerCapture?.(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
-      draw();
+      requestPreviewDraw();
     }
 
     function setSettingsOpen(open) {

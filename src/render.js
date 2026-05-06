@@ -3322,6 +3322,44 @@
       return path;
     }
 
+    function directionalPreviewKey(preview, character) {
+      const originKey = preview.origin ? keyOf(preview.origin) : "none";
+      const targetKey = preview.target ? keyOf(preview.target) : "none";
+      const dragStartKey = preview.dragStart ? keyOf(preview.dragStart) : "none";
+      const dragTargetKey = preview.dragTarget ? keyOf(preview.dragTarget) : "none";
+      const playerSnakeKey = snake?.map(keyOf).join("|") || "";
+      const computerSnakeKey = computerSnake?.map(keyOf).join("|") || "";
+      const stockKey = foodTypes.map(type => `${type.id}:${playerStock?.[type.id] || 0}`).join("|");
+      return [
+        character.id,
+        preview.direction,
+        originKey,
+        targetKey,
+        dragStartKey,
+        dragTargetKey,
+        radius,
+        targetMaxHex,
+        stockKey,
+        playerSnakeKey,
+        computerSnakeKey
+      ].join(";");
+    }
+
+    function directionalPreviewData(preview, character) {
+      const cacheKey = directionalPreviewKey(preview, character);
+      if (directionalPreviewCacheKey === cacheKey && directionalPreviewCache) return directionalPreviewCache;
+      const path = directionalPreviewPath(preview.origin, preview.direction, character);
+      const width = character.id === "moray" && path.length
+        ? Math.max(0, bandDistanceFromTotalWidth(attackStats(playerStock, "small").radius))
+        : 0;
+      const cellsForPreview = character.id === "moray" && path.length
+        ? cellsNearCells(path, width, snake)
+        : path;
+      directionalPreviewCacheKey = cacheKey;
+      directionalPreviewCache = { path, cellsForPreview };
+      return directionalPreviewCache;
+    }
+
     function directionBetweenCells(source, target, fallbackDirection = 0) {
       if (!source || !target) return fallbackDirection;
       for (let direction = 0; direction < directions.length; direction += 1) {
@@ -3421,15 +3459,8 @@
       const character = preview.character;
       const lineColor = canCast ? (character.line || colors.target) : "#94a3b8";
       const fillColor = canCast ? (character.accent || character.color || colors.target) : "#94a3b8";
-      const path = directionalPreviewPath(preview.origin, preview.direction, character);
+      const { path, cellsForPreview } = directionalPreviewData(preview, character);
       if (!path.length) return;
-
-      const width = character.id === "moray"
-        ? Math.max(0, bandDistanceFromTotalWidth(attackStats(playerStock, "small").radius))
-        : 0;
-      const cellsForPreview = character.id === "moray"
-        ? cellsNearCells(path, width, snake)
-        : path;
       const pulse = waveValue(now / 820);
 
       ctx.save();
