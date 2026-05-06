@@ -776,6 +776,40 @@ test("dragon tracking orb has limited curvature and board-width range", () => {
   });
 });
 
+test("lobster palm big attack stops the fist at the first collision", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("lobster"),
+    computerCharacter: characterById.get("dragon"),
+    seed: "lobster-palm-first-hit",
+    initialBombs: balance.attack.bigAttackBombCost,
+    initialStock: Object.fromEntries(FOOD_TYPES.map(type => [type, 6]))
+  });
+  const player = state.fighters.player;
+  const computer = state.fighters.computer;
+  player.snake = [{ q: 0, r: 0 }];
+  player.dir = 2;
+  player.policy.strategyWeights.castDirection = {
+    selfHeadToOpponentHead: 3,
+    opponentBodyLongestAxis: 0,
+    opponentHeadToNearestFood: 0
+  };
+  computer.snake = [{ q: 2, r: 0 }, { q: 3, r: 0 }];
+  state.foods = [];
+
+  assert.equal(launchAttack(state, player, computer, "big", state.now, balance), true);
+  const firstFist = state.projectiles
+    .filter(projectile => projectile.kind === "dragonOrb")
+    .sort((left, right) => left.impactAt - right.impactAt)[0];
+  const firstBurst = state.projectiles
+    .filter(projectile => projectile.kind === "dragonOrbBurst")
+    .sort((left, right) => left.impactAt - right.impactAt)[0];
+
+  assert.deepEqual(firstFist.target, computer.snake[0]);
+  assert.deepEqual(firstFist.pathCells.at(-1), computer.snake[0]);
+  assert.equal(firstFist.impactAt, firstBurst.impactAt);
+});
+
 test("protein fractional radius deals proportional outer-ring damage", () => {
   const stock = { protein: 5, fat: 0, fiber: 0, carb: 0 };
   const stats = attackStats(stock, "big", balance);

@@ -1063,7 +1063,9 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
       ? lobsterFistPath(state, source, direction, defender.snake)
       : dragonTrackingOrbPath(state, source, direction, defender.snake, curveMultiplier);
     const hits = pathHits(path, defender.snake);
-    const endCell = path[path.length - 1] || source;
+    const firstHit = isLobsterPalm ? hits[0] : null;
+    const travelPath = firstHit ? path.slice(0, firstHit.index + 1) : path;
+    const endCell = firstHit?.cell || path[path.length - 1] || source;
     const orbStepMs = ultimateSetting(balance, abilityId, "orbStepMs", DRAGON_ORB_STEP_MS);
     const orbRadius = isLobsterPalm ? 1 : small.radius * ultimateSetting(balance, abilityId, "orbRadiusMultiplier", DRAGON_ORB_RADIUS_MULTIPLIER);
     const burstRadius = small.radius * (isLobsterPalm ? 1.5 : ultimateSetting(balance, abilityId, "burstRadiusMultiplier", DRAGON_BURST_RADIUS_MULTIPLIER));
@@ -1078,15 +1080,17 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
         owner: attacker.owner,
         profile: "big",
         target: { ...endCell },
-        pathCells: path,
-        impactAt: now + volleyDelay + small.delay + path.length * orbStepMs,
+        pathCells: travelPath,
+        impactAt: now + volleyDelay + small.delay + travelPath.length * orbStepMs,
         radius: orbRadius,
         damage: orbDamage,
         burstRadius,
         burstDamage,
         stunChance
       });
-      const burstHits = isLobsterPalm && !hits.length ? [{ cell: endCell, index: Math.max(0, path.length - 1) }] : hits;
+      const burstHits = isLobsterPalm
+        ? (firstHit ? [firstHit] : [{ cell: endCell, index: Math.max(0, travelPath.length - 1) }])
+        : hits;
       for (const hit of burstHits) {
         state.projectiles.push({
           kind: "dragonOrbBurst",

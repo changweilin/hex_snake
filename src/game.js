@@ -1330,9 +1330,11 @@
           ? dragonTrackingOrbPath(source, direction, targetSnake)
           : dragonWrappedOrbPath(source, direction);
         const hits = pathHits(path, targetSnake);
-        const endCell = path[path.length - 1] || source;
+        const firstHit = isLobsterPalm ? hits[0] : null;
+        const travelPath = firstHit ? path.slice(0, firstHit.index + 1) : path;
+        const endCell = firstHit?.cell || path[path.length - 1] || source;
         const orbStepMs = ultimateSetting(abilityId, "orbStepMs", dragonOrbStepMs);
-        const travelDelay = small.delay + path.length * orbStepMs;
+        const travelDelay = small.delay + travelPath.length * orbStepMs;
         const volleys = isLobsterPalm ? 2 : 1;
         const orbDamage = small.damage * (isLobsterPalm ? 0.3 : 1);
         const orbRadius = isLobsterPalm ? 1 : small.radius * ultimateSetting(abilityId, "orbRadiusMultiplier", 1);
@@ -1349,7 +1351,7 @@
             profile: "big",
             source: { q: source.q, r: source.r },
             target: { q: endCell.q, r: endCell.r },
-            pathCells: path,
+            pathCells: travelPath,
             visualType,
             hand,
             createdAt: now + volleyDelay,
@@ -1361,7 +1363,9 @@
             burstDamage,
             stunChance
           });
-          const burstHits = isLobsterPalm && !hits.length ? [{ cell: endCell, index: Math.max(0, path.length - 1) }] : hits;
+          const burstHits = isLobsterPalm
+            ? (firstHit ? [firstHit] : [{ cell: endCell, index: Math.max(0, travelPath.length - 1) }])
+            : hits;
           burstHits.forEach(hit => {
             projectiles.push({
               kind: "dragonOrbBurst",
@@ -2523,40 +2527,40 @@
     function targetModeIconSvg(mode, directionAngle = 0) {
       if (mode === "food") {
         return targetModeCrosshairSvg(`
-          <path d="M16 3.6 27.8 26.8H4.2Z" fill="#f8fafc" stroke="#e5e7eb" stroke-width="1.6" stroke-linejoin="round"></path>
-          <path d="M10.3 15.8h11.4v10.8H10.3z" fill="#14532d" stroke="#052e16" stroke-width="0.8" stroke-linejoin="round"></path>
-          <path d="M12.4 18h7.2v7h-7.2z" fill="#166534"></path>
-          <circle cx="16" cy="13.6" r="2.6" fill="#facc15" stroke="#422006" stroke-width="0.8"></circle>
+          <path d="M16 1.8 29.3 28.4H2.7Z" fill="#f8fafc" stroke="#e5e7eb" stroke-width="1.7" stroke-linejoin="round"></path>
+          <path d="M9.2 15.2h13.6v13H9.2z" fill="#14532d" stroke="#052e16" stroke-width="0.85" stroke-linejoin="round"></path>
+          <path d="M11.7 17.7h8.6v8.5h-8.6z" fill="#166534"></path>
+          <circle cx="16" cy="12.8" r="2.9" fill="#facc15" stroke="#422006" stroke-width="0.85"></circle>
         `);
       }
       if (mode === "body") {
         return targetModeCrosshairSvg(`
-          <path d="M3.8 22.8c4.6-7.4 8.6 6.3 13.1-0.9 2.2-3.4 4.2-5.2 7.2-5.2" fill="none" stroke="#34d399" stroke-width="6.4" stroke-linecap="round"></path>
-          <path d="M3.8 22.8c4.6-7.4 8.6 6.3 13.1-0.9 2.2-3.4 4.2-5.2 7.2-5.2" fill="none" stroke="#a7f3d0" stroke-width="3.2" stroke-linecap="round"></path>
-          <circle cx="25.8" cy="13.5" r="5.1" fill="#fca5a5" stroke="#fecaca" stroke-width="1.3"></circle>
-          <circle cx="27.3" cy="12.1" r="1.05" fill="#111827"></circle>
-          <path d="M23.1 9.4 20.8 6.8M23.3 17.5l-3 1.5" stroke="#fecaca" stroke-width="1.2" stroke-linecap="round"></path>
+          <path d="M2 23.8c6.5-10.4 20.8-9.5 20.8-1.1 0 7.4-15 6.8-15 0.7 0-5.4 11.2-5.5 11.2-0.8 0 3.7-7.2 3.5-7.2 0.5 0-2.3 3.6-2.7 6.4-1.8 3.9 1.3 5.2-4.1 8.4-4.9" fill="none" stroke="#052e16" stroke-width="9.2" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M2 23.8c6.5-10.4 20.8-9.5 20.8-1.1 0 7.4-15 6.8-15 0.7 0-5.4 11.2-5.5 11.2-0.8 0 3.7-7.2 3.5-7.2 0.5 0-2.3 3.6-2.7 6.4-1.8 3.9 1.3 5.2-4.1 8.4-4.9" fill="none" stroke="#34d399" stroke-width="7.1" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M2 23.8c6.5-10.4 20.8-9.5 20.8-1.1 0 7.4-15 6.8-15 0.7 0-5.4 11.2-5.5 11.2-0.8 0 3.7-7.2 3.5-7.2 0.5 0-2.3 3.6-2.7 6.4-1.8 3.9 1.3 5.2-4.1 8.4-4.9" fill="none" stroke="#a7f3d0" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round"></path>
+          <circle cx="27" cy="13.8" r="5.8" fill="#fca5a5" stroke="#fecaca" stroke-width="1.35"></circle>
+          <circle cx="28.8" cy="12.2" r="1.15" fill="#111827"></circle>
+          <path d="M23.7 8.9 21 5.6M24 18.5l-3.6 1.8" stroke="#fecaca" stroke-width="1.25" stroke-linecap="round"></path>
         `);
       }
       if (mode === "direction") {
         return `
           <svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">
-            <circle cx="16" cy="16" r="12.8" fill="rgba(253, 230, 138, 0.1)" stroke="#fde68a" stroke-width="1.6"></circle>
             <g transform="rotate(${directionAngle} 16 16)" fill="none" stroke="#fde68a" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M3.8 16H27.8" stroke-width="5"></path>
-              <path d="M20 7.8 29.2 16 20 24.2" stroke-width="5"></path>
-              <path d="M3.8 16H27.8" stroke="#f59e0b" stroke-width="2"></path>
-              <path d="M20 7.8 29.2 16 20 24.2" stroke="#f59e0b" stroke-width="2"></path>
+              <path d="M1.8 16H28.7" stroke-width="6.2"></path>
+              <path d="M19.5 5.4 30.8 16 19.5 26.6" stroke-width="6.2"></path>
+              <path d="M1.8 16H28.7" stroke="#f59e0b" stroke-width="2.3"></path>
+              <path d="M19.5 5.4 30.8 16 19.5 26.6" stroke="#f59e0b" stroke-width="2.3"></path>
             </g>
           </svg>
         `;
       }
       return targetModeCrosshairSvg(`
-        <path d="M2.8 23.3c4.1-6.4 7.7 5.8 11.4-0.5 1.5-2.7 2.6-3.8 4.2-4.7" fill="none" stroke="#34d399" stroke-width="5.5" stroke-linecap="round"></path>
-        <path d="M2.8 23.3c4.1-6.4 7.7 5.8 11.4-0.5 1.5-2.7 2.6-3.8 4.2-4.7" fill="none" stroke="#a7f3d0" stroke-width="2.8" stroke-linecap="round"></path>
-        <circle cx="16" cy="16" r="6.4" fill="#fca5a5" stroke="#fecaca" stroke-width="1.5"></circle>
-        <circle cx="18.1" cy="14.4" r="1.15" fill="#111827"></circle>
-        <path d="M12.8 11.3 10.3 8.4M12.5 19.4l-3.1 1.4" stroke="#fecaca" stroke-width="1.2" stroke-linecap="round"></path>
+        <path d="M0.8 25c4.9-7.7 9.1 6.8 13.6-0.7 1.8-3.2 3.1-4.7 5.1-5.8" fill="none" stroke="#34d399" stroke-width="6.4" stroke-linecap="round"></path>
+        <path d="M0.8 25c4.9-7.7 9.1 6.8 13.6-0.7 1.8-3.2 3.1-4.7 5.1-5.8" fill="none" stroke="#a7f3d0" stroke-width="3.2" stroke-linecap="round"></path>
+        <circle cx="16" cy="16" r="7.3" fill="#fca5a5" stroke="#fecaca" stroke-width="1.55"></circle>
+        <circle cx="18.5" cy="14.1" r="1.25" fill="#111827"></circle>
+        <path d="M12.4 10.6 9.5 7.2M12 20.1l-3.8 1.7" stroke="#fecaca" stroke-width="1.3" stroke-linecap="round"></path>
       `);
     }
 
