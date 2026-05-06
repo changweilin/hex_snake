@@ -193,7 +193,7 @@
       { id: "fiber", label: "纖維", name: "纖維素", foodName: "綠色食物", effect: "提升移動速度，滿庫存約 1.8x", color: "#22c55e", line: "#bbf7d0" },
       { id: "carb", label: "碳水", name: "碳水", foodName: "藍色食物", effect: "提升攻擊施展與冷卻速度，並提高命中暈眩機率", color: "#3b82f6", line: "#bfdbfe" }
     ];
-    const blackFoodType = { id: "black", label: "蠱食", name: "蠱食", foodName: "黑色食物", effect: "特殊食物；吃下後紅黃綠藍隨機一種庫存 +1，並獲得 3 點能量", color: "#050505", line: "#e5e7eb" };
+    const blackFoodType = { id: "black", label: "迷幻菇", name: "迷幻菇", foodName: "迷幻菇", effect: "特殊食物；吃下後紅黃綠藍隨機一種庫存 +1，並獲得 3 點能量", color: "#050505", line: "#e5e7eb" };
     const foodTypeById = new Map([...foodTypes, blackFoodType].map(type => [type.id, type]));
     const foodLabels = {
       balanced: "均衡",
@@ -201,7 +201,7 @@
       fat: "黃色食物",
       fiber: "綠色食物",
       carb: "藍色食物",
-      black: "黑色食物"
+      black: "迷幻菇"
     };
     const poseAliases = {
       opening: "opening",
@@ -506,7 +506,7 @@
 
     function weightedFoodIconMarkup(character) {
       if (character?.specialFood === "black") {
-        return foodIconGroupMarkup("black", "加權產出黑色食物");
+        return foodIconGroupMarkup("black", "加權產出迷幻菇");
       }
       if (character?.food === "balanced") {
         return foodIconGroupMarkup(foodTypes.map(type => type.id), "均衡產出紅黃綠藍食物");
@@ -930,17 +930,17 @@
           <div class="resource-title">
             <span class="resource-owner"><span class="owner-name ${group.owner === "player" ? "is-p1" : "is-p2"}">${group.title}</span></span>
             <span class="resource-counters" data-total="${group.owner}">
-              <span class="resource-chip" data-energy-chip="${group.owner}" title="?賡?">
+              <span class="resource-chip" data-resource="energy" data-energy-chip="${group.owner}" title="?賡?">
                 <span class="resource-icon energy-icon" aria-hidden="true"></span>
                 <span class="resource-chip-track" data-energy-track="${group.owner}" role="meter" aria-label="?賡?" aria-valuemin="0">
                   <span class="resource-chip-fill" data-energy-fill="${group.owner}"></span>
                 </span>
                 <span class="resource-chip-value" data-energy-value="${group.owner}">0/0</span>
               </span>
-              <span class="resource-chip" data-bomb-chip="${group.owner}" title="?詨?">
+              <span class="resource-chip" data-resource="bomb" data-bomb-chip="${group.owner}" title="?詨?">
                 <span class="resource-icon missile-icon" aria-hidden="true"></span>
                 <span class="resource-chip-track" data-bomb-track="${group.owner}" role="meter" aria-label="?詨?" aria-valuemin="0">
-                  <span class="resource-chip-fill" data-bomb-fill="${group.owner}" style="--resource-chip-color: #facc15"></span>
+                  <span class="resource-chip-fill" data-bomb-fill="${group.owner}"></span>
                 </span>
                 <span class="resource-chip-value" data-bomb-value="${group.owner}">0/0</span>
               </span>

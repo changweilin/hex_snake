@@ -82,9 +82,20 @@
       return (Math.sin((progress + offset) * Math.PI * 2) + 1) / 2;
     }
 
-    function triggerBoardShake(visualType = "", now = performance.now()) {
-      if (!visualType.endsWith("-big") && !visualType.endsWith("-burst")) return;
+    function triggerBoardShake(visualType = "", now = performance.now(), options = {}) {
+      const isSmallHit = options?.profile === "smallHit" || options === "smallHit";
+      if (!isSmallHit && !visualType.endsWith("-big") && !visualType.endsWith("-burst")) return;
       const characterId = visualType.split("-")[0];
+      if (isSmallHit) {
+        const preset = { strength: 2.1, duration: 155, frequency: 2.6, style: "impact" };
+        if (now < boardShakeUntil && boardShakeStrength > preset.strength) return;
+        boardShakeStartedAt = now;
+        boardShakeUntil = Math.max(boardShakeUntil, now + preset.duration);
+        boardShakeStrength = Math.max(boardShakeStrength, preset.strength);
+        boardShakeFrequency = preset.frequency;
+        boardShakeStyle = preset.style;
+        return;
+      }
       const presets = {
         dragon: { strength: visualType.endsWith("-burst") ? 9.6 : 6.2, duration: visualType.endsWith("-burst") ? 760 : 520, frequency: 1.2, style: "impact" },
         moray: { strength: 5.8, duration: 700, frequency: 5.6, style: "electric" },

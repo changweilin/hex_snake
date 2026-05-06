@@ -744,7 +744,7 @@
           <span class="resource-chip${bombFlashing ? " is-flashing" : ""}" title="炸彈">
             <span class="resource-icon missile-icon" aria-hidden="true"></span>
             <span class="resource-chip-track" role="meter" aria-label="炸彈" aria-valuemin="0" aria-valuenow="${ammo}" aria-valuemax="${maxAmmo}" aria-valuetext="${ammo}/${maxAmmo}">
-              <span class="resource-chip-fill" style="--resource-ratio: ${bombRatio.toFixed(4)}; --resource-chip-color: #facc15"></span>
+              <span class="resource-chip-fill" style="--resource-ratio: ${bombRatio.toFixed(4)}"></span>
             </span>
             <span class="resource-chip-value">${ammo}/${maxAmmo}</span>
           </span>
@@ -1273,6 +1273,12 @@
       return type.endsWith("-big") ? type.replace(/-big$/, "-burst") : type;
     }
 
+    function triggerSmallHitShake(projectile, playerDamage, computerDamage, now) {
+      if (projectile.profile !== "small") return;
+      if (playerDamage <= 0 && computerDamage <= 0) return;
+      triggerBoardShake(projectile.visualType || attackVisualType(projectile.owner, projectile.profile), now, { profile: "smallHit" });
+    }
+
     function pushCircleAttack({ owner, profile, source = null, target, createdAt, impactAt, delay, radius, damage, stunChance, hidden = false, flat = false, visualType = null, ...extra }) {
       projectiles.push({
         kind: "circle",
@@ -1753,6 +1759,7 @@
         }
         if (projectile.owner === "player") playerDamage = 0;
         if (projectile.owner === "computer") computerDamage = 0;
+        triggerSmallHitShake(projectile, playerDamage, computerDamage, now);
         applyBlastDamage("player", playerDamage);
         applyBlastDamage("computer", computerDamage);
         if (projectile.owner !== "player" && playerDamage > 0) applyAttackStun("player", projectile.stunChance, now, { stack: projectile.stackStun });
