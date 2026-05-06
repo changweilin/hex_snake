@@ -409,6 +409,28 @@
       `;
     }
 
+    function setImageAttributeIfChanged(image, name, value) {
+      if (image.getAttribute(name) !== value) image.setAttribute(name, value);
+    }
+
+    function updateFighterPortraitImage(module, character, pose = "idle") {
+      let image = module.querySelector(".fighter-avatar-image[data-duel-avatar='true']");
+      if (!image) {
+        module.innerHTML = fighterPortraitImage(character, pose);
+        return;
+      }
+      const src = avatarUrl(character, "sm");
+      const srcset = avatarSrcset(character);
+      setImageAttributeIfChanged(image, "src", src);
+      setImageAttributeIfChanged(image, "srcset", srcset);
+      setImageAttributeIfChanged(image, "sizes", "72px");
+      setImageAttributeIfChanged(image, "alt", character.name);
+      image.dataset.pose = pose;
+      image.dataset.characterId = character.id;
+      image.dataset.portraitVariant = portraitVariantMode;
+      image.classList.toggle("is-attacking", pose === "attack");
+    }
+
     function characterStyle(character, owner = null) {
       const ownerVars = owner
         ? `--owner-color:${ownerMeta(owner).color};--owner-line:${ownerMeta(owner).line};`
@@ -869,7 +891,7 @@
       const module = characterStage.querySelector(`[data-module="${owner}"]`);
       if (!module) return;
       const character = characterFor(owner);
-      module.innerHTML = fighterPortraitImage(character, pose);
+      updateFighterPortraitImage(module, character, pose);
       clearTimeout(portraitPoseTimers[owner]);
       if (duration > 0) {
         portraitPoseTimers[owner] = setTimeout(() => {

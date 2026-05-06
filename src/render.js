@@ -3074,6 +3074,12 @@
       ctx.restore();
     }
 
+    function cachedEffectCells(effect, cacheKey, sourceCells, width, excludedCells = [], minDistance = 0) {
+      if (!effect) return cellsNearCells(sourceCells, width, excludedCells, minDistance);
+      if (!effect[cacheKey]) effect[cacheKey] = cellsNearCells(sourceCells, width, excludedCells, minDistance);
+      return effect[cacheKey];
+    }
+
     function drawProjectiles() {
       const now = performance.now();
       projectiles.forEach(projectile => {
@@ -3114,12 +3120,12 @@
         }
         if (projectile.kind === "line") {
           const progress = Math.min(1, Math.max(0, (now - projectile.createdAt) / (projectile.delay || baseAttackDelayMs)));
-          const lineTextureCells = cellsNearCells(projectile.lineCells, projectile.width, projectile.excludedCells);
+          const lineTextureCells = cachedEffectCells(projectile, "visualCells", projectile.lineCells, projectile.width, projectile.excludedCells);
           const linePlan = effectVisualPlanFor(projectile.visualType, "line", blastCharacter);
           if ((projectile.visualType || "").startsWith("moray")) {
             drawElementCellTextureWash(lineTextureCells, blastCharacter, progress, linePlan.textureAlpha, {
               seed: `${projectile.visualType}:${projectile.createdAt}`,
-              maxParticles: linePlan.maxParticles,
+              maxParticles: Math.min(linePlan.maxParticles, 72),
               perCell: linePlan.perCell,
               size: linePlan.size,
               spin: linePlan.spin,
@@ -3131,7 +3137,7 @@
           if ((projectile.visualType || "").startsWith("dragon")) {
             drawElementCellTextureWash(lineTextureCells, blastCharacter, progress, linePlan.textureAlpha, {
               seed: `${projectile.visualType}:${projectile.createdAt}`,
-              maxParticles: linePlan.maxParticles,
+              maxParticles: Math.min(linePlan.maxParticles, 72),
               perCell: linePlan.perCell,
               size: linePlan.size,
               spin: linePlan.spin,
@@ -3149,7 +3155,7 @@
           const alpha = 0.3 + progress * 0.48;
           drawElementCellTextureWash(lineTextureCells, blastCharacter, progress, linePlan.textureAlpha * 0.86, {
             seed: `${projectile.visualType}:${projectile.createdAt}`,
-            maxParticles: linePlan.maxParticles,
+            maxParticles: Math.min(linePlan.maxParticles, 64),
             perCell: linePlan.perCell,
             size: linePlan.size,
             spin: linePlan.spin,
@@ -3454,7 +3460,7 @@
             seed: `${hazard.visualType}:${hazard.startedAt}`,
             density: radiationPlan.density,
             size: radiationPlan.size,
-            maxParticles: radiationPlan.maxParticles,
+            maxParticles: Math.min(radiationPlan.maxParticles, 56),
             spin: radiationPlan.spin,
             ellipse: radiationPlan.ellipse
           });
@@ -3467,12 +3473,12 @@
           }
           return;
         }
-        const hazardCells = cellsNearCells(hazard.cells, hazard.width, hazard.visualExcludedCells || [], hazard.minDistance || 0);
+        const hazardCells = cachedEffectCells(hazard, "visualCells", hazard.cells, hazard.width, hazard.visualExcludedCells || [], hazard.minDistance || 0);
         const hazardPlan = effectVisualPlanFor(hazard.visualType, "hazard", blastCharacter);
         drawElementCellTextureWash(hazardCells, blastCharacter, progress, hazardPlan.textureAlpha * (1 - progress * 0.18), {
           seed: `${hazard.visualType}:${hazard.startedAt}`,
           persistent: hazardPlan.persistent,
-          maxParticles: hazardPlan.maxParticles,
+          maxParticles: Math.min(hazardPlan.maxParticles, (hazard.visualType || "").startsWith("quetzal") ? 48 : 56),
           perCell: hazardPlan.perCell,
           size: hazardPlan.size,
           drift: hazardPlan.drift,
@@ -3497,11 +3503,11 @@
     }
 
     function drawLineBlast(blast, progress, alpha, character) {
-      const textureCells = cellsNearCells(blast.lineCells, blast.width, blast.excludedCells);
+      const textureCells = cachedEffectCells(blast, "visualCells", blast.lineCells, blast.width, blast.excludedCells);
       const linePlan = effectVisualPlanFor(blast.visualType, "line", character);
       drawElementCellTextureWash(textureCells, character, progress, linePlan.textureAlpha * alpha, {
         seed: `${blast.visualType}:${blast.startedAt}`,
-        maxParticles: linePlan.maxParticles,
+        maxParticles: Math.min(linePlan.maxParticles, 72),
         perCell: linePlan.perCell,
         size: linePlan.size,
         spin: linePlan.spin,
