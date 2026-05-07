@@ -911,6 +911,9 @@
       gameOverSettlementPending = false;
       gameOverRelayStartOptions = null;
       gameOverContinuousVisualDeadlineAt = 0;
+      gameOverResultOwner = null;
+      gameOverPlayerLost = false;
+      gameOverComputerLost = false;
     }
 
     function resetRelayScore() {
@@ -1894,6 +1897,7 @@
     function showGameOverSettlement() {
       gameOverSettlementPending = false;
       if (!gameOver || running || HexSnakeReplay.isPlaybackMode()) return;
+      renderWinnerPortrait(gameOverResultOwner, gameOverPlayerLost, gameOverComputerLost);
       overlay.classList.add("show");
       if (gameOverRelayStartOptions) {
         const nextOptions = gameOverRelayStartOptions;
@@ -2171,13 +2175,17 @@
       overlayTitle.innerHTML = resultTitleHtml;
       HexSnakeAudio.playCharacter("player", winnerOwner === "player" ? "victory" : "defeat", { gainScale: winnerOwner ? 1 : 0.82 });
       HexSnakeAudio.playCharacter("computer", winnerOwner === "computer" ? "victory" : "defeat", { delay: winnerOwner ? 0.08 : 0.12, gainScale: winnerOwner ? 1 : 0.82 });
+      gameOverResultOwner = winnerOwner;
+      gameOverPlayerLost = playerLost;
+      gameOverComputerLost = computerLost;
+      showResultCallout("player", winnerOwner === "player" ? "victory" : "defeat");
+      showResultCallout("computer", winnerOwner === "computer" ? "victory" : "defeat");
       if (shouldContinueRelay) {
         if (winnerOwner === "player") relayPlayerWins += 1;
         else if (winnerOwner === "computer") relayComputerWins += 1;
         else relayDraws += 1;
         updateRelayControls();
       }
-      renderWinnerPortrait(winnerOwner, playerLost, computerLost);
       overlayText.textContent = shouldContinueRelay
         ? `P1 ${score} 分，P2 ${computerScore} 分。接力賽：P1 ${relayPlayerWins} 勝，P2 ${relayComputerWins} 勝，平手 ${relayDraws}。`
         : `P1 ${score} 分，P2 ${computerScore} 分。按開始再來一局。`;

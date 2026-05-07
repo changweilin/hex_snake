@@ -2606,6 +2606,18 @@
       --callout-color: #fef3c7;
     }
 
+    .attack-callout.is-victory {
+      --callout-line: #fef08a;
+      --callout-bg: rgba(46, 37, 12, 0.96);
+      --callout-color: #fef9c3;
+    }
+
+    .attack-callout.is-defeat {
+      --callout-line: #cbd5e1;
+      --callout-bg: rgba(15, 23, 42, 0.96);
+      --callout-color: #e2e8f0;
+    }
+
     .attack-callout.is-visible {
       opacity: 1;
       transform: translate(-50%, 0) scale(1);
@@ -2931,6 +2943,27 @@
 
     .result-portrait.is-winner .result-badge {
       background: color-mix(in srgb, var(--owner-color), #101720 28%);
+    }
+
+    .result-quote {
+      position: absolute;
+      left: 8px;
+      right: 8px;
+      bottom: 8px;
+      z-index: 4;
+      display: block;
+      padding: 7px 9px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      background: rgba(15, 23, 36, 0.78);
+      color: #f8fafc;
+      font-size: 0.78rem;
+      font-weight: 850;
+      line-height: 1.25;
+      text-align: center;
+      text-wrap: balance;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(5px);
     }
 
     .portrait-pair {

@@ -403,6 +403,9 @@ let relayRestartTimer = null;
 let gameOverRelayStartOptions = null;
 let gameOverSettlementPending = false;
 let gameOverContinuousVisualDeadlineAt = 0;
+let gameOverResultOwner = null;
+let gameOverPlayerLost = false;
+let gameOverComputerLost = false;
 let gameOver = false;
 let lastPlayerStep = 0;
 let lastComputerStep = 0;
@@ -1229,6 +1232,8 @@ function renderWinnerPortrait(owner, playerLost = false, computerLost = false) {
   }
   const playerPose = owner === "player" ? "victory" : "defeat";
   const computerPose = owner === "computer" ? "victory" : "defeat";
+  const playerCharacter = characterFor("player");
+  const computerCharacter = characterFor("computer");
   const playerResult = owner ? (owner === "player" ? "勝利" : "失敗") : "平手";
   const computerResult = owner ? (owner === "computer" ? "勝利" : "失敗") : "平手";
   winnerPortrait.hidden = false;
@@ -1236,13 +1241,15 @@ function renderWinnerPortrait(owner, playerLost = false, computerLost = false) {
   characterStage.innerHTML = "";
   winnerPortrait.innerHTML = `
         <div class="portrait-pair">
-          <div class="fighter-portrait result-portrait ${owner === "player" ? "is-winner" : ""} ${playerPose === "defeat" ? "is-defeated" : ""}" data-owner="player" data-result-owner="player" data-owner-mark="${ownerMeta("player").mark}" title="選擇 P1 角色" style="${characterStyle(characterFor("player"), "player")}">
+          <div class="fighter-portrait result-portrait ${owner === "player" ? "is-winner" : ""} ${playerPose === "defeat" ? "is-defeated" : ""}" data-owner="player" data-result-owner="player" data-owner-mark="${ownerMeta("player").mark}" title="選擇 P1 角色" style="${characterStyle(playerCharacter, "player")}">
             <span class="result-badge">${playerResult}</span>
-            ${fighterArt(characterFor("player"), playerPose, true)}
+            ${fighterArt(playerCharacter, playerPose, true)}
+            <span class="result-quote">「${resultLineForCharacter(playerCharacter, playerPose)}」</span>
           </div>
-          <div class="fighter-portrait result-portrait ${owner === "computer" ? "is-winner" : ""} ${computerPose === "defeat" ? "is-defeated" : ""}" data-owner="computer" data-result-owner="computer" data-owner-mark="${ownerMeta("computer").mark}" title="選擇 P2 角色" style="${characterStyle(characterFor("computer"), "computer")}">
+          <div class="fighter-portrait result-portrait ${owner === "computer" ? "is-winner" : ""} ${computerPose === "defeat" ? "is-defeated" : ""}" data-owner="computer" data-result-owner="computer" data-owner-mark="${ownerMeta("computer").mark}" title="選擇 P2 角色" style="${characterStyle(computerCharacter, "computer")}">
             <span class="result-badge">${computerResult}</span>
-            ${fighterArt(characterFor("computer"), computerPose, true)}
+            ${fighterArt(computerCharacter, computerPose, true)}
+            <span class="result-quote">「${resultLineForCharacter(computerCharacter, computerPose)}」</span>
           </div>
         </div>
       `;
@@ -1454,6 +1461,10 @@ function closePortraitLightbox() {
   portraitLightboxCaption.textContent = "";
 }
 
+function resultLineForCharacter(character, pose) {
+  return character?.resultLines?.[pose] || (pose === "victory" ? "輕鬆~" : "不可能!");
+}
+
 function setFighterPose(owner, pose, duration = 0) {
   const module = characterStage.querySelector(`[data-module="${owner}"]`);
   if (!module) return;
@@ -1473,12 +1484,13 @@ function showFighterCallout(owner, text, options = {}) {
   const kind = options.kind || "attack";
   const duration = options.duration ?? 1200;
   callout.textContent = text;
-  callout.classList.remove("is-attack", "is-status", "is-interrupt");
+  callout.classList.remove("is-attack", "is-status", "is-interrupt", "is-victory", "is-defeat");
   callout.classList.add(`is-${kind}`);
   callout.classList.add("is-visible");
   clearTimeout(attackCalloutTimers[owner]);
+  if (duration === null) return;
   attackCalloutTimers[owner] = setTimeout(() => {
-    callout.classList.remove("is-visible", "is-attack", "is-status", "is-interrupt");
+    callout.classList.remove("is-visible", "is-attack", "is-status", "is-interrupt", "is-victory", "is-defeat");
   }, duration);
 }
 
@@ -1500,6 +1512,13 @@ function showStatusCallout(owner, text, options = {}) {
   showFighterCallout(owner, statusCalloutText(text), {
     kind: options.interrupted ? "interrupt" : "status",
     duration: options.duration ?? 1350
+  });
+}
+
+function showResultCallout(owner, pose) {
+  showFighterCallout(owner, resultLineForCharacter(characterFor(owner), pose), {
+    kind: pose === "victory" ? "victory" : "defeat",
+    duration: null
   });
 }
 
