@@ -176,7 +176,7 @@
 
     function duelAvatarUrl(character, size = "sm") {
       const slug = character.slug || character.id;
-      const variant = portraitVariantModes.includes(portraitVariantMode) ? portraitVariantMode : "chibi";
+      const variant = portraitVariantModes.includes(portraitVariantMode) ? portraitVariantMode : defaultPortraitVariantMode;
       return `assets/portraits/avatars/${variant}/${size}/${slug}_duel.png`;
     }
 

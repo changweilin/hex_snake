@@ -474,6 +474,7 @@ let portraitInfoSwipeStartY = null;
 let portraitIntroDidSwipe = false;
 let portraitLightboxDidSwipe = false;
 const portraitVariantModes = ["human", "beast", "chibi"];
+const defaultPortraitVariantMode = "human";
 const portraitVariantLabels = {
   human: "擬人版",
   beast: "幻獸版",
@@ -484,7 +485,7 @@ let portraitVariantMode = portraitVariantModes.includes(storedPortraitVariant)
   ? storedPortraitVariant
   : storedPortraitVariant === "full"
     ? "human"
-    : "chibi";
+    : defaultPortraitVariantMode;
 let restartUnlockAt = 0;
 
 function fighterArt(character, pose = "idle", portrait = false, variant = "medium") {
@@ -1407,7 +1408,7 @@ function rerenderPortraitSurfaces() {
 }
 
 function setPortraitVariantMode(mode) {
-  const nextMode = mode === "full" ? "human" : portraitVariantModes.includes(mode) ? mode : "chibi";
+  const nextMode = mode === "full" ? "human" : portraitVariantModes.includes(mode) ? mode : defaultPortraitVariantMode;
   if (portraitVariantMode === nextMode) return;
   portraitVariantMode = nextMode;
   localStorage.setItem("hexSnakePortraitVariant", portraitVariantMode);
