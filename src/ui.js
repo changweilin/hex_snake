@@ -556,8 +556,9 @@ const tutorialSlides = [
     ]
   },
   {
-    title: "食物效果",
+    title: "資源總覽",
     visual: "resources",
+    hideCopy: true,
     tag: "資源圖表 + 食物效果",
     lead: "四種自然食物與特殊食物的效果列在這裡；庫存上限已併在食物效果區塊最後面。",
     points: [
@@ -910,7 +911,7 @@ function renderTutorialSlide() {
         <div class="tutorial-card" role="group" tabindex="0" aria-label="新手教學 ${tutorialStepIndex + 1} / ${tutorialSlides.length}">
             <div class="tutorial-progress">${tutorialSlides.map((_, index) => `<span class="${index === tutorialStepIndex ? "is-active" : ""}"></span>`).join("")}</div>
           ${tutorialVisualMarkup(slide)}
-          <div class="tutorial-copy">
+          ${slide.hideCopy ? "" : `<div class="tutorial-copy">
             <strong class="tutorial-title">${slide.title}</strong>
             <p class="tutorial-lead">${slide.lead}</p>
             ${slide.sections ? `
@@ -925,7 +926,7 @@ function renderTutorialSlide() {
               ${slide.points.map(point => `<p class="tutorial-line"><span>${point}</span></p>`).join("")}
               ${slide.note ? `<p class="tutorial-line tutorial-note"><span>${slide.note}</span></p>` : ""}
             `}
-          </div>
+          </div>`}
           <div class="tutorial-actions">
             <button class="secondary" type="button" data-tutorial-action="skip">Skip</button>
             <button class="secondary" type="button" data-tutorial-action="prev" ${tutorialStepIndex === 0 ? "disabled" : ""}>上一頁</button>
