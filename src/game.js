@@ -3442,6 +3442,12 @@
     rulesContent.addEventListener("click", event => {
       if (event.target.closest("[data-open-tutorial]")) showTutorial(0);
     });
+    rulesContent.addEventListener("keydown", event => {
+      const tutorialCard = event.target.closest("[data-open-tutorial]");
+      if (!tutorialCard || (event.key !== "Enter" && event.key !== " ")) return;
+      event.preventDefault();
+      showTutorial(0);
+    });
     replayArchiveButton.addEventListener("click", HexSnakeReplay.openModal);
     settingsReplayButton.addEventListener("click", HexSnakeReplay.openModal);
     replayModalClose.addEventListener("click", HexSnakeReplay.closeModal);

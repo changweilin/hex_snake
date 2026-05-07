@@ -1111,10 +1111,9 @@ function buildRulesContent() {
         `;
   }).join("");
   rulesContent.innerHTML = `
-        <section class="rules-block rules-tutorial-callout">
-          <h3>新手試玩教學</h3>
-          <p>${formatRichText("想先用圖片快速看懂進食策略、移動、小招操作，可以從這裡重新開啟教學頁。")}</p>
-          <button class="secondary" type="button" data-open-tutorial>觀看新手教學</button>
+        <section class="rules-block rules-tutorial-callout" data-open-tutorial role="button" tabindex="0" aria-label="開啟基礎規則教學">
+          <h3>基礎規則教學</h3>
+          <p>${formatRichText("想先用圖片快速看懂進食策略、移動、小招操作，可以點擊這裡重新開啟教學頁。")}</p>
         </section>
         <section class="rules-block">
           <h3>進階對戰</h3>
