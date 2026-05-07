@@ -110,7 +110,7 @@ function createBoard(gridSize) {
       if (Math.abs(q + r) <= radius) cells.push({ q, r });
     }
   }
-  return { radius, cells };
+  return { radius, cells, ...buildBoardTopology(radius, cells) };
 }
 
 function isInside(cell, radius) {
@@ -131,6 +131,35 @@ function nextWrappedCell(head, direction, radius) {
     wrapped = nextCell(wrapped, oppositeDirection);
   }
   return wrapped;
+}
+
+function buildBoardTopology(radius, cells) {
+  const cellIndexByKey = new Map(cells.map((cell, index) => [keyOf(cell), index]));
+  const neighbors = cells.map(cell => DIRECTIONS.map((_, direction) => {
+    const next = nextWrappedCell(cell, direction, radius);
+    return cellIndexByKey.get(keyOf(next));
+  }));
+  const nearbyOne = cells.map(cell => cells
+    .map((candidate, index) => ({ candidate, index }))
+    .filter(({ candidate }) => hexDistance(candidate, cell) <= 1)
+    .map(({ index }) => index));
+  const wrappedDistances = cells.map((_, sourceIndex) => {
+    const row = new Uint16Array(cells.length);
+    row.fill(65535);
+    row[sourceIndex] = 0;
+    const queue = [sourceIndex];
+    for (let index = 0; index < queue.length; index += 1) {
+      const currentIndex = queue[index];
+      const nextDistance = row[currentIndex] + 1;
+      neighbors[currentIndex].forEach(nextIndex => {
+        if (!Number.isInteger(nextIndex) || row[nextIndex] !== 65535) return;
+        row[nextIndex] = nextDistance;
+        queue.push(nextIndex);
+      });
+    }
+    return row;
+  });
+  return { cellIndexByKey, neighbors, nearbyOne, wrappedDistances };
 }
 
 function createStartingSnake(head, direction, length, radius) {
@@ -171,6 +200,12 @@ function mergeWeights(defaults, overrides = {}) {
 function wrappedDistance(state, start, target) {
   if (!start || !target) return Number.POSITIVE_INFINITY;
   if (keyOf(start) === keyOf(target)) return 0;
+  const startIndex = state.cellIndexByKey?.get(keyOf(start));
+  const targetIndex = state.cellIndexByKey?.get(keyOf(target));
+  if (Number.isInteger(startIndex) && Number.isInteger(targetIndex) && state.wrappedDistances?.[startIndex]) {
+    const cachedDistance = state.wrappedDistances[startIndex][targetIndex];
+    if (cachedDistance !== 65535) return cachedDistance;
+  }
   const seen = new Set([keyOf(start)]);
   const queue = [{ cell: start, distance: 0 }];
   for (let index = 0; index < queue.length; index += 1) {
@@ -281,7 +316,12 @@ function canAttackWithResources(stock, ammo, profile, balance) {
   return FOOD_TYPES.every(type => (stock[type] || 0) >= cost);
 }
 
-function foodResourceValueFor(fighter, food, balance) {
+function foodResourceValueFor(fighter, food, balance, state = null) {
+  const cache = state ? activeCacheFor(state, fighter) : null;
+  const cacheKey = food ? `${fighter.owner}:${keyOf(food)}` : null;
+  if (cache && cacheKey && cache.foodResourceValues.has(cacheKey)) {
+    return cache.foodResourceValues.get(cacheKey);
+  }
   const projectedStock = projectedStockAfterFood(fighter.stock, balance, food);
   const projectedAmmo = projectedAmmoAfterFood(fighter, balance, food);
   const normalizedTypes = foodTypeIdsForValue(food);
@@ -302,7 +342,48 @@ function foodResourceValueFor(fighter, food, balance) {
   const bigReady = !canAttack(fighter, "big", balance) && canAttackWithResources(projectedStock, projectedAmmo.ammo, "big", balance) ? 3.2 : 0;
   const overflowPenalty = Math.max(0, expectedStockGain - actualStockGain) * 0.45
     + (fighter.ammo >= balance.resources.maxAmmo && fighter.ammoCharge >= balance.resources.attackNeedTotal ? 0.9 : 0);
-  return Math.max(0, 0.5 + stockValue + energyValue + smallReady + bigReady - overflowPenalty);
+  const value = Math.max(0, 0.5 + stockValue + energyValue + smallReady + bigReady - overflowPenalty);
+  if (cache && cacheKey) cache.foodResourceValues.set(cacheKey, value);
+  return value;
+}
+
+function createAiDecisionCache(fighter, opponent, now) {
+  return {
+    owner: fighter.owner,
+    opponent: opponent.owner,
+    now,
+    damageMaps: new Map(),
+    foodResourceValues: new Map(),
+    occupiedSignatures: new WeakMap(),
+    reachableSpaces: new Map(),
+    targetBenefits: new Map()
+  };
+}
+
+function withAiDecisionCache(state, fighter, opponent, callback) {
+  const previous = state.aiDecisionCache;
+  state.aiDecisionCache = createAiDecisionCache(fighter, opponent, state.now);
+  try {
+    return callback();
+  } finally {
+    state.aiDecisionCache = previous;
+  }
+}
+
+function activeCacheFor(state, fighter) {
+  return state.aiDecisionCache?.owner === fighter.owner && state.aiDecisionCache?.now === state.now
+    ? state.aiDecisionCache
+    : null;
+}
+
+function occupiedSignature(state, occupied) {
+  const cache = state.aiDecisionCache;
+  if (!cache) return [...occupied].sort().join(";");
+  const cached = cache.occupiedSignatures.get(occupied);
+  if (cached) return cached;
+  const signature = [...occupied].sort().join(";");
+  cache.occupiedSignatures.set(occupied, signature);
+  return signature;
 }
 
 function attackDelay(stock, balance) {
@@ -758,8 +839,8 @@ function foodValueFor(fighter, opponent, food, policy, state = null) {
       (opponentDistance <= ownDistance ? weights.opponentDeficit * 0.35 : 0)
     );
   }
-  const ownResourceValue = foodResourceValueFor(fighter, food, state.balance);
-  const opponentResourceValue = foodResourceValueFor(opponent, food, state.balance);
+  const ownResourceValue = foodResourceValueFor(fighter, food, state.balance, state);
+  const opponentResourceValue = foodResourceValueFor(opponent, food, state.balance, state);
   const raceLead = opponentArrivalTime - ownArrivalTime;
   return (
     weights.fastestArrival * (8 + ownResourceValue) / (1 + ownArrivalTime) +
@@ -796,6 +877,9 @@ function shouldAbandonFoodTarget(state, fighter, opponent, food, lockedScore, be
 }
 
 function chooseFoodTarget(state, fighter, opponent) {
+  if (!state.aiDecisionCache) {
+    return withAiDecisionCache(state, fighter, opponent, () => chooseFoodTarget(state, fighter, opponent));
+  }
   const perceivedOpponent = perceivedSnakeFor(state, fighter, opponent);
   if (!state.foods.length) return perceivedOpponent[0];
   const staleTarget = fighter.foodTargetKey && Number.isFinite(fighter.foodTargetAt) && state.now - fighter.foodTargetAt >= FOOD_TARGET_SWITCH_MS ? fighter.foodTargetKey : null;
@@ -850,10 +934,23 @@ function movementOccupiedSetForSnake(state, fighter, opponent, snake) {
   return occupied;
 }
 
+function nearbyOpenSpace(state, cell, occupied) {
+  const index = state.cellIndexByKey?.get(keyOf(cell));
+  if (Number.isInteger(index) && state.nearbyOne?.[index]) {
+    return state.nearbyOne[index].reduce((count, cellIndex) => count + (occupied.has(keyOf(state.cells[cellIndex])) ? 0 : 1), 0);
+  }
+  return state.cells.reduce((count, candidate) => count + (hexDistance(candidate, cell) <= 1 && !occupied.has(keyOf(candidate)) ? 1 : 0), 0);
+}
+
 function movementTargetBenefit(state, fighter, target) {
   if (fighter.policy.aiDifficulty !== "high" || !target) return 0;
+  const cache = activeCacheFor(state, fighter);
+  const cacheKey = keyOf(target);
+  if (cache?.targetBenefits.has(cacheKey)) return cache.targetBenefits.get(cacheKey);
   const targetFood = state.foods.find(food => keyOf(food) === keyOf(target));
-  return targetFood ? Math.min(20, foodResourceValueFor(fighter, targetFood, state.balance)) : 0;
+  const value = targetFood ? Math.min(20, foodResourceValueFor(fighter, targetFood, state.balance, state)) : 0;
+  if (cache) cache.targetBenefits.set(cacheKey, value);
+  return value;
 }
 
 function opponentEtaThreatForCell(state, fighter, opponent, from, cell, opponentHead) {
@@ -874,7 +971,7 @@ function movementOptionForState(state, fighter, opponent, snake, currentDir, dir
   const blocked = selfBlocked || opponentBlocked || occupied.has(key);
   const headThreat = keyOf(opponentThreat) === key;
   const reachable = reachableSpace(state, next, occupied, 10);
-  const wallSpace = state.cells.filter(cell => hexDistance(cell, next) <= 1 && !occupied.has(keyOf(cell))).length;
+  const wallSpace = nearbyOpenSpace(state, next, occupied);
   const expectedDamage = expectedDamageAt(state, fighter, next);
   const weights = fighter.policy.strategyWeights.movement;
   const trapRisk = Math.max(0, 5 - reachable);
@@ -975,6 +1072,9 @@ function lookaheadMovementScore(state, fighter, opponent, firstOption, target, p
 }
 
 function directionToward(state, fighter, opponent, target) {
+  if (!state.aiDecisionCache) {
+    return withAiDecisionCache(state, fighter, opponent, () => directionToward(state, fighter, opponent, target));
+  }
   const occupied = movementOccupiedSet(state, fighter, opponent);
   const perceivedOpponent = perceivedSnakeFor(state, fighter, opponent);
   const opponentThreat = nextWrappedCell(perceivedOpponent[0], perceivedDirectionFor(state, opponent), state.radius);
@@ -1011,12 +1111,25 @@ function directionToward(state, fighter, opponent, target) {
   return candidates[0].direction;
 }
 
-function reachableSpace(state, start, occupied, maxCells = 10) {
+function reachableSpaceUncached(state, start, occupied, maxCells = 10) {
   if (occupied.has(keyOf(start))) return 0;
+  const startIndex = state.cellIndexByKey?.get(keyOf(start));
+  if (Number.isInteger(startIndex) && state.neighbors?.[startIndex]) {
+    const seen = new Set([startIndex]);
+    const queue = [startIndex];
+    for (let index = 0; index < queue.length && seen.size < maxCells; index += 1) {
+      state.neighbors[queue[index]].forEach(nextIndex => {
+        if (!Number.isInteger(nextIndex) || seen.has(nextIndex) || occupied.has(keyOf(state.cells[nextIndex]))) return;
+        seen.add(nextIndex);
+        queue.push(nextIndex);
+      });
+    }
+    return seen.size;
+  }
   const seen = new Set([keyOf(start)]);
   const queue = [start];
-  while (queue.length && seen.size < maxCells) {
-    const cell = queue.shift();
+  for (let index = 0; index < queue.length && seen.size < maxCells; index += 1) {
+    const cell = queue[index];
     DIRECTIONS.forEach((_, direction) => {
       const next = nextWrappedCell(cell, direction, state.radius);
       const key = keyOf(next);
@@ -1028,7 +1141,17 @@ function reachableSpace(state, start, occupied, maxCells = 10) {
   return seen.size;
 }
 
-function expectedDamageAt(state, fighter, cell) {
+function reachableSpace(state, start, occupied, maxCells = 10) {
+  const cache = state.aiDecisionCache;
+  if (!cache) return reachableSpaceUncached(state, start, occupied, maxCells);
+  const cacheKey = `${keyOf(start)}|${maxCells}|${occupiedSignature(state, occupied)}`;
+  if (!cache.reachableSpaces.has(cacheKey)) {
+    cache.reachableSpaces.set(cacheKey, reachableSpaceUncached(state, start, occupied, maxCells));
+  }
+  return cache.reachableSpaces.get(cacheKey);
+}
+
+function expectedDamageAtUncached(state, fighter, cell) {
   const opponentOwner = fighter.owner === "player" ? "computer" : "player";
   let damage = 0;
   state.projectiles.forEach(projectile => {
@@ -1047,6 +1170,30 @@ function expectedDamageAt(state, fighter, cell) {
     if (hazard.cells?.some(hazardCell => hexDistance(hazardCell, cell) <= hazard.width)) damage += hazard.damage || 0;
   });
   return damage;
+}
+
+function expectedDamageMapFor(state, fighter) {
+  const cache = activeCacheFor(state, fighter);
+  if (!cache) return null;
+  if (cache.damageMaps.has(fighter.owner)) return cache.damageMaps.get(fighter.owner);
+  const opponentOwner = fighter.owner === "player" ? "computer" : "player";
+  const hasVisibleThreat = state.projectiles.some(projectile => projectile.owner === opponentOwner && isProjectileVisibleTo(fighter, projectile, state.now))
+    || state.hazards.some(hazard => hazard.owner === opponentOwner && state.now <= hazard.endAt);
+  const damageMap = new Map();
+  if (hasVisibleThreat) {
+    state.cells.forEach(cell => {
+      const damage = expectedDamageAtUncached(state, fighter, cell);
+      if (damage > 0) damageMap.set(keyOf(cell), damage);
+    });
+  }
+  cache.damageMaps.set(fighter.owner, damageMap);
+  return damageMap;
+}
+
+function expectedDamageAt(state, fighter, cell) {
+  const damageMap = expectedDamageMapFor(state, fighter);
+  if (damageMap) return damageMap.get(keyOf(cell)) || 0;
+  return expectedDamageAtUncached(state, fighter, cell);
 }
 
 function isProjectileVisibleTo(observer, projectile, now) {
@@ -1902,6 +2049,10 @@ function createMatchState(options) {
     settings,
     radius: board.radius,
     cells: board.cells,
+    cellIndexByKey: board.cellIndexByKey,
+    neighbors: board.neighbors,
+    nearbyOne: board.nearbyOne,
+    wrappedDistances: board.wrappedDistances,
     rng: createRng(options.seed),
     now: 0,
     foods: [],

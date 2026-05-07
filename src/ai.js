@@ -1,3 +1,151 @@
+    let wrappedDistanceBoardCache = null;
+    let activeAiDecisionCache = null;
+    let aiPerfEnabledCache = null;
+    const aiPerfStats = new Map();
+
+    function isAiPerfEnabled() {
+      if (aiPerfEnabledCache !== null) return aiPerfEnabledCache;
+      try {
+        aiPerfEnabledCache = localStorage.getItem("hexSnakeAiPerf") === "1";
+      } catch {
+        aiPerfEnabledCache = false;
+      }
+      return aiPerfEnabledCache;
+    }
+
+    function recordAiPerf(label, elapsedMs) {
+      if (!isAiPerfEnabled()) return;
+      const row = aiPerfStats.get(label) || { calls: 0, totalMs: 0, maxMs: 0 };
+      row.calls += 1;
+      row.totalMs += elapsedMs;
+      row.maxMs = Math.max(row.maxMs, elapsedMs);
+      aiPerfStats.set(label, row);
+      if (label === "chooseAiDirection" && row.calls % 120 === 0) {
+        console.table([...aiPerfStats.entries()].map(([name, stats]) => ({
+          name,
+          calls: stats.calls,
+          totalMs: stats.totalMs.toFixed(2),
+          avgMs: (stats.totalMs / Math.max(1, stats.calls)).toFixed(3),
+          maxMs: stats.maxMs.toFixed(3)
+        })));
+      }
+    }
+
+    function withAiPerf(label, callback) {
+      if (!isAiPerfEnabled()) return callback();
+      const startedAt = performance.now();
+      try {
+        return callback();
+      } finally {
+        recordAiPerf(label, performance.now() - startedAt);
+      }
+    }
+
+    function createAiDecisionCache(owner, opponent, now) {
+      return {
+        owner,
+        opponent,
+        now,
+        damageMaps: new Map(),
+        foodResourceValues: new Map(),
+        occupiedSignatures: new WeakMap(),
+        reachableSpaces: new Map(),
+        targetBenefits: new Map()
+      };
+    }
+
+    function withAiDecisionCache(owner, opponent, now, callback) {
+      const previous = activeAiDecisionCache;
+      activeAiDecisionCache = createAiDecisionCache(owner, opponent, now);
+      try {
+        return callback();
+      } finally {
+        activeAiDecisionCache = previous;
+      }
+    }
+
+    function activeCacheFor(owner, now) {
+      return activeAiDecisionCache?.owner === owner && activeAiDecisionCache?.now === now
+        ? activeAiDecisionCache
+        : null;
+    }
+
+    function occupiedSignature(occupied) {
+      if (!activeAiDecisionCache) return [...occupied].sort().join(";");
+      const cached = activeAiDecisionCache.occupiedSignatures.get(occupied);
+      if (cached) return cached;
+      const signature = [...occupied].sort().join(";");
+      activeAiDecisionCache.occupiedSignatures.set(occupied, signature);
+      return signature;
+    }
+
+    function boardCacheSignature() {
+      const first = cells[0] ? keyOf(cells[0]) : "";
+      const last = cells.length ? keyOf(cells[cells.length - 1]) : "";
+      return `${radius}:${cells.length}:${first}:${last}`;
+    }
+
+    function ensureWrappedDistanceBoardCache() {
+      if (!cells.length) return null;
+      const signature = boardCacheSignature();
+      if (wrappedDistanceBoardCache?.signature === signature) return wrappedDistanceBoardCache;
+
+      const indexByKey = new Map(cells.map((cell, index) => [keyOf(cell), index]));
+      const neighborsByKey = new Map(cells.map(cell => [
+        keyOf(cell),
+        directions.map((_, direction) => nextWrappedCell(cell, direction))
+      ]));
+      const nearbyOneByKey = new Map(cells.map(cell => [
+        keyOf(cell),
+        cells.filter(candidate => hexDistance(candidate, cell) <= 1)
+      ]));
+      const distances = cells.map((source, sourceIndex) => {
+        const row = new Uint16Array(cells.length);
+        row.fill(65535);
+        row[sourceIndex] = 0;
+        const queue = [source];
+        for (let index = 0; index < queue.length; index += 1) {
+          const current = queue[index];
+          const currentDistance = row[indexByKey.get(keyOf(current))];
+          directions.forEach((_, direction) => {
+            const next = nextWrappedCell(current, direction);
+            const nextIndex = indexByKey.get(keyOf(next));
+            if (!Number.isInteger(nextIndex) || row[nextIndex] !== 65535) return;
+            row[nextIndex] = currentDistance + 1;
+            queue.push(next);
+          });
+        }
+        return row;
+      });
+
+      wrappedDistanceBoardCache = { signature, indexByKey, neighborsByKey, nearbyOneByKey, distances };
+      return wrappedDistanceBoardCache;
+    }
+
+    function cachedWrappedDistance(start, target) {
+      const cache = ensureWrappedDistanceBoardCache();
+      if (!cache || !start || !target) return null;
+      const startIndex = cache.indexByKey.get(keyOf(start));
+      const targetIndex = cache.indexByKey.get(keyOf(target));
+      if (!Number.isInteger(startIndex) || !Number.isInteger(targetIndex)) return null;
+      const value = cache.distances[startIndex][targetIndex];
+      return value === 65535 ? null : value;
+    }
+
+    function nearbyCellsWithinOne(cell) {
+      const cache = ensureWrappedDistanceBoardCache();
+      return cache?.nearbyOneByKey.get(keyOf(cell)) || cells.filter(candidate => hexDistance(candidate, cell) <= 1);
+    }
+
+    function neighborCellsFor(cell) {
+      const cache = ensureWrappedDistanceBoardCache();
+      return cache?.neighborsByKey.get(keyOf(cell)) || directions.map((_, direction) => nextWrappedCell(cell, direction));
+    }
+
+    function nearbyOpenSpace(cell, occupied) {
+      return nearbyCellsWithinOne(cell).reduce((count, candidate) => count + (occupied.has(keyOf(candidate)) ? 0 : 1), 0);
+    }
+
     function nearestFoodDistance(cell) {
       if (!foods.length) return Number.POSITIVE_INFINITY;
       return Math.min(...foods.map(food => wrappedDistance(cell, food)));
@@ -6,6 +154,8 @@
     function wrappedDistance(start, target) {
       if (!start || !target) return Number.POSITIVE_INFINITY;
       if (keyOf(start) === keyOf(target)) return 0;
+      const cachedDistance = cachedWrappedDistance(start, target);
+      if (cachedDistance !== null) return cachedDistance;
       const visited = new Set([keyOf(start)]);
       const queue = [{ cell: start, distance: 0 }];
       for (let index = 0; index < queue.length; index += 1) {
@@ -290,6 +440,11 @@
     }
 
     function foodResourceValueFor(owner, food) {
+      const cache = activeAiDecisionCache;
+      const cacheKey = food ? `${owner}:${keyOf(food)}` : null;
+      if (cache && cacheKey && cache.foodResourceValues.has(cacheKey)) {
+        return cache.foodResourceValues.get(cacheKey);
+      }
       const stock = ownerStock(owner);
       const projectedStock = projectedStockAfterFood(stock, food);
       const projectedAmmo = projectedAmmoAfterFood(owner, food);
@@ -312,7 +467,9 @@
       const bigReady = !canAttack(owner, "big") && canAttackWithResources(projectedStock, projectedAmmo.ammo, "big") ? 3.2 : 0;
       const overflowPenalty = Math.max(0, expectedStockGain - actualStockGain) * 0.45
         + (beforeAmmo >= maxAmmo && beforeCharge >= attackNeedTotal ? 0.9 : 0);
-      return Math.max(0, 0.5 + stockValue + energyValue + smallReady + bigReady - overflowPenalty);
+      const value = Math.max(0, 0.5 + stockValue + energyValue + smallReady + bigReady - overflowPenalty);
+      if (cache && cacheKey) cache.foodResourceValues.set(cacheKey, value);
+      return value;
     }
 
     function opponentOf(owner) {
@@ -636,8 +793,7 @@
         const current = queue[index];
         if (foodKeys.has(keyOf(current.cell))) return current.distance;
 
-        directions.forEach((_, direction) => {
-          const next = nextWrappedCell(current.cell, direction);
+        neighborCellsFor(current.cell).forEach(next => {
           const nextKey = keyOf(next);
           if (visited.has(nextKey)) return;
           if (occupied.has(nextKey) && !foodKeys.has(nextKey)) return;
@@ -649,14 +805,13 @@
       return Number.POSITIVE_INFINITY;
     }
 
-    function reachableSpace(start, occupied, maxCells = 10) {
+    function reachableSpaceUncached(start, occupied, maxCells = 10) {
       if (occupied.has(keyOf(start))) return 0;
       const visited = new Set([keyOf(start)]);
       const queue = [start];
       for (let index = 0; index < queue.length && visited.size < maxCells; index += 1) {
         const current = queue[index];
-        directions.forEach((_, direction) => {
-          const next = nextWrappedCell(current, direction);
+        neighborCellsFor(current).forEach(next => {
           const nextKey = keyOf(next);
           if (visited.has(nextKey) || occupied.has(nextKey)) return;
           visited.add(nextKey);
@@ -666,7 +821,17 @@
       return visited.size;
     }
 
-    function expectedDamageAt(owner, cell, now) {
+    function reachableSpace(start, occupied, maxCells = 10) {
+      const cache = activeAiDecisionCache;
+      if (!cache) return reachableSpaceUncached(start, occupied, maxCells);
+      const cacheKey = `${keyOf(start)}|${maxCells}|${occupiedSignature(occupied)}`;
+      if (!cache.reachableSpaces.has(cacheKey)) {
+        cache.reachableSpaces.set(cacheKey, reachableSpaceUncached(start, occupied, maxCells));
+      }
+      return cache.reachableSpaces.get(cacheKey);
+    }
+
+    function expectedDamageAtUncached(owner, cell, now) {
       const opponent = opponentOf(owner);
       let damage = 0;
       projectiles.forEach(projectile => {
@@ -685,6 +850,30 @@
         if (hazard.cells?.some(hazardCell => hexDistance(hazardCell, cell) <= hazard.width)) damage += hazard.damage || 0;
       });
       return damage;
+    }
+
+    function expectedDamageMapFor(owner, now) {
+      const cache = activeCacheFor(owner, now);
+      if (!cache) return null;
+      if (cache.damageMaps.has(owner)) return cache.damageMaps.get(owner);
+      const opponent = opponentOf(owner);
+      const hasVisibleThreat = projectiles.some(projectile => projectile.owner === opponent && isProjectileVisibleTo(owner, projectile, now))
+        || hazards.some(hazard => hazard.owner === opponent && now <= hazard.endAt);
+      const damageMap = new Map();
+      if (hasVisibleThreat) {
+        cells.forEach(cell => {
+          const damage = expectedDamageAtUncached(owner, cell, now);
+          if (damage > 0) damageMap.set(keyOf(cell), damage);
+        });
+      }
+      cache.damageMaps.set(owner, damageMap);
+      return damageMap;
+    }
+
+    function expectedDamageAt(owner, cell, now) {
+      const damageMap = expectedDamageMapFor(owner, now);
+      if (damageMap) return damageMap.get(keyOf(cell)) || 0;
+      return expectedDamageAtUncached(owner, cell, now);
     }
 
     function isProjectileVisibleTo(observer, projectile, now) {
@@ -826,8 +1015,13 @@
 
     function movementTargetBenefit(owner, opponent, target, now) {
       if (computerDifficulty !== "high" || !target) return 0;
+      const cache = activeCacheFor(owner, now);
+      const cacheKey = keyOf(target);
+      if (cache?.targetBenefits.has(cacheKey)) return cache.targetBenefits.get(cacheKey);
       const targetFood = foods.find(food => keyOf(food) === keyOf(target));
-      return targetFood ? Math.min(20, foodResourceValueFor(owner, targetFood)) : 0;
+      const value = targetFood ? Math.min(20, foodResourceValueFor(owner, targetFood)) : 0;
+      if (cache) cache.targetBenefits.set(cacheKey, value);
+      return value;
     }
 
     function opponentEtaThreatForCell(owner, opponent, from, cell, opponentHead, now) {
@@ -848,8 +1042,8 @@
       const blocked = selfBlocked || opponentBlocked || occupied.has(nextKey);
       const headThreat = keyOf(opponentThreat) === nextKey;
       const danger = headThreat ? 20 : 0;
-      const wallPressure = cells.filter(cell => hexDistance(cell, next) <= 1 && !occupied.has(keyOf(cell))).length;
-      const pathDistance = shortestFoodDistance(next, occupied);
+      const wallPressure = nearbyOpenSpace(next, occupied);
+      const pathDistance = computerDifficulty === "high" ? Number.POSITIVE_INFINITY : shortestFoodDistance(next, occupied);
       const targetDistance = distanceToTarget(next);
       const expectedDamage = expectedDamageAt(owner, next, now);
       const reachable = reachableSpace(next, occupied, 10);
@@ -860,6 +1054,9 @@
       const etaThreat = opponentEtaThreatForCell(owner, opponent, snakeParts[0], next, opponentSnake[0], now);
       const targetBenefit = movementTargetBenefit(owner, opponent, target, now);
       const risk = (blocked ? 100 : 0) + danger + etaThreat + trapRisk * 4 + expectedDamage;
+      const fallbackValue = computerDifficulty === "high"
+        ? targetDistance + danger
+        : nearestFoodDistance(next) + targetDistance * 0.45 + danger - wallPressure * 0.08;
       return {
         direction: candidate,
         next,
@@ -867,12 +1064,12 @@
         headThreat,
         deadEnd,
         lethalThreat,
-        pathValue: Number.isFinite(pathDistance) ? pathDistance : nearestFoodDistance(next),
+        pathValue: computerDifficulty === "high" ? targetDistance : Number.isFinite(pathDistance) ? pathDistance : nearestFoodDistance(next),
         risk,
         tacticalValue: computerDifficulty === "high"
           ? weights.fastestArrival * targetDistance + weights.safePath * risk + weights.leastDamage * expectedDamage + etaThreat * 0.65 - targetBenefit / (1 + targetDistance) * 1.15 - wallPressure * 0.04
           : (Number.isFinite(pathDistance) ? pathDistance : nearestFoodDistance(next)) + targetDistance * 0.45 + danger - wallPressure * 0.08,
-        fallbackValue: nearestFoodDistance(next) + targetDistance * 0.45 + danger - wallPressure * 0.08
+        fallbackValue
       };
     }
 
@@ -952,49 +1149,51 @@
 
     function chooseAiDirection(owner, now = performance.now()) {
       const opponent = opponentOf(owner);
-      const ownSnake = ownerSnake(owner);
-      const currentDirection = owner === "player" ? dir : computerDir;
-      const opponentSnake = perceivedSnakeFor(owner, opponent, now);
-      const opponentDirection = perceivedDirectionFor(opponent, now);
-      const opponentThreat = nextWrappedCell(opponentSnake[0], opponentDirection);
-      const target = chooseAiMoveTarget(owner, opponent, now);
-      const occupied = movementOccupiedSet(owner, opponent, now);
-      const targetDistanceCache = new Map();
-      const distanceToTarget = cell => {
-        const key = keyOf(cell);
-        if (!targetDistanceCache.has(key)) {
-          const distance = wrappedDistance(cell, target);
-          targetDistanceCache.set(key, computerDifficulty === "high" ? arrivalTimeForDistance(owner, distance, now) : distance);
-        }
-        return targetDistanceCache.get(key);
-      };
-      const options = [];
+      return withAiDecisionCache(owner, opponent, now, () => withAiPerf("chooseAiDirection", () => {
+        const ownSnake = ownerSnake(owner);
+        const currentDirection = owner === "player" ? dir : computerDir;
+        const opponentSnake = perceivedSnakeFor(owner, opponent, now);
+        const opponentDirection = perceivedDirectionFor(opponent, now);
+        const opponentThreat = nextWrappedCell(opponentSnake[0], opponentDirection);
+        const target = chooseAiMoveTarget(owner, opponent, now);
+        const occupied = movementOccupiedSet(owner, opponent, now);
+        const targetDistanceCache = new Map();
+        const distanceToTarget = cell => {
+          const key = keyOf(cell);
+          if (!targetDistanceCache.has(key)) {
+            const distance = wrappedDistance(cell, target);
+            targetDistanceCache.set(key, computerDifficulty === "high" ? arrivalTimeForDistance(owner, distance, now) : distance);
+          }
+          return targetDistanceCache.get(key);
+        };
+        const options = [];
 
-      directions.forEach((_, candidate) => {
-        if (!canOwnerTurn(owner, candidate)) return;
-        options.push(movementOptionForState(owner, opponent, ownSnake, currentDirection, candidate, target, occupied, opponentSnake, opponentThreat, now, distanceToTarget));
-      });
-
-      if (!options.length) return currentDirection;
-
-      const hardSafe = options.filter(option => !option.blocked && !option.headThreat && !option.deadEnd && !option.lethalThreat);
-      const rankedOptions = hardSafe.length ? hardSafe : options.filter(option => !option.blocked && !option.headThreat && !option.lethalThreat);
-      const sortableOptions = rankedOptions.length ? rankedOptions : options;
-      if (computerDifficulty === "high" && sortableOptions.length > 1) {
-        sortableOptions.forEach(option => {
-          option.lookaheadValue = lookaheadMovementScore(owner, opponent, option, target, opponentSnake, opponentThreat, now, distanceToTarget);
+        directions.forEach((_, candidate) => {
+          if (!canOwnerTurn(owner, candidate)) return;
+          options.push(movementOptionForState(owner, opponent, ownSnake, currentDirection, candidate, target, occupied, opponentSnake, opponentThreat, now, distanceToTarget));
         });
-      }
-      sortableOptions.sort((a, b) => {
-        if (computerDifficulty === "high") return (a.lookaheadValue ?? a.tacticalValue) - (b.lookaheadValue ?? b.tacticalValue) || a.tacticalValue - b.tacticalValue;
-        const aValue = Number.isFinite(a.tacticalValue) ? a.tacticalValue : a.fallbackValue;
-        const bValue = Number.isFinite(b.tacticalValue) ? b.tacticalValue : b.fallbackValue;
-        return aValue - bValue;
-      });
-      const randomChance = { high: 0, medium: 0.3, low: 0.52, novice: 0.52 }[computerDifficulty];
 
-      if (Math.random() < randomChance) return randomItem(sortableOptions).direction;
-      return sortableOptions[0].direction;
+        if (!options.length) return currentDirection;
+
+        const hardSafe = options.filter(option => !option.blocked && !option.headThreat && !option.deadEnd && !option.lethalThreat);
+        const rankedOptions = hardSafe.length ? hardSafe : options.filter(option => !option.blocked && !option.headThreat && !option.lethalThreat);
+        const sortableOptions = rankedOptions.length ? rankedOptions : options;
+        if (computerDifficulty === "high" && sortableOptions.length > 1) {
+          sortableOptions.forEach(option => {
+            option.lookaheadValue = withAiPerf("lookaheadMovementScore", () => lookaheadMovementScore(owner, opponent, option, target, opponentSnake, opponentThreat, now, distanceToTarget));
+          });
+        }
+        sortableOptions.sort((a, b) => {
+          if (computerDifficulty === "high") return (a.lookaheadValue ?? a.tacticalValue) - (b.lookaheadValue ?? b.tacticalValue) || a.tacticalValue - b.tacticalValue;
+          const aValue = Number.isFinite(a.tacticalValue) ? a.tacticalValue : a.fallbackValue;
+          const bValue = Number.isFinite(b.tacticalValue) ? b.tacticalValue : b.fallbackValue;
+          return aValue - bValue;
+        });
+        const randomChance = { high: 0, medium: 0.3, low: 0.52, novice: 0.52 }[computerDifficulty];
+
+        if (Math.random() < randomChance) return randomItem(sortableOptions).direction;
+        return sortableOptions[0].direction;
+      }));
     }
 
     function chooseComputerDirection() {
