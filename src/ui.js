@@ -1467,16 +1467,31 @@ function setFighterPose(owner, pose, duration = 0) {
   }
 }
 
-function showAttackCallout(owner, profile) {
+function showFighterCallout(owner, text, options = {}) {
   const callout = characterStage.querySelector(`[data-attack-callout="${owner}"]`);
-  if (!callout) return;
-  const character = characterFor(owner);
-  callout.textContent = profile === "small" ? character.smallMove : character.bigMove;
+  if (!callout || !text) return;
+  const kind = options.kind || "attack";
+  const duration = options.duration ?? 1200;
+  callout.textContent = text;
+  callout.classList.remove("is-attack", "is-status", "is-interrupt");
+  callout.classList.add(`is-${kind}`);
   callout.classList.add("is-visible");
   clearTimeout(attackCalloutTimers[owner]);
   attackCalloutTimers[owner] = setTimeout(() => {
-    callout.classList.remove("is-visible");
-  }, 1200);
+    callout.classList.remove("is-visible", "is-attack", "is-status", "is-interrupt");
+  }, duration);
+}
+
+function showAttackCallout(owner, profile) {
+  const character = characterFor(owner);
+  showFighterCallout(owner, profile === "small" ? character.smallMove : character.bigMove);
+}
+
+function showStatusCallout(owner, text, options = {}) {
+  showFighterCallout(owner, text, {
+    kind: options.interrupted ? "interrupt" : "status",
+    duration: options.duration ?? 1350
+  });
 }
 
 function buildResourceHud() {

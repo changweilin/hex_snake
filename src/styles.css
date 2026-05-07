@@ -2564,9 +2564,9 @@
       max-width: min(220px, 34vw);
       padding: 6px 10px;
       border-radius: 8px;
-      border: 1px solid var(--owner-line);
-      background: rgba(15, 23, 36, 0.94);
-      color: #ffffff;
+      border: 1px solid var(--callout-line, var(--owner-line));
+      background: var(--callout-bg, rgba(15, 23, 36, 0.94));
+      color: var(--callout-color, #ffffff);
       font-size: 0.78rem;
       font-weight: 950;
       line-height: 1.2;
@@ -2588,10 +2588,22 @@
       bottom: 100%;
       width: 9px;
       height: 9px;
-      border-left: 1px solid var(--owner-line);
-      border-top: 1px solid var(--owner-line);
-      background: rgba(15, 23, 36, 0.94);
+      border-left: 1px solid var(--callout-line, var(--owner-line));
+      border-top: 1px solid var(--callout-line, var(--owner-line));
+      background: var(--callout-bg, rgba(15, 23, 36, 0.94));
       transform: translate(-50%, 4px) rotate(45deg);
+    }
+
+    .attack-callout.is-status {
+      --callout-line: #93c5fd;
+      --callout-bg: rgba(15, 23, 42, 0.96);
+      --callout-color: #dbeafe;
+    }
+
+    .attack-callout.is-interrupt {
+      --callout-line: #fbbf24;
+      --callout-bg: rgba(32, 24, 12, 0.96);
+      --callout-color: #fef3c7;
     }
 
     .attack-callout.is-visible {

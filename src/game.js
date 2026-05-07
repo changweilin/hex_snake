@@ -1626,12 +1626,14 @@
     }
 
     function interruptCasting(owner) {
+      const beforeCount = projectiles.length;
       projectiles = projectiles.filter(projectile => projectile.owner !== owner);
+      return projectiles.length !== beforeCount;
     }
 
     function applyAttackStun(owner, chance = baseAttackStunChance, now = performance.now(), options = {}) {
       if (Math.random() >= chance) return false;
-      if (options.interrupt !== false) interruptCasting(owner);
+      const interrupted = options.interrupt !== false && interruptCasting(owner);
       const currentStunUntil = owner === "player" ? playerStunUntil : computerStunUntil;
       const stunBase = options.stack ? Math.max(now, currentStunUntil) : now;
       const stunUntil = stunBase + attackStunMs;
@@ -1643,6 +1645,7 @@
         computerStunUntil = Math.max(computerStunUntil, stunUntil);
         computerSlowUntil = Math.max(computerSlowUntil, slowUntil);
       }
+      showStatusCallout(owner, interrupted ? "暈眩！招式中斷" : "暈眩！", { interrupted });
       return true;
     }
 
@@ -1653,11 +1656,13 @@
         playerStunUntil = Math.max(playerStunUntil, stunUntil);
         playerSlowUntil = Math.max(playerSlowUntil, slowUntil);
         playerCollisionParalysisMs += collisionStunMs * severity;
+        showStatusCallout(owner, severity > 1 ? "重度麻痺！" : "麻痺！");
         return playerCollisionParalysisMs > maxCollisionParalysisMs;
       } else {
         computerStunUntil = Math.max(computerStunUntil, stunUntil);
         computerSlowUntil = Math.max(computerSlowUntil, slowUntil);
         computerCollisionParalysisMs += collisionStunMs * severity;
+        showStatusCallout(owner, severity > 1 ? "重度麻痺！" : "麻痺！");
         return computerCollisionParalysisMs > maxCollisionParalysisMs;
       }
     }
@@ -1672,6 +1677,7 @@
         computerStunUntil = Math.max(computerStunUntil, stunUntil);
         computerSlowUntil = Math.max(computerSlowUntil, slowUntil);
       }
+      showStatusCallout(owner, "麻痺！");
     }
 
     function collisionSeverity(selfHit, opponentHit) {
