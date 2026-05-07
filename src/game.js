@@ -3178,7 +3178,7 @@
       resetGame();
       resize();
       overlayTitle.textContent = "食物數量已更新";
-      overlayText.textContent = `場上會維持 ${foodCount} 個紅黃綠藍隨機食物。`;
+      overlayText.textContent = `場上會維持 ${foodCount} 個蛋白質、脂肪、纖維素、碳水隨機食物。`;
       startButton.textContent = "開始";
       renderIntroPortraits(true);
       overlay.classList.add("show");
@@ -3568,7 +3568,7 @@
         return;
       }
       overlayTitle.textContent = "準備開局";
-      overlayText.textContent = `每吃 1 個食物獲得 2 點能量，集滿 ${attackNeedTotal} 點獲得 1 枚炸彈，最多 ${maxAmmo} 枚；能量與炸彈都滿時，施放消耗炸彈的招式會立刻把滿能量轉為 1 枚炸彈；小招消耗紅黃綠藍各 1 點，大招消耗 ${bigAttackBombCost} 枚炸彈與紅黃綠藍各 2 點。`;
+      overlayText.textContent = `每吃 1 個食物獲得 2 點能量，集滿 ${attackNeedTotal} 點獲得 1 枚炸彈，最多 ${maxAmmo} 枚；能量與炸彈都滿時，施放消耗炸彈的招式會立刻把滿能量轉為 1 枚炸彈；小招消耗蛋白質、脂肪、纖維素、碳水各 1 點，大招消耗 ${bigAttackBombCost} 枚炸彈與四種庫存各 2 點。`;
       startButton.textContent = "開始";
       setOverlayChromeVisible(true);
       startGame();

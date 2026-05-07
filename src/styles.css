@@ -1104,6 +1104,37 @@
       font-weight: 760;
     }
 
+    .tutorial-resource-guide-panel.is-food-detail-panel {
+      align-content: start;
+    }
+
+    .tutorial-food-detail-list {
+      display: grid;
+      gap: 6px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .tutorial-food-detail-list li {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 8px;
+      align-items: start;
+      min-width: 0;
+    }
+
+    .tutorial-food-detail-list b {
+      color: var(--ink);
+      font-weight: 950;
+    }
+
+    .tutorial-food-detail-list span {
+      min-width: 0;
+      font-size: 0.78rem;
+      line-height: 1.26;
+    }
+
     .tutorial-hex {
       width: 58px;
       height: 52px;
@@ -1737,6 +1768,19 @@
       .tutorial-resource-guide-panel span {
         font-size: 0.72rem;
         line-height: 1.28;
+      }
+
+      .tutorial-food-detail-list {
+        gap: 4px;
+      }
+
+      .tutorial-food-detail-list li {
+        gap: 6px;
+      }
+
+      .tutorial-food-detail-list span {
+        font-size: 0.66rem;
+        line-height: 1.2;
       }
 
       .tutorial-copy {
@@ -5133,6 +5177,19 @@
       .tutorial-resource-guide-panel span {
         font-size: 0.72rem;
         line-height: 1.28;
+      }
+
+      .tutorial-food-detail-list {
+        gap: 4px;
+      }
+
+      .tutorial-food-detail-list li {
+        gap: 6px;
+      }
+
+      .tutorial-food-detail-list span {
+        font-size: 0.66rem;
+        line-height: 1.2;
       }
 
       .tutorial-copy {

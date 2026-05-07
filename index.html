@@ -42,7 +42,7 @@
           <div class="dialog">
             <div id="winnerPortrait" hidden></div>
             <h2 id="overlayTitle">準備開局</h2>
-            <p id="overlayText">每吃 1 個食物獲得 2 點能量，集滿 6 點獲得 1 枚炸彈，最多 3 枚；能量與炸彈都滿時，施放消耗炸彈的招式會立刻把滿能量轉為 1 枚炸彈；小招消耗紅黃綠藍各 1 點，大招消耗 2 枚炸彈與紅黃綠藍各 2 點。</p>
+            <p id="overlayText">每吃 1 個食物獲得 2 點能量，集滿 6 點獲得 1 枚炸彈，最多 3 枚；能量與炸彈都滿時，施放消耗炸彈的招式會立刻把滿能量轉為 1 枚炸彈；小招消耗蛋白質、脂肪、纖維素、碳水各 1 點，大招消耗 2 枚炸彈與四種庫存各 2 點。</p>
             <div class="dialog-actions">
               <button id="startButton" type="button">開始</button>
               <button id="computerBattleButton" class="secondary" type="button">自動對弈</button>
@@ -217,21 +217,21 @@
             <label for="initialBombs">初始炸彈</label>
             <input id="initialBombs" type="number" min="0" max="3" step="1" value="0" inputmode="numeric">
           </div>
-          <div class="food-stock-grid" aria-label="各色食物初始值">
+          <div class="food-stock-grid" aria-label="食物庫存初始值">
             <div class="field">
-              <label for="initialProtein">紅色食物</label>
+              <label for="initialProtein">蛋白質（紅色）</label>
               <input id="initialProtein" data-initial-stock="protein" type="number" min="0" max="20" step="1" value="0" inputmode="numeric">
             </div>
             <div class="field">
-              <label for="initialFat">黃色食物</label>
+              <label for="initialFat">脂肪（黃色）</label>
               <input id="initialFat" data-initial-stock="fat" type="number" min="0" max="20" step="1" value="0" inputmode="numeric">
             </div>
             <div class="field">
-              <label for="initialFiber">綠色食物</label>
+              <label for="initialFiber">纖維素（綠色）</label>
               <input id="initialFiber" data-initial-stock="fiber" type="number" min="0" max="20" step="1" value="0" inputmode="numeric">
             </div>
             <div class="field">
-              <label for="initialCarb">藍色食物</label>
+              <label for="initialCarb">碳水（藍色）</label>
               <input id="initialCarb" data-initial-stock="carb" type="number" min="0" max="20" step="1" value="0" inputmode="numeric">
             </div>
           </div>

@@ -188,21 +188,26 @@ const directions = [
   { q: -1, r: 0, angle: -150, key: "a", label: "左方" }
 ];
 const foodTypes = [
-  { id: "protein", label: "蛋白", name: "蛋白質", foodName: "紅色食物", effect: "爆炸半徑由 2 連續成長到 4，小數部分會讓最外圈承受對應比例傷害", color: "#ef4444", line: "#fecaca" },
-  { id: "fat", label: "油脂", name: "油脂", foodName: "黃色食物", effect: "攻擊傷害係數基礎 2，滿庫存約 3.4", color: "#facc15", line: "#fef08a" },
-  { id: "fiber", label: "纖維", name: "纖維素", foodName: "綠色食物", effect: "提升移動速度，滿庫存約 1.8x", color: "#22c55e", line: "#bbf7d0" },
-  { id: "carb", label: "碳水", name: "碳水", foodName: "藍色食物", effect: "提升攻擊施展與冷卻速度，並提高命中暈眩機率", color: "#3b82f6", line: "#bfdbfe" }
+  { id: "protein", label: "蛋白", name: "蛋白質", colorName: "紅色", foodName: "蛋白質", effect: "爆炸半徑由 2 連續成長到 4，小數部分會讓最外圈承受對應比例傷害", color: "#ef4444", line: "#fecaca" },
+  { id: "fat", label: "脂肪", name: "脂肪", colorName: "黃色", foodName: "脂肪", effect: "攻擊傷害係數基礎 2，滿庫存約 3.4", color: "#facc15", line: "#fef08a" },
+  { id: "fiber", label: "纖維", name: "纖維素", colorName: "綠色", foodName: "纖維素", effect: "提升移動速度，滿庫存約 1.8x", color: "#22c55e", line: "#bbf7d0" },
+  { id: "carb", label: "碳水", name: "碳水", colorName: "藍色", foodName: "碳水", effect: "提升攻擊施展與冷卻速度，並提高命中暈眩機率", color: "#3b82f6", line: "#bfdbfe" }
 ];
-const blackFoodType = { id: "black", label: "迷幻菇", name: "迷幻菇", foodName: "迷幻菇", effect: "特殊食物；吃下後紅黃綠藍隨機一種庫存 +1，並獲得 3 點能量", color: "#050505", line: "#e5e7eb" };
+const blackFoodType = { id: "black", label: "迷幻菇", name: "迷幻菇", colorName: "黑色", foodName: "迷幻菇", effect: "特殊食物；吃下後蛋白質、脂肪、纖維素、碳水隨機一種庫存 +1，並獲得 3 點能量", color: "#050505", line: "#e5e7eb" };
+const dualFoodName = "蟠桃";
 const foodTypeById = new Map([...foodTypes, blackFoodType].map(type => [type.id, type]));
 const foodLabels = {
   balanced: "均衡",
-  protein: "紅色食物",
-  fat: "黃色食物",
-  fiber: "綠色食物",
-  carb: "藍色食物",
+  protein: "蛋白質",
+  fat: "脂肪",
+  fiber: "纖維素",
+  carb: "碳水",
   black: "迷幻菇"
 };
+
+function foodNameWithColor(type) {
+  return type?.colorName ? `${type.name}（${type.colorName}）` : type?.name || "";
+}
 const poseAliases = {
   opening: "opening",
   intro: "opening",
@@ -473,7 +478,7 @@ const characterMoveGuides = {
     tip: "長按棋盤可預判敵方頭部下一步；施放後接近命中時會短暫潛地，可用來躲開危險。"
   },
   quetzal: {
-    big: "按大招鍵、點「大招」，或在棋盤長按都會施放；羽蛇會沿自身蛇身留下<strong>持續 3 秒</strong>的<strong>藤沼區域</strong>，不需要指定落點，紅色庫存越高外擴傷害越完整。",
+    big: "按大招鍵、點「大招」，或在棋盤長按都會施放；羽蛇會沿自身蛇身留下<strong>持續 3 秒</strong>的<strong>藤沼區域</strong>，不需要指定落點，蛋白質（紅色）庫存越高外擴傷害越完整。",
     tip: "適合在敵方靠近你身體或追逐時施放，用身體路徑封鎖空間。"
   },
   moray: {
@@ -531,7 +536,7 @@ const tutorialSlides = [
       },
       {
         title: "控制效果",
-        text: `攻擊命中後有 ${Math.round(baseAttackStunChance * 100)}% 基礎機率暈眩，藍色食物庫存會提高暈眩率；暈眩會讓對手短時間無法順利走位。`
+        text: `攻擊命中後有 ${Math.round(baseAttackStunChance * 100)}% 基礎機率暈眩，碳水（藍色）庫存會提高暈眩率；暈眩會讓對手短時間無法順利走位。`
       },
       {
         title: "撞擊懲罰",
@@ -540,13 +545,13 @@ const tutorialSlides = [
     ]
   },
   {
-    title: "食物資源",
+    title: "食物與資源細節",
     visual: "resources",
-    tag: "食物 + 資源圖表",
-    lead: "先看資源圖表，判斷現在缺的是各色庫存、能量，還是炸彈。",
+    tag: "正式名稱 + 資源圖表",
+    lead: "食物以正式名稱標示，括號是棋盤顏色；先看資源圖表判斷缺哪種庫存、能量或炸彈。",
     points: [
-      "缺庫存時：優先找對應顏色的食物；吃到食物會增加 1 段蛇身並增加2點HP。",
-      "缺炸彈時：持續吃食物累積能量；能量滿後會轉成炸彈，供大招使用。"
+      "吃到食物會增加 1 段蛇身並增加 2 點 HP。",
+      `${dualFoodName}會補棋盤上顯示的兩種庫存；能量與炸彈仍是大招節奏的核心資源。`
     ],
     note: "食物庫存與炸彈決定能不能放招式；兩邊都要顧。"
   },
@@ -559,12 +564,12 @@ const tutorialSlides = [
       {
         title: "小招操作",
         text: "按<strong>鍵盤Q</strong> 或<strong>小招</strong>按鈕施放；短按棋盤也可施展小招。",
-        cost: `成本：紅、黃、綠、藍四種庫存各 1 點。`
+        cost: `成本：蛋白質、脂肪、纖維素、碳水四種庫存各 1 點。`
       },
       {
         title: "大招操作",
         text: "按<strong>鍵盤R</strong> 或<strong>大招</strong>按鈕施放；長按或拖曳棋盤也可施展大招。",
-        cost: `成本：${bigAttackBombCost} 枚炸彈，且紅、黃、綠、藍四種庫存各 2 點。`
+        cost: `成本：${bigAttackBombCost} 枚炸彈，且蛋白質、脂肪、纖維素、碳水四種庫存各 2 點。`
       },
       {
         title: "瞄準細節",
@@ -826,12 +831,38 @@ function tutorialSnapshotMarkup(type) {
       `;
 }
 
+function tutorialFoodDetailListMarkup() {
+  const naturalFoodItems = foodTypes.map(type => `
+            <li>
+              ${foodIconGroupMarkup(type.id, `自然產出${foodNameWithColor(type)}`)}
+              <span><b>${foodNameWithColor(type)}</b>：${type.effect}。</span>
+            </li>
+          `).join("");
+  return `
+          <ul class="tutorial-food-detail-list" aria-label="食物效果細節">
+            ${naturalFoodItems}
+            <li>
+              ${foodIconGroupMarkup(foodTypes.map(type => type.id), dualFoodName)}
+              <span><b>${dualFoodName}</b>：補棋盤上顯示的兩種庫存各 ${dualColorStockGain} 點，並獲得 ${foodEnergy} 點能量。</span>
+            </li>
+            <li>
+              ${foodIconGroupMarkup("black", foodNameWithColor(blackFoodType))}
+              <span><b>${foodNameWithColor(blackFoodType)}</b>：${blackFoodType.effect}；不會自然產出。</span>
+            </li>
+          </ul>
+        `;
+}
+
 function tutorialResourceGuideMarkup() {
   return `
         <div class="tutorial-resource-guide" aria-label="資源說明">
+          <div class="tutorial-resource-guide-panel is-food-detail-panel">
+            <strong>食物效果</strong>
+            ${tutorialFoodDetailListMarkup()}
+          </div>
           <div class="tutorial-resource-guide-panel">
-            <strong>各色庫存</strong>
-            <span>紅、黃、綠、藍是招式材料；單色補同色 2 點，雙色補兩色各 1 點，每色最多 ${maxFoodStock} 點。</span>
+            <strong>庫存上限</strong>
+            <span>單一食物補同名庫存 ${singleColorStockGain} 點；${dualFoodName}補兩種庫存各 ${dualColorStockGain} 點；每種庫存最多 ${maxFoodStock} 點。</span>
           </div>
           <div class="tutorial-resource-guide-panel">
             <strong>能量與炸彈</strong>
@@ -943,27 +974,23 @@ function moveTutorial(delta) {
 
 function weightedFoodIconMarkup(character) {
   if (character?.specialFood === "black") {
-    return foodIconGroupMarkup("black", "加權產出迷幻菇");
+    return foodIconGroupMarkup("black", `加權產出${foodNameWithColor(blackFoodType)}`);
   }
   if (character?.food === "balanced") {
-    return foodIconGroupMarkup(foodTypes.map(type => type.id), "均衡產出紅黃綠藍食物");
+    return foodIconGroupMarkup(foodTypes.map(type => type.id), `均衡產出四種食物，並可能補出${dualFoodName}`);
   }
-  return foodIconGroupMarkup(character?.food, `加權產出${character.foodLabel}`);
+  const type = foodTypeById.get(character?.food);
+  return foodIconGroupMarkup(character?.food, `加權產出${type ? foodNameWithColor(type) : character.foodLabel}`);
+}
+
+function characterFoodLabelForRules(character) {
+  if (character?.specialFood === "black") return foodNameWithColor(blackFoodType);
+  if (character?.food === "balanced") return `${foodLabels.balanced}／${dualFoodName}`;
+  const type = foodTypeById.get(character?.food);
+  return type ? foodNameWithColor(type) : character?.foodLabel || foodLabels.balanced;
 }
 
 function buildRulesContent() {
-  const foodLegend = foodTypes.map(type => `
-        <li class="rule-food-line">
-          ${foodIconGroupMarkup(type.id, `自然產出${type.foodName}`)}
-          <span><b>${type.foodName}</b>: ${type.name}，${type.effect}</span>
-        </li>
-      `).join("");
-  const specialFoodLegend = `
-        <li class="rule-food-line">
-          ${foodIconGroupMarkup("black", blackFoodType.foodName)}
-          <span><b>${blackFoodType.foodName}</b>: ${blackFoodType.name}，${blackFoodType.effect}；不會自然產出。</span>
-        </li>
-      `;
   const characterLegend = characters.map(character => {
     const guide = moveGuideFor(character);
     return `
@@ -983,7 +1010,7 @@ function buildRulesContent() {
             <span class="rules-character-body">
               <span class="rules-character-title">
                 <b>${character.name}</b>
-                <span class="rules-character-role">${character.foodLabel}專精</span>
+                <span class="rules-character-role">${characterFoodLabelForRules(character)}專精</span>
               </span>
               <span class="rule-move-line"><b>角色大招：</b>${guide.big}</span>
               <span class="rule-move-line"><b>實戰重點：</b>${guide.tip}</span>
@@ -995,21 +1022,13 @@ function buildRulesContent() {
   rulesContent.innerHTML = `
         <section class="rules-block rules-tutorial-callout">
           <h3>新手試玩教學</h3>
-          <p>想先用圖片快速看懂移動、食物資源與小招操作，可以從這裡重新開啟教學頁。</p>
+          <p>想先用圖片快速看懂移動、食物與資源細節、小招操作，可以從這裡重新開啟教學頁。</p>
           <button class="secondary" type="button" data-open-tutorial>觀看新手教學</button>
         </section>
         <section class="rules-block">
           <h3>進階對戰</h3>
           <ul class="rules-list">
             <li><b>按鍵自訂</b>：小招、大招、暫停、投降與六方向鍵都可在開局設定中修改；若方向鍵與 X / Y 目標鍵相同，X / Y 目標鍵會優先作用。</li>
-          </ul>
-        </section>
-        <section class="rules-block">
-          <h3>食物與資源細節</h3>
-          <ul class="rules-list">
-            ${foodLegend}
-            ${specialFoodLegend}
-            <li><b>庫存上限</b>：每種食物最多累積 ${maxFoodStock} 點；一般專精角色只影響補貨偏好，特殊角色可能產出專屬食物。</li>
           </ul>
         </section>
         <section class="rules-block">
