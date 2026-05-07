@@ -1487,8 +1487,17 @@ function showAttackCallout(owner, profile) {
   showFighterCallout(owner, profile === "small" ? character.smallMove : character.bigMove);
 }
 
+function statusCalloutText(text) {
+  return String(text || "")
+    .split(/[！!]+/)
+    .map(item => item.trim())
+    .filter(Boolean)
+    .map(item => item.startsWith("(") && item.endsWith(")") ? item : `(${item})`)
+    .join("");
+}
+
 function showStatusCallout(owner, text, options = {}) {
-  showFighterCallout(owner, text, {
+  showFighterCallout(owner, statusCalloutText(text), {
     kind: options.interrupted ? "interrupt" : "status",
     duration: options.duration ?? 1350
   });
