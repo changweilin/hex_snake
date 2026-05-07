@@ -832,6 +832,31 @@ test("high food race compares arrival time using each fighter speed", () => {
   assert.deepEqual(chooseFoodTarget(state, fighter, opponent), state.foods[1]);
 });
 
+test("high food target abandons locked food when resource value collapses", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("dragon"),
+    computerCharacter: characterById.get("quetzal"),
+    seed: "high-food-retarget-resource-value",
+    computerModel: { aiDifficulty: "high", pathPrecision: 1, aimPrecision: 1 }
+  });
+  const fighter = state.fighters.computer;
+  const opponent = state.fighters.player;
+  fighter.snake[0] = { q: 0, r: 0 };
+  opponent.snake[0] = { q: 5, r: -5 };
+  fighter.stock.fat = balance.resources.maxFoodStock;
+  fighter.stock.fiber = 0;
+  state.now = 2000;
+  state.foods = [
+    { q: 1, r: 0, types: ["fat"] },
+    { q: 2, r: 0, types: ["fiber"] }
+  ];
+  fighter.foodTargetKey = `${state.foods[0].q},${state.foods[0].r}`;
+  fighter.foodTargetAt = 1000;
+  fighter.policy.strategyWeights.food = { fastestArrival: 0, ownDeficit: 3, opponentDeficit: 0, ownPreferred: 3, opponentPreferred: 0 };
+  assert.deepEqual(chooseFoodTarget(state, fighter, opponent), state.foods[1]);
+});
+
 test("stale food target timer resets when switching to a new target", () => {
   const state = createMatchState({
     balance,

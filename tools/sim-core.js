@@ -230,6 +230,81 @@ function arrivalTimeForDistance(fighter, balance, distance, now) {
   return distance * ((Number.isFinite(interval) ? interval : baseInterval) / baseInterval);
 }
 
+function foodTypeIdsForValue(food) {
+  const types = food?.types || [];
+  if (types.includes("black")) return FOOD_TYPES;
+  return types.filter(type => FOOD_TYPES.includes(type));
+}
+
+function foodExpectedStockGain(food, balance) {
+  const types = food?.types || [];
+  if (types.includes("black")) return 1;
+  return types.length > 1 ? balance.resources.dualColorStockGain : balance.resources.singleColorStockGain;
+}
+
+function foodGainPerType(food, balance, normalizedTypes) {
+  const types = food?.types || [];
+  if (types.includes("black")) return 1 / Math.max(1, normalizedTypes.length);
+  return foodExpectedStockGain(food, balance);
+}
+
+function projectedAmmoAfterFood(fighter, balance, food) {
+  let ammo = fighter.ammo;
+  let charge = fighter.ammoCharge + ((food?.types || []).includes("black") ? balance.resources.blackFoodEnergy : balance.resources.foodEnergy);
+  if (charge >= balance.resources.attackNeedTotal) {
+    if (ammo < balance.resources.maxAmmo) {
+      ammo = Math.min(balance.resources.maxAmmo, ammo + 1);
+      charge = 0;
+    } else {
+      charge = balance.resources.attackNeedTotal;
+    }
+  }
+  return { ammo, charge };
+}
+
+function projectedStockAfterFood(stock, balance, food) {
+  const projected = { ...stock };
+  const normalizedTypes = foodTypeIdsForValue(food);
+  const gain = foodGainPerType(food, balance, normalizedTypes);
+  normalizedTypes.forEach(type => {
+    projected[type] = Math.min(balance.resources.maxFoodStock, (projected[type] || 0) + gain);
+  });
+  return projected;
+}
+
+function canAttackWithResources(stock, ammo, profile, balance) {
+  if (ammo < attackBombCost(profile, balance)) return false;
+  const cost = attackFoodCost(profile, balance);
+  if (profile === "small") {
+    return FOOD_TYPES.reduce((best, type) => Math.max(best, stock[type] || 0), 0) >= cost;
+  }
+  return FOOD_TYPES.every(type => (stock[type] || 0) >= cost);
+}
+
+function foodResourceValueFor(fighter, food, balance) {
+  const projectedStock = projectedStockAfterFood(fighter.stock, balance, food);
+  const projectedAmmo = projectedAmmoAfterFood(fighter, balance, food);
+  const normalizedTypes = foodTypeIdsForValue(food);
+  const expectedStockGain = foodExpectedStockGain(food, balance);
+  const stockCap = fighter.balanceStockCap ?? balance.resources.maxFoodStock;
+  const actualStockGain = normalizedTypes.reduce((sum, type) => sum + Math.max(0, (projectedStock[type] || 0) - (fighter.stock[type] || 0)), 0);
+  const stockValue = normalizedTypes.reduce((sum, type) => {
+    const before = fighter.stock[type] || 0;
+    const gained = Math.max(0, (projectedStock[type] || 0) - before);
+    const roomRatio = Math.max(0, stockCap - before) / Math.max(1, stockCap);
+    const bigGap = Math.max(0, attackFoodCost("big", balance) - before);
+    return sum + gained * (1 + roomRatio + (bigGap > 0 ? 0.85 : 0));
+  }, 0);
+  const bombGain = Math.max(0, projectedAmmo.ammo - fighter.ammo);
+  const chargeGain = Math.max(0, projectedAmmo.charge - fighter.ammoCharge) / Math.max(1, balance.resources.attackNeedTotal);
+  const energyValue = bombGain * 2.2 + chargeGain * 1.4;
+  const smallReady = !canAttack(fighter, "small", balance) && canAttackWithResources(projectedStock, projectedAmmo.ammo, "small", balance) ? 2.1 : 0;
+  const bigReady = !canAttack(fighter, "big", balance) && canAttackWithResources(projectedStock, projectedAmmo.ammo, "big", balance) ? 3.2 : 0;
+  const overflowPenalty = Math.max(0, expectedStockGain - actualStockGain) * 0.45
+    + (fighter.ammo >= balance.resources.maxAmmo && fighter.ammoCharge >= balance.resources.attackNeedTotal ? 0.9 : 0);
+  return Math.max(0, 0.5 + stockValue + energyValue + smallReady + bigReady - overflowPenalty);
+}
+
 function attackDelay(stock, balance) {
   return balance.attack.baseAttackDelayMs / attackSpeedMultiplier(stock, balance);
 }
@@ -664,7 +739,7 @@ function foodValueFor(fighter, opponent, food, policy, state = null) {
   const preferredFood = aiProfile.preferredFood || fighter.character.foodPreference;
   const opponentPreferredFood = opponentProfile.preferredFood || opponent.character.foodPreference;
   const weights = policy.strategyWeights.food;
-  const normalizedTypes = types.includes("black") ? FOOD_TYPES : types.filter(type => FOOD_TYPES.includes(type));
+  const normalizedTypes = foodTypeIdsForValue(food);
   const ownDeficit = normalizedTypes.reduce((sum, type) => sum + (fighter.balanceStockCap ?? 20) - (fighter.stock[type] || 0), 0) / Math.max(1, normalizedTypes.length);
   const opponentDeficit = normalizedTypes.reduce((sum, type) => sum + (fighter.balanceStockCap ?? 20) - (opponent.stock[type] || 0), 0) / Math.max(1, normalizedTypes.length);
   const ownPrefers = preferredFood === "balanced"
@@ -673,14 +748,51 @@ function foodValueFor(fighter, opponent, food, policy, state = null) {
   const opponentPrefers = opponentPreferredFood === "balanced"
     ? normalizedTypes.length > 0
     : opponentPreferredFood === "black" ? types.includes("black") : types.includes(opponentPreferredFood);
+  if (!highDifficulty) {
+    return (
+      weights.fastestArrival * (1 / (1 + ownDistance)) * 10 +
+      weights.ownDeficit * ownDeficit / 5 +
+      weights.opponentDeficit * opponentDeficit / 6 +
+      weights.ownPreferred * (ownPrefers ? 2.5 : 0) +
+      weights.opponentPreferred * (opponentPrefers ? 2 : 0) +
+      (opponentDistance <= ownDistance ? weights.opponentDeficit * 0.35 : 0)
+    );
+  }
+  const ownResourceValue = foodResourceValueFor(fighter, food, state.balance);
+  const opponentResourceValue = foodResourceValueFor(opponent, food, state.balance);
+  const raceLead = opponentArrivalTime - ownArrivalTime;
   return (
-    weights.fastestArrival * (1 / (1 + ownArrivalTime)) * 10 +
-    weights.ownDeficit * ownDeficit / 5 +
-    weights.opponentDeficit * opponentDeficit / 6 +
+    weights.fastestArrival * (8 + ownResourceValue) / (1 + ownArrivalTime) +
+    ownResourceValue * (0.7 + weights.ownDeficit * 0.12) +
+    weights.ownDeficit * ownDeficit / 6 +
+    weights.opponentDeficit * opponentDeficit / 8 +
     weights.ownPreferred * (ownPrefers ? 2.5 : 0) +
-    weights.opponentPreferred * (opponentPrefers ? 2 : 0) +
-    (opponentArrivalTime <= ownArrivalTime ? weights.opponentDeficit * 0.35 : 0)
+    weights.opponentPreferred * (opponentPrefers ? Math.min(2.4, 0.8 + opponentResourceValue * 0.32) : 0) +
+    weights.opponentDeficit * opponentResourceValue / (1 + opponentArrivalTime) * 0.25 +
+    (opponentArrivalTime <= ownArrivalTime ? weights.opponentDeficit * 0.35 : 0) +
+    (raceLead >= 0 ? Math.min(2.5, raceLead * 0.35) : -Math.min(3.5, -raceLead * 0.8))
   );
+}
+
+function foodRaceAdvantage(state, fighter, opponent, food) {
+  if (fighter.policy.aiDifficulty === "high") {
+    const opponentHead = perceivedSnakeFor(state, fighter, opponent)[0] || opponent.snake[0];
+    return arrivalTimeForDistance(fighter, state.balance, wrappedDistance(state, fighter.snake[0], food), state.now)
+      - arrivalTimeForDistance(opponent, state.balance, wrappedDistance(state, opponentHead, food), state.now);
+  }
+  return wrappedDistance(state, fighter.snake[0], food) - wrappedDistance(state, opponent.snake[0], food);
+}
+
+function shouldAbandonFoodTarget(state, fighter, opponent, food, lockedScore, bestScore, targetAge) {
+  if (fighter.policy.aiDifficulty !== "high") return false;
+  const occupied = movementOccupiedSet(state, fighter, opponent);
+  const reachable = reachableSpace(state, food, occupied, DEAD_END_MIN_SPACE);
+  const expectedDamage = expectedDamageAt(state, fighter, food);
+  const opponentAdvantage = foodRaceAdvantage(state, fighter, opponent, food);
+  return expectedDamage >= fighter.hp
+    || reachable < DEAD_END_MIN_SPACE
+    || opponentAdvantage > 0.45
+    || (targetAge >= 750 && bestScore > lockedScore + 2.25);
 }
 
 function chooseFoodTarget(state, fighter, opponent) {
@@ -691,8 +803,15 @@ function chooseFoodTarget(state, fighter, opponent) {
   const filteredChoices = filterUnsafeFoodTargets(state, fighter, opponent, choices.length ? choices : state.foods);
   const targetPool = filteredChoices.length ? filteredChoices : choices.length ? choices : state.foods;
   const lockedTarget = !staleTarget && fighter.foodTargetKey ? targetPool.find(food => keyOf(food) === fighter.foodTargetKey) : null;
-  const target = lockedTarget || [...targetPool]
-    .sort((a, b) => foodValueFor(fighter, opponent, b, fighter.policy, state) - foodValueFor(fighter, opponent, a, fighter.policy, state))[0];
+  const sortedTargets = [...targetPool]
+    .map(food => ({ food, score: foodValueFor(fighter, opponent, food, fighter.policy, state) }))
+    .sort((a, b) => b.score - a.score);
+  const bestTarget = sortedTargets[0] || null;
+  const lockedScore = lockedTarget ? foodValueFor(fighter, opponent, lockedTarget, fighter.policy, state) : -Infinity;
+  const targetAge = Number.isFinite(fighter.foodTargetAt) ? state.now - fighter.foodTargetAt : Infinity;
+  const target = lockedTarget && !shouldAbandonFoodTarget(state, fighter, opponent, lockedTarget, lockedScore, bestTarget?.score ?? -Infinity, targetAge)
+    ? lockedTarget
+    : bestTarget?.food;
   const nextTargetKey = target ? keyOf(target) : null;
   if (nextTargetKey !== fighter.foodTargetKey) fighter.foodTargetAt = nextTargetKey ? state.now : 0;
   fighter.foodTargetKey = nextTargetKey;
@@ -711,14 +830,13 @@ function filterUnsafeFoodTargets(state, fighter, opponent, foods) {
   const occupied = movementOccupiedSet(state, fighter, opponent);
   const withRace = foods.map(food => ({
     food,
-    opponentAdvantage: fighter.policy.aiDifficulty === "high"
-      ? arrivalTimeForDistance(fighter, state.balance, wrappedDistance(state, fighter.snake[0], food), state.now)
-        - arrivalTimeForDistance(opponent, state.balance, wrappedDistance(state, opponent.snake[0], food), state.now)
-      : wrappedDistance(state, fighter.snake[0], food) - wrappedDistance(state, opponent.snake[0], food),
+    opponentAdvantage: foodRaceAdvantage(state, fighter, opponent, food),
+    expectedDamage: expectedDamageAt(state, fighter, food),
     reachable: reachableSpace(state, food, occupied, DEAD_END_MIN_SPACE)
   }));
   const maxOpponentAdvantage = Math.max(0, ...withRace.map(row => row.opponentAdvantage));
   const filtered = withRace
+    .filter(row => fighter.policy.aiDifficulty !== "high" || row.expectedDamage < fighter.hp)
     .filter(row => !(maxOpponentAdvantage > 0 && row.opponentAdvantage === maxOpponentAdvantage))
     .filter(row => row.reachable >= DEAD_END_MIN_SPACE)
     .map(row => row.food);
@@ -730,6 +848,22 @@ function movementOccupiedSetForSnake(state, fighter, opponent, snake) {
   const perceivedOpponent = perceivedSnakeFor(state, fighter, opponent);
   if (fighter.policy.pathPrecision > 0.35 && !isUnderground(opponent, state.now)) perceivedOpponent.forEach(segment => occupied.add(keyOf(segment)));
   return occupied;
+}
+
+function movementTargetBenefit(state, fighter, target) {
+  if (fighter.policy.aiDifficulty !== "high" || !target) return 0;
+  const targetFood = state.foods.find(food => keyOf(food) === keyOf(target));
+  return targetFood ? Math.min(20, foodResourceValueFor(fighter, targetFood, state.balance)) : 0;
+}
+
+function opponentEtaThreatForCell(state, fighter, opponent, from, cell, opponentHead) {
+  if (fighter.policy.aiDifficulty !== "high" || !cell || !opponentHead) return 0;
+  const ownArrival = arrivalTimeForDistance(fighter, state.balance, wrappedDistance(state, from, cell), state.now);
+  const opponentArrival = arrivalTimeForDistance(opponent, state.balance, wrappedDistance(state, opponentHead, cell), state.now);
+  if (!Number.isFinite(ownArrival) || !Number.isFinite(opponentArrival)) return 0;
+  if (opponentArrival <= ownArrival) return 10 + Math.min(10, (ownArrival - opponentArrival) * 4);
+  if (opponentArrival <= ownArrival + 0.5) return 4;
+  return 0;
 }
 
 function movementOptionForState(state, fighter, opponent, snake, currentDir, direction, target, occupied, perceivedOpponent, opponentThreat, distanceToTarget = cell => wrappedDistance(state, cell, target)) {
@@ -746,7 +880,9 @@ function movementOptionForState(state, fighter, opponent, snake, currentDir, dir
   const trapRisk = Math.max(0, 5 - reachable);
   const deadEnd = reachable < DEAD_END_MIN_SPACE;
   const lethalThreat = expectedDamage >= fighter.hp;
-  const risk = (selfBlocked ? 100 : 0) + (opponentBlocked ? 35 : 0) + trapRisk * 4 + expectedDamage;
+  const etaThreat = opponentEtaThreatForCell(state, fighter, opponent, snake[0], next, perceivedOpponent[0]);
+  const targetBenefit = movementTargetBenefit(state, fighter, target);
+  const risk = (selfBlocked ? 100 : 0) + (opponentBlocked ? 35 : 0) + etaThreat + trapRisk * 4 + expectedDamage;
   return {
     direction,
     next,
@@ -758,6 +894,8 @@ function movementOptionForState(state, fighter, opponent, snake, currentDir, dir
     score: weights.fastestArrival * distanceToTarget(next)
       + weights.safePath * risk
       + weights.leastDamage * expectedDamage
+      + etaThreat * 0.65
+      - targetBenefit / (1 + distanceToTarget(next)) * 1.15
       - wallSpace * 0.04
   };
 }
