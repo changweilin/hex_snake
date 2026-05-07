@@ -563,8 +563,7 @@ const tutorialSlides = [
     points: [
       "蛋白拉大爆炸半徑、脂肪增加傷害、纖維提高速度、碳水加快攻擊並提高暈眩。",
       `能量滿 ${attackNeedTotal} 點轉成炸彈，炸彈最多 ${maxAmmo} 枚，是大招的主要消耗。`
-    ],
-    note: "看食物效果區塊確認每種食物能補什麼，再回到棋盤搶最缺的資源。"
+    ]
   },
   {
     title: "招式操作",
@@ -924,7 +923,7 @@ function renderTutorialSlide() {
               `).join("")}
             ` : `
               ${slide.points.map(point => `<p class="tutorial-line"><span>${point}</span></p>`).join("")}
-              <p class="tutorial-line tutorial-note"><span>${slide.note}</span></p>
+              ${slide.note ? `<p class="tutorial-line tutorial-note"><span>${slide.note}</span></p>` : ""}
             `}
           </div>
           <div class="tutorial-actions">
