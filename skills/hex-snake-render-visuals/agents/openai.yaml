@@ -1,0 +1,4 @@
+interface:
+  display_name: "Hex Snake Render Visuals"
+  short_description: "Maintain Hex Snake canvas rendering and visual effects."
+  default_prompt: "Use $hex-snake-render-visuals to inspect or change Hex Snake render and visual effect code."

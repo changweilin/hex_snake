@@ -8,10 +8,10 @@ const promptDir = path.join(portraitDir, "prompts");
 const semanticPoses = ["opening", "intro", "small", "big", "victory", "defeat"];
 const foods = {
   balanced: "均衡",
-  protein: "紅色蛋白質",
-  fat: "黃色脂肪",
-  fiber: "綠色纖維",
-  carb: "藍色碳水"
+  protein: "蛋白（紅色）",
+  fat: "脂肪（黃色）",
+  fiber: "纖維（綠色）",
+  carb: "碳水（藍色）"
 };
 
 function parseArgs(argv) {
@@ -102,7 +102,7 @@ function mix(hex, target, amount) {
 
 function foodEffect(food, name) {
   if (food === "balanced") {
-    return `均衡型角色；${name}吃食後補出的新食物有 50% 機率為雙色，提供更彈性的資源路線。`;
+    return `均衡型角色；${name}吃食後補出的新食物有 50% 機率為蟠桃(雙色)，提供更彈性的資源路線。`;
   }
   return `偏好${foods[food]}；食物生成傾向${foods[food]}。`;
 }

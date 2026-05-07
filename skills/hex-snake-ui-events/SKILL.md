@@ -1,54 +1,46 @@
 ---
 name: hex-snake-ui-events
-description: Use for Hex Snake UI logic and event-flow work in index.html: inspect or change input handling, overlay state, modal behavior, keyboard shortcuts, joystick/touch controls, portrait lightbox, computer battle controls, localStorage settings, and game start/pause/surrender transitions without changing balance data.
+description: Maintain Hex Snake UI state and event flow after the src/ module split. Use for src/ui.js, src/dom.js, index.html, input handling, overlays, modals, keyboard and touch controls, portrait lightbox, settings, localStorage, and game start/pause/surrender UI transitions.
 ---
 
 # Hex Snake UI Events
 
-Use this skill when changing the browser game interface, input behavior, UI state transitions, accessibility attributes, or event handlers in `index.html`.
+Use this skill for browser UI behavior, DOM wiring, and user input flow. Keep gameplay rules, simulator logic, and render effects out of scope unless the Director assigns a handoff.
 
-## Boundaries
+## Ownership
 
-- Own `index.html` UI state, DOM updates, event listeners, canvas interaction, and local UI persistence.
-- Do not tune combat balance, food rules, damage, speed, or simulation values. Use `$hex-snake-balance` for that.
-- Do not edit character or balance JSON unless the UI change requires a data contract update. Use `$hex-snake-data-steward` for that handoff.
+- Own `src/ui.js`: UI state, event handlers, DOM updates, overlays, modals, settings, controls, localStorage.
+- Own `src/dom.js`: DOM query surface and element references.
+- Own `index.html`: UI structure and attributes.
+- Touch `src/styles.css` only for UI control layout or state classes.
+
+Do not tune combat values, alter simulator rules, or implement canvas visual effects. Use `$hex-snake-balance`, `$hex-snake-runtime-gameplay`, or `$hex-snake-render-visuals` for those.
 
 ## Inspection Workflow
 
-1. Locate the relevant DOM nodes near the query block around `document.querySelector`.
-2. Trace the state variables that drive the flow, especially `running`, `paused`, `computerBattleMode`, `relayMode`, `gameOver`, `selectedAttackProfile`, `playerCharacterId`, and `computerCharacterId`.
-3. Follow all event listeners for the affected surface:
+1. Locate DOM nodes in `src/dom.js` or `index.html`.
+2. Trace UI state in `src/ui.js`, especially `running`, `paused`, `computerBattleMode`, `relayMode`, `gameOver`, `selectedAttackProfile`, `playerCharacterId`, and `computerCharacterId`.
+3. Follow event listeners and persisted settings:
    ```bash
-   rg -n "addEventListener|localStorage|overlayTitle|overlayText|rulesModal|portraitLightbox|joyZone|keydown" index.html
+   rg -n "addEventListener|localStorage|overlayTitle|overlayText|rulesModal|portraitLightbox|joyZone|keydown" src index.html
    ```
-4. Check helper functions before editing: render/build functions, state setters, launch functions, and reset/start/end-game functions.
+4. Check adjacent lifecycle helpers before editing: render/build functions, state setters, start/reset/end-game functions.
 
-## UI Surfaces
+## Examples
 
-- Overlay and game lifecycle: `startButton`, `computerBattleButton`, `overlayTitle`, `overlayText`, `endGame`, `loop`.
-- Settings and GM panels: `settingsToggle`, `gmToggle`, numeric inputs, preset buttons, reset buttons.
-- Input controls: keyboard bindings, joystick direction buttons, pointer drag controls, target selection, attack buttons.
-- Character UI: intro portraits, portrait selection, winner portraits, lightbox, swipe/arrow navigation.
-- Auto battle: speed select, relay mode, pause button, persisted auto speed.
+- Change portrait lightbox controls: inspect `src/dom.js`, update `src/ui.js`, verify modal and keyboard flow.
+- Add a settings toggle: add markup in `index.html`, wire it in `src/dom.js`, persist and render state in `src/ui.js`.
+- Adjust surrender UI: update `src/ui.js`, then verify start, pause, surrender, and restart transitions.
 
 ## Validation
-
-After UI changes, verify the affected flows plus adjacent controls:
-
-- Keyboard movement and attack shortcuts.
-- Touch/pointer joystick movement and attack targeting.
-- Start, pause, resume, surrender, and restart.
-- Rules modal and portrait lightbox open/close behavior.
-- Computer battle, speed changes, relay mode, and auto pause.
-- Settings and GM panel expand/collapse plus localStorage-backed preferences.
 
 Run:
 ```bash
 npm.cmd test
 ```
 
-For visual or interaction changes, start the app with `npm.cmd run dev` and inspect in a browser.
+For interaction changes, inspect the app in a browser and verify keyboard, touch, modal, settings, and computer-battle flows related to the change.
 
 ## Output
 
-Report the UI surface changed, state variables touched, event handlers touched, validation performed, and any behavior intentionally left unchanged.
+Report UI surfaces changed, state variables touched, event handlers touched, validation performed, and behavior intentionally left unchanged.
