@@ -28,6 +28,7 @@ const {
   directionToward,
   emptyStock,
   hexDistance,
+  highAiStrategiesFromData,
   isProjectileVisibleTo,
   wrappedDistance,
   loadBalance,
@@ -65,7 +66,8 @@ const {
 } = require("./simulate-balance");
 
 const {
-  buildStrategyData
+  buildStrategyData,
+  updateIndex
 } = require("./apply-ai-strategy");
 
 const root = path.resolve(__dirname, "..");
@@ -282,6 +284,77 @@ test("medium and high difficulties hold big attacks for tactical windows", () =>
   assert.equal(chooseAttackProfile(state, computer, player, balance), "small");
   player.stunUntil = 1000;
   assert.equal(chooseAttackProfile(state, computer, player, balance), "big");
+});
+
+test("high attack profile uses the cheapest lethal attack", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("dragon"),
+    computerCharacter: characterById.get("moray"),
+    seed: "ev-cheapest-lethal",
+    initialBombs: balance.attack.bigAttackBombCost,
+    initialStock: Object.fromEntries(FOOD_TYPES.map(type => [type, 6])),
+    computerModel: { aiDifficulty: "high", pathPrecision: 1, aimPrecision: 1 }
+  });
+  const computer = state.fighters.computer;
+  const player = state.fighters.player;
+  player.hp = 1;
+  assert.equal(chooseAttackProfile(state, computer, player, balance), "small");
+});
+
+test("high attack profile does not spend a low-value big attack", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("dragon"),
+    computerCharacter: characterById.get("moray"),
+    seed: "ev-low-value-big",
+    initialBombs: balance.attack.bigAttackBombCost,
+    initialStock: Object.fromEntries(FOOD_TYPES.map(type => [type, 2])),
+    computerModel: { aiDifficulty: "high", pathPrecision: 1, aimPrecision: 1 }
+  });
+  const computer = state.fighters.computer;
+  const player = state.fighters.player;
+  player.hp = 100;
+  player.snake = [{ q: 4, r: -4 }];
+  assert.notEqual(chooseAttackProfile(state, computer, player, balance), "big");
+});
+
+test("high attack target EV prefers a dense body cluster over a low-damage head target", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("dragon"),
+    computerCharacter: characterById.get("moray"),
+    seed: "ev-body-cluster-target",
+    initialBombs: balance.attack.bigAttackBombCost,
+    initialStock: Object.fromEntries(FOOD_TYPES.map(type => [type, 6])),
+    computerModel: {
+      aiDifficulty: "high",
+      pathPrecision: 1,
+      aimPrecision: 1,
+      strategyWeights: {
+        castTarget: { targetHead: 3, bodyCluster: 0, targetNearestFood: 0 }
+      }
+    }
+  });
+  const computer = state.fighters.computer;
+  const player = state.fighters.player;
+  player.hp = 100;
+  player.snake = [
+    { q: 0, r: 0 },
+    { q: 4, r: -2 },
+    { q: 4, r: -1 },
+    { q: 5, r: -2 },
+    { q: 5, r: -3 },
+    { q: 3, r: -1 }
+  ];
+  state.foods = [];
+  const target = chooseAttackTarget(state, computer, player, balance, "big");
+  const stats = attackStats(computer.stock, "big", balance);
+  assert.notDeepEqual(target, player.snake[0]);
+  assert.ok(
+    damageSnake(player.snake, target, stats.radius, stats.damage, balance)
+      > damageSnake(player.snake, player.snake[0], stats.radius, stats.damage, balance)
+  );
 });
 
 test("sandworm underground perception uses last visible snake instead of true position", () => {
@@ -501,6 +574,62 @@ test("movement hard rules avoid predicted head-on collision cells", () => {
   player.snake = [{ q: 2, r: 0 }];
   player.dir = 5;
   assert.notEqual(directionToward(state, computer, player, player.snake[0]), 2);
+});
+
+function delayedTrapState(aiDifficulty) {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("dragon"),
+    computerCharacter: characterById.get("moray"),
+    seed: `delayed-trap-${aiDifficulty}`,
+    computerModel: {
+      aiDifficulty,
+      pathPrecision: 1,
+      strategyWeights: {
+        movement: { safePath: 0, leastDamage: 0, fastestArrival: 3 }
+      }
+    }
+  });
+  const computer = state.fighters.computer;
+  const player = state.fighters.player;
+  const start = { q: 0, r: 0 };
+  const tail = { q: -1, r: 0 };
+  const corridor = [
+    { q: 1, r: 0 },
+    { q: 2, r: 0 },
+    { q: 3, r: 0 }
+  ];
+  const openPocket = [
+    { q: 0, r: -1 },
+    { q: 0, r: -2 },
+    { q: 1, r: -2 },
+    { q: -1, r: -1 },
+    { q: -1, r: 0 },
+    { q: -2, r: 0 },
+    { q: -2, r: 1 },
+    { q: -1, r: -2 },
+    { q: 0, r: -3 },
+    { q: -2, r: -1 },
+    { q: -3, r: 1 }
+  ];
+  const allowed = new Set([start, tail, ...corridor, ...openPocket].map(cell => `${cell.q},${cell.r}`));
+  const blocked = state.cells.filter(cell => !allowed.has(`${cell.q},${cell.r}`));
+  computer.snake = [start, tail];
+  computer.dir = 2;
+  player.snake = [{ q: 6, r: -6 }, ...blocked.filter(cell => !(cell.q === 6 && cell.r === -6))];
+  player.dir = 0;
+  state.foods = [corridor.at(-1)];
+  return { state, computer, player, target: corridor.at(-1) };
+}
+
+test("medium movement keeps single-step hard-safety behavior in a delayed trap", () => {
+  const { state, computer, player, target } = delayedTrapState("medium");
+  assert.equal(directionToward(state, computer, player, target), 0);
+});
+
+test("high movement lookahead avoids a delayed corridor trap", () => {
+  const { state, computer, player, target } = delayedTrapState("high");
+  assert.notEqual(directionToward(state, computer, player, target), 2);
 });
 
 test("food hard rules keep nearby food when fighter has race advantage", () => {
@@ -746,12 +875,13 @@ test("near-full resource timing requires both bombs and energy to be near full",
   computer.policy.strategyWeights.skillAllocation = { preferSmall: 0, preferBig: 0 };
   computer.policy.strategyWeights.castTiming = {
     lethal: 0,
-    nearFullEnergy: 1,
+    nearFullEnergy: 4,
     opponentDebuffed: 0,
     opponentAlmostReady: 0,
     nearOpponent: 0,
     farOpponent: 0
   };
+  computer.policy.strategyWeights.castTarget = { targetHead: 0, bodyCluster: 0, targetNearestFood: 0 };
   player.hp = 99;
 
   computer.ammo = balance.resources.maxAmmo;
@@ -767,7 +897,7 @@ test("near-full resource timing requires both bombs and energy to be near full",
   assert.equal(chooseAttackProfile(state, computer, player, balance), "small");
 });
 
-test("high difficulty randomly breaks tied small and big attack scores", () => {
+test("high difficulty uses deterministic EV instead of random tied attack scores", () => {
   const makeTiedState = picker => {
     const state = createMatchState({
       balance,
@@ -800,8 +930,8 @@ test("high difficulty randomly breaks tied small and big attack scores", () => {
   const smallTie = makeTiedState(items => items[0]);
   assert.equal(chooseAttackProfile(smallTie.state, smallTie.computer, smallTie.player, balance), "small");
 
-  const bigTie = makeTiedState(items => items[items.length - 1]);
-  assert.equal(chooseAttackProfile(bigTie.state, bigTie.computer, bigTie.player, balance), "big");
+  const bigPicker = makeTiedState(items => items[items.length - 1]);
+  assert.equal(chooseAttackProfile(bigPicker.state, bigPicker.computer, bigPicker.player, balance), "small");
 });
 
 test("auto battle attack decisions are owner-mirrored under equal conditions", () => {
@@ -1204,6 +1334,27 @@ test("basic strategy weights are fixed and not role-adjusted", () => {
   });
 });
 
+test("high AI strategy parser accepts object arrays and raw maps", () => {
+  const dragonWeights = { movement: { safePath: 0.2 } };
+  const morayWeights = { movement: { safePath: 2.4 } };
+  const lobsterWeights = { movement: { safePath: 1.4 } };
+  assert.deepEqual(highAiStrategiesFromData({
+    strategies: {
+      dragon: { strategyId: "dragon-best", strategyWeights: dragonWeights },
+      universal: { strategyWeights: { movement: { safePath: 3 } } }
+    }
+  }), { dragon: dragonWeights });
+  assert.deepEqual(highAiStrategiesFromData({
+    bestStrategies: [
+      { characterId: "moray", strategyWeights: morayWeights },
+      { characterId: "universal", strategyWeights: { movement: { safePath: 3 } } }
+    ]
+  }), { moray: morayWeights });
+  assert.deepEqual(highAiStrategiesFromData({
+    lobster: lobsterWeights
+  }), { lobster: lobsterWeights });
+});
+
 test("AI strategy gate falls back to the basic baseline when no candidate wins decisively", () => {
   const character = characterById.get("dragon");
   const ranked = evaluateCharacterRound({
@@ -1273,6 +1424,7 @@ test("apply-ai-strategy builds complete character strategy data", () => {
   const strategyData = buildStrategyData(rows, characters, "unit-test");
   assert.equal(Object.keys(strategyData.strategies).length, characters.length);
   assert.equal(strategyData.strategies.dragon.strategyId, "dragon-best");
+  assert.equal(updateIndex(strategyData, characters), false);
 });
 
 let failed = 0;

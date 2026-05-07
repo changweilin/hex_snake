@@ -2153,26 +2153,28 @@
         localStorage.setItem("hexSnakeBestTotalMs", String(Math.floor(bestTotalMs)));
       }
       updateHud();
-      let title = "P1 獲勝";
-      if (playerLost && !computerLost) title = "P2 獲勝";
-      if (playerLost && computerLost) {
-        if (score > computerScore) title = "P1 獲勝";
-        else if (computerScore > score) title = "P2 獲勝";
-        else title = "平手";
-      }
-      setStatus(`對戰結束：${title}`);
-      overlayTitle.textContent = title;
       const winnerOwner = (!playerLost && computerLost) || (playerLost && computerLost && score > computerScore)
         ? "player"
         : (playerLost && !computerLost) || (playerLost && computerLost && computerScore > score)
           ? "computer"
           : null;
-      const resultText = winnerOwner === "player" ? "P1獲勝" : winnerOwner === "computer" ? "P2獲勝" : "平手";
+      const plainResultText = winnerOwner === "player" ? "P1 勝利" : winnerOwner === "computer" ? "P2 勝利" : "平手";
       const resultTitleHtml = winnerOwner === "player"
-        ? `<span class="owner-name is-p1">P1</span>獲勝！ <span class="owner-name is-p1">P1</span>:<span class="owner-name is-p2">P2</span> = ${score}:${computerScore}`
+        ? `本局結果：<span class="owner-name is-p1">P1</span> 勝利`
         : winnerOwner === "computer"
-          ? `<span class="owner-name is-p2">P2</span>獲勝！ <span class="owner-name is-p1">P1</span>:<span class="owner-name is-p2">P2</span> = ${score}:${computerScore}`
-          : `平手！ <span class="owner-name is-p1">P1</span>:<span class="owner-name is-p2">P2</span> = ${score}:${computerScore}`;
+          ? `本局結果：<span class="owner-name is-p2">P2</span> 勝利`
+          : "本局結果：平手";
+      const scoreText = `比分：P1 ${score}：${computerScore} P2`;
+      const resultReason = playerLost && computerLost
+        ? score === computerScore
+          ? "雙方同時結束，分數相同。"
+          : "雙方同時結束，以分數較高者勝出。"
+        : winnerOwner === "player"
+          ? "P2 淘汰，P1 獲勝。"
+          : winnerOwner === "computer"
+            ? "P1 淘汰，P2 獲勝。"
+            : "雙方分數相同。";
+      setStatus(`對戰結束：${plainResultText}`);
       overlayTitle.innerHTML = resultTitleHtml;
       HexSnakeAudio.playCharacter("player", winnerOwner === "player" ? "victory" : "defeat", { gainScale: winnerOwner ? 1 : 0.82 });
       HexSnakeAudio.playCharacter("computer", winnerOwner === "computer" ? "victory" : "defeat", { delay: winnerOwner ? 0.08 : 0.12, gainScale: winnerOwner ? 1 : 0.82 });
@@ -2187,16 +2189,12 @@
         else relayDraws += 1;
         updateRelayControls();
       }
-      overlayText.textContent = shouldContinueRelay
-        ? `P1 ${score} 分，P2 ${computerScore} 分。接力賽：P1 ${relayPlayerWins} 勝，P2 ${relayComputerWins} 勝，平手 ${relayDraws}。`
-        : `P1 ${score} 分，P2 ${computerScore} 分。按開始再來一局。`;
       startButton.textContent = "重新開始";
       gameOverSettlementPending = true;
       gameOverRelayStartOptions = shouldContinueRelay ? nextRelayStartOptions : null;
-      const gameScoreText = `${resultText}！ P1:P2 = ${score}:${computerScore}`;
       overlayText.textContent = shouldContinueRelay
-        ? `${gameScoreText}。接力賽：P1 ${relayPlayerWins} 勝，P2 ${relayComputerWins} 勝，平手 ${relayDraws}。`
-        : gameScoreText;
+        ? `${scoreText}。${resultReason} 接力賽：P1 ${relayPlayerWins} 勝，P2 ${relayComputerWins} 勝，平手 ${relayDraws}。`
+        : `${scoreText}。${resultReason}`;
       overlayText.hidden = true;
       cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(loop);
@@ -3956,6 +3954,7 @@
 
     async function bootstrap() {
       await loadBalanceConfig();
+      await loadHighAiStrategyConfig();
       try {
         await loadCharacterDatabase();
       } catch (error) {

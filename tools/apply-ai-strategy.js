@@ -6,7 +6,6 @@ const { loadCharacters } = require("./sim-core");
 
 const root = path.resolve(__dirname, "..");
 const strategyDataPath = path.join(root, "data", "high-ai-strategies.json");
-const indexPath = path.join(root, "index.html");
 
 function parseArgs(argv) {
   const args = {};
@@ -82,59 +81,8 @@ function buildStrategyData(rows, characters, source) {
   };
 }
 
-function formatNumber(value) {
-  return Number.isInteger(value) ? String(value) : String(Number(value.toFixed(4)));
-}
-
-function formatWeights(weights, indent = "        ") {
-  const groups = ["movement", "food", "skillAllocation", "castTiming", "castTarget", "castDirection"];
-  return groups.map(group => {
-    const entries = Object.entries(weights[group] || {})
-      .map(([key, value]) => `${key}: ${formatNumber(Number(value))}`)
-      .join(", ");
-    return `${indent}${group}: { ${entries} }`;
-  }).join(",\n");
-}
-
-function formatIndexBlock(strategyData, characters) {
-  const lines = ["    const highAiStrategyWeightsByCharacter = {"];
-  characters.forEach((character, index) => {
-    const row = strategyData.strategies[character.id];
-    lines.push(`      ${character.id}: {`);
-    lines.push(formatWeights(row.strategyWeights));
-    lines.push(`      }${index === characters.length - 1 ? "" : ","}`);
-  });
-  lines.push("    };");
-  return lines.join("\n");
-}
-
-function findObjectEnd(text, braceIndex) {
-  let depth = 0;
-  for (let index = braceIndex; index < text.length; index += 1) {
-    const char = text[index];
-    if (char === "{") depth += 1;
-    if (char === "}") {
-      depth -= 1;
-      if (depth === 0) {
-        const semicolon = text.indexOf(";", index);
-        if (semicolon === -1) throw new Error("Could not find semicolon after high AI strategy block.");
-        return semicolon + 1;
-      }
-    }
-  }
-  throw new Error("Could not find end of high AI strategy block.");
-}
-
-function updateIndex(strategyData, characters) {
-  const marker = "const highAiStrategyWeightsByCharacter =";
-  const text = fs.readFileSync(indexPath, "utf8");
-  const start = text.indexOf(marker);
-  if (start === -1) throw new Error("Could not find highAiStrategyWeightsByCharacter in index.html.");
-  const lineStart = text.lastIndexOf("\n", start) + 1;
-  const braceStart = text.indexOf("{", start);
-  const end = findObjectEnd(text, braceStart);
-  const next = `${text.slice(0, lineStart)}${formatIndexBlock(strategyData, characters)}${text.slice(end)}`;
-  fs.writeFileSync(indexPath, next, "utf8");
+function updateIndex() {
+  return false;
 }
 
 function main() {
@@ -143,9 +91,7 @@ function main() {
   const characters = loadCharacters(root);
   const strategyData = buildStrategyData(rowsFromInput(readJson(inputPath)), characters, inputPath);
   writeJson(strategyDataPath, strategyData);
-  if (!args["data-only"]) updateIndex(strategyData, characters);
   console.log(`Wrote ${strategyDataPath}`);
-  if (!args["data-only"]) console.log(`Updated ${indexPath}`);
 }
 
 if (require.main === module) {
@@ -161,6 +107,5 @@ module.exports = {
   buildStrategyData,
   updateIndex,
   writeJson,
-  rowsFromInput,
-  formatIndexBlock
+  rowsFromInput
 };

@@ -1239,8 +1239,8 @@ function renderWinnerPortrait(owner, playerLost = false, computerLost = false) {
   const computerPose = owner === "computer" ? "victory" : "defeat";
   const playerCharacter = characterFor("player");
   const computerCharacter = characterFor("computer");
-  const playerResult = owner ? (owner === "player" ? "勝利" : "失敗") : "平手";
-  const computerResult = owner ? (owner === "computer" ? "勝利" : "失敗") : "平手";
+  const playerResult = owner ? (owner === "player" ? "P1 勝利" : "P1 敗北") : "P1 平手";
+  const computerResult = owner ? (owner === "computer" ? "P2 勝利" : "P2 敗北") : "P2 平手";
   winnerPortrait.hidden = false;
   characterStage.hidden = true;
   characterStage.innerHTML = "";

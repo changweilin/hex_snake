@@ -3,7 +3,6 @@
 const path = require("path");
 const {
   buildStrategyData,
-  updateIndex,
   writeJson
 } = require("./apply-ai-strategy");
 const { loadCharacters } = require("./sim-core");
@@ -33,9 +32,7 @@ function main() {
   }));
   const strategyData = buildStrategyData(rows, characters, "tools/reset-high-ai-basic.js");
   writeJson(strategyDataPath, strategyData);
-  updateIndex(strategyData, characters);
   console.log(`Wrote ${strategyDataPath}`);
-  console.log("Updated index.html");
 }
 
 if (require.main === module) {

@@ -13,6 +13,9 @@ const SANDWORM_REVEAL_BEFORE_IMPACT_MS = 200;
 const SANDWORM_UNDERGROUND_WINDOW_MS = 500;
 const FOOD_TARGET_SWITCH_MS = 20000;
 const DEAD_END_MIN_SPACE = 5;
+const AI_LOOKAHEAD_DEPTH = 3;
+const AI_LOOKAHEAD_BEAM_WIDTH = 3;
+const AI_LOOKAHEAD_FUTURE_DISCOUNT = 0.65;
 const SMALL_ATTACK_FOOD_COST = 2;
 const DIRECTIONS = [
   { q: 0, r: -1 },
@@ -64,18 +67,25 @@ function loadCharacters(root = path.resolve(__dirname, "..")) {
   return loadJson(path.join(root, "data", "characters.json"));
 }
 
+function highAiStrategiesFromData(file) {
+  const rows = file?.strategies || file?.bestStrategies || file;
+  if (Array.isArray(rows)) {
+    return Object.fromEntries(rows
+      .filter(row => row?.characterId && row.characterId !== "universal")
+      .map(row => [row.characterId, row.strategyWeights || row]));
+  }
+  if (rows && typeof rows === "object") {
+    return Object.fromEntries(Object.entries(rows)
+      .filter(([characterId]) => characterId !== "universal")
+      .map(([characterId, row]) => [characterId, row?.strategyWeights || row]));
+  }
+  return {};
+}
+
 function loadHighAiStrategies(root = path.resolve(__dirname, "..")) {
   const filePath = path.join(root, "data", "high-ai-strategies.json");
   if (!fs.existsSync(filePath)) return {};
-  const file = loadJson(filePath);
-  const rows = file.strategies || file.bestStrategies || file;
-  if (Array.isArray(rows)) {
-    return Object.fromEntries(rows
-      .filter(row => row.characterId && row.characterId !== "universal")
-      .map(row => [row.characterId, row.strategyWeights || row]));
-  }
-  return Object.fromEntries(Object.entries(rows)
-    .map(([characterId, row]) => [characterId, row.strategyWeights || row]));
+  return highAiStrategiesFromData(loadJson(filePath));
 }
 
 function keyOf(cell) {
@@ -700,45 +710,145 @@ function filterUnsafeFoodTargets(state, fighter, opponent, foods) {
   return filtered.length ? filtered : foods;
 }
 
+function movementOccupiedSetForSnake(state, fighter, opponent, snake) {
+  const occupied = new Set(snake.slice(0, -1).map(keyOf));
+  const perceivedOpponent = perceivedSnakeFor(state, fighter, opponent);
+  if (fighter.policy.pathPrecision > 0.35 && !isUnderground(opponent, state.now)) perceivedOpponent.forEach(segment => occupied.add(keyOf(segment)));
+  return occupied;
+}
+
+function movementOptionForState(state, fighter, opponent, snake, currentDir, direction, target, occupied, perceivedOpponent, opponentThreat, distanceToTarget = cell => wrappedDistance(state, cell, target)) {
+  const next = nextWrappedCell(snake[0], direction, state.radius);
+  const key = keyOf(next);
+  const selfBlocked = snake.slice(0, -1).some(segment => keyOf(segment) === key);
+  const opponentBlocked = perceivedOpponent.some(segment => keyOf(segment) === key);
+  const blocked = selfBlocked || opponentBlocked || occupied.has(key);
+  const headThreat = keyOf(opponentThreat) === key;
+  const reachable = reachableSpace(state, next, occupied, 10);
+  const wallSpace = state.cells.filter(cell => hexDistance(cell, next) <= 1 && !occupied.has(keyOf(cell))).length;
+  const expectedDamage = expectedDamageAt(state, fighter, next);
+  const weights = fighter.policy.strategyWeights.movement;
+  const trapRisk = Math.max(0, 5 - reachable);
+  const deadEnd = reachable < DEAD_END_MIN_SPACE;
+  const lethalThreat = expectedDamage >= fighter.hp;
+  const risk = (selfBlocked ? 100 : 0) + (opponentBlocked ? 35 : 0) + trapRisk * 4 + expectedDamage;
+  return {
+    direction,
+    next,
+    blocked,
+    headThreat,
+    deadEnd,
+    lethalThreat,
+    risk,
+    score: weights.fastestArrival * distanceToTarget(next)
+      + weights.safePath * risk
+      + weights.leastDamage * expectedDamage
+      - wallSpace * 0.04
+  };
+}
+
+function movementHardPenalty(option) {
+  return (option.blocked ? 120 : 0)
+    + (option.headThreat ? 80 : 0)
+    + (option.lethalThreat ? 120 : 0)
+    + (option.deadEnd ? 60 : 0);
+}
+
+function movementFoodKeySet(state) {
+  return new Set(state.foods.map(keyOf));
+}
+
+function advanceMovementSnake(snake, option, foodKeys) {
+  const nextFoodKeys = new Set(foodKeys);
+  const nextSnake = [option.next, ...snake];
+  if (nextFoodKeys.has(keyOf(option.next))) {
+    nextFoodKeys.delete(keyOf(option.next));
+  } else {
+    nextSnake.pop();
+  }
+  return { snake: nextSnake, foodKeys: nextFoodKeys };
+}
+
+function terminalMobilityPenalty(state, fighter, opponent, snake, currentDir, target, foodKeys, perceivedOpponent, opponentThreat, distanceToTarget) {
+  const occupied = movementOccupiedSetForSnake(state, fighter, opponent, snake);
+  const options = DIRECTIONS
+    .map((_, direction) => {
+      if (!canTurn(snake, currentDir, direction)) return null;
+      return movementOptionForState(state, fighter, opponent, snake, currentDir, direction, target, occupied, perceivedOpponent, opponentThreat, distanceToTarget);
+    })
+    .filter(Boolean);
+  if (!options.length) return 1200;
+  const hardSafe = options.filter(option => !option.blocked && !option.headThreat && !option.deadEnd && !option.lethalThreat);
+  if (!hardSafe.length) return 1000;
+  if (hardSafe.length === 1) return 36;
+  return 0;
+}
+
+function lookaheadMovementScore(state, fighter, opponent, firstOption, target, perceivedOpponent, opponentThreat, distanceToTarget) {
+  const firstStep = advanceMovementSnake(fighter.snake, firstOption, movementFoodKeySet(state));
+  let beam = [{
+    snake: firstStep.snake,
+    dir: firstOption.direction,
+    foodKeys: firstStep.foodKeys,
+    score: firstOption.score + movementHardPenalty(firstOption),
+    discount: AI_LOOKAHEAD_FUTURE_DISCOUNT
+  }];
+
+  for (let depth = 1; depth < AI_LOOKAHEAD_DEPTH; depth += 1) {
+    const expanded = [];
+    beam.forEach(row => {
+      const occupied = movementOccupiedSetForSnake(state, fighter, opponent, row.snake);
+      DIRECTIONS.forEach((_, direction) => {
+        if (!canTurn(row.snake, row.dir, direction)) return;
+        const option = movementOptionForState(state, fighter, opponent, row.snake, row.dir, direction, target, occupied, perceivedOpponent, opponentThreat, distanceToTarget);
+        const nextStep = advanceMovementSnake(row.snake, option, row.foodKeys);
+        expanded.push({
+          snake: nextStep.snake,
+          dir: option.direction,
+          foodKeys: nextStep.foodKeys,
+          score: row.score + row.discount * (option.score + movementHardPenalty(option)),
+          discount: row.discount * AI_LOOKAHEAD_FUTURE_DISCOUNT
+        });
+      });
+    });
+    if (!expanded.length) return beam[0].score + beam[0].discount * 1200;
+    expanded.sort((a, b) => a.score - b.score);
+    beam = expanded.slice(0, AI_LOOKAHEAD_BEAM_WIDTH);
+  }
+
+  return Math.min(...beam.map(row => (
+    row.score + row.discount * terminalMobilityPenalty(state, fighter, opponent, row.snake, row.dir, target, row.foodKeys, perceivedOpponent, opponentThreat, distanceToTarget)
+  )));
+}
+
 function directionToward(state, fighter, opponent, target) {
   const occupied = movementOccupiedSet(state, fighter, opponent);
   const perceivedOpponent = perceivedSnakeFor(state, fighter, opponent);
   const opponentThreat = nextWrappedCell(perceivedOpponent[0], perceivedDirectionFor(state, opponent), state.radius);
+  const targetDistanceCache = new Map();
+  const distanceToTarget = cell => {
+    const key = keyOf(cell);
+    if (!targetDistanceCache.has(key)) targetDistanceCache.set(key, wrappedDistance(state, cell, target));
+    return targetDistanceCache.get(key);
+  };
   const options = [];
   DIRECTIONS.forEach((_, direction) => {
     if (!canTurn(fighter.snake, fighter.dir, direction)) return;
-    const next = nextWrappedCell(fighter.snake[0], direction, state.radius);
-    const key = keyOf(next);
-    const selfBlocked = fighter.snake.slice(0, -1).some(segment => keyOf(segment) === key);
-    const opponentBlocked = perceivedOpponent.some(segment => keyOf(segment) === key);
-    const blocked = selfBlocked || opponentBlocked || occupied.has(key);
-    const headThreat = keyOf(opponentThreat) === key;
-    const reachable = reachableSpace(state, next, occupied, 10);
-    const wallSpace = state.cells.filter(cell => hexDistance(cell, next) <= 1 && !occupied.has(keyOf(cell))).length;
-    const expectedDamage = expectedDamageAt(state, fighter, next);
-    const weights = fighter.policy.strategyWeights.movement;
-    const trapRisk = Math.max(0, 5 - reachable);
-    const deadEnd = reachable < DEAD_END_MIN_SPACE;
-    const lethalThreat = expectedDamage >= fighter.hp;
-    const risk = (selfBlocked ? 100 : 0) + (opponentBlocked ? 35 : 0) + trapRisk * 4 + expectedDamage;
-    options.push({
-      direction,
-      blocked,
-      headThreat,
-      deadEnd,
-      lethalThreat,
-      risk,
-      score: weights.fastestArrival * wrappedDistance(state, next, target)
-        + weights.safePath * risk
-        + weights.leastDamage * expectedDamage
-        - wallSpace * 0.04
-    });
+    options.push(movementOptionForState(state, fighter, opponent, fighter.snake, fighter.dir, direction, target, occupied, perceivedOpponent, opponentThreat, distanceToTarget));
   });
   const viable = options.length ? options : [{ direction: fighter.dir, score: 0, blocked: false }];
   const hardSafe = viable.filter(option => !option.blocked && !option.headThreat && !option.deadEnd && !option.lethalThreat);
   const safe = hardSafe.length ? hardSafe : viable.filter(option => !option.blocked && !option.headThreat && !option.lethalThreat && option.risk < 20);
   const candidates = safe.length ? safe : viable;
+  if (fighter.policy.aiDifficulty === "high" && candidates.length > 1) {
+    candidates.forEach(option => {
+      option.lookaheadScore = lookaheadMovementScore(state, fighter, opponent, option, target, perceivedOpponent, opponentThreat, distanceToTarget);
+    });
+  }
   candidates.sort((a, b) => a.score - b.score || a.risk - b.risk);
+  if (fighter.policy.aiDifficulty === "high") {
+    candidates.sort((a, b) => (a.lookaheadScore ?? a.score) - (b.lookaheadScore ?? b.score) || a.score - b.score || a.risk - b.risk);
+  }
   if (state.rng.next() > fighter.policy.pathPrecision) return state.rng.item(viable).direction;
   return candidates[0].direction;
 }
@@ -806,7 +916,15 @@ function nearestFoodForState(state, cell) {
 
 function bestBodyClusterTarget(state, targetSnake, stats, balance) {
   if (!targetSnake.length) return null;
-  return [...state.cells].sort((a, b) => {
+  const seen = new Set();
+  const candidates = targetSnake.flatMap(segment => cellsWithinDistance(state, segment, 0, Math.max(1, Math.ceil(stats.radius))))
+    .filter(cell => {
+      const key = keyOf(cell);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  return (candidates.length ? candidates : state.cells).sort((a, b) => {
     const damageDiff = damageSnake(targetSnake, b, stats.radius, stats.damage, balance) - damageSnake(targetSnake, a, stats.radius, stats.damage, balance);
     if (damageDiff) return damageDiff;
     return wrappedDistance(state, targetSnake[0], a) - wrappedDistance(state, targetSnake[0], b);
@@ -880,6 +998,60 @@ function chooseAttackProfile(stateOrFighter, fighterOrBalance, opponentOrRng, ma
   return canAttack(fighter, "small", balance) ? "small" : null;
 }
 
+function attackExpectedValue(state, attacker, defender, balance, profile, target, targetWeight, damageOverride = null) {
+  const stats = attackStats(attacker.stock, profile, balance);
+  const targetSnake = perceivedSnakeFor(state, attacker, defender);
+  const damage = damageOverride ?? attackTargetDamageScore(state, targetSnake, target, stats, balance);
+  const cappedDamage = Math.min(damage, defender.hp);
+  const overkill = Math.max(0, damage - defender.hp);
+  const allocation = attacker.policy.strategyWeights.skillAllocation;
+  const allocationScore = profile === "small" ? allocation.preferSmall : allocation.preferBig;
+  const resourcePenalty = attackResourceCost(profile, balance) * (profile === "big" ? 0.34 : 0.24);
+  const controlValue = attackStunChance(attacker.stock, balance) * 1.4 + (isDebuffed(defender, state.now) ? 0.75 : 0);
+  return cappedDamage * 1.15
+    + targetWeight * 0.6
+    + castTimingScore(state, attacker, defender, balance, profile)
+    + allocationScore
+    + controlValue
+    + (damage > 0 ? 0.6 : -2.5)
+    - resourcePenalty
+    - overkill * 0.35;
+}
+
+function highAttackTargetRows(state, attacker, defender, balance, profile) {
+  const { stats, targetSnake, targetHead, bodyCluster, targetNearestFood } = attackTargetCandidates(state, attacker, defender, balance, profile);
+  const weights = attacker.policy.strategyWeights.castTarget;
+  const seen = new Set();
+  return [
+    { target: targetHead, weight: weights.targetHead },
+    { target: bodyCluster, weight: weights.bodyCluster },
+    { target: targetNearestFood, weight: state.foods.length ? weights.targetNearestFood : 0 }
+  ]
+    .filter(item => item.target && !seen.has(keyOf(item.target)) && seen.add(keyOf(item.target)))
+    .map(item => {
+      const damage = attackTargetDamageScore(state, targetSnake, item.target, stats, balance);
+      return {
+        target: item.target,
+        weight: item.weight,
+        damage,
+        expectedValue: attackExpectedValue(state, attacker, defender, balance, profile, item.target, item.weight, damage)
+      };
+    })
+    .map(row => ({
+      ...row,
+      targetScore: row.expectedValue + row.damage * 1.1 + row.weight * 1.2 + (row.damage <= 0 ? row.weight * 5 : 0)
+    }))
+    .sort((a, b) => {
+      if (a.targetScore !== b.targetScore) return b.targetScore - a.targetScore;
+      if (a.damage !== b.damage) return b.damage - a.damage;
+      return wrappedDistance(state, targetHead, a.target) - wrappedDistance(state, targetHead, b.target);
+    });
+}
+
+function attackProfileThreshold(profile) {
+  return profile === "big" ? 4.2 : 4.5;
+}
+
 function chooseAiAttackProfile(state, fighter, opponent, balance) {
   if (fighter.policy.aiDifficulty === "novice") return null;
   const lethal = ["small", "big"]
@@ -896,31 +1068,28 @@ function chooseAiAttackProfile(state, fighter, opponent, balance) {
 
   const available = ["small", "big"].filter(profile => canAttack(fighter, profile, balance));
   if (!available.length) return null;
-  const allocation = fighter.policy.strategyWeights.skillAllocation;
   const scored = available.map(profile => {
-    const allocationScore = profile === "small" ? allocation.preferSmall : allocation.preferBig;
-    const timingScore = castTimingScore(state, fighter, opponent, balance, profile);
+    const bestTarget = highAttackTargetRows(state, fighter, opponent, balance, profile)[0];
     const legacyBoost = profile === "big" && shouldUseBigAttack(state, fighter, opponent, balance) ? 1.25 : 0;
-    return { profile, score: allocationScore + timingScore + legacyBoost };
-  });
+    return { profile, score: (bestTarget?.expectedValue ?? -Infinity) + legacyBoost };
+  }).sort((a, b) => b.score - a.score);
 
-  const bestScore = Math.max(...scored.map(row => row.score));
-  const bestOptions = scored.filter(row => row.score === bestScore);
-  const best = bestOptions.length > 1 ? state.rng.item(bestOptions) : bestOptions[0];
-  const tiedSmall = bestOptions.some(row => row.profile === "small");
-  if (best.profile === "big") {
-    if (fighter.policy.skillStrategy === "saveBurst") return best.score >= 2.1 ? "big" : null;
-    return best.score >= (tiedSmall ? 0.9 : 1.8) ? "big" : canAttack(fighter, "small", balance) ? "small" : null;
+  if (fighter.policy.skillStrategy === "saveBurst") {
+    const big = scored.find(row => row.profile === "big");
+    return big && big.score >= attackProfileThreshold("big") ? "big" : null;
   }
-  if (best.score >= 0.9 || fighter.policy.aiDifficulty === "low") return best.profile;
-  if (fighter.policy.aiDifficulty === "low" && canAttack(fighter, "big", balance)) return "big";
-  return null;
+  const accepted = scored.find(row => row.score >= attackProfileThreshold(row.profile));
+  return accepted ? accepted.profile : null;
 }
 
 function chooseAttackTarget(state, attacker, defender, balance, profile) {
   const { stats, targetSnake, targetHead, bodyCluster, targetNearestFood } = attackTargetCandidates(state, attacker, defender, balance, profile);
   const maxDamageTarget = bestBodyClusterTarget(state, targetSnake, stats, balance) || targetHead;
   if (attackTargetDamageScore(state, targetSnake, maxDamageTarget, stats, balance) >= defender.hp) return { ...maxDamageTarget };
+  if (attacker.policy.aiDifficulty === "high") {
+    const best = highAttackTargetRows(state, attacker, defender, balance, profile)[0];
+    if (best) return { ...best.target };
+  }
   const weights = attacker.policy.strategyWeights.castTarget;
   const weighted = [
     { target: targetHead, weight: weights.targetHead },
@@ -1788,6 +1957,7 @@ module.exports = {
   createRng,
   loadBalance,
   loadCharacters,
+  highAiStrategiesFromData,
   loadHighAiStrategies,
   hexDistance,
   wrappedDistance,
