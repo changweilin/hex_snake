@@ -1,43 +1,8 @@
 # Follow-up Execution List
 
-最後檢查：2026-05-07（Asia/Taipei）
+最後整理：2026-05-07（Asia/Taipei）
 
-這份清單只保留目前較值得排入後續開發的未完成事項。`doc/current-balance.md` 已刪除，平衡判斷請改以最新 `reports/` 輸出或重新執行模擬結果為準。
-
-## Current Progress
-
-- 已完成保守拆分 `index.html`
-  - `index.html` 現在只保留 HTML 骨架、CSS link，以及 `src/main.js` 入口。
-  - CSS 已搬到 `src/styles.css`。
-  - JS 已拆成：
-    - `src/main.js`：legacy loader，維持拆檔後仍在同一個執行 scope。
-    - `src/state.js`：共用狀態入口，目前先接 `audio` / `replay` 低風險狀態。
-    - `src/dom.js`：集中 DOM query。
-    - `src/ui.js`：UI、HUD、設定面板、事件輔助。
-    - `src/characters.js`：角色資料載入、角色選擇、立繪 URL / srcset。
-    - `src/audio.js`：音效狀態、音效 profile、播放 facade `HexSnakeAudio`。
-    - `src/replay.js`：重播紀錄、播放控制 facade `HexSnakeReplay`。
-    - `src/ai.js`：電腦 / 自動對戰決策、食物目標評分、攻擊選擇。
-    - `src/render.js`：主要畫布繪製、技能特效、蛇身、食物、projectile / hazard / blast 繪製。
-    - `src/game.js`：核心流程、攻擊結算、移動、輸入事件、loop、bootstrap。
-  - `build.js` 已更新，build 會複製 `src/` 到 `dist/src/`。
-  - 已驗證：
-    - 各拆分 JS 檔 `node --check` 通過。
-    - 合併後語法檢查通過。
-    - `npm.cmd run build` 通過。
-    - in-app browser 載入、開始遊戲、settings、replay modal smoke test 無 console error。
-
-- 已完成文件可讀性巡檢
-  - `README.md` 與 `doc/*.md` 以 UTF-8 讀取時內容可讀。
-  - `README.md` 已記錄 Windows PowerShell 5.x 預設 code page 可能讓 UTF-8 檔案看起來像亂碼，讀取時可改用 `-Encoding UTF8`。
-  - 本次掃描 `README.md`、`doc/`、`src/`、`index.html` 未找到常見 mojibake 或 replacement character。
-  - 後續若新增使用者可見文字或設計文件，只需列入例行檢查，不再作為 P0 未完成項。
-
-- 策略最佳化流程已開始整理
-  - `doc/strategy-optimization-sop.md` 已整理 quick/full profile、背景執行、進度檢查、完成檢查與套用門檻。
-  - `tools/run-strategy-optimization.js` 工作區版本已加入 target-vs-baseline 的 side-balanced cross-play 協議，避免把全員同時換策略的零和矩陣誤讀成單一角色進步。
-  - 目前最新完整可讀的同步高階 AI 對戰摘要是 `reports/sim-sync-cross20.md`。
-  - `reports/strategy-quick-20260507-183526/` 目前尚未產生 `manifest.json` 或 `comparison.md`，不能視為完成訓練結果。
+這份清單只保留目前值得排入後續開發的未完成事項。已完成的拆檔、文件可讀性巡檢、高階 AI v1 落地與手動 smoke 記錄已移出待辦；平衡判斷請改以最新 `reports/` 輸出或重新執行模擬結果為準。
 
 ## P0
 
@@ -51,6 +16,7 @@
   - 範圍：用 target-vs-baseline cross-play 協議跑完至少 quick profile，並產生 `manifest.json` 與 `comparison.md`。
   - 目標：確認新版交叉驗證輸出可讀、可重跑，且 SOP 與實際工具一致。
   - 驗收：輸出目錄包含 `baseline-cross.*`、`best-cross.*`、`comparison.md`、`manifest.json`，且 `comparison.md` 能清楚列出每個角色的 marginal delta。
+  - 現況：`reports/strategy-quick-20260507-183526/` 只有 `config.json`、log 與 `ga/`，尚未產生 `manifest.json` 或 `comparison.md`。
 
 ## P1
 
@@ -74,6 +40,14 @@
   - 範圍：確認 `README.md` 的相關文件區塊列出 `doc/strategy-optimization-sop.md`。
   - 目標：讓策略訓練、驗證與套用流程不只藏在 `doc/`。
   - 驗收：README 導覽與 SOP 內容一致，且 quick/full 指令可從專案根目錄直接執行。
+  - 現況：README 常用指令已有 `npm run optimize:strategy`，但相關文件區塊尚未列出 SOP。
+
+- 高階 AI v1 後續觀察與調校
+  - 範圍：針對 runtime JSON 策略、移動 lookahead、技能 EV 進行實戰與模擬對齊檢查。
+  - 目標：確認瀏覽器實際對戰與 `tools/sim-core.js` 模擬核心行為一致，並避免特定角色因 lookahead 或 EV 門檻出現明顯退步。
+  - 驗收：完成一輪手動 auto battle smoke、至少一輪 `simulate:ai-cross` 小樣本比較，並把需要調整的角色或技能列入策略最佳化 SOP。
+  - 後續：若 EV 門檻、target 權重或 lookahead 終局懲罰需要頻繁調整，再評估 v2 是否新增策略欄位；目前仍維持 `data/high-ai-strategies.json` schema 不變。
+  - 效能觀察：`simulate:ai-cross --runs 5 --jobs 1` 若明顯超過目前約 9 分鐘級距，優先檢查 `bestBodyClusterTarget`、lookahead 距離快取與長局時間。
 
 ## P2
 

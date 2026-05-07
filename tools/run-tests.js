@@ -809,6 +809,29 @@ test("wrapped distance and stale food target switching affect food choices", () 
   assert.deepEqual(chooseFoodTarget(state, fighter, opponent), state.foods[1]);
 });
 
+test("high food race compares arrival time using each fighter speed", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("quetzal"),
+    computerCharacter: characterById.get("quetzal"),
+    seed: "high-food-arrival-time",
+    computerModel: { aiDifficulty: "high", pathPrecision: 1, aimPrecision: 1 }
+  });
+  const fighter = state.fighters.computer;
+  const opponent = state.fighters.player;
+  fighter.snake[0] = { q: 0, r: 0 };
+  opponent.snake[0] = { q: 5, r: -5 };
+  opponent.stock.fiber = balance.resources.maxFoodStock;
+  state.foods = [
+    { q: 2, r: -2, types: ["fiber"] },
+    { q: -2, r: 0, types: ["fiber"] }
+  ];
+  fighter.policy.strategyWeights.food = { fastestArrival: 3, ownDeficit: 0, opponentDeficit: 0, ownPreferred: 0, opponentPreferred: 0 };
+  assert.equal(wrappedDistance(state, fighter.snake[0], state.foods[0]), 2);
+  assert.equal(wrappedDistance(state, opponent.snake[0], state.foods[0]), 3);
+  assert.deepEqual(chooseFoodTarget(state, fighter, opponent), state.foods[1]);
+});
+
 test("stale food target timer resets when switching to a new target", () => {
   const state = createMatchState({
     balance,

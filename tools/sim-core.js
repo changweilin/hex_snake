@@ -221,6 +221,15 @@ function moveInterval(fighter, balance, now) {
   return balance.movement.baseStepMs * slowScale / (fighter.initialSpeed * moveMultiplier(fighter.stock, balance));
 }
 
+function arrivalTimeForDistance(fighter, balance, distance, now) {
+  if (!Number.isFinite(distance)) return Number.POSITIVE_INFINITY;
+  const interval = moveInterval(fighter, balance, now);
+  const baseInterval = Number.isFinite(balance.movement.baseStepMs) && balance.movement.baseStepMs > 0
+    ? balance.movement.baseStepMs
+    : 1;
+  return distance * ((Number.isFinite(interval) ? interval : baseInterval) / baseInterval);
+}
+
 function attackDelay(stock, balance) {
   return balance.attack.baseAttackDelayMs / attackSpeedMultiplier(stock, balance);
 }
@@ -646,6 +655,9 @@ function shouldUseBigAttack(state, fighter, opponent, balance) {
 function foodValueFor(fighter, opponent, food, policy, state = null) {
   const ownDistance = state ? wrappedDistance(state, fighter.snake[0], food) : hexDistance(fighter.snake[0], food);
   const opponentDistance = state ? wrappedDistance(state, opponent.snake[0], food) : hexDistance(opponent.snake[0], food);
+  const highDifficulty = policy.aiDifficulty === "high" && state;
+  const ownArrivalTime = highDifficulty ? arrivalTimeForDistance(fighter, state.balance, ownDistance, state.now) : ownDistance;
+  const opponentArrivalTime = highDifficulty ? arrivalTimeForDistance(opponent, state.balance, opponentDistance, state.now) : opponentDistance;
   const types = food.types || [];
   const aiProfile = aiProfileFor(fighter);
   const opponentProfile = aiProfileFor(opponent);
@@ -662,12 +674,12 @@ function foodValueFor(fighter, opponent, food, policy, state = null) {
     ? normalizedTypes.length > 0
     : opponentPreferredFood === "black" ? types.includes("black") : types.includes(opponentPreferredFood);
   return (
-    weights.fastestArrival * (1 / (1 + ownDistance)) * 10 +
+    weights.fastestArrival * (1 / (1 + ownArrivalTime)) * 10 +
     weights.ownDeficit * ownDeficit / 5 +
     weights.opponentDeficit * opponentDeficit / 6 +
     weights.ownPreferred * (ownPrefers ? 2.5 : 0) +
     weights.opponentPreferred * (opponentPrefers ? 2 : 0) +
-    (opponentDistance <= ownDistance ? weights.opponentDeficit * 0.35 : 0)
+    (opponentArrivalTime <= ownArrivalTime ? weights.opponentDeficit * 0.35 : 0)
   );
 }
 
@@ -699,7 +711,10 @@ function filterUnsafeFoodTargets(state, fighter, opponent, foods) {
   const occupied = movementOccupiedSet(state, fighter, opponent);
   const withRace = foods.map(food => ({
     food,
-    opponentAdvantage: wrappedDistance(state, fighter.snake[0], food) - wrappedDistance(state, opponent.snake[0], food),
+    opponentAdvantage: fighter.policy.aiDifficulty === "high"
+      ? arrivalTimeForDistance(fighter, state.balance, wrappedDistance(state, fighter.snake[0], food), state.now)
+        - arrivalTimeForDistance(opponent, state.balance, wrappedDistance(state, opponent.snake[0], food), state.now)
+      : wrappedDistance(state, fighter.snake[0], food) - wrappedDistance(state, opponent.snake[0], food),
     reachable: reachableSpace(state, food, occupied, DEAD_END_MIN_SPACE)
   }));
   const maxOpponentAdvantage = Math.max(0, ...withRace.map(row => row.opponentAdvantage));
@@ -828,7 +843,12 @@ function directionToward(state, fighter, opponent, target) {
   const targetDistanceCache = new Map();
   const distanceToTarget = cell => {
     const key = keyOf(cell);
-    if (!targetDistanceCache.has(key)) targetDistanceCache.set(key, wrappedDistance(state, cell, target));
+    if (!targetDistanceCache.has(key)) {
+      const distance = wrappedDistance(state, cell, target);
+      targetDistanceCache.set(key, fighter.policy.aiDifficulty === "high"
+        ? arrivalTimeForDistance(fighter, state.balance, distance, state.now)
+        : distance);
+    }
     return targetDistanceCache.get(key);
   };
   const options = [];

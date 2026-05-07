@@ -230,6 +230,13 @@
       return ownerSnake(owner)[0];
     }
 
+    function arrivalTimeForDistance(owner, distance, now) {
+      if (!Number.isFinite(distance)) return Number.POSITIVE_INFINITY;
+      const interval = moveIntervalFor(owner, now);
+      const baseInterval = Number.isFinite(baseStepMs) && baseStepMs > 0 ? baseStepMs : 1;
+      return distance * ((Number.isFinite(interval) ? interval : baseInterval) / baseInterval);
+    }
+
     function opponentOf(owner) {
       return owner === "player" ? "computer" : "player";
     }
@@ -612,6 +619,8 @@
       const ownDistance = wrappedDistance(ownerHead(owner), food);
       const opponentHead = perceivedSnakeFor(owner, opponent, now)[0];
       const opponentDistance = wrappedDistance(opponentHead, food);
+      const ownArrivalTime = arrivalTimeForDistance(owner, ownDistance, now);
+      const opponentArrivalTime = arrivalTimeForDistance(opponent, opponentDistance, now);
       const profile = aiProfileFor(owner);
       const opponentProfile = aiProfileFor(opponent);
       const types = food.types || [];
@@ -629,12 +638,12 @@
         : opponentProfile.preferredFood === "black" ? types.includes("black") : types.includes(opponentProfile.preferredFood);
       if (computerDifficulty === "high") {
         return (
-          weights.fastestArrival * (1 / (1 + ownDistance)) * 10 +
+          weights.fastestArrival * (1 / (1 + ownArrivalTime)) * 10 +
           weights.ownDeficit * ownDeficit / 5 +
           weights.opponentDeficit * opponentDeficit / 6 +
           weights.ownPreferred * (preferred ? 2.5 : 0) +
           weights.opponentPreferred * (opponentPreferred ? 2 : 0) +
-          (opponentDistance <= ownDistance ? weights.opponentDeficit * 0.35 : 0)
+          (opponentArrivalTime <= ownArrivalTime ? weights.opponentDeficit * 0.35 : 0)
         );
       }
       const preferredBonus = preferred ? 1.5 : 0;
@@ -678,7 +687,10 @@
       const occupied = movementOccupiedSet(owner, opponent, now);
       const withRace = candidateFoods.map(food => ({
         food,
-        opponentAdvantage: wrappedDistance(ownerHead(owner), food) - wrappedDistance(ownerHead(opponent), food),
+        opponentAdvantage: computerDifficulty === "high"
+          ? arrivalTimeForDistance(owner, wrappedDistance(ownerHead(owner), food), now)
+            - arrivalTimeForDistance(opponent, wrappedDistance(ownerHead(opponent), food), now)
+          : wrappedDistance(ownerHead(owner), food) - wrappedDistance(ownerHead(opponent), food),
         reachable: reachableSpace(food, occupied, deadEndMinSpace)
       }));
       const maxOpponentAdvantage = Math.max(0, ...withRace.map(row => row.opponentAdvantage));
@@ -820,7 +832,10 @@
       const targetDistanceCache = new Map();
       const distanceToTarget = cell => {
         const key = keyOf(cell);
-        if (!targetDistanceCache.has(key)) targetDistanceCache.set(key, wrappedDistance(cell, target));
+        if (!targetDistanceCache.has(key)) {
+          const distance = wrappedDistance(cell, target);
+          targetDistanceCache.set(key, computerDifficulty === "high" ? arrivalTimeForDistance(owner, distance, now) : distance);
+        }
         return targetDistanceCache.get(key);
       };
       const options = [];
