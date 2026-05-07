@@ -1131,8 +1131,8 @@
 
     .tutorial-food-detail-list span {
       min-width: 0;
-      font-size: 0.78rem;
-      line-height: 1.26;
+      font-size: 0.84rem;
+      line-height: 1.32;
     }
 
     .tutorial-food-stock-limit {
@@ -1772,7 +1772,7 @@
       }
 
       .tutorial-resource-guide-panel span {
-        font-size: 0.72rem;
+        font-size: 0.74rem;
         line-height: 1.28;
       }
 
@@ -1785,8 +1785,8 @@
       }
 
       .tutorial-food-detail-list span {
-        font-size: 0.66rem;
-        line-height: 1.2;
+        font-size: 0.74rem;
+        line-height: 1.28;
       }
 
       .tutorial-copy {
@@ -5016,7 +5016,7 @@
       }
 
       .tutorial-resource-guide-panel span {
-        font-size: 0.8rem;
+        font-size: 0.84rem;
       }
 
       .tutorial-copy {
@@ -5222,7 +5222,7 @@
       }
 
       .tutorial-resource-guide-panel span {
-        font-size: 0.72rem;
+        font-size: 0.74rem;
         line-height: 1.28;
       }
 
@@ -5235,8 +5235,8 @@
       }
 
       .tutorial-food-detail-list span {
-        font-size: 0.66rem;
-        line-height: 1.2;
+        font-size: 0.74rem;
+        line-height: 1.28;
       }
 
       .tutorial-copy {
