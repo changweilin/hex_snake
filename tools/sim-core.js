@@ -13,6 +13,7 @@ const SANDWORM_REVEAL_BEFORE_IMPACT_MS = 200;
 const SANDWORM_UNDERGROUND_WINDOW_MS = 500;
 const FOOD_TARGET_SWITCH_MS = 20000;
 const DEAD_END_MIN_SPACE = 5;
+const SMALL_ATTACK_FOOD_COST = 2;
 const DIRECTIONS = [
   { q: 0, r: -1 },
   { q: 1, r: -1 },
@@ -222,21 +223,41 @@ function blastRadius(stock, balance) {
   return balance.attack.baseBlastHexRadius * areaMultiplier(stock, balance);
 }
 
-function attackFoodCost(profile = "big") {
-  return profile === "small" ? 1 : 2;
+function maxHpForSnake(snake = []) {
+  return ((snake?.length || 0) + 1) * 4;
+}
+
+function foodHealAmount() {
+  return 4;
+}
+
+function attackFoodCost(profile = "big", balance = null) {
+  return profile === "small" ? (balance?.attack?.smallAttackFoodCost ?? SMALL_ATTACK_FOOD_COST) : 2;
 }
 
 function attackBombCost(profile, balance) {
-  return profile === "small" ? 0 : balance.attack.bigAttackBombCost;
+  return profile === "small" ? (balance.attack.smallAttackBombCost ?? 1) : balance.attack.bigAttackBombCost;
 }
 
-function hasAttackFoodCost(stock, profile) {
-  const cost = attackFoodCost(profile);
+function highestStockFoodType(stock) {
+  return FOOD_TYPES.reduce((best, type) => {
+    const currentCount = stock[type] || 0;
+    const bestCount = best ? (stock[best] || 0) : -Infinity;
+    return currentCount > bestCount ? type : best;
+  }, null);
+}
+
+function hasAttackFoodCost(stock, profile, balance) {
+  const cost = attackFoodCost(profile, balance);
+  if (profile === "small") {
+    const highestType = highestStockFoodType(stock);
+    return Boolean(highestType) && (stock[highestType] || 0) >= cost;
+  }
   return FOOD_TYPES.every(type => (stock[type] || 0) >= cost);
 }
 
 function canAttack(fighter, profile, balance) {
-  return fighter.ammo >= attackBombCost(profile, balance) && hasAttackFoodCost(fighter.stock, profile);
+  return fighter.ammo >= attackBombCost(profile, balance) && hasAttackFoodCost(fighter.stock, profile, balance);
 }
 
 function attackStats(stock, profile, balance) {
@@ -252,12 +273,28 @@ function bandDistanceFromTotalWidth(totalWidth) {
   return Math.max(0, Math.floor((totalWidth - 1) / 2));
 }
 
+function convertFullEnergyToAmmo(fighter, balance) {
+  if (fighter.ammoCharge < balance.resources.attackNeedTotal || fighter.ammo >= balance.resources.maxAmmo) return false;
+  fighter.ammo = Math.min(balance.resources.maxAmmo, fighter.ammo + 1);
+  fighter.ammoCharge = 0;
+  return true;
+}
+
 function consumeAttackCost(fighter, profile, balance) {
-  const cost = attackFoodCost(profile);
-  FOOD_TYPES.forEach(type => {
-    fighter.stock[type] = Math.max(0, fighter.stock[type] - cost);
-  });
-  fighter.ammo = Math.max(0, fighter.ammo - attackBombCost(profile, balance));
+  const cost = attackFoodCost(profile, balance);
+  const bombCost = attackBombCost(profile, balance);
+  const hadFullEnergy = fighter.ammoCharge >= balance.resources.attackNeedTotal;
+  const hadFullBombs = fighter.ammo >= balance.resources.maxAmmo;
+  if (profile === "small") {
+    const highestType = highestStockFoodType(fighter.stock);
+    if (highestType) fighter.stock[highestType] = Math.max(0, (fighter.stock[highestType] || 0) - cost);
+  } else {
+    FOOD_TYPES.forEach(type => {
+      fighter.stock[type] = Math.max(0, fighter.stock[type] - cost);
+    });
+  }
+  fighter.ammo = Math.max(0, fighter.ammo - bombCost);
+  if (bombCost > 0 && hadFullEnergy && hadFullBombs) convertFullEnergyToAmmo(fighter, balance);
 }
 
 function addAmmoCharge(fighter, amount, balance) {
@@ -447,7 +484,7 @@ function makeFighter(owner, character, start, direction, settings, balance, poli
   }
   const stock = { ...emptyStock(), ...(settings.initialStock || {}) };
   const snake = createStartingSnake(start, direction, settings.initialLength, settings.radius);
-  const maxHp = snake.length * 2;
+  const maxHp = maxHpForSnake(snake);
   return {
     owner,
     character,
@@ -555,13 +592,15 @@ function isLethalAttack(state, fighter, opponent, balance, profile) {
 }
 
 function attackResourceCost(profile, balance) {
-  return attackFoodCost(profile) * FOOD_TYPES.length + attackBombCost(profile, balance) * FOOD_TYPES.length;
+  const foodMultiplier = profile === "small" ? 1 : FOOD_TYPES.length;
+  return attackFoodCost(profile, balance) * foodMultiplier + attackBombCost(profile, balance) * FOOD_TYPES.length;
 }
 
 function opponentAlmostReady(opponent, balance) {
   if (canAttack(opponent, "small", balance) || canAttack(opponent, "big", balance)) return true;
-  const stockClose = FOOD_TYPES.every(type => (opponent.stock[type] || 0) >= Math.max(0, attackFoodCost("small") - 1));
-  const ammoClose = opponent.ammo >= balance.attack.bigAttackBombCost - 1 || opponent.ammoCharge >= balance.resources.attackNeedTotal - 1;
+  const highestType = highestStockFoodType(opponent.stock);
+  const stockClose = highestType && (opponent.stock[highestType] || 0) >= Math.max(0, attackFoodCost("small", balance) - 1);
+  const ammoClose = opponent.ammo >= attackBombCost("small", balance) || opponent.ammoCharge >= balance.resources.attackNeedTotal - 1;
   return stockClose || ammoClose;
 }
 
@@ -1479,7 +1518,7 @@ function moveFighters(state, movers, now, balance) {
       fighter.foodTargetKey = null;
       fighter.foodTargetAt = 0;
       collectFood(fighter, plan.eatenFood, balance, state.rng);
-      fighter.hp = Math.min(fighter.snake.length * 2, fighter.hp + 1);
+      fighter.hp = Math.min(maxHpForSnake(fighter.snake), fighter.hp + foodHealAmount());
     } else {
       fighter.snake.pop();
     }
@@ -1746,7 +1785,7 @@ function aggregateMatches(matches, playerCharacterId, computerCharacterId, balan
       smallCastRate: totalCasts ? playerTotals.smallCasts / totalCasts : 0,
       damagePerCast: totalCasts ? playerTotals.damageDealt / totalCasts : 0,
       stunPerCast: totalCasts ? playerTotals.stunApplied / totalCasts : 0,
-      resourceEfficiency: totalCasts ? playerTotals.damageDealt / (playerTotals.smallCasts * 4 + playerTotals.bigCasts * (8 + balance.attack.bigAttackBombCost * 4)) : 0,
+      resourceEfficiency: totalCasts ? playerTotals.damageDealt / (playerTotals.smallCasts * attackResourceCost("small", balance) + playerTotals.bigCasts * attackResourceCost("big", balance)) : 0,
       controlValue: totalCasts ? playerTotals.stunApplied / totalCasts : 0,
       burstRisk: totalCasts ? playerTotals.bigCasts / totalCasts : 0
     },

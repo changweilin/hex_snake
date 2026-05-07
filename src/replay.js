@@ -325,8 +325,8 @@
       targetActive = Boolean(snapshot.targetActive);
       score = snapshot.score || 0;
       computerScore = snapshot.computerScore || 0;
-      playerHp = snapshot.playerHp ?? snake.length * 2;
-      computerHp = snapshot.computerHp ?? computerSnake.length * 2;
+      playerHp = snapshot.playerHp ?? maxHpForSnake(snake);
+      computerHp = snapshot.computerHp ?? maxHpForSnake(computerSnake);
       playerStock = replayClone(snapshot.playerStock || {});
       computerStock = replayClone(snapshot.computerStock || {});
       playerAmmo = snapshot.playerAmmo || 0;

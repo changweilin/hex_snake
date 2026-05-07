@@ -304,15 +304,17 @@
     }
 
     function attackResourceCost(profile = "big") {
-      return attackFoodCost(profile) * foodTypes.length + attackBombCost(profile) * foodTypes.length;
+      const foodMultiplier = profile === "small" ? 1 : foodTypes.length;
+      return attackFoodCost(profile) * foodMultiplier + attackBombCost(profile) * foodTypes.length;
     }
 
     function opponentAlmostReady(owner) {
       const opponent = opponentOf(owner);
       const stock = ownerStock(opponent);
       if (canAttack(opponent, "small") || canAttack(opponent, "big")) return true;
-      const stockClose = foodTypes.every(type => stock[type.id] >= Math.max(0, attackFoodCost("small") - 1));
-      const ammoClose = ammoFor(opponent) >= bigAttackBombCost - 1 || ammoChargeFor(opponent) >= attackNeedTotal - 1;
+      const highestType = highestStockFoodType(stock);
+      const stockClose = highestType && (stock[highestType.id] || 0) >= Math.max(0, attackFoodCost("small") - 1);
+      const ammoClose = ammoFor(opponent) >= attackBombCost("small") || ammoChargeFor(opponent) >= attackNeedTotal - 1;
       return stockClose || ammoClose;
     }
 
@@ -706,4 +708,3 @@
       } : {};
       if (launchAttack("player", target, now, profile, options)) flashAttackButton(profile, 150);
     }
-

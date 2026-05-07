@@ -39,6 +39,8 @@
     "targetMaxHex": 6
   },
   "attack": {
+    "smallAttackFoodCost": 2,
+    "smallAttackBombCost": 1,
     "bigAttackBombCost": 2,
     "baseAttackDelayMs": 2000,
     "baseAttackCooldownMs": 2400,

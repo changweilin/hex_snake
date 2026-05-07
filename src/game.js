@@ -541,8 +541,8 @@
       computerSnake = createStartingSnake({ q: offset, r: -offset }, computerDir, startLength);
       score = 0;
       computerScore = 0;
-      playerHp = snake.length * 2;
-      computerHp = computerSnake.length * 2;
+      playerHp = maxHpForSnake(snake);
+      computerHp = maxHpForSnake(computerSnake);
       playerStock = startingStock();
       computerStock = startingStock();
       playerAmmo = startingBombs();
@@ -818,8 +818,8 @@
 
     function updateHud() {
       lastHudFrameAt = performance.now();
-      const playerMaxHp = snake.length * 2;
-      const computerMaxHp = computerSnake.length * 2;
+      const playerMaxHp = maxHpForSnake(snake);
+      const computerMaxHp = maxHpForSnake(computerSnake);
       scoreEl.textContent = `HP ${Math.max(0, Math.ceil(playerHp))}/${playerMaxHp}`;
       computerScoreEl.textContent = `HP ${Math.max(0, Math.ceil(computerHp))}/${computerMaxHp}`;
       updateHealthBar("player", playerHp, playerMaxHp);
@@ -2011,7 +2011,7 @@
         lastPlayerFoodAt = performance.now();
         playerFoodTargetKey = null;
         playerFoodTargetAt = 0;
-        playerHp = Math.min(snake.length * 2, playerHp + 1);
+        playerHp = Math.min(maxHpForSnake(snake), playerHp + foodHealAmount());
       } else if (!playerCollision) {
         snake.pop();
       }
@@ -2023,7 +2023,7 @@
         computerFoodTargetAt = 0;
         if (computerCanGrow()) {
           collectFood("computer", computerEatenFood);
-          computerHp = Math.min(computerSnake.length * 2, computerHp + 1);
+          computerHp = Math.min(maxHpForSnake(computerSnake), computerHp + foodHealAmount());
         } else {
           computerSnake.pop();
         }
@@ -2081,7 +2081,7 @@
         lastPlayerFoodAt = performance.now();
         playerFoodTargetKey = null;
         playerFoodTargetAt = 0;
-        playerHp = Math.min(snake.length * 2, playerHp + 1);
+        playerHp = Math.min(maxHpForSnake(snake), playerHp + foodHealAmount());
         foods = foods.filter(food => keyOf(food) !== nextKey);
         placeFoods(["player"]);
       } else {
@@ -2118,7 +2118,7 @@
         computerFoodTargetAt = 0;
         if (computerCanGrow()) {
           collectFood("computer", computerEatenFood);
-          computerHp = Math.min(computerSnake.length * 2, computerHp + 1);
+          computerHp = Math.min(maxHpForSnake(computerSnake), computerHp + foodHealAmount());
         } else {
           computerSnake.pop();
         }
@@ -2741,11 +2741,17 @@
 
       const stock = playerStock;
       const foodCost = attackFoodCost(profile);
-      const missingFood = foodTypes
-        .filter(type => stock[type.id] < foodCost)
-        .map(type => type.label)
-        .join("、");
-      if (missingFood) return `${moveName} 施放失敗：${missingFood}庫存不足，需要四種庫存各 ${foodCost}。`;
+      if (profile === "small") {
+        const highestType = highestStockFoodType(stock);
+        const highestCount = highestType ? stock[highestType.id] || 0 : 0;
+        if (highestCount < foodCost) return `${moveName} 施放失敗：最高庫存不足，需要任一食物庫存至少 ${foodCost}。`;
+      } else {
+        const missingFood = foodTypes
+          .filter(type => stock[type.id] < foodCost)
+          .map(type => type.label)
+          .join("、");
+        if (missingFood) return `${moveName} 施放失敗：${missingFood}庫存不足，需要四種庫存各 ${foodCost}。`;
+      }
 
       const bombCost = attackBombCost(profile);
       if (ammoFor("player") < bombCost) return `${moveName} 施放失敗：炸彈不足，需要 ${bombCost} 枚，目前 ${ammoFor("player")} 枚。`;
@@ -3589,7 +3595,7 @@
         return;
       }
       overlayTitle.textContent = "準備開局";
-      overlayText.textContent = `每吃 1 個食物獲得 2 點能量，集滿 ${attackNeedTotal} 點獲得 1 枚炸彈，最多 ${maxAmmo} 枚；能量與炸彈都滿時，施放消耗炸彈的招式會立刻把滿能量轉為 1 枚炸彈；小招消耗蛋白、脂肪、纖維、碳水各 1 點，大招消耗 ${bigAttackBombCost} 枚炸彈與四種庫存各 2 點。`;
+      overlayText.textContent = `每吃 1 個食物獲得 2 點能量，集滿 ${attackNeedTotal} 點獲得 1 枚炸彈，最多 ${maxAmmo} 枚；HP 上限為（蛇長 + 1）× 4；能量與炸彈都滿時，施放消耗炸彈的招式會立刻把滿能量轉為 1 枚炸彈；小招消耗目前最高的食物庫存 ${smallAttackFoodCost} 點與 ${smallAttackBombCost} 枚炸彈，大招消耗 ${bigAttackBombCost} 枚炸彈與四種庫存各 2 點。`;
       startButton.textContent = "開始";
       setOverlayChromeVisible(true);
       startGame();

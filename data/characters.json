@@ -167,8 +167,8 @@
     ],
     "motto": "巨影臨沙之日，卑土亦將掀翻王座。",
     "resultLines": {
-      "victory": "沙葬已成",
-      "defeat": "地脈崩了"
+      "victory": "沙海送葬",
+      "defeat": "沙還在"
     },
     "smallMove": "潛沙絞殺",
     "bigMove": "沙海地葬",
@@ -411,7 +411,7 @@
     ],
     "motto": "鉤索一日不絕，逆潮便一日不肯退去。",
     "resultLines": {
-      "victory": "逆潮通電",
+      "victory": "輕鬆~",
       "defeat": "不可能!"
     },
     "smallMove": "雷牙狂咬",
@@ -533,8 +533,8 @@
     ],
     "motto": "萬螯既律，混沌自明。",
     "resultLines": {
-      "victory": "混沌清盤",
-      "defeat": "秩序亂了"
+      "victory": "混沌已清盤",
+      "defeat": "秩序再重排"
     },
     "smallMove": "赤螯重擊",
     "bigMove": "混沌爆螯",
@@ -655,8 +655,8 @@
     ],
     "motto": "甕底群蠱藏，赤血照寒芒。碧影沉千敵，諱名稱蠱王。",
     "resultLines": {
-      "victory": "敗者入甕",
-      "defeat": "毒甕碎裂"
+      "victory": "入甕",
+      "defeat": "甕碎"
     },
     "smallMove": "百足毒斬",
     "bigMove": "萬蠱蝕界令",

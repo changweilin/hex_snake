@@ -9,6 +9,8 @@ let maxInitialLength = 12;
 let attackNeedTotal = 6;
 let maxAmmo = 3;
 const autoBattleSpeeds = [4, 2, 1.5, 1, 0.75, 0.5, 0.25];
+let smallAttackFoodCost = 2;
+let smallAttackBombCost = 1;
 let bigAttackBombCost = 2;
 let baseAttackDelayMs = 2000;
 let baseAttackCooldownMs = 2400;
@@ -106,6 +108,8 @@ function applyBalanceConfig(config) {
   moveBonusPerPoint = config.movement?.moveBonusPerPoint ?? moveBonusPerPoint;
   maxMoveBonus = config.movement?.maxMoveBonus ?? maxMoveBonus;
   targetMaxHex = config.movement?.targetMaxHex ?? targetMaxHex;
+  smallAttackFoodCost = config.attack?.smallAttackFoodCost ?? smallAttackFoodCost;
+  smallAttackBombCost = config.attack?.smallAttackBombCost ?? smallAttackBombCost;
   bigAttackBombCost = config.attack?.bigAttackBombCost ?? bigAttackBombCost;
   baseAttackDelayMs = config.attack?.baseAttackDelayMs ?? baseAttackDelayMs;
   baseAttackCooldownMs = config.attack?.baseAttackCooldownMs ?? baseAttackCooldownMs;
@@ -631,7 +635,7 @@ const tutorialSlides = [
       },
       {
         title: "進食策略",
-        text: `食物以簡稱搭配棋盤顏色標示；先看資源圖表判斷缺哪種庫存、能量或炸彈。吃到食物會增加 1 段蛇身並增加 2 點 HP；${dualFoodName}會補棋盤上顯示的兩種庫存。食物庫存與炸彈決定能不能放招式；兩邊都要顧。`
+        text: `食物以簡稱搭配棋盤顏色標示；先看資源圖表判斷缺哪種庫存、能量或炸彈。HP 上限為（蛇長 + 1）× 4；吃到食物會增加 1 段蛇身並回復 ${foodHealAmount()} 點 HP；${dualFoodName}會補棋盤上顯示的兩種庫存。食物庫存與炸彈決定能不能放招式；兩邊都要顧。`
       },
       {
         title: "控制效果",
@@ -651,7 +655,7 @@ const tutorialSlides = [
     lead: "四種自然食物與特殊食物的效果列在這裡；庫存上限已併在食物效果區塊最後面。",
     points: [
       "蛋白拉大爆炸半徑、脂肪增加傷害、纖維提高速度、碳水加快攻擊並提高暈眩。",
-      `能量滿 ${attackNeedTotal} 點轉成炸彈，炸彈最多 ${maxAmmo} 枚，是大招的主要消耗。`
+      `能量滿 ${attackNeedTotal} 點轉成炸彈，炸彈最多 ${maxAmmo} 枚，是招式的主要消耗。`
     ]
   },
   {
@@ -663,7 +667,7 @@ const tutorialSlides = [
       {
         title: "小招操作",
         text: "按<strong>鍵盤Q</strong> 或<strong>小招</strong>按鈕施放；短按棋盤也可施展小招。",
-        cost: `成本：蛋白、脂肪、纖維、碳水四種庫存各 1 點。`
+        cost: `成本：目前最高的食物庫存 ${smallAttackFoodCost} 點，並消耗 ${smallAttackBombCost} 枚炸彈。`
       },
       {
         title: "大招操作",
@@ -962,7 +966,7 @@ function tutorialResourceGuideMarkup() {
           </div>
           <div class="tutorial-resource-guide-panel">
             <strong>能量與炸彈</strong>
-            <span>${formatRichText(`吃食物會累積能量；能量滿 ${attackNeedTotal} 點轉成炸彈，炸彈最多 ${maxAmmo} 枚，是大招的主要消耗。`)}</span>
+            <span>${formatRichText(`吃食物會累積能量；能量滿 ${attackNeedTotal} 點轉成炸彈，炸彈最多 ${maxAmmo} 枚，是招式的主要消耗。`)}</span>
           </div>
         </div>
       `;
@@ -1661,16 +1665,36 @@ function blastRadius(stock) {
   return baseBlastHexRadius * areaMultiplier(stock);
 }
 
+function maxHpForSnake(snakeParts = []) {
+  return ((snakeParts?.length || 0) + 1) * 4;
+}
+
+function foodHealAmount() {
+  return 4;
+}
+
 function attackFoodCost(profile = "big") {
-  return profile === "small" ? 1 : 2;
+  return profile === "small" ? smallAttackFoodCost : 2;
 }
 
 function attackBombCost(profile = "big") {
-  return profile === "small" ? 0 : bigAttackBombCost;
+  return profile === "small" ? smallAttackBombCost : bigAttackBombCost;
+}
+
+function highestStockFoodType(stock) {
+  return foodTypes.reduce((best, type) => {
+    const currentCount = stock[type.id] || 0;
+    const bestCount = best ? (stock[best.id] || 0) : -Infinity;
+    return currentCount > bestCount ? type : best;
+  }, null);
 }
 
 function hasAttackFoodCost(stock, profile = "big") {
   const cost = attackFoodCost(profile);
+  if (profile === "small") {
+    const highestType = highestStockFoodType(stock);
+    return Boolean(highestType) && (stock[highestType.id] || 0) >= cost;
+  }
   return foodTypes.every(type => stock[type.id] >= cost);
 }
 
@@ -1709,9 +1733,14 @@ function consumeAttackCost(owner, stock, profile = "big") {
   const bombCost = attackBombCost(profile);
   const hadFullEnergy = ammoChargeFor(owner) >= attackNeedTotal;
   const hadFullBombs = ammoFor(owner) >= maxAmmo;
-  foodTypes.forEach(type => {
-    stock[type.id] = Math.max(0, stock[type.id] - cost);
-  });
+  if (profile === "small") {
+    const highestType = highestStockFoodType(stock);
+    if (highestType) stock[highestType.id] = Math.max(0, (stock[highestType.id] || 0) - cost);
+  } else {
+    foodTypes.forEach(type => {
+      stock[type.id] = Math.max(0, stock[type.id] - cost);
+    });
+  }
   if (bombCost > 0) {
     if (owner === "player") playerAmmo = Math.max(0, playerAmmo - bombCost);
     else computerAmmo = Math.max(0, computerAmmo - bombCost);

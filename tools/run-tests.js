@@ -127,9 +127,57 @@ test("attack costs and damage calculations match core rules", () => {
   };
   assert.equal(canAttack(fighter, "small", balance), true);
   assert.equal(canAttack(fighter, "big", balance), true);
+  assert.equal(canAttack({ stock: { protein: 0, fat: 2, fiber: 0, carb: 1 }, ammo: balance.attack.smallAttackBombCost }, "small", balance), true);
+  assert.equal(canAttack({ stock: { protein: 2, fat: 0, fiber: 0, carb: 0 }, ammo: 0 }, "small", balance), false);
   const stats = attackStats(fighter.stock, "small", balance);
   const damage = damageSnake([{ q: 0, r: 0 }, { q: 1, r: 0 }], { q: 0, r: 0 }, stats.radius, stats.damage, balance);
   assert.ok(damage > 0);
+});
+
+test("small attack spends highest stock and one bomb", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("dragon"),
+    computerCharacter: characterById.get("moray"),
+    seed: "small-cost",
+    initialBombs: balance.attack.smallAttackBombCost,
+    initialStock: { protein: 1, fat: 3, fiber: 0, carb: 2 }
+  });
+  const player = state.fighters.player;
+  const computer = state.fighters.computer;
+  assert.equal(launchAttack(state, player, computer, "small", state.now, balance), true);
+  assert.equal(player.stock.fat, 1);
+  assert.equal(player.stock.protein, 1);
+  assert.equal(player.stock.carb, 2);
+  assert.equal(player.ammo, 0);
+});
+
+test("bomb spending converts full energy when bombs were capped", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("dragon"),
+    computerCharacter: characterById.get("moray"),
+    seed: "capped-bomb-conversion",
+    initialBombs: balance.resources.maxAmmo,
+    initialEnergy: balance.resources.attackNeedTotal,
+    initialStock: { protein: 0, fat: 3, fiber: 0, carb: 0 }
+  });
+  const player = state.fighters.player;
+  const computer = state.fighters.computer;
+  assert.equal(launchAttack(state, player, computer, "small", state.now, balance), true);
+  assert.equal(player.ammo, balance.resources.maxAmmo);
+  assert.equal(player.ammoCharge, 0);
+});
+
+test("fighter hp uses snake length plus one times four", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("dragon"),
+    computerCharacter: characterById.get("moray"),
+    initialLength: 3
+  });
+  assert.equal(state.fighters.player.hp, 16);
+  assert.equal(state.fighters.computer.hp, 16);
 });
 
 test("player-owned attacks and hazards do not damage or stun the player", () => {
@@ -678,7 +726,7 @@ test("near-full resource timing requires both bombs and energy to be near full",
   });
   const computer = state.fighters.computer;
   const player = state.fighters.player;
-  computer.stock = { protein: 1, fat: 1, fiber: 1, carb: 1 };
+  computer.stock = { protein: 2, fat: 1, fiber: 1, carb: 1 };
   computer.policy.strategyWeights.skillAllocation = { preferSmall: 0, preferBig: 0 };
   computer.policy.strategyWeights.castTiming = {
     lethal: 0,
