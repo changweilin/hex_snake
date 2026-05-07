@@ -1449,6 +1449,8 @@ function defeatByCollisionParalysis(state, fighter, now) {
 function moveFighters(state, movers, now, balance) {
   const player = state.fighters.player;
   const computer = state.fighters.computer;
+  const movedOwners = [];
+  const collisionOwners = [];
   movers.forEach(owner => {
     const fighter = state.fighters[owner];
     const opponent = owner === "player" ? computer : player;
@@ -1507,9 +1509,11 @@ function moveFighters(state, movers, now, balance) {
     const fighter = state.fighters[owner];
     const plan = plans[owner];
     if (plan.collision) {
+      collisionOwners.push(owner);
       if (applyCollisionPenalty(fighter, plan.collision, now, balance)) defeatByCollisionParalysis(state, fighter, now);
       return;
     }
+    movedOwners.push(owner);
     fighter.snake.unshift(plan.next);
     if (plan.eating) {
       fighter.score += 1;
@@ -1529,6 +1533,8 @@ function moveFighters(state, movers, now, balance) {
     state.foods = state.foods.filter(food => !eatenKeys.has(keyOf(food)));
     placeFoods(state, Object.entries(plans).filter(([, plan]) => plan.eating && !plan.collision).map(([owner]) => owner));
   }
+
+  return { movedOwners, collisionOwners, plans };
 }
 
 function sampleStock(fighter) {
@@ -1599,30 +1605,6 @@ function nextHazardTick(state, tickMs) {
   }, Number.POSITIVE_INFINITY);
 }
 
-function nextAttackCheckTick(state, fighter, balance, tickMs) {
-  if (!canAttack(fighter, "small", balance) && !canAttack(fighter, "big", balance)) return Number.POSITIVE_INFINITY;
-  const nextSequentialTick = state.now + tickMs;
-  const candidates = [];
-  if (canAttack(fighter, "small", balance)) {
-    candidates.push(fighter.lastAttack + attackCooldown(fighter.stock, balance) * SMALL_ATTACK_COOLDOWN_SCALE);
-  }
-  if (canAttack(fighter, "big", balance)) {
-    candidates.push(fighter.lastAttack + attackCooldown(fighter.stock, balance));
-  }
-  candidates.push(nextSequentialTick, fighter.stunUntil);
-  const ticks = [...new Set(candidates
-    .filter(Number.isFinite)
-    .map(candidate => Math.max(nextSequentialTick, ceilToTick(Math.max(candidate, fighter.stunUntil), tickMs))))]
-    .sort((left, right) => left - right);
-  return ticks.find(tick => (
-    tick >= fighter.stunUntil &&
-    (
-      canAttack(fighter, "small", balance) && tick - fighter.lastAttack >= attackCooldown(fighter.stock, balance) * SMALL_ATTACK_COOLDOWN_SCALE ||
-      canAttack(fighter, "big", balance) && tick - fighter.lastAttack >= attackCooldown(fighter.stock, balance)
-    )
-  )) ?? Number.POSITIVE_INFINITY;
-}
-
 function nextMoveTick(state, fighter, balance, tickMs) {
   const nextSequentialTick = state.now + tickMs;
   const candidates = [
@@ -1646,7 +1628,6 @@ function nextMeaningfulTick(state, balance, tickMs, maxMatchMs) {
     nextHazardTick(state, tickMs)
   ];
   Object.values(state.fighters).forEach(fighter => {
-    eventTicks.push(nextAttackCheckTick(state, fighter, balance, tickMs));
     eventTicks.push(nextMoveTick(state, fighter, balance, tickMs));
   });
   const soonest = Math.min(...eventTicks.filter(value => Number.isFinite(value) && value > state.now));
@@ -1671,23 +1652,23 @@ function simulateMatch(options) {
     resolveProjectiles(state, state.now, balance);
     resolveHazards(state, state.now, balance);
     updateVisibleMemory(state);
-    for (const [owner, fighter] of Object.entries(state.fighters)) {
-      const opponent = owner === "player" ? state.fighters.computer : state.fighters.player;
-      if (state.now >= fighter.stunUntil) {
-        const profile = chooseAttackProfile(state, fighter, opponent, balance);
-        if (profile) launchAttack(state, fighter, opponent, profile, state.now, balance);
-      }
-      sampleStock(fighter);
-    }
     const movers = Object.values(state.fighters)
       .filter(fighter => state.now >= fighter.stunUntil && state.now - fighter.lastStep >= moveInterval(fighter, balance, state.now))
       .map(fighter => fighter.owner);
     if (movers.length) {
-      moveFighters(state, movers, state.now, balance);
+      const { movedOwners } = moveFighters(state, movers, state.now, balance);
       movers.forEach(owner => {
         state.fighters[owner].lastStep = state.now;
       });
+      movedOwners.forEach(owner => {
+        const fighter = state.fighters[owner];
+        const opponent = owner === "player" ? state.fighters.computer : state.fighters.player;
+        if (fighter.hp <= 0 || opponent.hp <= 0 || state.now < fighter.stunUntil) return;
+        const profile = chooseAttackProfile(state, fighter, opponent, balance);
+        if (profile) launchAttack(state, fighter, opponent, profile, state.now, balance);
+      });
     }
+    Object.values(state.fighters).forEach(sampleStock);
   }
   const player = state.fighters.player;
   const computer = state.fighters.computer;

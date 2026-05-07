@@ -312,6 +312,22 @@ test("small attack delay is doubled in speed while big attack delay is unchanged
   assert.equal(attackStats(stock, "big", balance).delay, balance.attack.baseAttackDelayMs);
 });
 
+test("simulated AI does not attack before its first movement tick", () => {
+  const match = simulateMatch({
+    balance,
+    playerCharacter: characterById.get("dragon"),
+    computerCharacter: characterById.get("moray"),
+    seed: "attack-after-move-only",
+    initialBombs: balance.attack.smallAttackBombCost,
+    initialStock: { protein: 2, fat: 0, fiber: 0, carb: 0 },
+    maxMatchMs: 100,
+    playerModel: { aiDifficulty: "high", pathPrecision: 1, aimPrecision: 1 },
+    computerModel: { aiDifficulty: "high", pathPrecision: 1, aimPrecision: 1 }
+  });
+  assert.equal(match.player.smallCasts + match.player.bigCasts, 0);
+  assert.equal(match.computer.smallCasts + match.computer.bigCasts, 0);
+});
+
 test("sandworm big attack stays hidden until 0.2s before impact and burrows for 0.5s around impact", () => {
   const state = createMatchState({
     balance,
