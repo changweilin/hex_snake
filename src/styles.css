@@ -1135,6 +1135,12 @@
       line-height: 1.26;
     }
 
+    .tutorial-food-stock-limit {
+      display: block;
+      margin-top: 2px;
+      color: #fde68a;
+    }
+
     .tutorial-hex {
       width: 58px;
       height: 52px;

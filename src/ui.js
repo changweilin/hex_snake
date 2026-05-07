@@ -188,25 +188,32 @@ const directions = [
   { q: -1, r: 0, angle: -150, key: "a", label: "左方" }
 ];
 const foodTypes = [
-  { id: "protein", label: "蛋白", name: "蛋白質", colorName: "紅色", foodName: "蛋白質", effect: "爆炸半徑由 2 連續成長到 4，小數部分會讓最外圈承受對應比例傷害", color: "#ef4444", line: "#fecaca" },
+  { id: "protein", label: "蛋白", name: "蛋白", colorName: "紅色", foodName: "蛋白", effect: "爆炸半徑由 2 連續成長到 4，小數部分會讓最外圈承受對應比例傷害", color: "#ef4444", line: "#fecaca" },
   { id: "fat", label: "脂肪", name: "脂肪", colorName: "黃色", foodName: "脂肪", effect: "攻擊傷害係數基礎 2，滿庫存約 3.4", color: "#facc15", line: "#fef08a" },
-  { id: "fiber", label: "纖維", name: "纖維素", colorName: "綠色", foodName: "纖維素", effect: "提升移動速度，滿庫存約 1.8x", color: "#22c55e", line: "#bbf7d0" },
+  { id: "fiber", label: "纖維", name: "纖維", colorName: "綠色", foodName: "纖維", effect: "提升移動速度，滿庫存約 1.8x", color: "#22c55e", line: "#bbf7d0" },
   { id: "carb", label: "碳水", name: "碳水", colorName: "藍色", foodName: "碳水", effect: "提升攻擊施展與冷卻速度，並提高命中暈眩機率", color: "#3b82f6", line: "#bfdbfe" }
 ];
-const blackFoodType = { id: "black", label: "迷幻菇", name: "迷幻菇", colorName: "黑色", foodName: "迷幻菇", effect: "特殊食物；吃下後蛋白質、脂肪、纖維素、碳水隨機一種庫存 +1，並獲得 3 點能量", color: "#050505", line: "#e5e7eb" };
-const dualFoodName = "蟠桃";
+const blackFoodType = { id: "black", label: "迷幻菇", name: "迷幻菇", colorName: "黑色", foodName: "迷幻菇", effect: "特殊食物；吃下後蛋白、脂肪、纖維、碳水隨機一種庫存 +1，並獲得 3 點能量", color: "#050505", line: "#e5e7eb" };
+const dualFoodName = "蟠桃(雙色)";
 const foodTypeById = new Map([...foodTypes, blackFoodType].map(type => [type.id, type]));
 const foodLabels = {
   balanced: "均衡",
-  protein: "蛋白質",
+  protein: "蛋白",
   fat: "脂肪",
-  fiber: "纖維素",
+  fiber: "纖維",
   carb: "碳水",
   black: "迷幻菇"
 };
 
 function foodNameWithColor(type) {
   return type?.colorName ? `${type.name}（${type.colorName}）` : type?.name || "";
+}
+
+function compactFoodTerms(text = "") {
+  return text
+    .replace(/蟠桃(?!\()/g, dualFoodName)
+    .replace(/蛋白質/g, "蛋白")
+    .replace(/纖維素/g, "纖維");
 }
 const poseAliases = {
   opening: "opening",
@@ -478,7 +485,7 @@ const characterMoveGuides = {
     tip: "長按棋盤可預判敵方頭部下一步；施放後接近命中時會短暫潛地，可用來躲開危險。"
   },
   quetzal: {
-    big: "按大招鍵、點「大招」，或在棋盤長按都會施放；羽蛇會沿自身蛇身留下<strong>持續 3 秒</strong>的<strong>藤沼區域</strong>，不需要指定落點，蛋白質（紅色）庫存越高外擴傷害越完整。",
+    big: "按大招鍵、點「大招」，或在棋盤長按都會施放；羽蛇會沿自身蛇身留下<strong>持續 3 秒</strong>的<strong>藤沼區域</strong>，不需要指定落點，蛋白（紅色）庫存越高外擴傷害越完整。",
     tip: "適合在敵方靠近你身體或追逐時施放，用身體路徑封鎖空間。"
   },
   moray: {
@@ -505,7 +512,7 @@ function moveGuideFor(character) {
 function characterStoryMarkup(character) {
   const motto = character.motto ? `<p class="portrait-motto">「${character.motto}」</p>` : "";
   const moves = character.smallMove && character.bigMove
-    ? `<div class="portrait-moves" aria-label="${character.name}招式與食補效果"><span>小招：${character.smallMove}</span><span>大招：${character.bigMove}</span><span>食補效果：${character.detail}</span></div>`
+    ? `<div class="portrait-moves" aria-label="${character.name}招式與食補效果"><span>小招：${character.smallMove}</span><span>大招：${character.bigMove}</span><span>食補效果：${compactFoodTerms(character.detail)}</span></div>`
     : "";
   const story = (character.story || []).map(paragraph => `<p>${paragraph}</p>`).join("");
   return `${motto}${moves}${story}`;
@@ -535,6 +542,10 @@ const tutorialSlides = [
         text: "用<strong>虛擬搖桿區</strong>或 <strong>W/E/D/X/Z/A</strong> 選六角方向；蒐集食物，逐步累積出招資源。"
       },
       {
+        title: "進食策略",
+        text: "先吃能補缺口的食物：蛋白拉大爆炸半徑、脂肪增加傷害、纖維提高速度、碳水加快攻擊並提高暈眩。"
+      },
+      {
         title: "控制效果",
         text: `攻擊命中後有 ${Math.round(baseAttackStunChance * 100)}% 基礎機率暈眩，碳水（藍色）庫存會提高暈眩率；暈眩會讓對手短時間無法順利走位。`
       },
@@ -545,10 +556,10 @@ const tutorialSlides = [
     ]
   },
   {
-    title: "食物與資源細節",
+    title: "食物效果",
     visual: "resources",
-    tag: "正式名稱 + 資源圖表",
-    lead: "食物以正式名稱標示，括號是棋盤顏色；先看資源圖表判斷缺哪種庫存、能量或炸彈。",
+    tag: "資源圖表 + 食物效果",
+    lead: "食物以簡稱搭配棋盤顏色標示；先看資源圖表判斷缺哪種庫存、能量或炸彈。",
     points: [
       "吃到食物會增加 1 段蛇身並增加 2 點 HP。",
       `${dualFoodName}會補棋盤上顯示的兩種庫存；能量與炸彈仍是大招節奏的核心資源。`
@@ -564,12 +575,12 @@ const tutorialSlides = [
       {
         title: "小招操作",
         text: "按<strong>鍵盤Q</strong> 或<strong>小招</strong>按鈕施放；短按棋盤也可施展小招。",
-        cost: `成本：蛋白質、脂肪、纖維素、碳水四種庫存各 1 點。`
+        cost: `成本：蛋白、脂肪、纖維、碳水四種庫存各 1 點。`
       },
       {
         title: "大招操作",
         text: "按<strong>鍵盤R</strong> 或<strong>大招</strong>按鈕施放；長按或拖曳棋盤也可施展大招。",
-        cost: `成本：${bigAttackBombCost} 枚炸彈，且蛋白質、脂肪、纖維素、碳水四種庫存各 2 點。`
+        cost: `成本：${bigAttackBombCost} 枚炸彈，且蛋白、脂肪、纖維、碳水四種庫存各 2 點。`
       },
       {
         title: "瞄準細節",
@@ -859,10 +870,7 @@ function tutorialResourceGuideMarkup() {
           <div class="tutorial-resource-guide-panel is-food-detail-panel">
             <strong>食物效果</strong>
             ${tutorialFoodDetailListMarkup()}
-          </div>
-          <div class="tutorial-resource-guide-panel">
-            <strong>庫存上限</strong>
-            <span>單一食物補同名庫存 ${singleColorStockGain} 點；${dualFoodName}補兩種庫存各 ${dualColorStockGain} 點；每種庫存最多 ${maxFoodStock} 點。</span>
+            <span class="tutorial-food-stock-limit">單一食物補同名庫存 ${singleColorStockGain} 點；每種食物庫存最多 ${maxFoodStock} 點。</span>
           </div>
           <div class="tutorial-resource-guide-panel">
             <strong>能量與炸彈</strong>
@@ -1014,7 +1022,7 @@ function buildRulesContent() {
               </span>
               <span class="rule-move-line"><b>角色大招：</b>${guide.big}</span>
               <span class="rule-move-line"><b>實戰重點：</b>${guide.tip}</span>
-              <span class="rule-food-effect">食補效果：${weightedFoodIconMarkup(character)}<span>${character.detail}</span></span>
+              <span class="rule-food-effect">食補效果：${weightedFoodIconMarkup(character)}<span>${compactFoodTerms(character.detail)}</span></span>
             </span>
           </li>
         `;
@@ -1022,7 +1030,7 @@ function buildRulesContent() {
   rulesContent.innerHTML = `
         <section class="rules-block rules-tutorial-callout">
           <h3>新手試玩教學</h3>
-          <p>想先用圖片快速看懂移動、食物與資源細節、小招操作，可以從這裡重新開啟教學頁。</p>
+          <p>想先用圖片快速看懂進食策略、移動、小招操作，可以從這裡重新開啟教學頁。</p>
           <button class="secondary" type="button" data-open-tutorial>觀看新手教學</button>
         </section>
         <section class="rules-block">
