@@ -215,6 +215,89 @@ function compactFoodTerms(text = "") {
     .replace(/蛋白質/g, "蛋白")
     .replace(/纖維素/g, "纖維");
 }
+
+function escapeRegExp(text) {
+  return String(text).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function foodTermMarkup(typeId, label) {
+  return `<strong class="inline-food-term is-${typeId}">${label}</strong>`;
+}
+
+function keywordMarkup(label) {
+  return `<strong class="inline-keyword">${label}</strong>`;
+}
+
+const inlineFoodTerms = [
+  ["dual", dualFoodName],
+  ["black", foodNameWithColor(blackFoodType)],
+  ["black", blackFoodType.name],
+  ...foodTypes.flatMap(type => [
+    [type.id, foodNameWithColor(type)],
+    [type.id, type.name]
+  ])
+].sort((a, b) => b[1].length - a[1].length);
+
+const inlineKeywordTerms = [
+  "HP 歸零",
+  "虛擬搖桿區",
+  "資源圖表",
+  "食物庫存",
+  "能量與炸彈",
+  "角色大招",
+  "實戰重點",
+  "食補效果",
+  "按鍵自訂",
+  "開局設定",
+  "六方向鍵",
+  "鍵盤Q",
+  "鍵盤R",
+  "短按",
+  "長按",
+  "拖曳",
+  "庫存",
+  "能量",
+  "炸彈",
+  "暈眩",
+  "小招",
+  "大招",
+  "落敗"
+].sort((a, b) => b.length - a.length);
+
+const inlineTermPattern = new RegExp(
+  [...inlineFoodTerms.map(([, label]) => label), ...inlineKeywordTerms].map(escapeRegExp).join("|"),
+  "g"
+);
+const inlineFoodTermByLabel = new Map(inlineFoodTerms.map(([id, label]) => [label, id]));
+const inlineKeywordSet = new Set(inlineKeywordTerms);
+
+function formatInlineText(text = "") {
+  if (!text) return "";
+  return compactFoodTerms(text).replace(inlineTermPattern, match => {
+    const foodId = inlineFoodTermByLabel.get(match);
+    if (foodId) return foodTermMarkup(foodId, match);
+    if (inlineKeywordSet.has(match)) return keywordMarkup(match);
+    return match;
+  });
+}
+
+function formatRichText(markup = "") {
+  const parts = compactFoodTerms(markup).split(/(<[^>]+>)/g);
+  let emphasizedDepth = 0;
+  return parts.map(part => {
+    if (!part) return "";
+    if (part.startsWith("<")) {
+      const tag = part.match(/^<\/?\s*([a-z0-9-]+)/i)?.[1]?.toLowerCase();
+      const isClosing = /^<\//.test(part);
+      if (tag === "strong" || tag === "b") {
+        emphasizedDepth += isClosing ? -1 : 1;
+        emphasizedDepth = Math.max(0, emphasizedDepth);
+      }
+      return part;
+    }
+    return emphasizedDepth > 0 ? part : formatInlineText(part);
+  }).join("");
+}
 const poseAliases = {
   opening: "opening",
   intro: "opening",
@@ -512,7 +595,7 @@ function moveGuideFor(character) {
 function characterStoryMarkup(character) {
   const motto = character.motto ? `<p class="portrait-motto">「${character.motto}」</p>` : "";
   const moves = character.smallMove && character.bigMove
-    ? `<div class="portrait-moves" aria-label="${character.name}招式與食補效果"><span>小招：${character.smallMove}</span><span>大招：${character.bigMove}</span><span>食補效果：${compactFoodTerms(character.detail)}</span></div>`
+    ? `<div class="portrait-moves" aria-label="${character.name}招式與食補效果"><span>小招：${character.smallMove}</span><span>大招：${character.bigMove}</span><span>食補效果：${formatRichText(character.detail)}</span></div>`
     : "";
   const story = (character.story || []).map(paragraph => `<p>${paragraph}</p>`).join("");
   return `${motto}${moves}${story}`;
@@ -846,7 +929,7 @@ function tutorialFoodDetailListMarkup() {
   const naturalFoodItems = foodTypes.map(type => `
             <li>
               ${foodIconGroupMarkup(type.id, `自然產出${foodNameWithColor(type)}`)}
-              <span><b>${foodNameWithColor(type)}</b>：${type.effect}。</span>
+              <span>${foodTermMarkup(type.id, foodNameWithColor(type))}：${formatRichText(type.effect)}。</span>
             </li>
           `).join("");
   return `
@@ -854,11 +937,11 @@ function tutorialFoodDetailListMarkup() {
             ${naturalFoodItems}
             <li>
               ${foodIconGroupMarkup(foodTypes.map(type => type.id), dualFoodName)}
-              <span><b>${dualFoodName}</b>：補棋盤上顯示的兩種庫存各 ${dualColorStockGain} 點，並獲得 ${foodEnergy} 點能量。</span>
+              <span>${foodTermMarkup("dual", dualFoodName)}：${formatRichText(`補棋盤上顯示的兩種庫存各 ${dualColorStockGain} 點，並獲得 ${foodEnergy} 點能量。`)}</span>
             </li>
             <li>
               ${foodIconGroupMarkup("black", foodNameWithColor(blackFoodType))}
-              <span><b>${foodNameWithColor(blackFoodType)}</b>：${blackFoodType.effect}；不會自然產出。</span>
+              <span>${foodTermMarkup("black", foodNameWithColor(blackFoodType))}：${formatRichText(`${blackFoodType.effect}；不會自然產出。`)}</span>
             </li>
           </ul>
         `;
@@ -870,11 +953,11 @@ function tutorialResourceGuideMarkup() {
           <div class="tutorial-resource-guide-panel is-food-detail-panel">
             <strong>食物效果</strong>
             ${tutorialFoodDetailListMarkup()}
-            <span class="tutorial-food-stock-limit">單一食物補同名庫存 ${singleColorStockGain} 點；每種食物庫存最多 ${maxFoodStock} 點。</span>
+            <span class="tutorial-food-stock-limit">${formatRichText(`單一食物補同名庫存 ${singleColorStockGain} 點；每種食物庫存最多 ${maxFoodStock} 點。`)}</span>
           </div>
           <div class="tutorial-resource-guide-panel">
             <strong>能量與炸彈</strong>
-            <span>吃食物會累積能量；能量滿 ${attackNeedTotal} 點轉成炸彈，炸彈最多 ${maxAmmo} 枚，是大招的主要消耗。</span>
+            <span>${formatRichText(`吃食物會累積能量；能量滿 ${attackNeedTotal} 點轉成炸彈，炸彈最多 ${maxAmmo} 枚，是大招的主要消耗。`)}</span>
           </div>
         </div>
       `;
@@ -912,19 +995,19 @@ function renderTutorialSlide() {
             <div class="tutorial-progress">${tutorialSlides.map((_, index) => `<span class="${index === tutorialStepIndex ? "is-active" : ""}"></span>`).join("")}</div>
           ${tutorialVisualMarkup(slide)}
           ${slide.hideCopy ? "" : `<div class="tutorial-copy">
-            <strong class="tutorial-title">${slide.title}</strong>
-            <p class="tutorial-lead">${slide.lead}</p>
+            <strong class="tutorial-title">${formatRichText(slide.title)}</strong>
+            <p class="tutorial-lead">${formatRichText(slide.lead)}</p>
             ${slide.sections ? `
               ${slide.sections.map(section => `
                 <p class="tutorial-line">
-                  <b>${section.title}</b>
-                  <span>${section.text}</span>
-                  ${section.cost ? `<small>${section.cost}</small>` : ""}
+                  <b>${formatRichText(section.title)}</b>
+                  <span>${formatRichText(section.text)}</span>
+                  ${section.cost ? `<small>${formatRichText(section.cost)}</small>` : ""}
                 </p>
               `).join("")}
             ` : `
-              ${slide.points.map(point => `<p class="tutorial-line"><span>${point}</span></p>`).join("")}
-              ${slide.note ? `<p class="tutorial-line tutorial-note"><span>${slide.note}</span></p>` : ""}
+              ${slide.points.map(point => `<p class="tutorial-line"><span>${formatRichText(point)}</span></p>`).join("")}
+              ${slide.note ? `<p class="tutorial-line tutorial-note"><span>${formatRichText(slide.note)}</span></p>` : ""}
             `}
           </div>`}
           <div class="tutorial-actions">
@@ -1018,11 +1101,11 @@ function buildRulesContent() {
             <span class="rules-character-body">
               <span class="rules-character-title">
                 <b>${character.name}</b>
-                <span class="rules-character-role">${characterFoodLabelForRules(character)}專精</span>
+                <span class="rules-character-role">${formatRichText(characterFoodLabelForRules(character))}專精</span>
               </span>
-              <span class="rule-move-line"><b>角色大招：</b>${guide.big}</span>
-              <span class="rule-move-line"><b>實戰重點：</b>${guide.tip}</span>
-              <span class="rule-food-effect">食補效果：${weightedFoodIconMarkup(character)}<span>${compactFoodTerms(character.detail)}</span></span>
+              <span class="rule-move-line"><b>角色大招：</b>${formatRichText(guide.big)}</span>
+              <span class="rule-move-line"><b>實戰重點：</b>${formatRichText(guide.tip)}</span>
+              <span class="rule-food-effect"><b>食補效果：</b>${weightedFoodIconMarkup(character)}<span>${formatRichText(character.detail)}</span></span>
             </span>
           </li>
         `;
@@ -1030,13 +1113,13 @@ function buildRulesContent() {
   rulesContent.innerHTML = `
         <section class="rules-block rules-tutorial-callout">
           <h3>新手試玩教學</h3>
-          <p>想先用圖片快速看懂進食策略、移動、小招操作，可以從這裡重新開啟教學頁。</p>
+          <p>${formatRichText("想先用圖片快速看懂進食策略、移動、小招操作，可以從這裡重新開啟教學頁。")}</p>
           <button class="secondary" type="button" data-open-tutorial>觀看新手教學</button>
         </section>
         <section class="rules-block">
           <h3>進階對戰</h3>
           <ul class="rules-list">
-            <li><b>按鍵自訂</b>：小招、大招、暫停、投降與六方向鍵都可在開局設定中修改；若方向鍵與 X / Y 目標鍵相同，X / Y 目標鍵會優先作用。</li>
+            <li><b>按鍵自訂</b>：${formatRichText("小招、大招、暫停、投降與六方向鍵都可在開局設定中修改；若方向鍵與 X / Y 目標鍵相同，X / Y 目標鍵會優先作用。")}</li>
           </ul>
         </section>
         <section class="rules-block">

@@ -3894,6 +3894,47 @@
       line-height: 1.45;
     }
 
+    .inline-keyword.inline-keyword {
+      color: color-mix(in srgb, var(--ink), #fbbf24 18%);
+      font-weight: 950;
+    }
+
+    .inline-food-term.inline-food-term {
+      --food-term-color: #e5e7eb;
+      color: var(--food-term-color);
+      font-weight: 950;
+      padding: 0 0.08em;
+      border-radius: 4px;
+      background: color-mix(in srgb, var(--food-term-color), transparent 88%);
+    }
+
+    .inline-food-term.is-protein {
+      --food-term-color: #fca5a5;
+    }
+
+    .inline-food-term.is-fat {
+      --food-term-color: #fde68a;
+    }
+
+    .inline-food-term.is-fiber {
+      --food-term-color: #86efac;
+    }
+
+    .inline-food-term.is-carb {
+      --food-term-color: #93c5fd;
+    }
+
+    .inline-food-term.is-black {
+      --food-term-color: #e5e7eb;
+      background: rgba(5, 5, 5, 0.32);
+      border-bottom: 1px solid rgba(229, 231, 235, 0.26);
+    }
+
+    .inline-food-term.is-dual {
+      --food-term-color: #fdba74;
+      background: linear-gradient(90deg, rgba(252, 165, 165, 0.16), rgba(147, 197, 253, 0.14));
+    }
+
     .food-icon-group {
       display: inline-flex;
       align-items: center;
