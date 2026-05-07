@@ -132,7 +132,7 @@ test("attack costs and damage calculations match core rules", () => {
   assert.ok(damage > 0);
 });
 
-test("player-owned attacks and hazards do not damage the player", () => {
+test("player-owned attacks and hazards do not damage or stun the player", () => {
   const state = createMatchState({
     balance,
     playerCharacter: characterById.get("lobster"),
@@ -158,6 +158,8 @@ test("player-owned attacks and hazards do not damage the player", () => {
   });
   resolveProjectiles(state, 0, balance);
   assert.equal(player.hp, 10);
+  assert.equal(player.stunUntil, 0);
+  assert.equal(player.slowUntil, 0);
 
   state.hazards.push({
     kind: "radiation",
@@ -174,6 +176,23 @@ test("player-owned attacks and hazards do not damage the player", () => {
   });
   resolveHazards(state, 0, balance);
   assert.equal(player.hp, 10);
+  assert.equal(player.stunUntil, 0);
+  assert.equal(player.slowUntil, 0);
+
+  state.projectiles.push({
+    kind: "circle",
+    owner: "player",
+    profile: "big",
+    target: { q: 4, r: -4 },
+    impactAt: 500,
+    radius: 2,
+    damage: 1,
+    stunChance: 1
+  });
+  resolveProjectiles(state, 500, balance);
+  assert.equal(player.stunUntil, 0);
+  assert.equal(computer.stunUntil, 500 + balance.attack.attackStunMs);
+  assert.equal(computer.slowUntil, computer.stunUntil + balance.attack.attackSlowMs);
 });
 
 test("low difficulty can cast big attacks but still prefers small attacks", () => {
