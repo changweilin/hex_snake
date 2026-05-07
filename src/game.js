@@ -528,6 +528,7 @@
       portraitPoseTimers = {};
       Object.values(attackCalloutTimers).forEach(clearTimeout);
       attackCalloutTimers = {};
+      lockedFighterCallouts.clear();
       preloadPortraitsFor("player");
       preloadPortraitsFor("computer");
       buildCharacterStage();

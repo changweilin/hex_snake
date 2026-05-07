@@ -459,6 +459,7 @@ let moduleHoldTimer = null;
 let attackPointerLongPressTimer = null;
 let portraitPoseTimers = {};
 let attackCalloutTimers = {};
+let lockedFighterCallouts = new Set();
 let selectedPortraitOwner = "player";
 let highlightedAttackProfile = null;
 let attackHighlightReleaseTimer = null;
@@ -1483,13 +1484,20 @@ function showFighterCallout(owner, text, options = {}) {
   if (!callout || !text) return;
   const kind = options.kind || "attack";
   const duration = options.duration ?? 1200;
+  const locked = options.locked || duration === null;
+  if (lockedFighterCallouts.has(owner) && !locked && !options.force) return;
   callout.textContent = text;
   callout.classList.remove("is-attack", "is-status", "is-interrupt", "is-victory", "is-defeat");
   callout.classList.add(`is-${kind}`);
   callout.classList.add("is-visible");
   clearTimeout(attackCalloutTimers[owner]);
-  if (duration === null) return;
+  if (locked) {
+    lockedFighterCallouts.add(owner);
+    return;
+  }
+  lockedFighterCallouts.delete(owner);
   attackCalloutTimers[owner] = setTimeout(() => {
+    if (lockedFighterCallouts.has(owner)) return;
     callout.classList.remove("is-visible", "is-attack", "is-status", "is-interrupt", "is-victory", "is-defeat");
   }, duration);
 }
@@ -1518,7 +1526,8 @@ function showStatusCallout(owner, text, options = {}) {
 function showResultCallout(owner, pose) {
   showFighterCallout(owner, resultLineForCharacter(characterFor(owner), pose), {
     kind: pose === "victory" ? "victory" : "defeat",
-    duration: null
+    duration: null,
+    locked: true
   });
 }
 
