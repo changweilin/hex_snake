@@ -660,8 +660,8 @@ function buildMatrix(results, characters) {
   return { rows, averages };
 }
 
-function matrixToCsv(matrix, characters) {
-  const header = ["player\\opponent", ...characters.map(character => character.id), "average"];
+function matrixToCsv(matrix, characters, cornerLabel = "player\\opponent") {
+  const header = [cornerLabel, ...characters.map(character => character.id), "average"];
   const rows = matrix.rows.map(row => {
     const average = matrix.averages.find(item => item.characterId === row.characterId);
     return [
@@ -671,6 +671,81 @@ function matrixToCsv(matrix, characters) {
     ];
   });
   return [header, ...rows];
+}
+
+function combineChallengeSeries({ balance, candidateCharacter, opponentCharacter, candidateAsPlayer, candidateAsComputer }) {
+  const runs = candidateAsPlayer.runs + candidateAsComputer.runs;
+  const wins = candidateAsPlayer.wins + candidateAsComputer.losses;
+  const losses = candidateAsPlayer.losses + candidateAsComputer.wins;
+  const draws = candidateAsPlayer.draws + candidateAsComputer.draws;
+  const decisiveGames = wins + losses;
+  const candidateAsComputerWinRate = candidateAsComputer.runs ? candidateAsComputer.losses / candidateAsComputer.runs : 0;
+  const averageFromCandidatePerspective = (playerValue, computerValue) => (
+    runs ? (candidateAsPlayer.runs * playerValue - candidateAsComputer.runs * computerValue) / runs : 0
+  );
+  return {
+    candidateCharacterId: candidateCharacter.id,
+    opponentCharacterId: opponentCharacter.id,
+    playerCharacterId: candidateCharacter.id,
+    computerCharacterId: opponentCharacter.id,
+    runs,
+    wins,
+    losses,
+    draws,
+    winRate: runs ? wins / runs : 0,
+    drawRate: runs ? draws / runs : 0,
+    decisiveGames,
+    decisiveWinRate: decisiveGames ? wins / decisiveGames : 0,
+    averageDurationMs: runs
+      ? (candidateAsPlayer.runs * candidateAsPlayer.averageDurationMs + candidateAsComputer.runs * candidateAsComputer.averageDurationMs) / runs
+      : 0,
+    averageHpDiff: averageFromCandidatePerspective(candidateAsPlayer.averageHpDiff, candidateAsComputer.averageHpDiff),
+    averageScoreDiff: averageFromCandidatePerspective(candidateAsPlayer.averageScoreDiff, candidateAsComputer.averageScoreDiff),
+    candidateAsPlayerWinRate: candidateAsPlayer.winRate,
+    candidateAsComputerWinRate,
+    warning: wins / Math.max(1, runs) < balance.simulation.balanceWinRateMin || wins / Math.max(1, runs) > balance.simulation.balanceWinRateMax
+  };
+}
+
+function challengeRowsToCsv(results) {
+  return [
+    [
+      "candidateCharacterId",
+      "opponentCharacterId",
+      "runs",
+      "wins",
+      "losses",
+      "draws",
+      "winRate",
+      "drawRate",
+      "decisiveGames",
+      "decisiveWinRate",
+      "averageDurationMs",
+      "averageHpDiff",
+      "averageScoreDiff",
+      "candidateAsPlayerWinRate",
+      "candidateAsComputerWinRate",
+      "warning"
+    ],
+    ...results.map(result => [
+      result.candidateCharacterId,
+      result.opponentCharacterId,
+      result.runs,
+      result.wins,
+      result.losses,
+      result.draws,
+      result.winRate,
+      result.drawRate,
+      result.decisiveGames,
+      result.decisiveWinRate,
+      Math.round(result.averageDurationMs),
+      result.averageHpDiff,
+      result.averageScoreDiff,
+      result.candidateAsPlayerWinRate,
+      result.candidateAsComputerWinRate,
+      result.warning
+    ])
+  ];
 }
 
 function runCrossPlayReport({ balance, characters, strategyFile, runs, seed, outputPrefix }) {
@@ -701,6 +776,72 @@ function runCrossPlayReport({ balance, characters, strategyFile, runs, seed, out
   return { report, matrix };
 }
 
+function runChallengeCrossPlayReport({ balance, characters, candidateStrategyFile, opponentStrategyFile, runs, seed, outputPrefix }) {
+  const results = [];
+  const seatResults = [];
+  characters.forEach(candidateCharacter => {
+    characters.forEach(opponentCharacter => {
+      if (candidateCharacter.id === opponentCharacter.id) return;
+      const candidateAsPlayer = runSeries({
+        balance,
+        playerCharacter: candidateCharacter,
+        computerCharacter: opponentCharacter,
+        seed: `${seed}:${candidateCharacter.id}:as-player:vs:${opponentCharacter.id}`,
+        runs,
+        playerModel: strategyModel(candidateStrategyFile, candidateCharacter.id),
+        computerModel: strategyModel(opponentStrategyFile, opponentCharacter.id)
+      });
+      const candidateAsComputer = runSeries({
+        balance,
+        playerCharacter: opponentCharacter,
+        computerCharacter: candidateCharacter,
+        seed: `${seed}:${candidateCharacter.id}:as-computer:vs:${opponentCharacter.id}`,
+        runs,
+        playerModel: strategyModel(opponentStrategyFile, opponentCharacter.id),
+        computerModel: strategyModel(candidateStrategyFile, candidateCharacter.id)
+      });
+      seatResults.push({
+        candidateCharacterId: candidateCharacter.id,
+        opponentCharacterId: opponentCharacter.id,
+        candidateSeat: "player",
+        result: candidateAsPlayer
+      });
+      seatResults.push({
+        candidateCharacterId: candidateCharacter.id,
+        opponentCharacterId: opponentCharacter.id,
+        candidateSeat: "computer",
+        result: candidateAsComputer
+      });
+      results.push(combineChallengeSeries({
+        balance,
+        candidateCharacter,
+        opponentCharacter,
+        candidateAsPlayer,
+        candidateAsComputer
+      }));
+    });
+  });
+  const report = {
+    generatedAt: new Date().toISOString(),
+    config: {
+      seed,
+      runsPerSeat: runs,
+      candidateOpponentPairs: results.length,
+      orderedSeatSeries: seatResults.length,
+      protocol: "candidate strategy vs baseline opponents, side-balanced",
+      candidateStrategySource: candidateStrategyFile.source,
+      opponentStrategySource: opponentStrategyFile.source
+    },
+    results,
+    seatResults
+  };
+  const matrix = buildMatrix(results, characters);
+  writeJson(`${outputPrefix}.json`, report);
+  writeCsv(`${outputPrefix}.csv`, challengeRowsToCsv(results));
+  writeCsv(`${outputPrefix}-matrix.csv`, matrixToCsv(matrix, characters, "candidate\\opponent"));
+  return { report, matrix };
+}
+
 function percent(value) {
   return `${(value * 100).toFixed(1)}%`;
 }
@@ -720,18 +861,19 @@ function comparisonMarkdown({ config, gaQualified, rlBest, baselineCross, bestCr
     `Seed: ${config.seed}`,
     `Gate: winRate = wins / (wins + losses + draws) > 50%`,
     `Diversity distance: ${config.diversityDistance}`,
+    `Cross-play protocol: target character uses the strategy under test; all opponents use baseline; both player and computer seats are evaluated.`,
     "",
     "## Summary",
     "",
     `- Diverse GA-qualified strategies: ${gaQualified.length}`,
     `- RL best strategies: ${rlBest.length}`,
-    `- Baseline average cross win rate: ${percent(baselineAverage)}`,
-    `- Best average cross win rate: ${percent(bestAverage)}`,
+    `- Baseline target-vs-field win rate: ${percent(baselineAverage)}`,
+    `- Optimized target-vs-field win rate: ${percent(bestAverage)}`,
     `- Delta: ${percent(bestAverage - baselineAverage)}`,
     "",
-    "## Per Character Average",
+    "## Per Character Marginal Cross-Play",
     "",
-    "| Character | Baseline | Best | Delta |",
+    "| Character | Baseline target | Optimized target | Delta |",
     "| --- | --- | --- | --- |",
     ...rows,
     "",
@@ -864,18 +1006,20 @@ function runOptimization(options = {}) {
   writeJson(path.join(outputDir, "baseline-strategies.json"), baselineStrategyFile);
   writeJson(path.join(outputDir, "best-strategies-for-apply.json"), bestStrategyFile);
 
-  const baselineCross = runCrossPlayReport({
+  const baselineCross = runChallengeCrossPlayReport({
     balance,
     characters,
-    strategyFile: baselineStrategyFile,
+    candidateStrategyFile: baselineStrategyFile,
+    opponentStrategyFile: baselineStrategyFile,
     runs: config.crossRuns,
     seed: `${seed}:baseline-cross`,
     outputPrefix: path.join(outputDir, "baseline-cross")
   });
-  const bestCross = runCrossPlayReport({
+  const bestCross = runChallengeCrossPlayReport({
     balance,
     characters,
-    strategyFile: bestStrategyFile,
+    candidateStrategyFile: bestStrategyFile,
+    opponentStrategyFile: baselineStrategyFile,
     runs: config.crossRuns,
     seed: `${seed}:best-cross`,
     outputPrefix: path.join(outputDir, "best-cross")
@@ -898,6 +1042,7 @@ function runOptimization(options = {}) {
     config,
     gaStopReason: ga.stopReason,
     rlStopReason: rl.stopReason,
+    crossProtocol: "target character uses the strategy under test; all opponents use baseline; both player and computer seats are evaluated",
     perCharacterQualified: Object.fromEntries(Object.entries(ga.perCharacterQualified).map(([characterId, rows]) => [characterId, rows.length])),
     outputs: {
       directory: outputDir,
@@ -1053,6 +1198,7 @@ module.exports = {
   normalizedDistance,
   qualifiedRows,
   runBanditRl,
+  runChallengeCrossPlayReport,
   runGaSearch,
   runMultiCycleOptimization,
   runOptimization,
