@@ -10,6 +10,7 @@ const SANDWORM_UNDERGROUND_WINDOW_MS = 500;
 const DEFAULT_HP_PER_SNAKE_UNIT = 4;
 const DEFAULT_ATTACK_DAMAGE_MULTIPLIER = 1;
 const FOOD_TARGET_SWITCH_MS = 20000;
+const FOOD_RACE_TIE_WINDOW = 0.05;
 const DEAD_END_MIN_SPACE = 5;
 const AI_LOOKAHEAD_DEPTH = 3;
 const AI_LOOKAHEAD_BEAM_WIDTH = 3;
@@ -224,6 +225,12 @@ function addStock(stock, typeId, amount, balance) {
   stock[typeId] = clamp((stock[typeId] || 0) + amount, 0, balance.resources.maxFoodStock);
 }
 
+function addRandomStock(stock, candidates, amount, balance, rng) {
+  const available = candidates.filter(type => FOOD_TYPES.includes(type));
+  if (!available.length) return;
+  addStock(stock, rng.item(available), amount, balance);
+}
+
 function foodBonus(stock, typeId, perPoint, maxBonus) {
   return Math.min(maxBonus, (stock[typeId] || 0) * perPoint);
 }
@@ -256,8 +263,21 @@ function attackSpeedMultiplier(stock, balance) {
   return 1 + foodBonus(stock, "carb", balance.attack.attackSpeedBonusPerPoint, balance.attack.maxAttackSpeedBonus);
 }
 
-function attackStunChance(stock, balance) {
-  return Math.min(1, balance.attack.baseAttackStunChance + foodBonus(stock, "carb", balance.attack.attackStunChanceBonusPerPoint, balance.attack.maxAttackStunChanceBonus));
+function attackStunChance(stock, balance, baseChance = balance.attack.baseAttackStunChance) {
+  return Math.min(1, baseChance + foodBonus(stock, "carb", balance.attack.attackStunChanceBonusPerPoint, balance.attack.maxAttackStunChanceBonus));
+}
+
+function attackHitStunChances(stock, balance) {
+  const bodyBase = balance.attack.bodyHitStunChance ?? 0.15;
+  const bodyPerPoint = balance.attack.bodyHitStunChanceBonusPerPoint ?? balance.attack.attackStunChanceBonusPerPoint;
+  const bodyMaxBonus = balance.attack.bodyHitMaxStunChanceBonus ?? balance.attack.maxAttackStunChanceBonus;
+  const headBase = balance.attack.headHitStunChance ?? balance.attack.baseAttackStunChance;
+  const headPerPoint = balance.attack.headHitStunChanceBonusPerPoint ?? balance.attack.attackStunChanceBonusPerPoint * 2;
+  const headMaxBonus = balance.attack.headHitMaxStunChanceBonus ?? 0.4;
+  return {
+    body: Math.min(1, bodyBase + foodBonus(stock, "carb", bodyPerPoint, bodyMaxBonus)),
+    head: Math.min(1, headBase + foodBonus(stock, "carb", headPerPoint, headMaxBonus))
+  };
 }
 
 function moveInterval(fighter, balance, now) {
@@ -399,8 +419,11 @@ function attackDelay(stock, balance) {
   return balance.attack.baseAttackDelayMs / attackSpeedMultiplier(stock, balance);
 }
 
-function attackCooldown(stock, balance) {
-  return balance.attack.baseAttackCooldownMs / attackSpeedMultiplier(stock, balance);
+function attackCooldown(stock, balance, profile = "big", characterId = null) {
+  const baseCooldown = profile === "big" && characterId
+    ? ultimateSetting(balance, characterId, "bigCooldownMs", balance.attack.baseAttackCooldownMs)
+    : balance.attack.baseAttackCooldownMs;
+  return baseCooldown / attackSpeedMultiplier(stock, balance);
 }
 
 function blastRadius(stock, balance) {
@@ -479,10 +502,6 @@ function lineBandDamageMultiplier(distance, band) {
   return band?.outerDamageMultiplier ?? 1;
 }
 
-function lineHitSegmentMultiplier(segmentIndex, options = {}) {
-  return segmentIndex === 0 ? (options.headDamageMultiplier ?? 1) : 1;
-}
-
 function convertFullEnergyToAmmo(fighter, balance) {
   if (fighter.ammoCharge < balance.resources.attackNeedTotal || fighter.ammo >= balance.resources.maxAmmo) return false;
   fighter.ammo = Math.min(balance.resources.maxAmmo, fighter.ammo + 1);
@@ -540,58 +559,112 @@ function randomFoodTypeIdsForCharacter(character, balance, rng) {
   return [first, second];
 }
 
+function applyCharacterFoodStockBonus(fighter, food, balance, rng) {
+  const types = food?.types || [];
+  const character = fighter?.character;
+  if (!character) return;
+  const preferredFood = character?.foodPreference || "balanced";
+  const hasBlackFood = types.includes("black");
+  const stockTypes = types.filter(type => FOOD_TYPES.includes(type));
+  const isBlackSpecialist = character?.specialFood === "black" || preferredFood === "black";
+  if (isBlackSpecialist) {
+    if (!hasBlackFood) return;
+    const roll = rng.next();
+    const doubleChance = balance.resources.blackFoodDoubleBonusChance ?? (1 / 15);
+    const singleChance = balance.resources.blackFoodBonusChance ?? (1 / 3);
+    if (roll < doubleChance) {
+      addRandomStock(fighter.stock, FOOD_TYPES, 2, balance, rng);
+    } else if (roll < doubleChance + singleChance) {
+      addRandomStock(fighter.stock, FOOD_TYPES, 1, balance, rng);
+    }
+    return;
+  }
+  if (preferredFood === "balanced") {
+    const candidates = hasBlackFood ? FOOD_TYPES : stockTypes;
+    const chance = balance.resources.balancedFoodBonusChance ?? 0.2;
+    if (candidates.length && rng.next() < chance) {
+      addRandomStock(fighter.stock, candidates, 1, balance, rng);
+    }
+    return;
+  }
+  const chance = balance.resources.favoriteFoodBonusChance ?? 0.5;
+  if (stockTypes.length === 1 && stockTypes[0] === preferredFood && rng.next() < chance) {
+    addStock(fighter.stock, stockTypes[0], 1, balance);
+  }
+}
+
 function collectFood(fighter, food, balance, rng) {
   if (food.types.includes("black")) {
     addStock(fighter.stock, rng.item(FOOD_TYPES), 1, balance);
     addAmmoCharge(fighter, balance.resources.blackFoodEnergy, balance);
+    applyCharacterFoodStockBonus(fighter, food, balance, rng);
     return;
   }
   const gain = food.types.length > 1 ? balance.resources.dualColorStockGain : balance.resources.singleColorStockGain;
   food.types.forEach(type => addStock(fighter.stock, type, gain, balance));
+  applyCharacterFoodStockBonus(fighter, food, balance, rng);
   addAmmoCharge(fighter, balance.resources.foodEnergy, balance);
 }
 
 function damageSnake(parts, target, radius, damageScale, balance) {
-  const falloff = balance.attack.rangeDamageFalloffEnabled ? balance.attack.baseBlastHexRadius / Math.max(balance.attack.baseBlastHexRadius, radius) : 1;
-  const wholeRadius = Math.floor(radius);
-  const outerRingRatio = Math.max(0, Math.min(1, radius - wholeRadius));
-  const outerRingDistance = wholeRadius + 1;
   return parts.reduce((total, segment) => {
-    const distance = hexDistance(segment, target);
-    if (distance > radius) {
-      if (outerRingRatio > 0 && distance === outerRingDistance) {
-        return total + damageScale * falloff * outerRingRatio;
-      }
-      return total;
-    }
-    const hitChance = Math.max(0, Math.min(1, 1 - distance / radius));
-    return total + damageScale * falloff * hitChance;
+    const multiplier = circleDamageMultiplier(hexDistance(segment, target), radius);
+    return total + damageScale * multiplier;
   }, 0);
 }
 
-function damageSnakeFlat(parts, target, radius, damageScale) {
-  return parts.reduce((total, segment) => hexDistance(segment, target) <= radius ? total + damageScale : total, 0);
+function circleDamageMultiplier(distance, radius) {
+  if (!Number.isFinite(radius) || radius <= 0) return distance === 0 ? 1 : 0;
+  return Math.max(0, Math.min(1, 1 - distance / radius));
 }
 
-function damageSnakeCells(parts, effectCells, width, damageScale, excludedCells = [], minDistance = 0, outerDamageMultiplier = 1, fullDamageWidth = 0, headDamageMultiplier = 1) {
+function circleAttackHitsHead(parts, target, radius) {
+  const head = parts[0];
+  return Boolean(head && target && circleDamageMultiplier(hexDistance(head, target), radius) > 0);
+}
+
+function stunChanceForHeadHit(hitHead, projectile) {
+  return hitHead ? projectile.headStunChance ?? projectile.stunChance : projectile.stunChance;
+}
+
+function damageSnakeCells(parts, effectCells, width, damageScale, excludedCells = [], minDistance = 0, outerDamageMultiplier = 1, fullDamageWidth = 0) {
   const excluded = cellKeySet(excludedCells);
-  return parts.reduce((total, segment, index) => {
+  return parts.reduce((total, segment) => {
     if (excluded.has(keyOf(segment))) return total;
     const bestMultiplier = effectCells.reduce((best, cell) => {
       const distance = hexDistance(segment, cell);
       if (distance < minDistance || distance > width) return best;
       return Math.max(best, lineBandDamageMultiplier(distance, { width, fullDamageWidth, outerDamageMultiplier }));
     }, 0);
-    return bestMultiplier > 0 ? total + damageScale * bestMultiplier * lineHitSegmentMultiplier(index, { headDamageMultiplier }) : total;
+    return bestMultiplier > 0 ? total + damageScale * bestMultiplier : total;
   }, 0);
 }
 
-function snakeBodyHitAtCenter(snake, target) {
-  return snake.slice(1).some(segment => keyOf(segment) === keyOf(target));
+function lineProjectileHitsHead(parts, projectile) {
+  const head = parts[0];
+  if (!head) return false;
+  if (cellKeySet(projectile.excludedCells || []).has(keyOf(head))) return false;
+  return (projectile.lineCells || []).some(cell => {
+    const distance = hexDistance(head, cell);
+    if (distance < (projectile.minDistance || 0) || distance > (projectile.width || 0)) return false;
+    return lineBandDamageMultiplier(distance, {
+      width: projectile.width || 0,
+      fullDamageWidth: projectile.fullDamageWidth || 0,
+      outerDamageMultiplier: projectile.outerDamageMultiplier ?? 1
+    }) > 0;
+  });
 }
 
-function snakeHeadHitAtCenter(snake, target) {
-  return Boolean(snake[0] && keyOf(snake[0]) === keyOf(target));
+function lineProjectileStunChance(parts, projectile) {
+  return stunChanceForHeadHit(lineProjectileHitsHead(parts, projectile), projectile);
+}
+
+function snakeBodyHitAtCenter(parts, target) {
+  return parts.slice(1).some(segment => keyOf(segment) === keyOf(target));
+}
+
+function snakeHeadHitAtCenter(parts, target) {
+  return Boolean(parts[0] && keyOf(parts[0]) === keyOf(target));
 }
 
 function buildCharacterMap(characters) {
@@ -704,12 +777,15 @@ function makeFighter(owner, character, start, direction, settings, balance, poli
     ammoCharge: settings.initialEnergy,
     initialSpeed: settings.initialSpeed,
     lastStep: 0,
-    lastAttack: -Infinity,
+    lastAttack: { small: -Infinity, big: -Infinity },
     stunUntil: 0,
     slowUntil: 0,
     collisionParalysisMs: 0,
+    vulnerable: false,
     undergroundFrom: 0,
     undergroundUntil: 0,
+    statusImmuneFrom: 0,
+    statusImmuneUntil: 0,
     lastVisibleSnake: snake.map(segment => ({ ...segment })),
     lastVisibleDir: direction,
     foodTargetKey: null,
@@ -748,6 +824,27 @@ function aiProfileFor(fighter) {
 
 function isUnderground(fighter, now) {
   return fighter.character.id === "sandworm" && fighter.undergroundFrom && now >= fighter.undergroundFrom && now <= fighter.undergroundUntil;
+}
+
+function isStatusImmune(fighter, now) {
+  return fighter.character.id === "sandworm" && fighter.statusImmuneFrom && now >= fighter.statusImmuneFrom && now <= fighter.statusImmuneUntil;
+}
+
+function isDamageImmune(fighter, now) {
+  return isUnderground(fighter, now);
+}
+
+function clearAbnormalStatus(fighter, now) {
+  fighter.stunUntil = Math.min(fighter.stunUntil, now);
+  fighter.slowUntil = Math.min(fighter.slowUntil, now);
+  fighter.collisionParalysisMs = 0;
+  fighter.vulnerable = false;
+}
+
+function refreshStatusImmunity(state, now) {
+  Object.values(state.fighters || {}).forEach(fighter => {
+    if (isStatusImmune(fighter, now)) clearAbnormalStatus(fighter, now);
+  });
 }
 
 function updateVisibleMemory(state) {
@@ -902,21 +999,12 @@ function foodValueFor(fighter, opponent, food, policy, state = null) {
   const highDifficulty = policy.aiDifficulty === "high" && state;
   const ownArrivalTime = highDifficulty ? arrivalTimeForDistance(fighter, state.balance, ownDistance, state.now) : ownDistance;
   const opponentArrivalTime = highDifficulty ? arrivalTimeForDistance(opponent, state.balance, opponentDistance, state.now) : opponentDistance;
-  const types = food.types || [];
-  const aiProfile = aiProfileFor(fighter);
-  const opponentProfile = aiProfileFor(opponent);
-  const preferredFood = aiProfile.preferredFood || fighter.character.foodPreference;
-  const opponentPreferredFood = opponentProfile.preferredFood || opponent.character.foodPreference;
   const weights = policy.strategyWeights.food;
   const normalizedTypes = foodTypeIdsForValue(food);
   const ownDeficit = normalizedTypes.reduce((sum, type) => sum + (fighter.balanceStockCap ?? 20) - (fighter.stock[type] || 0), 0) / Math.max(1, normalizedTypes.length);
   const opponentDeficit = normalizedTypes.reduce((sum, type) => sum + (fighter.balanceStockCap ?? 20) - (opponent.stock[type] || 0), 0) / Math.max(1, normalizedTypes.length);
-  const ownPrefers = preferredFood === "balanced"
-    ? normalizedTypes.length > 0
-    : preferredFood === "black" ? types.includes("black") : types.includes(preferredFood);
-  const opponentPrefers = opponentPreferredFood === "balanced"
-    ? normalizedTypes.length > 0
-    : opponentPreferredFood === "black" ? types.includes("black") : types.includes(opponentPreferredFood);
+  const ownPrefers = fighterPrefersFood(fighter, food);
+  const opponentPrefers = fighterPrefersFood(opponent, food);
   if (!highDifficulty) {
     return (
       weights.fastestArrival * (1 / (1 + ownDistance)) * 10 +
@@ -943,6 +1031,19 @@ function foodValueFor(fighter, opponent, food, policy, state = null) {
   );
 }
 
+function foodMatchesPreference(preferredFood, food) {
+  const types = food?.types || [];
+  const normalizedTypes = foodTypeIdsForValue(food);
+  if (preferredFood === "balanced") return normalizedTypes.length > 0;
+  if (preferredFood === "black") return types.includes("black");
+  return types.includes(preferredFood);
+}
+
+function fighterPrefersFood(fighter, food) {
+  const profile = aiProfileFor(fighter);
+  return foodMatchesPreference(profile.preferredFood || fighter.character.foodPreference, food);
+}
+
 function foodRaceAdvantage(state, fighter, opponent, food) {
   if (fighter.policy.aiDifficulty === "high") {
     const opponentHead = perceivedSnakeFor(state, fighter, opponent)[0] || opponent.snake[0];
@@ -950,6 +1051,55 @@ function foodRaceAdvantage(state, fighter, opponent, food) {
       - arrivalTimeForDistance(opponent, state.balance, wrappedDistance(state, opponentHead, food), state.now);
   }
   return wrappedDistance(state, fighter.snake[0], food) - wrappedDistance(state, opponent.snake[0], food);
+}
+
+function foodArrivalFrom(state, fighter, head, food) {
+  if (!head || !food) return Number.POSITIVE_INFINITY;
+  return arrivalTimeForDistance(fighter, state.balance, wrappedDistance(state, head, food), state.now);
+}
+
+function alternativeFoodArrivals(state, fighter, head, contestedFood) {
+  const contestedKey = keyOf(contestedFood);
+  return state.foods
+    .filter(food => keyOf(food) !== contestedKey)
+    .map(food => ({
+      key: keyOf(food),
+      arrival: foodArrivalFrom(state, fighter, head, food)
+    }))
+    .sort((a, b) => a.arrival - b.arrival || a.key.localeCompare(b.key));
+}
+
+function stableFoodRaceTieOwner(food) {
+  return hashSeed(`${keyOf(food)}:food-race-tie`) % 2 === 0 ? "player" : "computer";
+}
+
+function contestedFoodTieWinner(state, fighter, opponent, food) {
+  if (fighter.policy.aiDifficulty !== "high") return null;
+  const opponentHead = perceivedSnakeFor(state, fighter, opponent)[0] || opponent.snake[0];
+  const ownArrival = foodArrivalFrom(state, fighter, fighter.snake[0], food);
+  const opponentArrival = foodArrivalFrom(state, opponent, opponentHead, food);
+  if (!Number.isFinite(ownArrival) || !Number.isFinite(opponentArrival)) return null;
+  if (Math.abs(ownArrival - opponentArrival) > FOOD_RACE_TIE_WINDOW) return null;
+
+  const ownPreferred = fighterPrefersFood(fighter, food);
+  const opponentPreferred = fighterPrefersFood(opponent, food);
+  if (ownPreferred !== opponentPreferred) return ownPreferred ? fighter.owner : opponent.owner;
+
+  const ownAlternatives = alternativeFoodArrivals(state, fighter, fighter.snake[0], food);
+  const opponentAlternatives = alternativeFoodArrivals(state, opponent, opponentHead, food);
+  const count = Math.max(ownAlternatives.length, opponentAlternatives.length);
+  for (let index = 0; index < count; index += 1) {
+    const ownAlternativeArrival = ownAlternatives[index]?.arrival ?? Number.POSITIVE_INFINITY;
+    const opponentAlternativeArrival = opponentAlternatives[index]?.arrival ?? Number.POSITIVE_INFINITY;
+    if (ownAlternativeArrival + FOOD_RACE_TIE_WINDOW < opponentAlternativeArrival) return opponent.owner;
+    if (opponentAlternativeArrival + FOOD_RACE_TIE_WINDOW < ownAlternativeArrival) return fighter.owner;
+  }
+
+  return stableFoodRaceTieOwner(food);
+}
+
+function filterContestedFoodTargets(state, fighter, opponent, foods) {
+  return foods.filter(food => contestedFoodTieWinner(state, fighter, opponent, food) !== opponent.owner);
 }
 
 function shouldAbandonFoodTarget(state, fighter, opponent, food, lockedScore, bestScore, targetAge) {
@@ -973,7 +1123,12 @@ function chooseFoodTarget(state, fighter, opponent) {
   const staleTarget = fighter.foodTargetKey && Number.isFinite(fighter.foodTargetAt) && state.now - fighter.foodTargetAt >= FOOD_TARGET_SWITCH_MS ? fighter.foodTargetKey : null;
   const choices = state.foods.filter(food => keyOf(food) !== staleTarget);
   const filteredChoices = filterUnsafeFoodTargets(state, fighter, opponent, choices.length ? choices : state.foods);
-  const targetPool = filteredChoices.length ? filteredChoices : choices.length ? choices : state.foods;
+  const targetPool = filterContestedFoodTargets(state, fighter, opponent, filteredChoices.length ? filteredChoices : choices.length ? choices : state.foods);
+  if (!targetPool.length) {
+    fighter.foodTargetKey = null;
+    fighter.foodTargetAt = 0;
+    return perceivedOpponent[0];
+  }
   const lockedTarget = !staleTarget && fighter.foodTargetKey ? targetPool.find(food => keyOf(food) === fighter.foodTargetKey) : null;
   const sortedTargets = [...targetPool]
     .map(food => ({ food, score: foodValueFor(fighter, opponent, food, fighter.policy, state) }))
@@ -1240,6 +1395,7 @@ function reachableSpace(state, start, occupied, maxCells = 10) {
 }
 
 function expectedDamageAtUncached(state, fighter, cell) {
+  if (isDamageImmune(fighter, state.now)) return 0;
   const opponentOwner = fighter.owner === "player" ? "computer" : "player";
   let damage = 0;
   state.projectiles.forEach(projectile => {
@@ -1249,15 +1405,15 @@ function expectedDamageAtUncached(state, fighter, cell) {
       const multiplier = projectile.lineCells?.reduce((best, lineCell) => (
         Math.max(best, lineBandDamageMultiplier(hexDistance(lineCell, cell), projectile))
       ), 0) || 0;
-      damage += (projectile.damage || 0) * multiplier * (projectile.headDamageMultiplier ?? 1);
+      damage += (projectile.damage || 0) * multiplier;
       return;
     }
     const target = projectile.explosionTarget || projectile.target;
-    if (target && hexDistance(cell, target) <= (projectile.radius || 0)) damage += projectile.damage || 0;
+    if (target) damage += (projectile.damage || 0) * circleDamageMultiplier(hexDistance(cell, target), projectile.radius || 0);
   });
   state.hazards.forEach(hazard => {
     if (hazard.owner !== opponentOwner || state.now > hazard.endAt) return;
-    if (hazard.kind === "radiation" && hexDistance(cell, hazard.target) <= hazard.radius) damage += hazard.damage || 0;
+    if (hazard.kind === "radiation") damage += (hazard.damage || 0) * circleDamageMultiplier(hexDistance(cell, hazard.target), hazard.radius || 0);
     if (hazard.cells?.some(hazardCell => hexDistance(hazardCell, cell) <= hazard.width)) damage += hazard.damage || 0;
   });
   return damage;
@@ -1362,12 +1518,11 @@ function morayLineCandidateStats(targetSnake, lineCells, lineShape) {
   return targetSnake.reduce((stats, segment, index) => {
     const distance = lineCells.reduce((best, lineCell) => Math.min(best, hexDistance(segment, lineCell)), Infinity);
     const damageMultiplier = lineBandDamageMultiplier(distance, lineShape);
-    const segmentMultiplier = lineHitSegmentMultiplier(index, lineShape);
     if (index === 0) stats.headDistance = distance;
     if (damageMultiplier > 0) {
-      stats.hits += segmentMultiplier;
-      stats.damageScore += damageMultiplier * segmentMultiplier;
-      if (distance === 0) stats.exactHits += segmentMultiplier;
+      stats.hits += 1;
+      stats.damageScore += damageMultiplier;
+      if (distance === 0) stats.exactHits += 1;
     }
     return stats;
   }, { hits: 0, exactHits: 0, damageScore: 0, headDistance: Infinity });
@@ -1390,7 +1545,7 @@ function chooseMorayLineAttackPlan(state, attacker, defender, balance) {
   const fallbackDirection = attacker.dir;
   if (!targetSnake.length || !fallbackTarget) return { target: fallbackTarget, direction: fallbackDirection };
 
-  const lineShape = { ...bandShapeFromTotalWidth(attackStats(attacker.stock, "small", balance).radius), headDamageMultiplier: 2 };
+  const lineShape = bandShapeFromTotalWidth(attackStats(attacker.stock, "small", balance).radius);
   const idealDirection = directionForLongestBodyAxis(targetSnake, fallbackDirection);
   let best = null;
   targetSnake.forEach((origin, originIndex) => {
@@ -1416,9 +1571,11 @@ function chooseMorayLineAttackPlan(state, attacker, defender, balance) {
 function morayLinePlanDamage(state, attacker, defender, balance, plan) {
   const targetSnake = perceivedSnakeFor(state, attacker, defender);
   if (!targetSnake.length || !plan?.target) return 0;
-  const lineShape = { ...bandShapeFromTotalWidth(attackStats(attacker.stock, "small", balance).radius), headDamageMultiplier: 2 };
+  const lineShape = bandShapeFromTotalWidth(attackStats(attacker.stock, "small", balance).radius);
   const stats = morayLineCandidateStats(targetSnake, boardLineThrough(state, plan.target, plan.direction), lineShape);
-  return stats.damageScore * attackDamage(attacker.stock, "big", balance) * 0.8 * ultimateDamageMultiplier(balance, "moray");
+  const strikeCount = Math.max(1, Math.round(ultimateSetting(balance, "moray", "strikeCount", 8)));
+  const damageMultiplier = ultimateSetting(balance, "moray", "damageMultiplier", 0.2);
+  return stats.damageScore * attackDamage(attacker.stock, "big", balance) * damageMultiplier * strikeCount;
 }
 
 function chooseAttackDirection(state, attacker, defender, target, fallbackDirection = attacker.dir) {
@@ -1466,7 +1623,7 @@ function attackExpectedValue(state, attacker, defender, balance, profile, target
   const allocation = attacker.policy.strategyWeights.skillAllocation;
   const allocationScore = profile === "small" ? allocation.preferSmall : allocation.preferBig;
   const resourcePenalty = attackResourceCost(profile, balance) * (profile === "big" ? 0.34 : 0.24);
-  const controlValue = attackStunChance(attacker.stock, balance) * 1.4 + (isDebuffed(defender, state.now) ? 0.75 : 0);
+  const controlValue = attackHitStunChances(attacker.stock, balance).body * 1.4 + (isDebuffed(defender, state.now) ? 0.75 : 0);
   return cappedDamage * 1.15
     + targetWeight * 0.6
     + castTimingScore(state, attacker, defender, balance, profile)
@@ -1655,7 +1812,11 @@ function pushCircleAttack(state, attack) {
   state.projectiles.push({ kind: "circle", ...attack });
 }
 
-function scheduleBigAttack(state, attacker, defender, target, now, balance, stunChance, aimDirection = null) {
+function lobsterPalmVulnerabilityChance(stock, balance) {
+  return attackStunChance(stock, balance, ultimateSetting(balance, "lobster", "vulnerabilityChance", 0.3));
+}
+
+function scheduleBigAttack(state, attacker, defender, target, now, balance, stunChance, aimDirection = null, vulnerabilityChance = 0, hitStunChances = null) {
   const small = attackStats(attacker.stock, "small", balance);
   const bigDamage = attackDamage(attacker.stock, "big", balance);
   const source = attacker.snake[0];
@@ -1669,10 +1830,11 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
     const endCell = firstHit?.cell || path[path.length - 1] || source;
     const fistStepMs = ultimateSetting(balance, characterId, "fistStepMs", LOBSTER_PALM_STEP_MS);
     const contactRadius = Math.max(0.25, ultimateSetting(balance, characterId, "contactRadius", 1));
-    const burstRadius = small.radius * ultimateSetting(balance, characterId, "burstRadiusMultiplier", 1.5);
-    const burstDamage = bigDamage * ultimateSetting(balance, characterId, "burstDamageMultiplier", 0.9);
+    const burstRadius = small.radius * ultimateSetting(balance, characterId, "burstRadiusMultiplier", 1.6);
+    const burstDamage = bigDamage * ultimateSetting(balance, characterId, "burstDamageMultiplier", 1.6);
     const volleys = Math.max(1, Math.round(ultimateSetting(balance, characterId, "volleyCount", 2)));
-    const contactDamage = bigDamage * ultimateSetting(balance, characterId, "contactDamageMultiplier", 0.3);
+    const contactDamage = bigDamage * ultimateSetting(balance, characterId, "contactDamageMultiplier", 0.6);
+    const palmVulnerabilityChance = vulnerabilityChance;
     const volleyIntervalMs = attackDelay(attacker.stock, balance);
     for (let volley = 0; volley < volleys; volley += 1) {
       const volleyDelay = volley * volleyIntervalMs;
@@ -1687,7 +1849,9 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
         damage: contactDamage,
         burstRadius,
         burstDamage,
-        stunChance
+        stunChance,
+        headStunChance: hitStunChances?.head ?? stunChance,
+        vulnerabilityChance: palmVulnerabilityChance
       });
       const burstHits = firstHit ? [firstHit] : [{ cell: endCell, index: Math.max(0, travelPath.length - 1) }];
       for (const hit of burstHits) {
@@ -1701,7 +1865,9 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
           damage: contactDamage,
           burstRadius,
           burstDamage,
-          stunChance
+          stunChance,
+          headStunChance: hitStunChances?.head ?? stunChance,
+          vulnerabilityChance: palmVulnerabilityChance
         });
       }
     }
@@ -1711,27 +1877,34 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
     const lineCells = boardLineThrough(state, target, direction);
     const lineShape = bandShapeFromTotalWidth(small.radius);
     const excludedCells = attacker.snake.map(segment => ({ ...segment }));
-    state.projectiles.push({
-      kind: "line",
-      owner: attacker.owner,
-      profile: "big",
-      target,
-      lineCells,
-      excludedCells,
-      width: lineShape.width,
-      fullDamageWidth: lineShape.fullDamageWidth,
-      outerDamageMultiplier: lineShape.outerDamageMultiplier,
-      impactAt: now + small.delay,
-      damage: bigDamage * 0.8 * ultimateDamageMultiplier(balance, characterId),
-      stunChance,
-      stackStun: true
-    });
+    const strikeCount = Math.max(1, Math.round(ultimateSetting(balance, characterId, "strikeCount", 8)));
+    const strikeIntervalMs = small.delay * Math.max(0, ultimateSetting(balance, characterId, "strikeIntervalMultiplier", 0.5));
+    const damage = bigDamage * ultimateSetting(balance, characterId, "damageMultiplier", 0.2);
+    for (let index = 0; index < strikeCount; index += 1) {
+      state.projectiles.push({
+        kind: "line",
+        owner: attacker.owner,
+        profile: "big",
+        target,
+        lineCells,
+        excludedCells,
+        width: lineShape.width,
+        fullDamageWidth: lineShape.fullDamageWidth,
+        outerDamageMultiplier: lineShape.outerDamageMultiplier,
+        impactAt: now + small.delay + index * strikeIntervalMs,
+        damage,
+        stunChance,
+        headStunChance: hitStunChances?.head ?? stunChance,
+        stackStun: strikeCount > 1
+      });
+    }
     return;
   }
   if (characterId === "quetzal") {
     const trail = attacker.snake.map(segment => ({ ...segment }));
     const extensionDamageMultiplier = Math.max(0, Math.min(1, (attacker.stock.protein || 0) / balance.resources.maxFoodStock));
     const outwardWidth = extensionDamageMultiplier > 0 ? 1 : 0;
+    const tickMs = ultimateSetting(balance, characterId, "tickMs", balance.movement.baseStepMs);
     state.hazards.push({
       kind: "swamp",
       owner: attacker.owner,
@@ -1742,26 +1915,33 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
       outerDamageMultiplier: extensionDamageMultiplier,
       damage: bigDamage * ultimateDamageMultiplier(balance, characterId),
       profile: "big",
-      stunChance,
+      stunChance: 0,
       startedAt: now + small.delay,
       nextTickAt: now + small.delay,
-      tickMs: moveInterval(attacker, balance, now),
+      tickMs,
       endAt: now + small.delay + 3000
     });
     return;
   }
   if (characterId === "sandworm") {
-    const delay = small.delay * 3;
-    attacker.undergroundFrom = now + Math.max(0, delay - SANDWORM_UNDERGROUND_WINDOW_MS);
-    attacker.undergroundUntil = now + delay + SANDWORM_UNDERGROUND_WINDOW_MS;
+    const armorFrom = now + small.delay * ultimateSetting(balance, characterId, "superArmorDelayMultiplier", 1);
+    const armorUntil = armorFrom + ultimateSetting(balance, characterId, "superArmorDurationMs", 3000);
+    const undergroundFrom = now + small.delay * ultimateSetting(balance, characterId, "invisibleDelayMultiplier", 2);
+    const undergroundUntil = undergroundFrom + ultimateSetting(balance, characterId, "invisibleDurationMs", 1500);
+    const delay = small.delay * ultimateSetting(balance, characterId, "impactDelayMultiplier", 3);
+    attacker.statusImmuneFrom = armorFrom;
+    attacker.statusImmuneUntil = Math.max(attacker.statusImmuneUntil, armorUntil);
+    attacker.undergroundFrom = undergroundFrom;
+    attacker.undergroundUntil = Math.max(attacker.undergroundUntil, undergroundUntil);
     pushCircleAttack(state, {
       owner: attacker.owner,
       profile: "big",
       target,
       impactAt: now + delay,
       radius: Math.max(0.5, small.radius * 0.5),
-      damage: bigDamage * 4 * ultimateDamageMultiplier(balance, characterId),
+      damage: bigDamage * ultimateSetting(balance, characterId, "damageMultiplier", 8),
       stunChance,
+      headStunChance: hitStunChances?.head ?? stunChance,
       sandwormHidden: true,
       sandwormParalyzeOnBody: true,
       sandwormKillOnHead: true
@@ -1770,8 +1950,8 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
   }
   if (characterId === "dragon") {
     const spiritRadius = small.radius * ultimateSetting(balance, characterId, "radiusMultiplier", 2);
-    const impactDamage = bigDamage * ultimateSetting(balance, characterId, "impactDamageMultiplier", 0.5);
-    const radiationTotalDamage = bigDamage * ultimateSetting(balance, characterId, "radiationDamageMultiplier", 1.5);
+    const impactDamage = bigDamage * ultimateSetting(balance, characterId, "impactDamageMultiplier", 1.5);
+    const radiationTotalDamage = bigDamage * ultimateSetting(balance, characterId, "radiationDamageMultiplier", 2);
     const radiationDurationMs = ultimateSetting(balance, characterId, "radiationDurationMs", 4000);
     const radiationTickMs = ultimateSetting(balance, characterId, "radiationTickMs", 500);
     const firstImpactDelay = small.delay * ultimateSetting(balance, characterId, "firstImpactDelayMultiplier", 2);
@@ -1790,6 +1970,7 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
         radiationTickMs,
         radiationTotalDamage,
         stunChance,
+        headStunChance: hitStunChances?.head ?? stunChance,
         flat: true
       });
     }
@@ -1806,27 +1987,39 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
         target,
         impactAt: now + impactDelay,
         radius: small.radius,
-        damage: bigDamage * ultimateDamageMultiplier(balance, characterId),
-        stunChance
+        damage: bigDamage * ultimateSetting(balance, characterId, "damageMultiplier", 1.5),
+        stunChance,
+        headStunChance: hitStunChances?.head ?? stunChance
       });
     }
     return;
   }
   const big = attackStats(attacker.stock, "big", balance);
-  pushCircleAttack(state, { owner: attacker.owner, profile: "big", target, impactAt: now + big.delay, radius: big.radius, damage: big.damage * ultimateDamageMultiplier(balance, characterId), stunChance });
+  pushCircleAttack(state, { owner: attacker.owner, profile: "big", target, impactAt: now + big.delay, radius: big.radius, damage: big.damage * ultimateDamageMultiplier(balance, characterId), stunChance, headStunChance: hitStunChances?.head ?? stunChance });
 }
 
 function launchAttack(state, attacker, defender, profile, now, balance) {
   if (!canAttack(attacker, profile, balance)) return false;
   const cooldownScale = profile === "small" ? SMALL_ATTACK_COOLDOWN_SCALE : 1;
-  if (now - attacker.lastAttack < attackCooldown(attacker.stock, balance) * cooldownScale) return false;
+  const attackProfile = profile === "small" ? "small" : "big";
+  const lastAttack = typeof attacker.lastAttack === "number"
+    ? attacker.lastAttack
+    : Number.isFinite(attacker.lastAttack?.[attackProfile])
+      ? attacker.lastAttack[attackProfile]
+      : -Infinity;
+  if (now - lastAttack < attackCooldown(attacker.stock, balance, profile, attacker.character.id) * cooldownScale) return false;
   const target = chooseAttackTarget(state, attacker, defender, balance, profile);
   const stats = attackStats(attacker.stock, profile, balance);
-  const stunChance = attackStunChance(attacker.stock, balance);
+  const hitStunChances = attackHitStunChances(attacker.stock, balance);
+  const stunChance = hitStunChances.body;
+  const vulnerabilityChance = profile === "big" && attacker.character.id === "lobster"
+    ? lobsterPalmVulnerabilityChance(attacker.stock, balance)
+    : 0;
   consumeAttackCost(attacker, profile, balance);
-  attacker.lastAttack = now;
+  if (!attacker.lastAttack || typeof attacker.lastAttack !== "object") attacker.lastAttack = { small: -Infinity, big: -Infinity };
+  attacker.lastAttack[attackProfile] = now;
   if (profile === "small") {
-    pushCircleAttack(state, { owner: attacker.owner, profile, target, impactAt: now + stats.delay, radius: stats.radius, damage: stats.damage, stunChance });
+    pushCircleAttack(state, { owner: attacker.owner, profile, target, impactAt: now + stats.delay, radius: stats.radius, damage: stats.damage, stunChance, headStunChance: hitStunChances.head });
     attacker.stats.smallCasts += 1;
   } else {
     const morayLinePlan = attacker.character.id === "moray"
@@ -1834,7 +2027,7 @@ function launchAttack(state, attacker, defender, profile, now, balance) {
       : null;
     const attackTarget = morayLinePlan?.target || target;
     const aimDirection = morayLinePlan?.direction ?? chooseAttackDirection(state, attacker, defender, attackTarget, attacker.dir);
-    scheduleBigAttack(state, attacker, defender, attackTarget, now, balance, stunChance, aimDirection);
+    scheduleBigAttack(state, attacker, defender, attackTarget, now, balance, stunChance, aimDirection, vulnerabilityChance, hitStunChances);
     attacker.stats.bigCasts += 1;
   }
   return true;
@@ -1855,28 +2048,60 @@ function recordFatalEvent(state, target, cause, now) {
 }
 
 function applyDamage(state, target, damage, cause, now) {
-  if (damage <= 0) return;
+  if (damage <= 0) return 0;
+  if (isDamageImmune(target, now)) return 0;
+  const finalDamage = target.vulnerable ? damage * 2 : damage;
+  if (target.vulnerable) target.vulnerable = false;
   const beforeHp = target.hp;
-  if (cause === "small" || cause === "big") target.stats.damageTakenByCause[cause] += damage;
-  target.hp = Math.max(0, target.hp - damage);
-  target.stats.damageTaken += damage;
+  if (cause === "small" || cause === "big") target.stats.damageTakenByCause[cause] += finalDamage;
+  target.hp = Math.max(0, target.hp - finalDamage);
+  target.stats.damageTaken += finalDamage;
   if (beforeHp > 0 && target.hp <= 0) recordFatalEvent(state, target, controlledFatalCause(target, cause, now), now);
+  return finalDamage;
 }
 
 function applyAttackStun(state, target, chance, now, balance, options = {}) {
   if (state.rng.next() >= chance) return false;
+  if (isStatusImmune(target, now)) {
+    clearAbnormalStatus(target, now);
+    return false;
+  }
+  if (options.interrupt !== false) interruptCasting(state, target.owner);
   const stunBase = options.stack ? Math.max(now, target.stunUntil) : now;
   target.stunUntil = Math.max(target.stunUntil, stunBase + balance.attack.attackStunMs);
   target.slowUntil = Math.max(target.slowUntil, target.stunUntil + balance.attack.attackSlowMs);
   return true;
 }
 
-function applyCollisionParalysis(target, now, balance) {
+function applyVulnerability(state, target, chance, now) {
+  if (state.rng.next() >= chance) return false;
+  if (isStatusImmune(target, now)) {
+    clearAbnormalStatus(target, now);
+    return false;
+  }
+  target.vulnerable = true;
+  return true;
+}
+
+function interruptCasting(state, owner) {
+  const beforeCount = state.projectiles.length;
+  state.projectiles = state.projectiles.filter(projectile => projectile.owner !== owner);
+  return state.projectiles.length !== beforeCount;
+}
+
+function applyCollisionParalysis(state, target, now, balance, options = {}) {
+  if (isStatusImmune(target, now)) {
+    clearAbnormalStatus(target, now);
+    return false;
+  }
+  if (options.interrupt !== false) interruptCasting(state, target.owner);
   target.stunUntil = Math.max(target.stunUntil, now + balance.collision.collisionStunMs);
   target.slowUntil = Math.max(target.slowUntil, target.stunUntil + balance.collision.collisionSlowMs);
+  return true;
 }
 
 function resolveProjectiles(state, now, balance) {
+  refreshStatusImmunity(state, now);
   const landed = state.projectiles.filter(projectile => now >= projectile.impactAt);
   if (!landed.length) return;
   state.projectiles = state.projectiles.filter(projectile => now < projectile.impactAt);
@@ -1888,6 +2113,8 @@ function resolveProjectiles(state, now, balance) {
     const computer = state.fighters.computer;
     let playerDamage = 0;
     let computerDamage = 0;
+    let playerStunChance = projectile.stunChance;
+    let computerStunChance = projectile.stunChance;
     if (projectile.kind === "lobsterPalm") {
       continue;
     } else if (projectile.kind === "lobsterPalmBurst") {
@@ -1896,18 +2123,27 @@ function resolveProjectiles(state, now, balance) {
       else computerDamage += defenderDamage;
       playerDamage += damageSnake(player.snake, projectile.target, projectile.burstRadius, projectile.burstDamage, balance);
       computerDamage += damageSnake(computer.snake, projectile.target, projectile.burstRadius, projectile.burstDamage, balance);
+      const playerHeadHit = (defenderOwner === "player" && projectile.damage > 0 && circleAttackHitsHead(player.snake, projectile.target, projectile.radius))
+        || (projectile.burstDamage > 0 && circleAttackHitsHead(player.snake, projectile.target, projectile.burstRadius));
+      const computerHeadHit = (defenderOwner === "computer" && projectile.damage > 0 && circleAttackHitsHead(computer.snake, projectile.target, projectile.radius))
+        || (projectile.burstDamage > 0 && circleAttackHitsHead(computer.snake, projectile.target, projectile.burstRadius));
+      playerStunChance = stunChanceForHeadHit(playerHeadHit, projectile);
+      computerStunChance = stunChanceForHeadHit(computerHeadHit, projectile);
     } else if (projectile.kind === "line") {
       playerDamage = damageSnakeCells(player.snake, projectile.lineCells, projectile.width, projectile.damage, projectile.excludedCells, 0, projectile.outerDamageMultiplier ?? 1, projectile.fullDamageWidth ?? 0);
       computerDamage = damageSnakeCells(computer.snake, projectile.lineCells, projectile.width, projectile.damage, projectile.excludedCells, 0, projectile.outerDamageMultiplier ?? 1, projectile.fullDamageWidth ?? 0);
+      playerStunChance = lineProjectileStunChance(player.snake, projectile);
+      computerStunChance = lineProjectileStunChance(computer.snake, projectile);
     } else {
       if (projectile.kind === "headCircle" && projectile.followHead) {
         projectile.explosionTarget = { ...attacker.snake[0] };
         projectile.target = { ...projectile.explosionTarget };
       }
       const explosionTarget = projectile.explosionTarget || projectile.target;
-      const damageFn = projectile.flat ? damageSnakeFlat : damageSnake;
-      playerDamage = damageFn(player.snake, explosionTarget, projectile.radius, projectile.damage, balance);
-      computerDamage = damageFn(computer.snake, explosionTarget, projectile.radius, projectile.damage, balance);
+      playerDamage = damageSnake(player.snake, explosionTarget, projectile.radius, projectile.damage, balance);
+      computerDamage = damageSnake(computer.snake, explosionTarget, projectile.radius, projectile.damage, balance);
+      playerStunChance = stunChanceForHeadHit(circleAttackHitsHead(player.snake, explosionTarget, projectile.radius), projectile);
+      computerStunChance = stunChanceForHeadHit(circleAttackHitsHead(computer.snake, explosionTarget, projectile.radius), projectile);
       if (projectile.kind === "headCircle" && projectile.radiationDurationMs) {
         const ticks = Math.max(1, Math.ceil(projectile.radiationDurationMs / projectile.radiationTickMs));
         state.hazards.push({
@@ -1917,7 +2153,7 @@ function resolveProjectiles(state, now, balance) {
           radius: projectile.radius,
           damage: projectile.radiationTotalDamage / ticks,
           profile: "big",
-          stunChance: projectile.stunChance,
+          stunChance: 0,
           startedAt: now,
           nextTickAt: now + projectile.radiationTickMs,
           tickMs: projectile.radiationTickMs,
@@ -1927,32 +2163,31 @@ function resolveProjectiles(state, now, balance) {
       if (projectile.sandwormParalyzeOnBody || projectile.sandwormKillOnHead) {
         if (projectile.owner !== "player") {
           if (projectile.sandwormKillOnHead && snakeHeadHitAtCenter(player.snake, explosionTarget)) playerDamage = Math.max(playerDamage, player.hp);
-          else if (projectile.sandwormParalyzeOnBody && snakeBodyHitAtCenter(player.snake, explosionTarget)) {
-            applyCollisionParalysis(player, now, balance);
-            attacker.stats.stunApplied += 1;
-          }
+          else if (projectile.sandwormParalyzeOnBody && snakeBodyHitAtCenter(player.snake, explosionTarget) && applyCollisionParalysis(state, player, now, balance)) attacker.stats.stunApplied += 1;
         }
         if (projectile.owner !== "computer") {
           if (projectile.sandwormKillOnHead && snakeHeadHitAtCenter(computer.snake, explosionTarget)) computerDamage = Math.max(computerDamage, computer.hp);
-          else if (projectile.sandwormParalyzeOnBody && snakeBodyHitAtCenter(computer.snake, explosionTarget)) {
-            applyCollisionParalysis(computer, now, balance);
-            attacker.stats.stunApplied += 1;
-          }
+          else if (projectile.sandwormParalyzeOnBody && snakeBodyHitAtCenter(computer.snake, explosionTarget) && applyCollisionParalysis(state, computer, now, balance)) attacker.stats.stunApplied += 1;
         }
       }
     }
     if (projectile.owner === "player") playerDamage = 0;
     if (projectile.owner === "computer") computerDamage = 0;
-    applyDamage(state, player, playerDamage, projectile.profile || "big", now);
-    applyDamage(state, computer, computerDamage, projectile.profile || "big", now);
-    attacker.stats.damageDealt += projectile.owner === "player" ? computerDamage : playerDamage;
-    if (projectile.owner !== "player" && playerDamage > 0 && applyAttackStun(state, player, projectile.stunChance, now, balance, { stack: projectile.stackStun })) attacker.stats.stunApplied += 1;
-    if (projectile.owner !== "computer" && computerDamage > 0 && applyAttackStun(state, computer, projectile.stunChance, now, balance, { stack: projectile.stackStun })) attacker.stats.stunApplied += 1;
+    if (isDamageImmune(player, now)) playerDamage = 0;
+    if (isDamageImmune(computer, now)) computerDamage = 0;
+    const appliedPlayerDamage = applyDamage(state, player, playerDamage, projectile.profile || "big", now);
+    const appliedComputerDamage = applyDamage(state, computer, computerDamage, projectile.profile || "big", now);
+    attacker.stats.damageDealt += projectile.owner === "player" ? appliedComputerDamage : appliedPlayerDamage;
+    if (projectile.owner !== "player" && appliedPlayerDamage > 0 && applyAttackStun(state, player, playerStunChance, now, balance, { stack: projectile.stackStun })) attacker.stats.stunApplied += 1;
+    if (projectile.owner !== "computer" && appliedComputerDamage > 0 && applyAttackStun(state, computer, computerStunChance, now, balance, { stack: projectile.stackStun })) attacker.stats.stunApplied += 1;
+    if (projectile.owner !== "player" && appliedPlayerDamage > 0 && projectile.vulnerabilityChance > 0) applyVulnerability(state, player, projectile.vulnerabilityChance, now);
+    if (projectile.owner !== "computer" && appliedComputerDamage > 0 && projectile.vulnerabilityChance > 0) applyVulnerability(state, computer, projectile.vulnerabilityChance, now);
     if (defender.hp <= 0 || attacker.hp <= 0) break;
   }
 }
 
 function resolveHazards(state, now, balance) {
+  refreshStatusImmunity(state, now);
   state.hazards = state.hazards.filter(hazard => now <= hazard.endAt);
   for (const hazard of state.hazards) {
     if (now < hazard.startedAt || now < hazard.nextTickAt) continue;
@@ -1967,11 +2202,13 @@ function resolveHazards(state, now, balance) {
       : damageSnakeCells(state.fighters.computer.snake, hazard.cells, hazard.width, hazard.damage, hazard.owner === "computer" ? damageExcludedCells : [], hazard.minDistance || 0, hazard.outerDamageMultiplier ?? 1);
     if (hazard.owner === "player") playerDamage = 0;
     if (hazard.owner === "computer") computerDamage = 0;
-    applyDamage(state, state.fighters.player, playerDamage, hazard.profile || "big", now);
-    applyDamage(state, state.fighters.computer, computerDamage, hazard.profile || "big", now);
-    attacker.stats.damageDealt += hazard.owner === "player" ? computerDamage : playerDamage;
-    if (hazard.owner !== "player" && playerDamage > 0 && applyAttackStun(state, state.fighters.player, hazard.stunChance, now, balance, { interrupt: false })) attacker.stats.stunApplied += 1;
-    if (hazard.owner !== "computer" && computerDamage > 0 && applyAttackStun(state, state.fighters.computer, hazard.stunChance, now, balance, { interrupt: false })) attacker.stats.stunApplied += 1;
+    if (isDamageImmune(state.fighters.player, now)) playerDamage = 0;
+    if (isDamageImmune(state.fighters.computer, now)) computerDamage = 0;
+    const appliedPlayerDamage = applyDamage(state, state.fighters.player, playerDamage, hazard.profile || "big", now);
+    const appliedComputerDamage = applyDamage(state, state.fighters.computer, computerDamage, hazard.profile || "big", now);
+    attacker.stats.damageDealt += hazard.owner === "player" ? appliedComputerDamage : appliedPlayerDamage;
+    if (hazard.owner !== "player" && appliedPlayerDamage > 0 && applyAttackStun(state, state.fighters.player, hazard.stunChance, now, balance, { interrupt: false })) attacker.stats.stunApplied += 1;
+    if (hazard.owner !== "computer" && appliedComputerDamage > 0 && applyAttackStun(state, state.fighters.computer, hazard.stunChance, now, balance, { interrupt: false })) attacker.stats.stunApplied += 1;
   }
 }
 
@@ -2000,7 +2237,12 @@ function collisionSeverity(selfHit, opponentHit) {
   return 0;
 }
 
-function applyCollisionPenalty(fighter, severity, now, balance) {
+function applyCollisionPenalty(state, fighter, severity, now, balance) {
+  if (isStatusImmune(fighter, now)) {
+    clearAbnormalStatus(fighter, now);
+    return false;
+  }
+  interruptCasting(state, fighter.owner);
   fighter.stunUntil = Math.max(fighter.stunUntil, now + balance.collision.collisionStunMs * severity);
   fighter.slowUntil = Math.max(fighter.slowUntil, fighter.stunUntil + balance.collision.collisionSlowMs * severity);
   fighter.collisionParalysisMs += balance.collision.collisionStunMs * severity;
@@ -2077,7 +2319,7 @@ function moveFighters(state, movers, now, balance) {
     const plan = plans[owner];
     if (plan.collision) {
       collisionOwners.push(owner);
-      if (applyCollisionPenalty(fighter, plan.collision, now, balance)) defeatByCollisionParalysis(state, fighter, now);
+      if (applyCollisionPenalty(state, fighter, plan.collision, now, balance)) defeatByCollisionParalysis(state, fighter, now);
       return;
     }
     movedOwners.push(owner);
@@ -2176,6 +2418,13 @@ function nextHazardTick(state, tickMs) {
   }, Number.POSITIVE_INFINITY);
 }
 
+function nextStatusImmunityTick(state, tickMs) {
+  return Object.values(state.fighters).reduce((soonest, fighter) => {
+    if (!fighter.statusImmuneFrom || state.now >= fighter.statusImmuneUntil) return soonest;
+    return Math.min(soonest, ceilToTick(fighter.statusImmuneFrom, tickMs));
+  }, Number.POSITIVE_INFINITY);
+}
+
 function nextMoveTick(state, fighter, balance, tickMs) {
   const nextSequentialTick = state.now + tickMs;
   const candidates = [
@@ -2196,7 +2445,8 @@ function nextMeaningfulTick(state, balance, tickMs, maxMatchMs) {
   const nextSequentialTick = Math.min(maxMatchMs, state.now + tickMs);
   const eventTicks = [
     nextProjectileTick(state, tickMs),
-    nextHazardTick(state, tickMs)
+    nextHazardTick(state, tickMs),
+    nextStatusImmunityTick(state, tickMs)
   ];
   Object.values(state.fighters).forEach(fighter => {
     eventTicks.push(nextMoveTick(state, fighter, balance, tickMs));
@@ -2220,8 +2470,10 @@ function simulateMatch(options) {
     const skippedTicks = Math.max(0, Math.round((nextNow - previousNow) / tickMs) - 1);
     sampleStockTicks(state, skippedTicks);
     state.now = nextNow;
+    refreshStatusImmunity(state, state.now);
     resolveProjectiles(state, state.now, balance);
     resolveHazards(state, state.now, balance);
+    refreshStatusImmunity(state, state.now);
     updateVisibleMemory(state);
     const movers = Object.values(state.fighters)
       .filter(fighter => state.now >= fighter.stunUntil && state.now - fighter.lastStep >= moveInterval(fighter, balance, state.now))

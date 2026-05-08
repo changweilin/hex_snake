@@ -581,13 +581,19 @@
       playerStunUntil = 0;
       playerSlowUntil = 0;
       playerCollisionParalysisMs = 0;
+      playerVulnerable = false;
       computerStunUntil = 0;
       computerSlowUntil = 0;
       computerCollisionParalysisMs = 0;
+      computerVulnerable = false;
       playerUndergroundFrom = 0;
       playerUndergroundUntil = 0;
       computerUndergroundFrom = 0;
       computerUndergroundUntil = 0;
+      playerSandwormArmorFrom = 0;
+      playerSandwormArmorUntil = 0;
+      computerSandwormArmorFrom = 0;
+      computerSandwormArmorUntil = 0;
       lastVisiblePlayerSnake = snake.map(segment => ({ ...segment }));
       lastVisibleComputerSnake = computerSnake.map(segment => ({ ...segment }));
       lastVisiblePlayerDir = dir;
@@ -598,8 +604,8 @@
       computerFoodTargetAt = 0;
       lastPlayerFoodAt = 0;
       lastComputerFoodAt = 0;
-      lastPlayerAttackMs = -Infinity;
-      lastComputerAttackMs = -Infinity;
+      lastPlayerAttackMs = resetAttackCooldownTracker();
+      lastComputerAttackMs = resetAttackCooldownTracker();
       HexSnakeReplay.resetSurrendered();
       gameOver = false;
       paused = false;
@@ -816,6 +822,37 @@
       bar.closest(".player-metric")?.classList.toggle("is-low-health", ratio <= 0.3);
     }
 
+    function cooldownTimerText(remainingMs) {
+      if (remainingMs <= 0) return "0";
+      const seconds = remainingMs / 1000;
+      return seconds >= 10 ? String(Math.ceil(seconds)) : seconds.toFixed(1);
+    }
+
+    function updateCooldownIndicator(profile = "small", indicator = null, valueEl = null, now = performance.now()) {
+      if (!indicator || !valueEl) return;
+      const remainingMs = attackCooldownRemainingMs("player", profile, now);
+      const cooling = remainingMs > 0;
+      const available = canAttack("player", profile);
+      const label = profile === "big" ? "大招" : "小招";
+      const text = cooldownTimerText(remainingMs);
+      valueEl.textContent = text;
+      indicator.classList.toggle("is-cooling", cooling);
+      indicator.classList.toggle("is-ready", !cooling && available);
+      indicator.classList.toggle("is-blocked", !cooling && !available);
+      const title = cooling
+        ? `${label}冷卻 ${text} 秒`
+        : available
+          ? `${label}冷卻完成`
+          : `${label}冷卻完成，資源不足`;
+      indicator.title = title;
+      indicator.setAttribute("aria-label", title);
+    }
+
+    function updateCooldownHud(now = performance.now()) {
+      updateCooldownIndicator("small", cooldownSmallIndicator, cooldownSmallValue, now);
+      updateCooldownIndicator("big", cooldownBigIndicator, cooldownBigValue, now);
+    }
+
     function updateHud() {
       lastHudFrameAt = performance.now();
       const playerMaxHp = maxHpForSnake(snake);
@@ -838,6 +875,7 @@
       keyEls.forEach(el => el.classList.toggle("active", Number(el.dataset.dir) === nextDir));
       updateStockHud("player", playerStock, playerAmmo, playerAmmoCharge);
       updateStockHud("computer", computerStock, computerAmmo, computerAmmoCharge);
+      updateCooldownHud(now);
     }
 
     function updateHudThrottled(now = performance.now()) {
@@ -994,13 +1032,59 @@
 
     function sandwormUndergroundAlpha(owner, now) {
       if (characterFor(owner).id !== "sandworm") return 1;
+      const armorFrom = owner === "player" ? playerSandwormArmorFrom : computerSandwormArmorFrom;
+      const armorUntil = owner === "player" ? playerSandwormArmorUntil : computerSandwormArmorUntil;
       const from = owner === "player" ? playerUndergroundFrom : computerUndergroundFrom;
       const until = owner === "player" ? playerUndergroundUntil : computerUndergroundUntil;
+      if (from && now >= from && now <= until) return 0;
+      if (armorFrom && now >= armorFrom && now <= armorUntil) {
+        const fadeTargetAt = from && from > armorFrom ? from : armorFrom + 500;
+        if (now < fadeTargetAt) {
+          const fadeProgress = Math.max(0, Math.min(1, (now - armorFrom) / Math.max(1, fadeTargetAt - armorFrom)));
+          return 1 - fadeProgress * 0.55;
+        }
+        if (until && now > until) {
+          const fadeProgress = Math.max(0, Math.min(1, (now - until) / Math.max(1, armorUntil - until)));
+          return 0.45 + fadeProgress * 0.55;
+        }
+        return 0.45;
+      }
       if (!from || now < from || now > until) return 1;
       const fadeMs = 120;
       const fadeIn = Math.min(1, Math.max(0, (now - from) / fadeMs));
       const fadeOut = Math.min(1, Math.max(0, (until - now) / fadeMs));
       return 1 - Math.min(fadeIn, fadeOut);
+    }
+
+    function isOwnerSandwormArmored(owner, now) {
+      if (characterFor(owner).id !== "sandworm") return false;
+      const from = owner === "player" ? playerSandwormArmorFrom : computerSandwormArmorFrom;
+      const until = owner === "player" ? playerSandwormArmorUntil : computerSandwormArmorUntil;
+      return Boolean(from && now >= from && now <= until);
+    }
+
+    function isOwnerDamageImmune(owner, now) {
+      return isOwnerUnderground(owner, now);
+    }
+
+    function clearOwnerAbnormalStatus(owner, now) {
+      if (owner === "player") {
+        playerStunUntil = Math.min(playerStunUntil, now);
+        playerSlowUntil = Math.min(playerSlowUntil, now);
+        playerCollisionParalysisMs = 0;
+        playerVulnerable = false;
+      } else {
+        computerStunUntil = Math.min(computerStunUntil, now);
+        computerSlowUntil = Math.min(computerSlowUntil, now);
+        computerCollisionParalysisMs = 0;
+        computerVulnerable = false;
+      }
+    }
+
+    function refreshSandwormProtections(now) {
+      ["player", "computer"].forEach(owner => {
+        if (isOwnerSandwormArmored(owner, now)) clearOwnerAbnormalStatus(owner, now);
+      });
     }
 
     function canTurn(newDir) {
@@ -1091,10 +1175,6 @@
       if (distance > (band?.width ?? 0)) return 0;
       if (distance <= (band?.fullDamageWidth ?? 0)) return 1;
       return band?.outerDamageMultiplier ?? 1;
-    }
-
-    function lineHitSegmentMultiplier(segmentIndex, options = {}) {
-      return segmentIndex === 0 ? (options.headDamageMultiplier ?? 1) : 1;
     }
 
     function ownerDirection(owner) {
@@ -1270,6 +1350,17 @@
       });
     }
 
+    function lobsterPalmVulnerabilityChance(stock) {
+      return attackStunChance(stock, ultimateSetting("lobster", "vulnerabilityChance", 0.3));
+    }
+
+    function attackHitStunChances(stock) {
+      return {
+        body: Math.min(1, bodyHitStunChance + foodBonus(stock, "carb", bodyHitStunChanceBonusPerPoint, bodyHitMaxStunChanceBonus)),
+        head: Math.min(1, headHitStunChance + foodBonus(stock, "carb", headHitStunChanceBonusPerPoint, headHitMaxStunChanceBonus))
+      };
+    }
+
     function scheduleCharacterBigAttack(owner, character, source, target, now, stock, stunChance, options = {}) {
       const small = attackStats(stock, "small");
       const bigDamage = attackDamage(stock, "big");
@@ -1287,10 +1378,13 @@
         const fistStepMs = ultimateSetting(character.id, "fistStepMs", lobsterPalmStepMs);
         const travelDelay = small.delay + travelPath.length * fistStepMs;
         const volleys = Math.max(1, Math.round(ultimateSetting(character.id, "volleyCount", 2)));
-        const contactDamage = bigDamage * ultimateSetting(character.id, "contactDamageMultiplier", 0.3);
+        const contactDamage = bigDamage * ultimateSetting(character.id, "contactDamageMultiplier", 0.6);
         const contactRadius = Math.max(0.25, ultimateSetting(character.id, "contactRadius", 1));
-        const burstRadius = small.radius * ultimateSetting(character.id, "burstRadiusMultiplier", 1.5);
-        const burstDamage = bigDamage * ultimateSetting(character.id, "burstDamageMultiplier", 0.9);
+        const burstRadius = small.radius * ultimateSetting(character.id, "burstRadiusMultiplier", 1.6);
+        const burstDamage = bigDamage * ultimateSetting(character.id, "burstDamageMultiplier", 1.6);
+        const palmVulnerabilityChance = Number.isFinite(options.vulnerabilityChance)
+          ? options.vulnerabilityChance
+          : lobsterPalmVulnerabilityChance(stock);
         const visualType = "lobster-palm-big";
         const volleyIntervalMs = attackDelay(stock);
         for (let volley = 0; volley < volleys; volley += 1) {
@@ -1312,7 +1406,9 @@
             damage: contactDamage,
             burstRadius,
             burstDamage,
-            stunChance
+            stunChance,
+            headStunChance: options.hitStunChances?.head ?? stunChance,
+            vulnerabilityChance: palmVulnerabilityChance
           });
           const burstHits = firstHit ? [firstHit] : [{ cell: endCell, index: Math.max(0, travelPath.length - 1) }];
           burstHits.forEach(hit => {
@@ -1332,7 +1428,9 @@
               damage: contactDamage,
               burstRadius,
               burstDamage,
-              stunChance
+              stunChance,
+              headStunChance: options.hitStunChances?.head ?? stunChance,
+              vulnerabilityChance: palmVulnerabilityChance
             });
           });
         }
@@ -1344,27 +1442,33 @@
         const lineCells = boardLineThrough(lineOrigin, direction);
         const lineShape = bandShapeFromTotalWidth(small.radius);
         const excludedCells = (owner === "player" ? snake : computerSnake).map(segment => ({ q: segment.q, r: segment.r }));
-        projectiles.push({
-          kind: "line",
-          owner,
-          profile: "big",
-          source: { q: source.q, r: source.r },
-          target: { q: target.q, r: target.r },
-          lineCells,
-          excludedCells,
-          width: lineShape.width,
-          fullDamageWidth: lineShape.fullDamageWidth,
-          outerDamageMultiplier: lineShape.outerDamageMultiplier,
-          headDamageMultiplier: 2,
-          visualType: attackVisualType(owner, "big"),
-          createdAt: now,
-          impactAt: now + small.delay,
-          delay: small.delay,
-          damage: bigDamage * 0.8 * ultimateDamageMultiplier(character.id),
-          stunChance,
-          stackStun: true
-        });
-        return small.delay;
+        const strikeCount = Math.max(1, Math.round(ultimateSetting(character.id, "strikeCount", 8)));
+        const strikeIntervalMs = small.delay * Math.max(0, ultimateSetting(character.id, "strikeIntervalMultiplier", 0.5));
+        const damage = bigDamage * ultimateSetting(character.id, "damageMultiplier", 0.2);
+        for (let index = 0; index < strikeCount; index += 1) {
+          const strikeDelay = index * strikeIntervalMs;
+          projectiles.push({
+            kind: "line",
+            owner,
+            profile: "big",
+            source: { q: source.q, r: source.r },
+            target: { q: target.q, r: target.r },
+            lineCells,
+            excludedCells,
+            width: lineShape.width,
+            fullDamageWidth: lineShape.fullDamageWidth,
+            outerDamageMultiplier: lineShape.outerDamageMultiplier,
+            visualType: attackVisualType(owner, "big"),
+            createdAt: now + strikeDelay,
+            impactAt: now + strikeDelay + small.delay,
+            delay: small.delay,
+            damage,
+            stunChance,
+            headStunChance: options.hitStunChances?.head ?? stunChance,
+            stackStun: strikeCount > 1
+          });
+        }
+        return small.delay + (strikeCount - 1) * strikeIntervalMs;
       }
 
       if (character.id === "quetzal") {
@@ -1372,6 +1476,7 @@
         const duration = 3000;
         const extensionDamageMultiplier = Math.max(0, Math.min(1, (stock.protein || 0) / maxFoodStock));
         const outwardWidth = extensionDamageMultiplier > 0 ? 1 : 0;
+        const tickMs = ultimateSetting(character.id, "tickMs", baseStepMs);
         hazards.push({
           kind: "swamp",
           owner,
@@ -1383,23 +1488,29 @@
           outerDamageMultiplier: extensionDamageMultiplier,
           visualType: attackVisualType(owner, "big"),
           damage: bigDamage * ultimateDamageMultiplier(character.id),
-          stunChance,
+          stunChance: 0,
           startedAt: now + small.delay,
           nextTickAt: now + small.delay,
-          tickMs: moveInterval(stock),
+          tickMs,
           endAt: now + small.delay + duration
         });
         return small.delay + duration;
       }
 
       if (character.id === "sandworm") {
-        const delay = small.delay * 3;
-        const undergroundFrom = now + Math.max(0, delay - sandwormUndergroundWindowMs);
-        const undergroundUntil = now + delay + sandwormUndergroundWindowMs;
+        const armorFrom = now + small.delay * ultimateSetting(character.id, "superArmorDelayMultiplier", 1);
+        const armorUntil = armorFrom + ultimateSetting(character.id, "superArmorDurationMs", 3000);
+        const undergroundFrom = now + small.delay * ultimateSetting(character.id, "invisibleDelayMultiplier", 2);
+        const undergroundUntil = undergroundFrom + ultimateSetting(character.id, "invisibleDurationMs", 1500);
+        const delay = small.delay * ultimateSetting(character.id, "impactDelayMultiplier", 3);
         if (owner === "player") {
+          playerSandwormArmorFrom = armorFrom;
+          playerSandwormArmorUntil = Math.max(playerSandwormArmorUntil, armorUntil);
           playerUndergroundFrom = undergroundFrom;
           playerUndergroundUntil = Math.max(playerUndergroundUntil, undergroundUntil);
         } else {
+          computerSandwormArmorFrom = armorFrom;
+          computerSandwormArmorUntil = Math.max(computerSandwormArmorUntil, armorUntil);
           computerUndergroundFrom = undergroundFrom;
           computerUndergroundUntil = Math.max(computerUndergroundUntil, undergroundUntil);
         }
@@ -1412,8 +1523,9 @@
           impactAt: now + delay,
           delay,
           radius: Math.max(0.5, small.radius * 0.5),
-          damage: bigDamage * 4 * ultimateDamageMultiplier(character.id),
+          damage: bigDamage * ultimateSetting(character.id, "damageMultiplier", 8),
           stunChance,
+          headStunChance: options.hitStunChances?.head ?? stunChance,
           hidden: true,
           sandwormHidden: true,
           sandwormParalyzeOnBody: true,
@@ -1424,8 +1536,8 @@
 
       if (character.id === "dragon") {
         const spiritRadius = small.radius * ultimateSetting(character.id, "radiusMultiplier", 2);
-        const impactDamage = bigDamage * ultimateSetting(character.id, "impactDamageMultiplier", 0.5);
-        const radiationTotalDamage = bigDamage * ultimateSetting(character.id, "radiationDamageMultiplier", 1.5);
+        const impactDamage = bigDamage * ultimateSetting(character.id, "impactDamageMultiplier", 1.5);
+        const radiationTotalDamage = bigDamage * ultimateSetting(character.id, "radiationDamageMultiplier", 2);
         const radiationDurationMs = ultimateSetting(character.id, "radiationDurationMs", 4000);
         const radiationTickMs = ultimateSetting(character.id, "radiationTickMs", 500);
         const firstImpactDelay = small.delay * ultimateSetting(character.id, "firstImpactDelayMultiplier", 2);
@@ -1448,6 +1560,7 @@
             radiationTickMs,
             radiationTotalDamage,
             stunChance,
+            headStunChance: options.hitStunChances?.head ?? stunChance,
             flat: true,
             visualType
           });
@@ -1468,40 +1581,45 @@
             impactAt: now + impactDelay,
             delay: impactDelay,
             radius: small.radius,
-            damage: bigDamage * ultimateDamageMultiplier(character.id),
-            stunChance
+            damage: bigDamage * ultimateSetting(character.id, "damageMultiplier", 1.5),
+            stunChance,
+            headStunChance: options.hitStunChances?.head ?? stunChance
           });
         }
         return firstImpactDelay + volleyIntervalMs * 2;
       }
 
       const big = attackStats(stock, "big");
-      pushCircleAttack({ owner, profile: "big", target, createdAt: now, impactAt: now + big.delay, delay: big.delay, radius: big.radius, damage: big.damage * ultimateDamageMultiplier(character.id), stunChance });
+      pushCircleAttack({ owner, profile: "big", target, createdAt: now, impactAt: now + big.delay, delay: big.delay, radius: big.radius, damage: big.damage * ultimateDamageMultiplier(character.id), stunChance, headStunChance: options.hitStunChances?.head ?? stunChance });
       return big.delay;
     }
 
     function launchAttack(owner, target, now, profile = "big", options = {}) {
       const stock = owner === "player" ? playerStock : computerStock;
-      const lastAttack = owner === "player" ? lastPlayerAttackMs : lastComputerAttackMs;
+      const lastAttack = lastAttackMsFor(owner, profile);
       const source = owner === "player" ? snake[0] : computerSnake[0];
       const character = characterFor(owner);
       const isSmall = profile === "small";
       if (!canAttack(owner, profile)) return false;
-      if (now - lastAttack < attackCooldown(stock) * (isSmall ? smallAttackCooldownScale : 1)) return false;
+      if (now - lastAttack < attackProfileCooldown(stock, profile, character.id)) return false;
       const stats = attackStats(stock, profile);
-      const stunChance = attackStunChance(stock);
+      const hitStunChances = attackHitStunChances(stock);
+      const stunChance = hitStunChances.body;
+      const vulnerabilityChance = !isSmall && character.id === "lobster"
+        ? lobsterPalmVulnerabilityChance(stock)
+        : 0;
       consumeAttackCost(owner, stock, profile);
       if (owner === "player") {
-        lastPlayerAttackMs = now;
+        setLastAttackMsFor(owner, profile, now);
         playerBombFlashUntil = now + 1200;
       } else {
-        lastComputerAttackMs = now;
+        setLastAttackMsFor(owner, profile, now);
         computerBombFlashUntil = now + 1200;
       }
       HexSnakeAudio.playCharacter(owner, isSmall ? "small" : "big");
       const poseDuration = isSmall
         ? stats.delay
-        : scheduleCharacterBigAttack(owner, character, source, target, now, stock, stunChance, options);
+        : scheduleCharacterBigAttack(owner, character, source, target, now, stock, stunChance, { ...options, vulnerabilityChance, hitStunChances });
       if (isSmall) {
         projectiles.push({
           kind: "circle",
@@ -1515,7 +1633,8 @@
           delay: stats.delay,
           radius: stats.radius,
           damage: stats.damage,
-          stunChance
+          stunChance,
+          headStunChance: hitStunChances.head
         });
       }
       setFighterPose(owner, "attack", Math.max(180, Math.min(poseDuration, 520)));
@@ -1525,40 +1644,56 @@
     }
 
     function damageSnake(parts, target, radius, damageScale) {
-      const falloff = rangeDamageFalloffEnabled ? baseBlastHexRadius / Math.max(baseBlastHexRadius, radius) : 1;
-      const wholeRadius = Math.floor(radius);
-      const outerRingRatio = Math.max(0, Math.min(1, radius - wholeRadius));
-      const outerRingDistance = wholeRadius + 1;
       return parts.reduce((total, segment) => {
-        const distance = hexDistance(segment, target);
-        if (distance > radius) {
-          if (outerRingRatio > 0 && distance === outerRingDistance) {
-            return total + damageScale * falloff * outerRingRatio;
-          }
-          return total;
-        }
-        const hitChance = Math.max(0, Math.min(1, 1 - distance / radius));
-        return total + damageScale * falloff * hitChance;
+        const multiplier = circleDamageMultiplier(hexDistance(segment, target), radius);
+        return total + damageScale * multiplier;
       }, 0);
     }
 
-    function damageSnakeFlat(parts, target, radius, damageScale) {
-      return parts.reduce((total, segment) => (
-        hexDistance(segment, target) <= radius ? total + damageScale : total
-      ), 0);
+    function circleDamageMultiplier(distance, radius) {
+      if (!Number.isFinite(radius) || radius <= 0) return distance === 0 ? 1 : 0;
+      return Math.max(0, Math.min(1, 1 - distance / radius));
     }
 
-    function damageSnakeCells(parts, effectCells, width, damageScale, excludedCells = [], minDistance = 0, outerDamageMultiplier = 1, fullDamageWidth = 0, headDamageMultiplier = 1) {
+    function circleAttackHitsHead(parts, target, radius) {
+      const head = parts[0];
+      return Boolean(head && target && circleDamageMultiplier(hexDistance(head, target), radius) > 0);
+    }
+
+    function stunChanceForHeadHit(hitHead, projectile) {
+      return hitHead ? projectile.headStunChance ?? projectile.stunChance : projectile.stunChance;
+    }
+
+    function damageSnakeCells(parts, effectCells, width, damageScale, excludedCells = [], minDistance = 0, outerDamageMultiplier = 1, fullDamageWidth = 0) {
       const excluded = cellKeySet(excludedCells);
-      return parts.reduce((total, segment, index) => {
+      return parts.reduce((total, segment) => {
         if (excluded.has(keyOf(segment))) return total;
         const bestMultiplier = effectCells.reduce((best, cell) => {
           const distance = hexDistance(segment, cell);
           if (distance < minDistance || distance > width) return best;
           return Math.max(best, lineBandDamageMultiplier(distance, { width, fullDamageWidth, outerDamageMultiplier }));
         }, 0);
-        return bestMultiplier > 0 ? total + damageScale * bestMultiplier * lineHitSegmentMultiplier(index, { headDamageMultiplier }) : total;
+        return bestMultiplier > 0 ? total + damageScale * bestMultiplier : total;
       }, 0);
+    }
+
+    function lineProjectileHitsHead(parts, projectile) {
+      const head = parts[0];
+      if (!head) return false;
+      if (cellKeySet(projectile.excludedCells || []).has(keyOf(head))) return false;
+      return (projectile.lineCells || []).some(cell => {
+        const distance = hexDistance(head, cell);
+        if (distance < (projectile.minDistance || 0) || distance > (projectile.width || 0)) return false;
+        return lineBandDamageMultiplier(distance, {
+          width: projectile.width || 0,
+          fullDamageWidth: projectile.fullDamageWidth || 0,
+          outerDamageMultiplier: projectile.outerDamageMultiplier ?? 1
+        }) > 0;
+      });
+    }
+
+    function lineProjectileStunChance(parts, projectile) {
+      return stunChanceForHeadHit(lineProjectileHitsHead(parts, projectile), projectile);
     }
 
     function snakeBodyHitAtCenter(parts, target) {
@@ -1569,12 +1704,24 @@
       return Boolean(parts[0] && keyOf(parts[0]) === keyOf(target));
     }
 
-    function applyBlastDamage(owner, damage) {
+    function isOwnerVulnerable(owner) {
+      return owner === "player" ? playerVulnerable : computerVulnerable;
+    }
+
+    function setOwnerVulnerable(owner, vulnerable) {
+      if (owner === "player") playerVulnerable = vulnerable;
+      else computerVulnerable = vulnerable;
+    }
+
+    function applyBlastDamage(owner, damage, now = performance.now()) {
       if (damage <= 0) return;
+      if (isOwnerDamageImmune(owner, now)) return;
+      const finalDamage = isOwnerVulnerable(owner) ? damage * 2 : damage;
+      if (isOwnerVulnerable(owner)) setOwnerVulnerable(owner, false);
       if (owner === "player") {
-        playerHp = Math.max(0, playerHp - damage);
+        playerHp = Math.max(0, playerHp - finalDamage);
       } else {
-        computerHp = Math.max(0, computerHp - damage);
+        computerHp = Math.max(0, computerHp - finalDamage);
       }
     }
 
@@ -1586,6 +1733,10 @@
 
     function applyAttackStun(owner, chance = baseAttackStunChance, now = performance.now(), options = {}) {
       if (Math.random() >= chance) return false;
+      if (isOwnerSandwormArmored(owner, now)) {
+        clearOwnerAbnormalStatus(owner, now);
+        return false;
+      }
       const interrupted = options.interrupt !== false && interruptCasting(owner);
       const currentStunUntil = owner === "player" ? playerStunUntil : computerStunUntil;
       const stunBase = options.stack ? Math.max(now, currentStunUntil) : now;
@@ -1602,25 +1753,46 @@
       return true;
     }
 
+    function applyVulnerability(owner, chance = baseAttackStunChance, now = performance.now()) {
+      if (Math.random() >= chance) return false;
+      if (isOwnerSandwormArmored(owner, now)) {
+        clearOwnerAbnormalStatus(owner, now);
+        return false;
+      }
+      setOwnerVulnerable(owner, true);
+      showStatusCallout(owner, "易傷");
+      return true;
+    }
+
     function applyCollisionPenalty(owner, severity = 1, now = performance.now()) {
+      if (isOwnerSandwormArmored(owner, now)) {
+        clearOwnerAbnormalStatus(owner, now);
+        return false;
+      }
+      const interrupted = interruptCasting(owner);
       const stunUntil = now + collisionStunMs * severity;
       const slowUntil = stunUntil + collisionSlowMs * severity;
       if (owner === "player") {
         playerStunUntil = Math.max(playerStunUntil, stunUntil);
         playerSlowUntil = Math.max(playerSlowUntil, slowUntil);
         playerCollisionParalysisMs += collisionStunMs * severity;
-        showStatusCallout(owner, severity > 1 ? "重度麻痺！" : "麻痺！");
+        if (interrupted) showStatusCallout(owner, severity > 1 ? "重度麻痺！招式中斷" : "麻痺！招式中斷", { interrupted });
         return playerCollisionParalysisMs > maxCollisionParalysisMs;
       } else {
         computerStunUntil = Math.max(computerStunUntil, stunUntil);
         computerSlowUntil = Math.max(computerSlowUntil, slowUntil);
         computerCollisionParalysisMs += collisionStunMs * severity;
-        showStatusCallout(owner, severity > 1 ? "重度麻痺！" : "麻痺！");
+        if (interrupted) showStatusCallout(owner, severity > 1 ? "重度麻痺！招式中斷" : "麻痺！招式中斷", { interrupted });
         return computerCollisionParalysisMs > maxCollisionParalysisMs;
       }
     }
 
     function applyCollisionParalysis(owner, now = performance.now()) {
+      if (isOwnerSandwormArmored(owner, now)) {
+        clearOwnerAbnormalStatus(owner, now);
+        return false;
+      }
+      const interrupted = interruptCasting(owner);
       const stunUntil = now + collisionStunMs;
       const slowUntil = stunUntil + collisionSlowMs;
       if (owner === "player") {
@@ -1630,7 +1802,8 @@
         computerStunUntil = Math.max(computerStunUntil, stunUntil);
         computerSlowUntil = Math.max(computerSlowUntil, slowUntil);
       }
-      showStatusCallout(owner, "麻痺！");
+      if (interrupted) showStatusCallout(owner, "麻痺！招式中斷", { interrupted });
+      return true;
     }
 
     function collisionSeverity(selfHit, opponentHit) {
@@ -1647,6 +1820,8 @@
       landed.forEach(projectile => {
         let playerDamage = 0;
         let computerDamage = 0;
+        let playerStunChance = projectile.stunChance;
+        let computerStunChance = projectile.stunChance;
         if (projectile.kind === "lobsterPalm") {
           return;
         } else if (projectile.kind === "lobsterPalmBurst") {
@@ -1657,6 +1832,12 @@
           else computerDamage += contactDamage;
           playerDamage += damageSnake(snake, projectile.target, projectile.burstRadius, projectile.burstDamage);
           computerDamage += damageSnake(computerSnake, projectile.target, projectile.burstRadius, projectile.burstDamage);
+          const playerHeadHit = (defenderOwner === "player" && projectile.damage > 0 && circleAttackHitsHead(snake, projectile.target, projectile.radius))
+            || (projectile.burstDamage > 0 && circleAttackHitsHead(snake, projectile.target, projectile.burstRadius));
+          const computerHeadHit = (defenderOwner === "computer" && projectile.damage > 0 && circleAttackHitsHead(computerSnake, projectile.target, projectile.radius))
+            || (projectile.burstDamage > 0 && circleAttackHitsHead(computerSnake, projectile.target, projectile.burstRadius));
+          playerStunChance = stunChanceForHeadHit(playerHeadHit, projectile);
+          computerStunChance = stunChanceForHeadHit(computerHeadHit, projectile);
           blasts.push({
             kind: "circle",
             target: projectile.target,
@@ -1669,8 +1850,10 @@
           });
           triggerBoardShake(burstVisualType(projectile), now);
         } else if (projectile.kind === "line") {
-          playerDamage = damageSnakeCells(snake, projectile.lineCells, projectile.width, projectile.damage, projectile.excludedCells, 0, projectile.outerDamageMultiplier ?? 1, projectile.fullDamageWidth ?? 0, projectile.headDamageMultiplier ?? 1);
-          computerDamage = damageSnakeCells(computerSnake, projectile.lineCells, projectile.width, projectile.damage, projectile.excludedCells, 0, projectile.outerDamageMultiplier ?? 1, projectile.fullDamageWidth ?? 0, projectile.headDamageMultiplier ?? 1);
+          playerDamage = damageSnakeCells(snake, projectile.lineCells, projectile.width, projectile.damage, projectile.excludedCells, 0, projectile.outerDamageMultiplier ?? 1, projectile.fullDamageWidth ?? 0);
+          computerDamage = damageSnakeCells(computerSnake, projectile.lineCells, projectile.width, projectile.damage, projectile.excludedCells, 0, projectile.outerDamageMultiplier ?? 1, projectile.fullDamageWidth ?? 0);
+          playerStunChance = lineProjectileStunChance(snake, projectile);
+          computerStunChance = lineProjectileStunChance(computerSnake, projectile);
           blasts.push({
             kind: "line",
             lineCells: projectile.lineCells,
@@ -1678,7 +1861,6 @@
             width: projectile.width,
             fullDamageWidth: projectile.fullDamageWidth,
             outerDamageMultiplier: projectile.outerDamageMultiplier,
-            headDamageMultiplier: projectile.headDamageMultiplier,
             target: projectile.target,
             owner: projectile.owner,
             visualType: projectile.visualType || attackVisualType(projectile.owner, projectile.profile),
@@ -1695,9 +1877,10 @@
           const explosionTarget = projectile.explosionTarget || projectile.target;
           const radius = projectile.radius || baseBlastHexRadius;
           const damage = projectile.damage || 1;
-          const damageFn = projectile.flat ? damageSnakeFlat : damageSnake;
-          playerDamage = damageFn(snake, explosionTarget, radius, damage);
-          computerDamage = damageFn(computerSnake, explosionTarget, radius, damage);
+          playerDamage = damageSnake(snake, explosionTarget, radius, damage);
+          computerDamage = damageSnake(computerSnake, explosionTarget, radius, damage);
+          playerStunChance = stunChanceForHeadHit(circleAttackHitsHead(snake, explosionTarget, radius), projectile);
+          computerStunChance = stunChanceForHeadHit(circleAttackHitsHead(computerSnake, explosionTarget, radius), projectile);
           blasts.push({
             kind: "circle",
             target: explosionTarget,
@@ -1719,7 +1902,7 @@
               width: radius,
               visualType: projectile.visualType === "dragon-spirit-big" ? "dragon-spirit-radiation" : "lobster-radiation",
               damage: projectile.radiationTotalDamage / ticks,
-              stunChance: projectile.stunChance,
+              stunChance: 0,
               startedAt: now,
               nextTickAt: now + projectile.radiationTickMs,
               tickMs: projectile.radiationTickMs,
@@ -1739,11 +1922,15 @@
         }
         if (projectile.owner === "player") playerDamage = 0;
         if (projectile.owner === "computer") computerDamage = 0;
+        if (isOwnerDamageImmune("player", now)) playerDamage = 0;
+        if (isOwnerDamageImmune("computer", now)) computerDamage = 0;
         triggerSmallHitShake(projectile, playerDamage, computerDamage, now);
-        applyBlastDamage("player", playerDamage);
-        applyBlastDamage("computer", computerDamage);
-        if (projectile.owner !== "player" && playerDamage > 0) applyAttackStun("player", projectile.stunChance, now, { stack: projectile.stackStun });
-        if (projectile.owner !== "computer" && computerDamage > 0) applyAttackStun("computer", projectile.stunChance, now, { stack: projectile.stackStun });
+        applyBlastDamage("player", playerDamage, now);
+        applyBlastDamage("computer", computerDamage, now);
+        if (projectile.owner !== "player" && playerDamage > 0) applyAttackStun("player", playerStunChance, now, { stack: projectile.stackStun });
+        if (projectile.owner !== "computer" && computerDamage > 0) applyAttackStun("computer", computerStunChance, now, { stack: projectile.stackStun });
+        if (projectile.owner !== "player" && playerDamage > 0 && projectile.vulnerabilityChance > 0) applyVulnerability("player", projectile.vulnerabilityChance, now);
+        if (projectile.owner !== "computer" && computerDamage > 0 && projectile.vulnerabilityChance > 0) applyVulnerability("computer", projectile.vulnerabilityChance, now);
       });
       blasts = blasts.filter(blast => now <= blast.endAt);
       if (playerHp <= 0 || computerHp <= 0) endGame(playerHp <= 0, computerHp <= 0);
@@ -1773,7 +1960,6 @@
           width: projectile.width,
           fullDamageWidth: projectile.fullDamageWidth,
           outerDamageMultiplier: projectile.outerDamageMultiplier,
-          headDamageMultiplier: projectile.headDamageMultiplier,
           target: projectile.target,
           owner: projectile.owner,
           visualType: projectile.visualType || attackVisualType(projectile.owner, projectile.profile),
@@ -1811,7 +1997,7 @@
           width: radius,
           visualType: projectile.visualType === "dragon-spirit-big" ? "dragon-spirit-radiation" : "lobster-radiation",
           damage: 0,
-          stunChance: projectile.stunChance,
+          stunChance: 0,
           startedAt: now,
           nextTickAt: now + projectile.radiationTickMs,
           tickMs: projectile.radiationTickMs,
@@ -1885,8 +2071,10 @@
           : damageSnakeCells(computerSnake, hazard.cells, hazard.width, hazard.damage, hazard.owner === "computer" ? damageExcludedCells : [], hazard.minDistance || 0, hazard.outerDamageMultiplier ?? 1);
         if (hazard.owner === "player") playerDamage = 0;
         if (hazard.owner === "computer") computerDamage = 0;
-        applyBlastDamage("player", playerDamage);
-        applyBlastDamage("computer", computerDamage);
+        if (isOwnerDamageImmune("player", now)) playerDamage = 0;
+        if (isOwnerDamageImmune("computer", now)) computerDamage = 0;
+        applyBlastDamage("player", playerDamage, now);
+        applyBlastDamage("computer", computerDamage, now);
         if (hazard.owner !== "player" && playerDamage > 0) applyAttackStun("player", hazard.stunChance, now, { interrupt: false });
         if (hazard.owner !== "computer" && computerDamage > 0) applyAttackStun("computer", hazard.stunChance, now, { interrupt: false });
       });
@@ -2181,8 +2369,10 @@
         lastTimerFrame = now;
       }
       if (!paused) {
+        refreshSandwormProtections(now);
         resolveProjectiles(now);
         resolveHazards(now);
+        refreshSandwormProtections(now);
         updateAiVisibilityMemory(now);
       }
       if (running && !paused) {
@@ -2709,8 +2899,7 @@
       const bombCost = attackBombCost(profile);
       if (ammoFor("player") < bombCost) return `${moveName} 施放失敗：炸彈不足，需要 ${bombCost} 枚，目前 ${ammoFor("player")} 枚。`;
 
-      const cooldownMs = attackCooldown(stock) * (profile === "small" ? 0.58 : 1);
-      const remainingMs = cooldownMs - (now - lastPlayerAttackMs);
+      const remainingMs = attackCooldownRemainingMs("player", profile, now);
       if (remainingMs > 0) return `${moveName} 施放失敗：冷卻中，還需 ${(remainingMs / 1000).toFixed(1)} 秒。`;
 
       return `${moveName} 施放失敗：目前條件不允許施放。`;

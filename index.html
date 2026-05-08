@@ -37,6 +37,14 @@
         <button class="target-mode-indicator" id="targetModeBigIndicator" type="button" data-profile-label="大" aria-label="顯示大招目標提示" title="大招目標">
           <span class="target-mode-icon" id="targetModeBigIcon" aria-hidden="true"></span>
         </button>
+        <div class="cooldown-indicator is-ready" id="cooldownSmallIndicator" data-profile-label="小" role="timer" aria-label="小招冷卻完成" title="小招冷卻完成">
+          <span class="cooldown-clock" aria-hidden="true"></span>
+          <span class="cooldown-value" id="cooldownSmallValue">0</span>
+        </div>
+        <div class="cooldown-indicator is-ready" id="cooldownBigIndicator" data-profile-label="大" role="timer" aria-label="大招冷卻完成" title="大招冷卻完成">
+          <span class="cooldown-clock" aria-hidden="true"></span>
+          <span class="cooldown-value" id="cooldownBigValue">0</span>
+        </div>
         <div class="character-stage" id="characterStage"></div>
         <div class="overlay show" id="overlay">
           <div class="dialog">

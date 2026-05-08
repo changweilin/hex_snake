@@ -22,10 +22,10 @@ let baseBlastHexRadius = 2;
 let proteinRangeBonusPerPoint = 0.05;
 let maxAttackSpeedBonus = 1;
 let maxMoveBonus = 0.8;
-let maxDamageBonus = 1.4;
+let maxDamageBonus = 2;
 let attackSpeedBonusPerPoint = 0.05;
 let moveBonusPerPoint = 0.04;
-let damageBonusPerPoint = 0.07;
+let damageBonusPerPoint = 0.1;
 let maxFoodStock = 20;
 let foodEnergy = 2;
 let blackFoodEnergy = 3;
@@ -35,6 +35,10 @@ let preferredFoodWeight = 0.4;
 let otherFoodWeight = 0.2;
 let balancedDualChance = 0.5;
 let blackSpecialChance = 1 / 3;
+let favoriteFoodBonusChance = 0.5;
+let balancedFoodBonusChance = 0.2;
+let blackFoodBonusChance = 1 / 3;
+let blackFoodDoubleBonusChance = 1 / 15;
 let collisionStunMs = 2000;
 let collisionSlowMs = 1000;
 let attackStunMs = 500;
@@ -42,6 +46,12 @@ let attackSlowMs = 500;
 let baseAttackStunChance = 0.3;
 let attackStunChanceBonusPerPoint = 0.01;
 let maxAttackStunChanceBonus = 0.2;
+let bodyHitStunChance = 0.15;
+let bodyHitStunChanceBonusPerPoint = 0.01;
+let bodyHitMaxStunChanceBonus = 0.2;
+let headHitStunChance = 0.3;
+let headHitStunChanceBonusPerPoint = 0.02;
+let headHitMaxStunChanceBonus = 0.4;
 let attackUltimateBalance = {};
 let maxCollisionParalysisMs = 8000;
 let rangeDamageFalloffEnabled = false;
@@ -107,6 +117,10 @@ function applyBalanceConfig(config) {
   blackFoodEnergy = config.resources?.blackFoodEnergy ?? blackFoodEnergy;
   singleColorStockGain = config.resources?.singleColorStockGain ?? singleColorStockGain;
   dualColorStockGain = config.resources?.dualColorStockGain ?? dualColorStockGain;
+  favoriteFoodBonusChance = config.resources?.favoriteFoodBonusChance ?? favoriteFoodBonusChance;
+  balancedFoodBonusChance = config.resources?.balancedFoodBonusChance ?? balancedFoodBonusChance;
+  blackFoodBonusChance = config.resources?.blackFoodBonusChance ?? blackFoodBonusChance;
+  blackFoodDoubleBonusChance = config.resources?.blackFoodDoubleBonusChance ?? blackFoodDoubleBonusChance;
   baseStepMs = config.movement?.baseStepMs ?? baseStepMs;
   moveBonusPerPoint = config.movement?.moveBonusPerPoint ?? moveBonusPerPoint;
   maxMoveBonus = config.movement?.maxMoveBonus ?? maxMoveBonus;
@@ -128,6 +142,12 @@ function applyBalanceConfig(config) {
   baseAttackStunChance = config.attack?.baseAttackStunChance ?? baseAttackStunChance;
   attackStunChanceBonusPerPoint = config.attack?.attackStunChanceBonusPerPoint ?? attackStunChanceBonusPerPoint;
   maxAttackStunChanceBonus = config.attack?.maxAttackStunChanceBonus ?? maxAttackStunChanceBonus;
+  bodyHitStunChance = config.attack?.bodyHitStunChance ?? bodyHitStunChance;
+  bodyHitStunChanceBonusPerPoint = config.attack?.bodyHitStunChanceBonusPerPoint ?? bodyHitStunChanceBonusPerPoint;
+  bodyHitMaxStunChanceBonus = config.attack?.bodyHitMaxStunChanceBonus ?? bodyHitMaxStunChanceBonus;
+  headHitStunChance = config.attack?.headHitStunChance ?? headHitStunChance;
+  headHitStunChanceBonusPerPoint = config.attack?.headHitStunChanceBonusPerPoint ?? headHitStunChanceBonusPerPoint;
+  headHitMaxStunChanceBonus = config.attack?.headHitMaxStunChanceBonus ?? headHitMaxStunChanceBonus;
   attackStunMs = config.attack?.attackStunMs ?? attackStunMs;
   attackSlowMs = config.attack?.attackSlowMs ?? attackSlowMs;
   rangeDamageFalloffEnabled = config.attack?.rangeDamageFalloffEnabled ?? rangeDamageFalloffEnabled;
@@ -206,6 +226,7 @@ const foodTypes = [
 const blackFoodType = { id: "black", label: "迷幻菇", name: "迷幻菇", colorName: "黑色", foodName: "迷幻菇", effect: "特殊食物；吃下後蛋白、脂肪、纖維、碳水隨機一種庫存 +1，並獲得 3 點能量", color: "#050505", line: "#e5e7eb" };
 const dualFoodName = "蟠桃(雙色)";
 const foodTypeById = new Map([...foodTypes, blackFoodType].map(type => [type.id, type]));
+const stockFoodTypeIds = foodTypes.map(type => type.id);
 const foodLabels = {
   balanced: "均衡",
   protein: "蛋白",
@@ -422,13 +443,19 @@ let lastComputerStep = 0;
 let playerStunUntil = 0;
 let playerSlowUntil = 0;
 let playerCollisionParalysisMs = 0;
+let playerVulnerable = false;
 let computerStunUntil = 0;
 let computerSlowUntil = 0;
 let computerCollisionParalysisMs = 0;
+let computerVulnerable = false;
 let playerUndergroundFrom = 0;
 let playerUndergroundUntil = 0;
 let computerUndergroundFrom = 0;
 let computerUndergroundUntil = 0;
+let playerSandwormArmorFrom = 0;
+let playerSandwormArmorUntil = 0;
+let computerSandwormArmorFrom = 0;
+let computerSandwormArmorUntil = 0;
 let lastVisiblePlayerSnake = [];
 let lastVisibleComputerSnake = [];
 let lastVisiblePlayerDir = 0;
@@ -445,8 +472,8 @@ const hudFrameIntervalMs = 100;
 const replayRecordCheckIntervalMs = 100;
 let lastHudFrameAt = -Infinity;
 let lastReplayRecordCheckAt = -Infinity;
-let lastPlayerAttackMs = -Infinity;
-let lastComputerAttackMs = -Infinity;
+let lastPlayerAttackMs = resetAttackCooldownTracker();
+let lastComputerAttackMs = resetAttackCooldownTracker();
 let rafId = 0;
 let previewDrawRafId = 0;
 let movePointerId = null;
@@ -578,22 +605,22 @@ const commonSmallMoveGuide = "小招是所有角色共用的基本爆破：按�
 const characterMoveGuides = {
   dragon: {
     big: "按大招鍵或點「大招」會依 Y 鍵選擇的大招目標快速施放；也可在棋盤長按指定落點。白龍會在目標格降下<strong>靈息爆發</strong>，命中後留下<strong>持續 4 秒</strong>的靈息傷害區。",
-    tip: "長按棋盤可把落點放在敵方必經路線；爆發傷害較低，但持續區域能逼迫對手轉向。"
+    tip: "長按棋盤可把落點放在敵方必經路線；第一波爆發傷害更高，持續區域能逼迫對手轉向。"
   },
   sandworm: {
-    big: "按大招鍵或點「大招」會依 Y 鍵選擇的大招目標快速施放；也可在棋盤長按指定突襲格。沙蟲會<strong>潛地延遲突襲</strong>，命中頭部可<strong>直接擊倒</strong>，命中身體會造成<strong>麻痺</strong>。",
+    big: "按大招鍵或點「大招」會依 Y 鍵選擇的大招目標快速施放；也可在棋盤長按指定突襲格。沙蟲會<strong>潛地延遲突襲</strong>，正中頭部會直接擊倒，正中身體會麻痺並中斷招式；擦邊仍依一般頭部/身體暈眩率判定。",
     tip: "長按棋盤可預判敵方頭部下一步；施放後接近命中時會短暫潛地，可用來躲開危險。"
   },
   quetzal: {
-    big: "按大招鍵、點「大招」，或在棋盤長按都會施放；羽蛇會沿自身蛇身留下<strong>持續 3 秒</strong>的<strong>藤沼區域</strong>，不需要指定落點，蛋白（紅色）庫存越高外擴傷害越完整。",
+    big: "按大招鍵、點「大招」，或在棋盤長按都會施放；羽蛇會沿自身蛇身留下<strong>持續 3 秒</strong>的<strong>藤沼區域</strong>，不需要指定落點，蛋白（紅色）庫存越高外擴傷害越完整，藤沼傷害不會造成暈眩。",
     tip: "適合在敵方靠近你身體或追逐時施放，用身體路徑封鎖空間。"
   },
   moray: {
-    big: "在棋盤拖曳可指定電擊起點與方向，放開施放；按大招鍵或點「大招」則依 Y 鍵選擇的大招方向施放。電鰻會打出貫穿棋盤的<strong>直線電擊</strong>，命中可<strong>堆疊暈眩</strong>。",
+    big: "在棋盤拖曳可指定電擊起點與方向，放開施放；按大招鍵或點「大招」則依 Y 鍵選擇的大招方向施放。電鰻會打出貫穿棋盤的<strong>8 段直線電擊</strong>，頭部與身體受到相同傷害，頭部命中的暈眩率較高且多段可堆疊。",
     tip: "棋盤拖曳時，拖曳方向比落點更重要；沿敵方身體長軸掃線最容易命中多段。"
   },
   lobster: {
-    big: "在棋盤拖曳可指定出拳方向，放開施放；按大招鍵或點「大招」則依 Y 鍵選擇的大招方向施放。智蝦會從頭部打出<strong>兩波追蹤連拳</strong>，拳路遇到第一個敵方蛇身會<strong>停下並爆發</strong>。",
+    big: "在棋盤拖曳可指定出拳方向，放開施放；按大招鍵或點「大招」則依 Y 鍵選擇的大招方向施放。智蝦會從頭部打出<strong>兩波追蹤連拳</strong>，拳路遇到第一個敵方蛇身會<strong>停下並爆發</strong>，小拳命中可能附加易傷，使下一次受到的傷害加倍。",
     tip: "拖曳方向從自己頭部出拳；對準敵方頭部或彎折蛇身，兩波連拳更容易打滿。"
   },
   gu_king: {
@@ -647,7 +674,7 @@ const tutorialSlides = [
       },
       {
         title: "控制效果",
-        text: `攻擊命中後有 ${Math.round(baseAttackStunChance * 100)}% 基礎機率暈眩，碳水（藍色）庫存會提高暈眩率；暈眩會讓對手短時間無法順利走位。`
+        text: `攻擊命中身體時有 ${Math.round(bodyHitStunChance * 100)}% 基礎機率暈眩，命中頭部時有 ${Math.round(headHitStunChance * 100)}% 基礎機率暈眩，碳水（藍色）庫存會提高暈眩率；暈眩與麻痺會讓對手短時間無法順利走位，並中斷尚未命中的招式。`
       },
       {
         title: "撞擊懲罰",
@@ -1650,8 +1677,8 @@ function attackSpeedMultiplier(stock) {
   return 1 + foodBonus(stock, "carb", attackSpeedBonusPerPoint, maxAttackSpeedBonus);
 }
 
-function attackStunChance(stock) {
-  return Math.min(1, baseAttackStunChance + foodBonus(stock, "carb", attackStunChanceBonusPerPoint, maxAttackStunChanceBonus));
+function attackStunChance(stock, baseChance = baseAttackStunChance) {
+  return Math.min(1, baseChance + foodBonus(stock, "carb", attackStunChanceBonusPerPoint, maxAttackStunChanceBonus));
 }
 
 function moveInterval(stock) {
@@ -1673,8 +1700,52 @@ function attackDelay(stock) {
   return baseAttackDelayMs / attackSpeedMultiplier(stock);
 }
 
-function attackCooldown(stock) {
-  return baseAttackCooldownMs / attackSpeedMultiplier(stock);
+function attackCooldown(stock, profile = "big", characterId = null) {
+  const baseCooldown = profile === "big" && characterId
+    ? attackUltimateBalance?.[characterId]?.bigCooldownMs ?? baseAttackCooldownMs
+    : baseAttackCooldownMs;
+  return baseCooldown / attackSpeedMultiplier(stock);
+}
+
+function attackProfileCooldown(stock, profile = "big", characterId = null) {
+  return attackCooldown(stock, profile, characterId) * (profile === "small" ? smallAttackCooldownScale : 1);
+}
+
+function resetAttackCooldownTracker() {
+  return { small: -Infinity, big: -Infinity };
+}
+
+function normalizedAttackProfile(profile = "big") {
+  return profile === "small" ? "small" : "big";
+}
+
+function attackCooldownTrackerFor(owner) {
+  return owner === "player" ? lastPlayerAttackMs : lastComputerAttackMs;
+}
+
+function lastAttackMsFor(owner, profile = "big") {
+  const tracker = attackCooldownTrackerFor(owner);
+  if (typeof tracker === "number") return tracker;
+  const key = normalizedAttackProfile(profile);
+  return Number.isFinite(tracker?.[key]) ? tracker[key] : -Infinity;
+}
+
+function setLastAttackMsFor(owner, profile = "big", value = performance.now()) {
+  const key = normalizedAttackProfile(profile);
+  if (owner === "player") {
+    if (!lastPlayerAttackMs || typeof lastPlayerAttackMs !== "object") lastPlayerAttackMs = resetAttackCooldownTracker();
+    lastPlayerAttackMs[key] = value;
+    return;
+  }
+  if (!lastComputerAttackMs || typeof lastComputerAttackMs !== "object") lastComputerAttackMs = resetAttackCooldownTracker();
+  lastComputerAttackMs[key] = value;
+}
+
+function attackCooldownRemainingMs(owner, profile = "big", now = performance.now()) {
+  const stock = owner === "player" ? playerStock : computerStock;
+  const character = characterFor(owner);
+  const cooldownMs = attackProfileCooldown(stock, profile, character?.id);
+  return Math.max(0, cooldownMs - (now - lastAttackMsFor(owner, profile)));
 }
 
 function blastRadius(stock) {
@@ -1801,6 +1872,43 @@ function foodTypeIds(food) {
   return food.type ? [food.type] : [];
 }
 
+function randomStockFoodTypeId(candidates = stockFoodTypeIds) {
+  const available = candidates.filter(typeId => stockFoodTypeIds.includes(typeId));
+  if (!available.length) return null;
+  return available[Math.floor(Math.random() * available.length)];
+}
+
+function addRandomStock(stock, candidates = stockFoodTypeIds, amount = 1) {
+  const typeId = randomStockFoodTypeId(candidates);
+  if (typeId) addStock(stock, typeId, amount);
+}
+
+function applyCharacterFoodStockBonus(owner, stock, types) {
+  const character = characterFor(owner);
+  const hasBlackFood = types.includes("black");
+  const stockTypes = types.filter(typeId => stockFoodTypeIds.includes(typeId));
+  if (character?.specialFood === "black") {
+    if (!hasBlackFood) return;
+    const roll = Math.random();
+    if (roll < blackFoodDoubleBonusChance) {
+      addRandomStock(stock, stockFoodTypeIds, 2);
+    } else if (roll < blackFoodDoubleBonusChance + blackFoodBonusChance) {
+      addRandomStock(stock, stockFoodTypeIds, 1);
+    }
+    return;
+  }
+  if (character?.food === "balanced") {
+    const candidates = hasBlackFood ? stockFoodTypeIds : stockTypes;
+    if (candidates.length && Math.random() < balancedFoodBonusChance) {
+      addRandomStock(stock, candidates, 1);
+    }
+    return;
+  }
+  if (stockTypes.length === 1 && stockTypes[0] === character?.food && Math.random() < favoriteFoodBonusChance) {
+    addStock(stock, stockTypes[0], 1);
+  }
+}
+
 function collectFood(owner, food) {
   const stock = owner === "player" ? playerStock : computerStock;
   const types = foodTypeIds(food);
@@ -1808,10 +1916,12 @@ function collectFood(owner, food) {
     const randomType = foodTypes[Math.floor(Math.random() * foodTypes.length)];
     addStock(stock, randomType.id, 1);
     addAmmoCharge(owner, blackFoodEnergy);
+    applyCharacterFoodStockBonus(owner, stock, types);
     return;
   }
   const stockGain = types.length > 1 ? dualColorStockGain : singleColorStockGain;
   types.forEach(typeId => addStock(stock, typeId, stockGain));
+  applyCharacterFoodStockBonus(owner, stock, types);
   addAmmoCharge(owner, foodEnergy);
 }
 

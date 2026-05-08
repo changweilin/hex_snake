@@ -30,10 +30,14 @@
     "foodEnergy": 2,
     "blackFoodEnergy": 3,
     "singleColorStockGain": 2,
-    "dualColorStockGain": 1
+    "dualColorStockGain": 1,
+    "favoriteFoodBonusChance": 0.5,
+    "balancedFoodBonusChance": 0.2,
+    "blackFoodBonusChance": 0.3333333333333333,
+    "blackFoodDoubleBonusChance": 0.06666666666666667
   },
   "health": {
-    "hpPerSnakeUnit": 2
+    "hpPerSnakeUnit": 10
   },
   "movement": {
     "baseStepMs": 460,
@@ -44,8 +48,8 @@
   "attack": {
     "smallAttackFoodCost": 2,
     "smallAttackBombCost": 1,
-    "smallAttackDamageMultiplier": 0.5,
-    "bigAttackDamageMultiplier": 1,
+    "smallAttackDamageMultiplier": 2.5,
+    "bigAttackDamageMultiplier": 5,
     "bigAttackBombCost": 2,
     "baseAttackDelayMs": 2000,
     "baseAttackCooldownMs": 2400,
@@ -54,42 +58,61 @@
     "blastDurationMs": 520,
     "attackSpeedBonusPerPoint": 0.05,
     "maxAttackSpeedBonus": 1,
-    "damageBonusPerPoint": 0.07,
-    "maxDamageBonus": 1.4,
+    "damageBonusPerPoint": 0.1,
+    "maxDamageBonus": 2,
     "baseAttackStunChance": 0.3,
     "attackStunChanceBonusPerPoint": 0.01,
     "maxAttackStunChanceBonus": 0.2,
+    "bodyHitStunChance": 0.15,
+    "bodyHitStunChanceBonusPerPoint": 0.01,
+    "bodyHitMaxStunChanceBonus": 0.2,
+    "headHitStunChance": 0.3,
+    "headHitStunChanceBonusPerPoint": 0.02,
+    "headHitMaxStunChanceBonus": 0.4,
     "attackStunMs": 500,
     "attackSlowMs": 500,
     "rangeDamageFalloffEnabled": false,
     "ultimates": {
       "dragon": {
+        "bigCooldownMs": 4800,
         "radiusMultiplier": 2,
-        "impactDamageMultiplier": 0.5,
-        "radiationDamageMultiplier": 1.5,
+        "impactDamageMultiplier": 1.5,
+        "radiationDamageMultiplier": 2,
         "radiationDurationMs": 4000,
         "radiationTickMs": 500,
         "firstImpactDelayMultiplier": 2
       },
       "lobster": {
         "fistStepMs": 45,
-        "contactDamageMultiplier": 0.3,
+        "contactDamageMultiplier": 0.6,
         "contactRadius": 1,
-        "burstRadiusMultiplier": 1.5,
-        "burstDamageMultiplier": 0.9,
+        "burstRadiusMultiplier": 1.6,
+        "burstDamageMultiplier": 1.6,
+        "vulnerabilityChance": 0.3,
         "volleyCount": 2
       },
       "sandworm": {
-        "damageMultiplier": 1
+        "bigCooldownMs": 6000,
+        "damageMultiplier": 8,
+        "superArmorDelayMultiplier": 1,
+        "superArmorDurationMs": 3000,
+        "invisibleDelayMultiplier": 2,
+        "invisibleDurationMs": 1500,
+        "impactDelayMultiplier": 3
       },
       "quetzal": {
-        "damageMultiplier": 1.25
+        "bigCooldownMs": 3600,
+        "damageMultiplier": 1.25,
+        "tickMs": 460
       },
       "moray": {
-        "damageMultiplier": 1
+        "bigCooldownMs": 2400,
+        "damageMultiplier": 0.2,
+        "strikeCount": 8,
+        "strikeIntervalMultiplier": 0.5
       },
       "gu_king": {
-        "damageMultiplier": 1
+        "damageMultiplier": 1.5
       }
     }
   },

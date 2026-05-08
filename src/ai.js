@@ -193,6 +193,7 @@
     const aiLookaheadDepth = 3;
     const aiLookaheadBeamWidth = 3;
     const aiLookaheadFutureDiscount = 0.65;
+    const foodRaceTieWindow = 0.05;
 
     const baselineHighAiStrategyWeightsByCharacter = {
       dragon: {
@@ -678,7 +679,7 @@
       const allocation = aiStrategyWeightsFor(owner).skillAllocation;
       const allocationScore = profile === "small" ? allocation.preferSmall : allocation.preferBig;
       const resourcePenalty = attackResourceCost(profile) * (profile === "big" ? 0.34 : 0.24);
-      const controlValue = attackStunChance(ownerStock(owner)) * 1.4 + (hasOpponentDebuff(owner, now) ? 0.75 : 0);
+      const controlValue = attackHitStunChances(ownerStock(owner)).body * 1.4 + (hasOpponentDebuff(owner, now) ? 0.75 : 0);
       return cappedDamage * 1.15
         + targetWeight * 0.6
         + castTimingScore(owner, profile, now)
@@ -818,12 +819,11 @@
       return targetSnake.reduce((stats, segment, index) => {
         const distance = lineCells.reduce((best, lineCell) => Math.min(best, hexDistance(segment, lineCell)), Infinity);
         const damageMultiplier = lineBandDamageMultiplier(distance, lineShape);
-        const segmentMultiplier = lineHitSegmentMultiplier(index, lineShape);
         if (index === 0) stats.headDistance = distance;
         if (damageMultiplier > 0) {
-          stats.hits += segmentMultiplier;
-          stats.damageScore += damageMultiplier * segmentMultiplier;
-          if (distance === 0) stats.exactHits += segmentMultiplier;
+          stats.hits += 1;
+          stats.damageScore += damageMultiplier;
+          if (distance === 0) stats.exactHits += 1;
         }
         return stats;
       }, { hits: 0, exactHits: 0, damageScore: 0, headDistance: Infinity });
@@ -847,7 +847,7 @@
       const fallbackDirection = ownerDirection(owner);
       if (!targetSnake.length || !fallbackTarget) return { target: fallbackTarget, direction: fallbackDirection };
 
-      const lineShape = { ...bandShapeFromTotalWidth(attackStats(ownerStock(owner), "small").radius), headDamageMultiplier: 2 };
+      const lineShape = bandShapeFromTotalWidth(attackStats(ownerStock(owner), "small").radius);
       const idealDirection = directionForLongestBodyAxis(targetSnake, fallbackDirection);
       let best = null;
       targetSnake.forEach((origin, originIndex) => {
@@ -874,9 +874,11 @@
       const opponent = opponentOf(owner);
       const targetSnake = perceivedSnakeFor(owner, opponent, now);
       if (!targetSnake.length || !plan?.target) return 0;
-      const lineShape = { ...bandShapeFromTotalWidth(attackStats(ownerStock(owner), "small").radius), headDamageMultiplier: 2 };
+      const lineShape = bandShapeFromTotalWidth(attackStats(ownerStock(owner), "small").radius);
       const stats = morayLineCandidateStats(targetSnake, boardLineThrough(plan.target, plan.direction), lineShape);
-      return stats.damageScore * attackDamage(ownerStock(owner), "big") * 0.8 * ultimateDamageMultiplier("moray");
+      const strikeCount = Math.max(1, Math.round(ultimateSetting("moray", "strikeCount", 8)));
+      const damageMultiplier = ultimateSetting("moray", "damageMultiplier", 0.2);
+      return stats.damageScore * attackDamage(ownerStock(owner), "big") * damageMultiplier * strikeCount;
     }
 
     function chooseAiAttackDirection(owner, target, now) {
@@ -976,6 +978,7 @@
     }
 
     function expectedDamageAtUncached(owner, cell, now) {
+      if (isOwnerDamageImmune(owner, now)) return 0;
       const opponent = opponentOf(owner);
       let damage = 0;
       projectiles.forEach(projectile => {
@@ -985,15 +988,15 @@
           const multiplier = projectile.lineCells?.reduce((best, lineCell) => (
             Math.max(best, lineBandDamageMultiplier(hexDistance(lineCell, cell), projectile))
           ), 0) || 0;
-          damage += (projectile.damage || 0) * multiplier * (projectile.headDamageMultiplier ?? 1);
+          damage += (projectile.damage || 0) * multiplier;
           return;
         }
         const target = projectile.explosionTarget || projectile.target;
-        if (target && hexDistance(cell, target) <= (projectile.radius || 0)) damage += projectile.damage || 0;
+        if (target) damage += (projectile.damage || 0) * circleDamageMultiplier(hexDistance(cell, target), projectile.radius || 0);
       });
       hazards.forEach(hazard => {
         if (hazard.owner !== opponent || now > hazard.endAt) return;
-        if (hazard.kind === "radiation" && hexDistance(cell, hazard.target) <= hazard.radius) damage += hazard.damage || 0;
+        if (hazard.kind === "radiation") damage += (hazard.damage || 0) * circleDamageMultiplier(hexDistance(cell, hazard.target), hazard.radius || 0);
         if (hazard.cells?.some(hazardCell => hexDistance(hazardCell, cell) <= hazard.width)) damage += hazard.damage || 0;
       });
       return damage;
@@ -1037,19 +1040,14 @@
       const opponentArrivalTime = arrivalTimeForDistance(opponent, opponentDistance, now);
       const profile = aiProfileFor(owner);
       const opponentProfile = aiProfileFor(opponent);
-      const types = food.types || [];
       const weights = aiStrategyWeightsFor(owner).food;
       const normalizedTypes = foodTypeIdsForValue(food);
       const ownStock = ownerStock(owner);
       const opponentStock = ownerStock(opponent);
       const ownDeficit = normalizedTypes.reduce((sum, type) => sum + maxFoodStock - (ownStock[type] || 0), 0) / Math.max(1, normalizedTypes.length);
       const opponentDeficit = normalizedTypes.reduce((sum, type) => sum + maxFoodStock - (opponentStock[type] || 0), 0) / Math.max(1, normalizedTypes.length);
-      const preferred = profile.preferredFood === "balanced"
-        ? normalizedTypes.length > 0
-        : profile.preferredFood === "black" ? types.includes("black") : types.includes(profile.preferredFood);
-      const opponentPreferred = opponentProfile.preferredFood === "balanced"
-        ? normalizedTypes.length > 0
-        : opponentProfile.preferredFood === "black" ? types.includes("black") : types.includes(opponentProfile.preferredFood);
+      const preferred = foodMatchesPreference(profile.preferredFood, food);
+      const opponentPreferred = foodMatchesPreference(opponentProfile.preferredFood, food);
       if (computerDifficulty === "high") {
         const ownResourceValue = foodResourceValueFor(owner, food);
         const opponentResourceValue = foodResourceValueFor(opponent, food);
@@ -1079,6 +1077,86 @@
       return wrappedDistance(ownerHead(owner), food) - wrappedDistance(ownerHead(opponent), food);
     }
 
+    function foodMatchesPreference(preferredFood, food) {
+      const types = food?.types || [];
+      const normalizedTypes = foodTypeIdsForValue(food);
+      if (preferredFood === "balanced") return normalizedTypes.length > 0;
+      if (preferredFood === "black") return types.includes("black");
+      return types.includes(preferredFood);
+    }
+
+    function ownerPrefersFood(owner, food) {
+      const profile = aiProfileFor(owner);
+      return foodMatchesPreference(profile.preferredFood, food);
+    }
+
+    function foodArrivalFrom(owner, head, food, now) {
+      if (!head || !food) return Number.POSITIVE_INFINITY;
+      return arrivalTimeForDistance(owner, wrappedDistance(head, food), now);
+    }
+
+    function alternativeFoodArrivals(owner, head, contestedFood, now) {
+      const contestedKey = keyOf(contestedFood);
+      return foods
+        .filter(food => keyOf(food) !== contestedKey)
+        .map(food => ({
+          key: keyOf(food),
+          arrival: foodArrivalFrom(owner, head, food, now)
+        }))
+        .sort((a, b) => a.arrival - b.arrival || a.key.localeCompare(b.key));
+    }
+
+    function stableFoodRaceTieOwner(food) {
+      return stableVariantIndex(food, 41, 2) === 0 ? "player" : "computer";
+    }
+
+    function isAutoFoodRaceTieBreakActive(owner, opponent) {
+      if (owner === opponent) return false;
+      if (typeof isPlayerAutoControlActive !== "function") return true;
+      return isPlayerAutoControlActive();
+    }
+
+    function contestedFoodTieWinner(owner, opponent, food, now) {
+      if (computerDifficulty !== "high") return null;
+      if (!isAutoFoodRaceTieBreakActive(owner, opponent)) return null;
+      const ownHead = ownerHead(owner);
+      const opponentHead = perceivedSnakeFor(owner, opponent, now)[0] || ownerHead(opponent);
+      const ownArrival = foodArrivalFrom(owner, ownHead, food, now);
+      const opponentArrival = foodArrivalFrom(opponent, opponentHead, food, now);
+      if (!Number.isFinite(ownArrival) || !Number.isFinite(opponentArrival)) return null;
+      if (Math.abs(ownArrival - opponentArrival) > foodRaceTieWindow) return null;
+
+      const ownPreferred = ownerPrefersFood(owner, food);
+      const opponentPreferred = ownerPrefersFood(opponent, food);
+      if (ownPreferred !== opponentPreferred) return ownPreferred ? owner : opponent;
+
+      const ownAlternatives = alternativeFoodArrivals(owner, ownHead, food, now);
+      const opponentAlternatives = alternativeFoodArrivals(opponent, opponentHead, food, now);
+      const count = Math.max(ownAlternatives.length, opponentAlternatives.length);
+      for (let index = 0; index < count; index += 1) {
+        const ownAlternativeArrival = ownAlternatives[index]?.arrival ?? Number.POSITIVE_INFINITY;
+        const opponentAlternativeArrival = opponentAlternatives[index]?.arrival ?? Number.POSITIVE_INFINITY;
+        if (ownAlternativeArrival + foodRaceTieWindow < opponentAlternativeArrival) return opponent;
+        if (opponentAlternativeArrival + foodRaceTieWindow < ownAlternativeArrival) return owner;
+      }
+
+      return stableFoodRaceTieOwner(food);
+    }
+
+    function filterContestedFoodTargets(owner, opponent, candidateFoods, now) {
+      return candidateFoods.filter(food => contestedFoodTieWinner(owner, opponent, food, now) !== opponent);
+    }
+
+    function setAiFoodTarget(owner, nextTargetKey, now) {
+      if (owner === "player") {
+        if (nextTargetKey !== playerFoodTargetKey) playerFoodTargetAt = nextTargetKey ? now : 0;
+        playerFoodTargetKey = nextTargetKey;
+      } else {
+        if (nextTargetKey !== computerFoodTargetKey) computerFoodTargetAt = nextTargetKey ? now : 0;
+        computerFoodTargetKey = nextTargetKey;
+      }
+    }
+
     function shouldAbandonFoodTarget(owner, opponent, food, now, lockedScore, bestScore, targetAge) {
       if (computerDifficulty !== "high") return false;
       const occupied = movementOccupiedSet(owner, opponent, now);
@@ -1099,7 +1177,11 @@
       const staleTarget = targetKey && Number.isFinite(targetAt) && now - targetAt >= 20000 ? targetKey : null;
       const choices = foods.filter(food => keyOf(food) !== staleTarget);
       const filteredChoices = filterUnsafeFoodTargets(owner, opponent, choices.length ? choices : foods, now);
-      const targetPool = filteredChoices.length ? filteredChoices : choices.length ? choices : foods;
+      const targetPool = filterContestedFoodTargets(owner, opponent, filteredChoices.length ? filteredChoices : choices.length ? choices : foods, now);
+      if (!targetPool.length) {
+        setAiFoodTarget(owner, null, now);
+        return perceivedOpponent[0];
+      }
       const lockedTarget = !staleTarget && targetKey ? targetPool.find(food => keyOf(food) === targetKey) : null;
       const sortedTargets = [...targetPool]
         .map(food => ({ food, score: foodValueFor(owner, opponent, food, now) }))
@@ -1111,13 +1193,7 @@
         ? lockedTarget
         : bestTarget?.food;
       const nextTargetKey = target ? keyOf(target) : null;
-      if (owner === "player") {
-        if (nextTargetKey !== playerFoodTargetKey) playerFoodTargetAt = nextTargetKey ? now : 0;
-        playerFoodTargetKey = nextTargetKey;
-      } else {
-        if (nextTargetKey !== computerFoodTargetKey) computerFoodTargetAt = nextTargetKey ? now : 0;
-        computerFoodTargetKey = nextTargetKey;
-      }
+      setAiFoodTarget(owner, nextTargetKey, now);
       return target;
     }
 

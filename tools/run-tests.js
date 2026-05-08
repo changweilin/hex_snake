@@ -98,6 +98,33 @@ function test(name, fn) {
   tests.push({ name, fn });
 }
 
+function createFixedRng(values) {
+  let index = 0;
+  return {
+    next() {
+      const value = values[index] ?? 0;
+      index += 1;
+      return value;
+    },
+    int(max) {
+      return Math.floor(this.next() * max);
+    },
+    item(items) {
+      return items[this.int(items.length)];
+    }
+  };
+}
+
+function balanceWithResourceOverrides(overrides) {
+  return {
+    ...balance,
+    resources: {
+      ...balance.resources,
+      ...overrides
+    }
+  };
+}
+
 test("hex distance and wrapped movement are deterministic", () => {
   const board = createBoard(6);
   assert.equal(hexDistance({ q: 0, r: 0 }, { q: 2, r: -1 }), 2);
@@ -112,6 +139,35 @@ test("food collection applies stock and energy rules", () => {
   collectFood(fighter, { types: ["fat", "carb"] }, balance, createRng("dual"));
   assert.equal(fighter.stock.fat, balance.resources.dualColorStockGain);
   assert.equal(fighter.stock.carb, balance.resources.dualColorStockGain);
+});
+
+test("preferred single-color foods can grant character stock bonus", () => {
+  const tunedBalance = balanceWithResourceOverrides({ favoriteFoodBonusChance: 1 });
+  const fighter = { stock: emptyStock(), ammo: 0, ammoCharge: 0, character: characterById.get("sandworm") };
+  collectFood(fighter, { types: ["fat"] }, tunedBalance, createRng("preferred-fat"));
+  assert.equal(fighter.stock.fat, tunedBalance.resources.singleColorStockGain + 1);
+  collectFood(fighter, { types: ["fat", "carb"] }, tunedBalance, createRng("preferred-dual"));
+  assert.equal(fighter.stock.fat, tunedBalance.resources.singleColorStockGain + 1 + tunedBalance.resources.dualColorStockGain);
+  assert.equal(fighter.stock.carb, tunedBalance.resources.dualColorStockGain);
+});
+
+test("white dragon food bonus applies to any food and randomizes dual colors", () => {
+  const tunedBalance = balanceWithResourceOverrides({ balancedFoodBonusChance: 1 });
+  const fighter = { stock: emptyStock(), ammo: 0, ammoCharge: 0, character: characterById.get("dragon") };
+  collectFood(fighter, { types: ["protein", "carb"] }, tunedBalance, createFixedRng([0, 0]));
+  assert.equal(fighter.stock.protein, tunedBalance.resources.dualColorStockGain + 1);
+  assert.equal(fighter.stock.carb, tunedBalance.resources.dualColorStockGain);
+});
+
+test("gu king mushroom stock bonus is mutually exclusive", () => {
+  const guKing = characterById.get("gu_king");
+  const doubleBonus = { stock: emptyStock(), ammo: 0, ammoCharge: 0, character: guKing };
+  collectFood(doubleBonus, { types: ["black"] }, balance, createFixedRng([0, 0, 0]));
+  assert.equal(doubleBonus.stock.protein, 3);
+
+  const singleBonus = { stock: emptyStock(), ammo: 0, ammoCharge: 0, character: guKing };
+  collectFood(singleBonus, { types: ["black"] }, balance, createFixedRng([0, 0.1, 0]));
+  assert.equal(singleBonus.stock.protein, 2);
 });
 
 test("gu king food generation only creates black or single-color foods", () => {
@@ -141,6 +197,24 @@ test("attack costs and damage calculations match core rules", () => {
   assert.ok(Math.abs(stats.damage - bigStats.damage * balance.attack.smallAttackDamageMultiplier / balance.attack.bigAttackDamageMultiplier) < 1e-9);
   const damage = damageSnake([{ q: 0, r: 0 }, { q: 1, r: 0 }], { q: 0, r: 0 }, stats.radius, stats.damage, balance);
   assert.ok(damage > 0);
+});
+
+test("full fat stock doubles attack damage", () => {
+  const emptyDamage = attackStats({ protein: 0, fat: 0, fiber: 0, carb: 0 }, "big", balance).damage;
+  const fullFatDamage = attackStats({ protein: 0, fat: balance.resources.maxFoodStock, fiber: 0, carb: 0 }, "big", balance).damage;
+  assert.equal(fullFatDamage, emptyDamage * 2);
+});
+
+test("circle damage uses the linear distance formula", () => {
+  const parts = [
+    { q: 0, r: 0 },
+    { q: 1, r: 0 },
+    { q: 2, r: 0 },
+    { q: 3, r: 0 }
+  ];
+  const damage = damageSnake(parts, { q: 0, r: 0 }, 2.4, 10, balance);
+  const expected = 10 * (1 + (1 - 1 / 2.4) + (1 - 2 / 2.4));
+  assert.ok(Math.abs(damage - expected) < 1e-9);
 });
 
 test("small attack spends highest stock and one bomb", () => {
@@ -185,8 +259,9 @@ test("fighter hp uses configured snake unit hp", () => {
     computerCharacter: characterById.get("moray"),
     initialLength: 3
   });
-  assert.equal(state.fighters.player.hp, 8);
-  assert.equal(state.fighters.computer.hp, 8);
+  const expectedHp = (3 + 1) * balance.health.hpPerSnakeUnit;
+  assert.equal(state.fighters.player.hp, expectedHp);
+  assert.equal(state.fighters.computer.hp, expectedHp);
 });
 
 test("player-owned attacks and hazards do not damage or stun the player", () => {
@@ -250,6 +325,33 @@ test("player-owned attacks and hazards do not damage or stun the player", () => 
   assert.equal(player.stunUntil, 0);
   assert.equal(computer.stunUntil, 500 + balance.attack.attackStunMs);
   assert.equal(computer.slowUntil, computer.stunUntil + balance.attack.attackSlowMs);
+});
+
+test("flat circle projectiles still use circle falloff", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("dragon"),
+    computerCharacter: characterById.get("moray"),
+    seed: "flat-circle-falloff"
+  });
+  const player = state.fighters.player;
+  const computer = state.fighters.computer;
+  player.snake = [{ q: 1, r: 0 }];
+  computer.snake = [{ q: 5, r: -5 }];
+  player.hp = 20;
+  state.projectiles.push({
+    kind: "headCircle",
+    owner: "computer",
+    profile: "big",
+    target: { q: 0, r: 0 },
+    impactAt: 0,
+    radius: 2,
+    damage: 10,
+    flat: true,
+    stunChance: 0
+  });
+  resolveProjectiles(state, 0, balance);
+  assert.equal(player.hp, 15);
 });
 
 test("low difficulty can cast big attacks but still prefers small attacks", () => {
@@ -326,7 +428,7 @@ test("high attack profile does not spend a low-value big attack", () => {
   assert.notEqual(chooseAttackProfile(state, computer, player, balance), "big");
 });
 
-test("high attack profile shifts from early small attacks to late big attacks", () => {
+test("high attack profile favors big attacks under amplified damage", () => {
   const state = createMatchState({
     balance,
     playerCharacter: characterById.get("dragon"),
@@ -340,7 +442,7 @@ test("high attack profile shifts from early small attacks to late big attacks", 
   const player = state.fighters.player;
   player.hp = 100;
   state.now = 100;
-  assert.equal(chooseAttackProfile(state, computer, player, balance), "small");
+  assert.equal(chooseAttackProfile(state, computer, player, balance), "big");
   state.now = 120000;
   assert.equal(chooseAttackProfile(state, computer, player, balance), "big");
 });
@@ -430,6 +532,58 @@ test("small attack delay is doubled in speed while big attack delay is unchanged
   assert.equal(attackStats(stock, "big", balance).delay, balance.attack.baseAttackDelayMs);
 });
 
+test("selected characters use custom big attack cooldowns", () => {
+  [
+    ["dragon", 4800],
+    ["moray", 2400],
+    ["quetzal", 3600],
+    ["sandworm", 6000]
+  ].forEach(([characterId, cooldownMs]) => {
+    const state = createMatchState({
+      balance,
+      playerCharacter: characterById.get(characterId),
+      computerCharacter: characterById.get("gu_king"),
+      seed: `big-cooldown-${characterId}`,
+      initialBombs: balance.attack.bigAttackBombCost,
+      initialStock: Object.fromEntries(FOOD_TYPES.map(type => [type, 6])),
+      playerModel: { aiDifficulty: "high", aimPrecision: 1, pathPrecision: 1 }
+    });
+    const player = state.fighters.player;
+    const computer = state.fighters.computer;
+    assert.equal(launchAttack(state, player, computer, "big", 1000, balance), true);
+    const effectiveCooldownMs = cooldownMs / (1 + Math.min(
+      balance.attack.maxAttackSpeedBonus,
+      player.stock.carb * balance.attack.attackSpeedBonusPerPoint
+    ));
+    player.ammo = balance.attack.bigAttackBombCost;
+    assert.equal(launchAttack(state, player, computer, "big", 1000 + effectiveCooldownMs - 1, balance), false);
+    player.ammo = balance.attack.bigAttackBombCost;
+    assert.equal(launchAttack(state, player, computer, "big", 1000 + effectiveCooldownMs, balance), true);
+  });
+});
+
+test("small and big attack cooldowns are tracked separately", () => {
+  function readyState(seed) {
+    return createMatchState({
+      balance,
+      playerCharacter: characterById.get("dragon"),
+      computerCharacter: characterById.get("moray"),
+      seed,
+      initialBombs: balance.resources.maxAmmo,
+      initialStock: Object.fromEntries(FOOD_TYPES.map(type => [type, 4])),
+      playerModel: { aiDifficulty: "high", aimPrecision: 1, pathPrecision: 1 }
+    });
+  }
+
+  const smallThenBig = readyState("separate-cooldown-small-big");
+  assert.equal(launchAttack(smallThenBig, smallThenBig.fighters.player, smallThenBig.fighters.computer, "small", 1000, balance), true);
+  assert.equal(launchAttack(smallThenBig, smallThenBig.fighters.player, smallThenBig.fighters.computer, "big", 1000, balance), true);
+
+  const bigThenSmall = readyState("separate-cooldown-big-small");
+  assert.equal(launchAttack(bigThenSmall, bigThenSmall.fighters.player, bigThenSmall.fighters.computer, "big", 1000, balance), true);
+  assert.equal(launchAttack(bigThenSmall, bigThenSmall.fighters.player, bigThenSmall.fighters.computer, "small", 1000, balance), true);
+});
+
 test("simulated AI does not attack before its first movement tick", () => {
   const match = simulateMatch({
     balance,
@@ -446,7 +600,7 @@ test("simulated AI does not attack before its first movement tick", () => {
   assert.equal(match.computer.smallCasts + match.computer.bigCasts, 0);
 });
 
-test("sandworm big attack stays hidden until 0.2s before impact and burrows for 0.5s around impact", () => {
+test("sandworm big attack phases, turns invisible, then impacts at 3T", () => {
   const state = createMatchState({
     balance,
     playerCharacter: characterById.get("sandworm"),
@@ -460,16 +614,85 @@ test("sandworm big attack stays hidden until 0.2s before impact and burrows for 
   const computer = state.fighters.computer;
   state.now = 1000;
   assert.equal(launchAttack(state, player, computer, "big", state.now, balance), true);
+  const small = attackStats(player.stock, "small", balance);
   const projectile = state.projectiles.find(item => item.owner === "player" && item.profile === "big");
   assert.ok(projectile.sandwormHidden);
-  assert.equal(projectile.damage, attackStats(player.stock, "big", balance).damage * 4 * balance.attack.ultimates.sandworm.damageMultiplier);
-  assert.equal(projectile.impactAt - player.undergroundFrom, 500);
-  assert.equal(player.undergroundUntil - projectile.impactAt, 500);
+  assert.equal(projectile.sandwormParalyzeOnBody, true);
+  assert.equal(projectile.sandwormKillOnHead, true);
+  assert.equal(projectile.damage, attackStats(player.stock, "big", balance).damage * balance.attack.ultimates.sandworm.damageMultiplier);
+  assert.equal(player.statusImmuneFrom, state.now + small.delay);
+  assert.equal(player.statusImmuneUntil, player.statusImmuneFrom + 3000);
+  assert.equal(player.undergroundFrom, state.now + small.delay * 2);
+  assert.equal(player.undergroundUntil, player.undergroundFrom + 1500);
+  assert.equal(projectile.impactAt, state.now + small.delay * 3);
   assert.equal(isProjectileVisibleTo(computer, projectile, projectile.impactAt - 201), false);
   assert.equal(isProjectileVisibleTo(computer, projectile, projectile.impactAt - 200), true);
 });
 
-test("sandworm big attack center body hit always paralyzes and center head hit kills", () => {
+test("sandworm super armor clears debuffs and blocks new abnormal statuses", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("sandworm"),
+    computerCharacter: characterById.get("moray"),
+    seed: "sandworm-super-armor",
+    initialBombs: balance.attack.bigAttackBombCost,
+    initialStock: Object.fromEntries(FOOD_TYPES.map(type => [type, 6])),
+    playerModel: { aiDifficulty: "high", skillStrategy: "preferBig", aimPrecision: 1, pathPrecision: 1 }
+  });
+  const player = state.fighters.player;
+  const computer = state.fighters.computer;
+  state.now = 1000;
+  assert.equal(launchAttack(state, player, computer, "big", state.now, balance), true);
+  const armorAt = player.statusImmuneFrom;
+  player.stunUntil = armorAt + 5000;
+  player.slowUntil = armorAt + 6000;
+  player.collisionParalysisMs = 4000;
+  state.projectiles.push({
+    kind: "circle",
+    owner: "computer",
+    profile: "big",
+    target: { ...player.snake[0] },
+    impactAt: armorAt,
+    radius: 2,
+    damage: 1,
+    stunChance: 1
+  });
+  resolveProjectiles(state, armorAt, balance);
+  assert.equal(player.stunUntil, armorAt);
+  assert.equal(player.slowUntil, armorAt);
+  assert.equal(player.collisionParalysisMs, 0);
+});
+
+test("sandworm invisible window prevents damage", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("sandworm"),
+    computerCharacter: characterById.get("moray"),
+    seed: "sandworm-invincible",
+    initialBombs: balance.attack.bigAttackBombCost,
+    initialStock: Object.fromEntries(FOOD_TYPES.map(type => [type, 6])),
+    playerModel: { aiDifficulty: "high", skillStrategy: "preferBig", aimPrecision: 1, pathPrecision: 1 }
+  });
+  const player = state.fighters.player;
+  const computer = state.fighters.computer;
+  assert.equal(launchAttack(state, player, computer, "big", 1000, balance), true);
+  const beforeHp = player.hp;
+  state.projectiles.push({
+    kind: "circle",
+    owner: "computer",
+    profile: "big",
+    target: { ...player.snake[0] },
+    impactAt: player.undergroundFrom,
+    radius: 2,
+    damage: 99,
+    stunChance: 1
+  });
+  resolveProjectiles(state, player.undergroundFrom, balance);
+  assert.equal(player.hp, beforeHp);
+  assert.equal(player.stunUntil, 0);
+});
+
+test("sandworm exact center body hit paralyzes and exact center head hit kills", () => {
   const state = createMatchState({
     balance,
     playerCharacter: characterById.get("moray"),
@@ -491,12 +714,15 @@ test("sandworm big attack center body hit always paralyzes and center head hit k
     radius: 0.5,
     damage: 0,
     stunChance: 0,
+    headStunChance: 0,
     sandwormParalyzeOnBody: true,
     sandwormKillOnHead: true
   });
   resolveProjectiles(state, state.now, balance);
   assert.equal(player.hp, 3);
   assert.equal(player.stunUntil, state.now + balance.collision.collisionStunMs);
+  assert.equal(player.slowUntil, state.now + balance.collision.collisionStunMs + balance.collision.collisionSlowMs);
+  assert.equal(computer.stats.stunApplied, 1);
 
   player.stunUntil = 0;
   player.slowUntil = 0;
@@ -509,13 +735,89 @@ test("sandworm big attack center body hit always paralyzes and center head hit k
     radius: 0.5,
     damage: 0,
     stunChance: 0,
+    headStunChance: 0,
     sandwormParalyzeOnBody: true,
     sandwormKillOnHead: true
   });
   resolveProjectiles(state, state.now, balance);
   assert.equal(player.hp, 0);
+  assert.equal(state.fatalEvents.at(-1).owner, "player");
   assert.equal(state.fatalEvents.at(-1).cause, "big");
   assert.equal(computer.stats.damageDealt, 3);
+});
+
+test("sandworm grazing hits still use split stun chances", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("moray"),
+    computerCharacter: characterById.get("sandworm"),
+    seed: "sandworm-graze-hit",
+    initialStock: Object.fromEntries(FOOD_TYPES.map(type => [type, 6]))
+  });
+  const player = state.fighters.player;
+  player.snake = [{ q: 0, r: 0 }, { q: 2, r: 0 }];
+  player.hp = 100;
+  state.now = 2000;
+  state.projectiles.push({
+    kind: "circle",
+    owner: "computer",
+    profile: "big",
+    target: { q: 1, r: 0 },
+    impactAt: state.now,
+    radius: 2,
+    damage: 10,
+    stunChance: 0,
+    headStunChance: 1,
+    sandwormParalyzeOnBody: true,
+    sandwormKillOnHead: true
+  });
+  resolveProjectiles(state, state.now, balance);
+  assert.equal(player.hp, 90);
+  assert.equal(player.stunUntil, state.now + balance.attack.attackStunMs);
+});
+
+test("paralysis interrupts active skills without resetting cooldown", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("moray"),
+    computerCharacter: characterById.get("sandworm"),
+    seed: "paralysis-interrupt-cooldown",
+    initialBombs: balance.attack.bigAttackBombCost,
+    initialStock: Object.fromEntries(FOOD_TYPES.map(type => [type, 6])),
+    playerModel: { aiDifficulty: "high", skillStrategy: "preferBig", aimPrecision: 1, pathPrecision: 1 }
+  });
+  const player = state.fighters.player;
+  const computer = state.fighters.computer;
+  player.snake = [{ q: 0, r: 0 }, { q: -1, r: 0 }, { q: -2, r: 0 }];
+  state.now = 1000;
+  assert.equal(launchAttack(state, player, computer, "big", state.now, balance), true);
+  const castAt = player.lastAttack.big;
+  assert.equal(castAt, state.now);
+  assert.ok(state.projectiles.some(projectile => projectile.owner === "player"));
+
+  const interruptAt = state.now + 100;
+  state.projectiles.push({
+    kind: "circle",
+    owner: "computer",
+    profile: "big",
+    target: { q: -1, r: 0 },
+    impactAt: interruptAt,
+    radius: 0.5,
+    damage: 0,
+    stunChance: 0,
+    headStunChance: 0,
+    sandwormParalyzeOnBody: true,
+    sandwormKillOnHead: true
+  });
+  resolveProjectiles(state, interruptAt, balance);
+  assert.equal(state.projectiles.some(projectile => projectile.owner === "player"), false);
+  assert.equal(player.lastAttack.big, castAt);
+
+  player.ammo = balance.attack.bigAttackBombCost;
+  FOOD_TYPES.forEach(type => {
+    player.stock[type] = 6;
+  });
+  assert.equal(launchAttack(state, player, computer, "big", interruptAt + 1, balance), false);
 });
 
 test("high difficulty movement ignores character story roles", () => {
@@ -800,7 +1102,7 @@ test("attack target weights can prefer head cluster or target nearest food", () 
   const clusterTarget = chooseAttackTarget(state, attacker, defender, balance, "small");
   assert.ok(damageSnake(defender.snake, clusterTarget, attackStats(attacker.stock, "small", balance).radius, 1, balance) >= 2);
 
-  attacker.policy.strategyWeights.castTarget = { targetHead: 0, bodyCluster: 0, targetNearestFood: 4 };
+  attacker.policy.strategyWeights.castTarget = { targetHead: 0, bodyCluster: 0, targetNearestFood: 10 };
   assert.deepEqual(chooseAttackTarget(state, attacker, defender, balance, "small"), state.foods[0]);
 });
 
@@ -864,6 +1166,40 @@ test("moray big attack chooses the longest opponent body line instead of forcing
   longLine.forEach(segment => assert.equal(lineKeys.has(key(segment)), true));
 });
 
+test("moray big attack schedules eight 0.2x line strikes", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("dragon"),
+    computerCharacter: characterById.get("moray"),
+    seed: "moray-single-strike",
+    initialBombs: balance.attack.bigAttackBombCost,
+    initialStock: Object.fromEntries(FOOD_TYPES.map(type => [type, 2])),
+    computerModel: { aiDifficulty: "high", aimPrecision: 1, pathPrecision: 1 }
+  });
+  const attacker = state.fighters.computer;
+  const defender = state.fighters.player;
+  attacker.snake = [{ q: 5, r: -5 }];
+  defender.snake = [{ q: 0, r: 0 }, { q: 1, r: 0 }];
+  defender.hp = 100;
+  state.foods = [];
+
+  assert.equal(launchAttack(state, attacker, defender, "big", state.now, balance), true);
+  const bigStats = attackStats(attacker.stock, "big", balance);
+  const smallStats = attackStats(attacker.stock, "small", balance);
+  const lines = state.projectiles
+    .filter(projectile => projectile.kind === "line")
+    .sort((left, right) => left.impactAt - right.impactAt);
+  assert.equal(lines.length, 8);
+  lines.forEach((line, index) => {
+    assert.ok(Math.abs(line.damage - bigStats.damage * balance.attack.ultimates.moray.damageMultiplier) < 1e-9);
+    assert.ok(Math.abs(line.impactAt - (state.now + smallStats.delay + index * smallStats.delay * balance.attack.ultimates.moray.strikeIntervalMultiplier)) < 1e-9);
+    assert.equal(line.headDamageMultiplier, undefined);
+    assert.equal(line.stackStun, true);
+    assert.ok(Math.abs(line.stunChance - 0.17) < 1e-9);
+    assert.ok(Math.abs(line.headStunChance - 0.34) < 1e-9);
+  });
+});
+
 test("moray fractional line range spills into the outer band with proportional damage", () => {
   const state = createMatchState({
     balance,
@@ -897,6 +1233,196 @@ test("moray fractional line range spills into the outer band with proportional d
   const expectedDamage = line.damage * (centerLine.length + line.outerDamageMultiplier);
   resolveProjectiles(state, line.impactAt, balance);
   assert.ok(Math.abs(defender.hp - (100 - expectedDamage)) < 1e-9);
+});
+
+test("line attacks use body damage but head stun chance", () => {
+  function resolveLineAgainst(defenderSnake) {
+    const state = createMatchState({
+      balance,
+      playerCharacter: characterById.get("moray"),
+      computerCharacter: characterById.get("dragon"),
+      seed: "moray-head-stun-split"
+    });
+    const attacker = state.fighters.player;
+    const defender = state.fighters.computer;
+    attacker.snake = [{ q: 5, r: -5 }];
+    defender.snake = defenderSnake;
+    defender.hp = 100;
+    state.projectiles.push({
+      kind: "line",
+      owner: "player",
+      profile: "big",
+      target: { q: 0, r: 0 },
+      lineCells: [{ q: 0, r: 0 }],
+      width: 0,
+      fullDamageWidth: 0,
+      outerDamageMultiplier: 0,
+      impactAt: 0,
+      damage: 5,
+      stunChance: 0,
+      headStunChance: 1
+    });
+    resolveProjectiles(state, 0, balance);
+    return { damage: 100 - defender.hp, stunned: defender.stunUntil > 0 };
+  }
+
+  assert.deepEqual(resolveLineAgainst([{ q: 0, r: 1 }, { q: 0, r: 0 }]), { damage: 5, stunned: false });
+  assert.deepEqual(resolveLineAgainst([{ q: 0, r: 0 }, { q: 0, r: 1 }]), { damage: 5, stunned: true });
+});
+
+test("circle attacks use body damage but head stun chance", () => {
+  function resolveCircleAgainst(defenderSnake) {
+    const state = createMatchState({
+      balance,
+      playerCharacter: characterById.get("dragon"),
+      computerCharacter: characterById.get("moray"),
+      seed: "circle-head-stun-split"
+    });
+    const defender = state.fighters.computer;
+    defender.snake = defenderSnake;
+    defender.hp = 100;
+    state.projectiles.push({
+      kind: "circle",
+      owner: "player",
+      profile: "small",
+      target: { q: 0, r: 0 },
+      impactAt: 0,
+      radius: 0.5,
+      damage: 5,
+      stunChance: 0,
+      headStunChance: 1
+    });
+    resolveProjectiles(state, 0, balance);
+    return { damage: 100 - defender.hp, stunned: defender.stunUntil > 0 };
+  }
+
+  assert.deepEqual(resolveCircleAgainst([{ q: 0, r: 1 }, { q: 0, r: 0 }]), { damage: 5, stunned: false });
+  assert.deepEqual(resolveCircleAgainst([{ q: 0, r: 0 }, { q: 0, r: 1 }]), { damage: 5, stunned: true });
+});
+
+test("dragon radiation and quetzal swamp do not stun", () => {
+  const tunedBalance = JSON.parse(JSON.stringify(balance));
+  tunedBalance.attack.baseAttackStunChance = 1;
+  tunedBalance.attack.attackStunChanceBonusPerPoint = 0;
+
+  const dragonState = createMatchState({
+    balance: tunedBalance,
+    playerCharacter: characterById.get("dragon"),
+    computerCharacter: characterById.get("moray"),
+    seed: "dragon-radiation-no-stun",
+    initialBombs: tunedBalance.attack.bigAttackBombCost,
+    initialStock: Object.fromEntries(FOOD_TYPES.map(type => [type, 2]))
+  });
+  const dragon = dragonState.fighters.player;
+  const dragonDefender = dragonState.fighters.computer;
+  dragon.snake = [{ q: 0, r: 0 }];
+  dragonDefender.snake = [{ q: 1, r: 0 }];
+  dragonDefender.hp = 1000;
+  assert.equal(launchAttack(dragonState, dragon, dragonDefender, "big", dragonState.now, tunedBalance), true);
+  const spirit = dragonState.projectiles.find(projectile => projectile.kind === "headCircle");
+  resolveProjectiles(dragonState, spirit.impactAt, tunedBalance);
+  const radiation = dragonState.hazards.find(hazard => hazard.kind === "radiation");
+  assert.equal(radiation.stunChance, 0);
+  dragonDefender.stunUntil = 0;
+  dragonDefender.slowUntil = 0;
+  resolveHazards(dragonState, radiation.nextTickAt, tunedBalance);
+  assert.equal(dragonDefender.stunUntil, 0);
+
+  const quetzalState = createMatchState({
+    balance: tunedBalance,
+    playerCharacter: characterById.get("quetzal"),
+    computerCharacter: characterById.get("moray"),
+    seed: "quetzal-swamp-no-stun",
+    initialBombs: tunedBalance.attack.bigAttackBombCost,
+    initialStock: Object.fromEntries(FOOD_TYPES.map(type => [type, 2]))
+  });
+  const quetzal = quetzalState.fighters.player;
+  const quetzalDefender = quetzalState.fighters.computer;
+  quetzal.stock.carb = tunedBalance.resources.maxFoodStock;
+  quetzal.snake = [{ q: 0, r: 0 }, { q: 1, r: 0 }];
+  quetzalDefender.snake = [{ q: 1, r: 0 }];
+  quetzalDefender.hp = 1000;
+  assert.equal(launchAttack(quetzalState, quetzal, quetzalDefender, "big", quetzalState.now, tunedBalance), true);
+  const swamp = quetzalState.hazards.find(hazard => hazard.kind === "swamp");
+  assert.equal(swamp.stunChance, 0);
+  assert.equal(swamp.tickMs, tunedBalance.attack.ultimates.quetzal.tickMs);
+  resolveHazards(quetzalState, swamp.nextTickAt, tunedBalance);
+  assert.equal(quetzalDefender.stunUntil, 0);
+});
+
+test("lobster palm uses split hit stun and separate vulnerability chance", () => {
+  function palmChancesFor(carb) {
+    const state = createMatchState({
+      balance,
+      playerCharacter: characterById.get("lobster"),
+      computerCharacter: characterById.get("dragon"),
+      seed: `lobster-palm-stun-${carb}`,
+      initialBombs: balance.attack.bigAttackBombCost,
+      initialStock: Object.fromEntries(FOOD_TYPES.map(type => [type, 2]))
+    });
+    const attacker = state.fighters.player;
+    const defender = state.fighters.computer;
+    attacker.stock.carb = carb;
+    attacker.snake = [{ q: 0, r: 0 }];
+    defender.snake = [{ q: 1, r: 0 }];
+    assert.equal(launchAttack(state, attacker, defender, "big", state.now, balance), true);
+    const palm = state.projectiles.find(projectile => projectile.kind === "lobsterPalmBurst");
+    return {
+      stunChance: Number(palm.stunChance.toFixed(6)),
+      headStunChance: Number(palm.headStunChance.toFixed(6)),
+      vulnerabilityChance: Number(palm.vulnerabilityChance.toFixed(6))
+    };
+  }
+
+  assert.deepEqual(palmChancesFor(2), { stunChance: 0.17, headStunChance: 0.34, vulnerabilityChance: 0.32 });
+  assert.deepEqual(palmChancesFor(balance.resources.maxFoodStock), { stunChance: 0.35, headStunChance: 0.7, vulnerabilityChance: 0.5 });
+});
+
+test("vulnerability doubles the next damage and then clears", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("lobster"),
+    computerCharacter: characterById.get("dragon"),
+    seed: "vulnerability-next-hit",
+    initialBombs: balance.attack.bigAttackBombCost,
+    initialStock: Object.fromEntries(FOOD_TYPES.map(type => [type, 2]))
+  });
+  const attacker = state.fighters.player;
+  const defender = state.fighters.computer;
+  attacker.snake = [{ q: 0, r: 0 }];
+  defender.snake = [{ q: 1, r: 0 }];
+  defender.hp = 100;
+
+  state.projectiles.push({
+    kind: "lobsterPalmBurst",
+    owner: "player",
+    profile: "big",
+    target: { q: 1, r: 0 },
+    impactAt: 0,
+    radius: 1,
+    damage: 10,
+    burstRadius: 0,
+    burstDamage: 0,
+    stunChance: 0,
+    vulnerabilityChance: 1
+  });
+  resolveProjectiles(state, 0, balance);
+  assert.equal(defender.hp, 90);
+  assert.equal(defender.vulnerable, true);
+
+  state.projectiles.push({
+    kind: "circle",
+    owner: "player",
+    profile: "small",
+    target: { q: 1, r: 0 },
+    impactAt: 100,
+    radius: 1,
+    damage: 10,
+    stunChance: 0
+  });
+  resolveProjectiles(state, 100, balance);
+  assert.equal(defender.hp, 70);
+  assert.equal(defender.vulnerable, false);
 });
 
 test("wrapped distance and stale food target switching affect food choices", () => {
@@ -945,6 +1471,55 @@ test("high food race compares arrival time using each fighter speed", () => {
   assert.equal(wrappedDistance(state, fighter.snake[0], state.foods[0]), 2);
   assert.equal(wrappedDistance(state, opponent.snake[0], state.foods[0]), 3);
   assert.deepEqual(chooseFoodTarget(state, fighter, opponent), state.foods[1]);
+});
+
+test("tied food races yield to the fighter that prefers that food", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("quetzal"),
+    computerCharacter: characterById.get("moray"),
+    seed: "food-race-preference-yield",
+    playerModel: { aiDifficulty: "high", pathPrecision: 1, aimPrecision: 1 },
+    computerModel: { aiDifficulty: "high", pathPrecision: 1, aimPrecision: 1 }
+  });
+  const player = state.fighters.player;
+  const computer = state.fighters.computer;
+  player.snake[0] = { q: 1, r: 0 };
+  computer.snake[0] = { q: -1, r: 0 };
+  state.foods = [
+    { q: 0, r: 0, types: ["fiber"] },
+    { q: -2, r: 0, types: ["carb"] }
+  ];
+  player.policy.strategyWeights.food = { fastestArrival: 3, ownDeficit: 0, opponentDeficit: 0, ownPreferred: 0, opponentPreferred: 0 };
+  computer.policy.strategyWeights.food = { fastestArrival: 3, ownDeficit: 0, opponentDeficit: 0, ownPreferred: 0, opponentPreferred: 0 };
+
+  assert.deepEqual(chooseFoodTarget(state, player, computer), state.foods[0]);
+  assert.deepEqual(chooseFoodTarget(state, computer, player), state.foods[1]);
+});
+
+test("tied food races yield to the fighter with the farther next food", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("quetzal"),
+    computerCharacter: characterById.get("quetzal"),
+    seed: "food-race-alternative-yield",
+    playerModel: { aiDifficulty: "high", pathPrecision: 1, aimPrecision: 1 },
+    computerModel: { aiDifficulty: "high", pathPrecision: 1, aimPrecision: 1 }
+  });
+  const player = state.fighters.player;
+  const computer = state.fighters.computer;
+  player.snake[0] = { q: 1, r: 0 };
+  computer.snake[0] = { q: -1, r: 0 };
+  state.foods = [
+    { q: 0, r: 0, types: ["fiber"] },
+    { q: -2, r: 0, types: ["fiber"] },
+    { q: 3, r: 0, types: ["fiber"] }
+  ];
+  player.policy.strategyWeights.food = { fastestArrival: 3, ownDeficit: 0, opponentDeficit: 0, ownPreferred: 0, opponentPreferred: 0 };
+  computer.policy.strategyWeights.food = { fastestArrival: 3, ownDeficit: 0, opponentDeficit: 0, ownPreferred: 0, opponentPreferred: 0 };
+
+  assert.deepEqual(chooseFoodTarget(state, player, computer), state.foods[0]);
+  assert.deepEqual(chooseFoodTarget(state, computer, player), state.foods[1]);
 });
 
 test("high food target abandons locked food when resource value collapses", () => {
@@ -1035,7 +1610,7 @@ test("near-full resource timing requires both bombs and energy to be near full",
   const computer = state.fighters.computer;
   const player = state.fighters.player;
   computer.stock = { protein: 2, fat: 1, fiber: 1, carb: 1 };
-  computer.policy.strategyWeights.skillAllocation = { preferSmall: 0, preferBig: 0 };
+  computer.policy.strategyWeights.skillAllocation = { preferSmall: -6, preferBig: -6 };
   computer.policy.strategyWeights.castTiming = {
     lethal: 0,
     nearFullEnergy: 4,
@@ -1091,10 +1666,13 @@ test("high difficulty uses deterministic EV instead of random tied attack scores
   };
 
   const smallTie = makeTiedState(items => items[0]);
-  assert.equal(chooseAttackProfile(smallTie.state, smallTie.computer, smallTie.player, balance), "small");
+  const smallTieChoice = chooseAttackProfile(smallTie.state, smallTie.computer, smallTie.player, balance);
 
   const bigPicker = makeTiedState(items => items[items.length - 1]);
-  assert.equal(chooseAttackProfile(bigPicker.state, bigPicker.computer, bigPicker.player, balance), "small");
+  const bigPickerChoice = chooseAttackProfile(bigPicker.state, bigPicker.computer, bigPicker.player, balance);
+
+  assert.equal(smallTieChoice, bigPickerChoice);
+  assert.equal(smallTieChoice, "big");
 });
 
 test("auto battle attack decisions are owner-mirrored under equal conditions", () => {
@@ -1139,6 +1717,7 @@ test("lobster palm big attack stops the fist at the first collision", () => {
   state.foods = [];
 
   assert.equal(launchAttack(state, player, computer, "big", state.now, balance), true);
+  const bigDamage = attackStats(player.stock, "big", balance).damage;
   const firstFist = state.projectiles
     .filter(projectile => projectile.kind === "lobsterPalm")
     .sort((left, right) => left.impactAt - right.impactAt)[0];
@@ -1149,14 +1728,35 @@ test("lobster palm big attack stops the fist at the first collision", () => {
   assert.deepEqual(firstFist.target, computer.snake[0]);
   assert.deepEqual(firstFist.pathCells.at(-1), computer.snake[0]);
   assert.equal(firstFist.impactAt, firstBurst.impactAt);
+  assert.equal(firstFist.damage, bigDamage * 0.6);
+  assert.equal(firstBurst.burstDamage, bigDamage * 1.6);
 });
 
-test("protein fractional radius deals proportional outer-ring damage", () => {
+test("gu king big attack uses 1.5x damage on each poison blast", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("gu_king"),
+    computerCharacter: characterById.get("dragon"),
+    seed: "gu-king-1-5x",
+    initialBombs: balance.attack.bigAttackBombCost,
+    initialStock: Object.fromEntries(FOOD_TYPES.map(type => [type, 2]))
+  });
+  const player = state.fighters.player;
+  const computer = state.fighters.computer;
+
+  assert.equal(launchAttack(state, player, computer, "big", state.now, balance), true);
+  const bigDamage = attackStats(player.stock, "big", balance).damage;
+  const blasts = state.projectiles.filter(projectile => projectile.kind === "circle" && projectile.profile === "big");
+  assert.equal(blasts.length, 3);
+  blasts.forEach(projectile => assert.equal(projectile.damage, bigDamage * 1.5));
+});
+
+test("protein fractional radius uses linear falloff only inside the circle", () => {
   const stock = { protein: 5, fat: 0, fiber: 0, carb: 0 };
   const stats = attackStats(stock, "big", balance);
   assert.equal(stats.radius, 2.5);
-  const damage = damageSnake([{ q: 3, r: 0 }], { q: 0, r: 0 }, stats.radius, stats.damage, balance);
-  assert.equal(damage, stats.damage * 0.5);
+  const damage = damageSnake([{ q: 2, r: 0 }, { q: 3, r: 0 }], { q: 0, r: 0 }, stats.radius, stats.damage, balance);
+  assert.equal(damage, stats.damage * (1 - 2 / stats.radius));
 });
 
 test("protein range growth can be configured without changing default behavior", () => {
