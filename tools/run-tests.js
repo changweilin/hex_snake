@@ -143,6 +143,24 @@ test("attack costs and damage calculations match core rules", () => {
   assert.ok(damage > 0);
 });
 
+test("full fat stock doubles attack damage", () => {
+  const emptyDamage = attackStats({ protein: 0, fat: 0, fiber: 0, carb: 0 }, "big", balance).damage;
+  const fullFatDamage = attackStats({ protein: 0, fat: balance.resources.maxFoodStock, fiber: 0, carb: 0 }, "big", balance).damage;
+  assert.equal(fullFatDamage, emptyDamage * 2);
+});
+
+test("circle damage uses the linear distance formula", () => {
+  const parts = [
+    { q: 0, r: 0 },
+    { q: 1, r: 0 },
+    { q: 2, r: 0 },
+    { q: 3, r: 0 }
+  ];
+  const damage = damageSnake(parts, { q: 0, r: 0 }, 2.4, 10, balance);
+  const expected = 10 * (1 + (1 - 1 / 2.4) + (1 - 2 / 2.4));
+  assert.ok(Math.abs(damage - expected) < 1e-9);
+});
+
 test("small attack spends highest stock and one bomb", () => {
   const state = createMatchState({
     balance,
@@ -250,6 +268,33 @@ test("player-owned attacks and hazards do not damage or stun the player", () => 
   assert.equal(player.stunUntil, 0);
   assert.equal(computer.stunUntil, 500 + balance.attack.attackStunMs);
   assert.equal(computer.slowUntil, computer.stunUntil + balance.attack.attackSlowMs);
+});
+
+test("flat circle projectiles still use circle falloff", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("dragon"),
+    computerCharacter: characterById.get("moray"),
+    seed: "flat-circle-falloff"
+  });
+  const player = state.fighters.player;
+  const computer = state.fighters.computer;
+  player.snake = [{ q: 1, r: 0 }];
+  computer.snake = [{ q: 5, r: -5 }];
+  player.hp = 20;
+  state.projectiles.push({
+    kind: "headCircle",
+    owner: "computer",
+    profile: "big",
+    target: { q: 0, r: 0 },
+    impactAt: 0,
+    radius: 2,
+    damage: 10,
+    flat: true,
+    stunChance: 0
+  });
+  resolveProjectiles(state, 0, balance);
+  assert.equal(player.hp, 15);
 });
 
 test("low difficulty can cast big attacks but still prefers small attacks", () => {
@@ -1151,12 +1196,12 @@ test("lobster palm big attack stops the fist at the first collision", () => {
   assert.equal(firstFist.impactAt, firstBurst.impactAt);
 });
 
-test("protein fractional radius deals proportional outer-ring damage", () => {
+test("protein fractional radius uses linear falloff only inside the circle", () => {
   const stock = { protein: 5, fat: 0, fiber: 0, carb: 0 };
   const stats = attackStats(stock, "big", balance);
   assert.equal(stats.radius, 2.5);
-  const damage = damageSnake([{ q: 3, r: 0 }], { q: 0, r: 0 }, stats.radius, stats.damage, balance);
-  assert.equal(damage, stats.damage * 0.5);
+  const damage = damageSnake([{ q: 2, r: 0 }, { q: 3, r: 0 }], { q: 0, r: 0 }, stats.radius, stats.damage, balance);
+  assert.equal(damage, stats.damage * (1 - 2 / stats.radius));
 });
 
 test("protein range growth can be configured without changing default behavior", () => {

@@ -1525,27 +1525,15 @@
     }
 
     function damageSnake(parts, target, radius, damageScale) {
-      const falloff = rangeDamageFalloffEnabled ? baseBlastHexRadius / Math.max(baseBlastHexRadius, radius) : 1;
-      const wholeRadius = Math.floor(radius);
-      const outerRingRatio = Math.max(0, Math.min(1, radius - wholeRadius));
-      const outerRingDistance = wholeRadius + 1;
       return parts.reduce((total, segment) => {
-        const distance = hexDistance(segment, target);
-        if (distance > radius) {
-          if (outerRingRatio > 0 && distance === outerRingDistance) {
-            return total + damageScale * falloff * outerRingRatio;
-          }
-          return total;
-        }
-        const hitChance = Math.max(0, Math.min(1, 1 - distance / radius));
-        return total + damageScale * falloff * hitChance;
+        const multiplier = circleDamageMultiplier(hexDistance(segment, target), radius);
+        return total + damageScale * multiplier;
       }, 0);
     }
 
-    function damageSnakeFlat(parts, target, radius, damageScale) {
-      return parts.reduce((total, segment) => (
-        hexDistance(segment, target) <= radius ? total + damageScale : total
-      ), 0);
+    function circleDamageMultiplier(distance, radius) {
+      if (!Number.isFinite(radius) || radius <= 0) return distance === 0 ? 1 : 0;
+      return Math.max(0, Math.min(1, 1 - distance / radius));
     }
 
     function damageSnakeCells(parts, effectCells, width, damageScale, excludedCells = [], minDistance = 0, outerDamageMultiplier = 1, fullDamageWidth = 0, headDamageMultiplier = 1) {
@@ -1695,9 +1683,8 @@
           const explosionTarget = projectile.explosionTarget || projectile.target;
           const radius = projectile.radius || baseBlastHexRadius;
           const damage = projectile.damage || 1;
-          const damageFn = projectile.flat ? damageSnakeFlat : damageSnake;
-          playerDamage = damageFn(snake, explosionTarget, radius, damage);
-          computerDamage = damageFn(computerSnake, explosionTarget, radius, damage);
+          playerDamage = damageSnake(snake, explosionTarget, radius, damage);
+          computerDamage = damageSnake(computerSnake, explosionTarget, radius, damage);
           blasts.push({
             kind: "circle",
             target: explosionTarget,

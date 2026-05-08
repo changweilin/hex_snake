@@ -989,11 +989,11 @@
           return;
         }
         const target = projectile.explosionTarget || projectile.target;
-        if (target && hexDistance(cell, target) <= (projectile.radius || 0)) damage += projectile.damage || 0;
+        if (target) damage += (projectile.damage || 0) * circleDamageMultiplier(hexDistance(cell, target), projectile.radius || 0);
       });
       hazards.forEach(hazard => {
         if (hazard.owner !== opponent || now > hazard.endAt) return;
-        if (hazard.kind === "radiation" && hexDistance(cell, hazard.target) <= hazard.radius) damage += hazard.damage || 0;
+        if (hazard.kind === "radiation") damage += (hazard.damage || 0) * circleDamageMultiplier(hexDistance(cell, hazard.target), hazard.radius || 0);
         if (hazard.cells?.some(hazardCell => hexDistance(hazardCell, cell) <= hazard.width)) damage += hazard.damage || 0;
       });
       return damage;

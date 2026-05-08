@@ -552,25 +552,15 @@ function collectFood(fighter, food, balance, rng) {
 }
 
 function damageSnake(parts, target, radius, damageScale, balance) {
-  const falloff = balance.attack.rangeDamageFalloffEnabled ? balance.attack.baseBlastHexRadius / Math.max(balance.attack.baseBlastHexRadius, radius) : 1;
-  const wholeRadius = Math.floor(radius);
-  const outerRingRatio = Math.max(0, Math.min(1, radius - wholeRadius));
-  const outerRingDistance = wholeRadius + 1;
   return parts.reduce((total, segment) => {
-    const distance = hexDistance(segment, target);
-    if (distance > radius) {
-      if (outerRingRatio > 0 && distance === outerRingDistance) {
-        return total + damageScale * falloff * outerRingRatio;
-      }
-      return total;
-    }
-    const hitChance = Math.max(0, Math.min(1, 1 - distance / radius));
-    return total + damageScale * falloff * hitChance;
+    const multiplier = circleDamageMultiplier(hexDistance(segment, target), radius);
+    return total + damageScale * multiplier;
   }, 0);
 }
 
-function damageSnakeFlat(parts, target, radius, damageScale) {
-  return parts.reduce((total, segment) => hexDistance(segment, target) <= radius ? total + damageScale : total, 0);
+function circleDamageMultiplier(distance, radius) {
+  if (!Number.isFinite(radius) || radius <= 0) return distance === 0 ? 1 : 0;
+  return Math.max(0, Math.min(1, 1 - distance / radius));
 }
 
 function damageSnakeCells(parts, effectCells, width, damageScale, excludedCells = [], minDistance = 0, outerDamageMultiplier = 1, fullDamageWidth = 0, headDamageMultiplier = 1) {
@@ -1253,11 +1243,11 @@ function expectedDamageAtUncached(state, fighter, cell) {
       return;
     }
     const target = projectile.explosionTarget || projectile.target;
-    if (target && hexDistance(cell, target) <= (projectile.radius || 0)) damage += projectile.damage || 0;
+    if (target) damage += (projectile.damage || 0) * circleDamageMultiplier(hexDistance(cell, target), projectile.radius || 0);
   });
   state.hazards.forEach(hazard => {
     if (hazard.owner !== opponentOwner || state.now > hazard.endAt) return;
-    if (hazard.kind === "radiation" && hexDistance(cell, hazard.target) <= hazard.radius) damage += hazard.damage || 0;
+    if (hazard.kind === "radiation") damage += (hazard.damage || 0) * circleDamageMultiplier(hexDistance(cell, hazard.target), hazard.radius || 0);
     if (hazard.cells?.some(hazardCell => hexDistance(hazardCell, cell) <= hazard.width)) damage += hazard.damage || 0;
   });
   return damage;
@@ -1905,9 +1895,8 @@ function resolveProjectiles(state, now, balance) {
         projectile.target = { ...projectile.explosionTarget };
       }
       const explosionTarget = projectile.explosionTarget || projectile.target;
-      const damageFn = projectile.flat ? damageSnakeFlat : damageSnake;
-      playerDamage = damageFn(player.snake, explosionTarget, projectile.radius, projectile.damage, balance);
-      computerDamage = damageFn(computer.snake, explosionTarget, projectile.radius, projectile.damage, balance);
+      playerDamage = damageSnake(player.snake, explosionTarget, projectile.radius, projectile.damage, balance);
+      computerDamage = damageSnake(computer.snake, explosionTarget, projectile.radius, projectile.damage, balance);
       if (projectile.kind === "headCircle" && projectile.radiationDurationMs) {
         const ticks = Math.max(1, Math.ceil(projectile.radiationDurationMs / projectile.radiationTickMs));
         state.hazards.push({
