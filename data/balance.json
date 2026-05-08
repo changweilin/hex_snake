@@ -106,7 +106,7 @@
         "tickMs": 460
       },
       "moray": {
-        "bigCooldownMs": 2400,
+        "bigCooldownMs": 3600,
         "damageMultiplier": 0.2,
         "strikeCount": 8,
         "strikeIntervalMultiplier": 0.5

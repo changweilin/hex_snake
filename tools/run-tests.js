@@ -539,7 +539,7 @@ test("small attack delay is doubled in speed while big attack delay is unchanged
 test("selected characters use custom big attack cooldowns", () => {
   [
     ["dragon", 4800],
-    ["moray", 2400],
+    ["moray", 3600],
     ["quetzal", 3600],
     ["sandworm", 6000]
   ].forEach(([characterId, cooldownMs]) => {
@@ -557,13 +557,41 @@ test("selected characters use custom big attack cooldowns", () => {
     assert.equal(launchAttack(state, player, computer, "big", 1000, balance), true);
     const effectiveCooldownMs = cooldownMs / (1 + Math.min(
       balance.attack.maxAttackSpeedBonus,
-      player.stock.carb * balance.attack.attackSpeedBonusPerPoint
+      player.stock.fiber * balance.attack.attackSpeedBonusPerPoint
     ));
     player.ammo = balance.attack.bigAttackBombCost;
     assert.equal(launchAttack(state, player, computer, "big", 1000 + effectiveCooldownMs - 1, balance), false);
     player.ammo = balance.attack.bigAttackBombCost;
     assert.equal(launchAttack(state, player, computer, "big", 1000 + effectiveCooldownMs, balance), true);
   });
+});
+
+test("fiber shortens cooldown while carb shortens attack delay", () => {
+  const baseStock = { protein: 0, fat: 0, fiber: 0, carb: 0 };
+  const carbStock = { ...baseStock, carb: balance.resources.maxFoodStock };
+  const fiberStock = { ...baseStock, fiber: balance.resources.maxFoodStock };
+  assert.equal(attackStats(carbStock, "big", balance).delay < attackStats(baseStock, "big", balance).delay, true);
+  assert.equal(attackStats(fiberStock, "big", balance).delay, attackStats(baseStock, "big", balance).delay);
+
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("moray"),
+    computerCharacter: characterById.get("dragon"),
+    seed: "fiber-cooldown",
+    initialBombs: balance.attack.bigAttackBombCost,
+    initialStock: { protein: 2, fat: 2, fiber: balance.resources.maxFoodStock, carb: 2 },
+    playerModel: { aiDifficulty: "high", aimPrecision: 1, pathPrecision: 1 }
+  });
+  const player = state.fighters.player;
+  const computer = state.fighters.computer;
+  assert.equal(launchAttack(state, player, computer, "big", 1000, balance), true);
+  const effectiveCooldownMs = balance.attack.ultimates.moray.bigCooldownMs / (1 + balance.attack.maxAttackSpeedBonus);
+  player.stock = { protein: 2, fat: 2, fiber: balance.resources.maxFoodStock, carb: 2 };
+  player.ammo = balance.attack.bigAttackBombCost;
+  assert.equal(launchAttack(state, player, computer, "big", 1000 + effectiveCooldownMs - 1, balance), false);
+  player.stock = { protein: 2, fat: 2, fiber: 2, carb: balance.resources.maxFoodStock };
+  player.ammo = balance.attack.bigAttackBombCost;
+  assert.equal(launchAttack(state, player, computer, "big", 1000 + effectiveCooldownMs, balance), false);
 });
 
 test("small and big attack cooldowns are tracked separately", () => {

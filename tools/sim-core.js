@@ -263,6 +263,10 @@ function attackSpeedMultiplier(stock, balance) {
   return 1 + foodBonus(stock, "carb", balance.attack.attackSpeedBonusPerPoint, balance.attack.maxAttackSpeedBonus);
 }
 
+function attackCooldownMultiplier(stock, balance) {
+  return 1 + foodBonus(stock, "fiber", balance.attack.attackSpeedBonusPerPoint, balance.attack.maxAttackSpeedBonus);
+}
+
 function attackStunChance(stock, balance, baseChance = balance.attack.baseAttackStunChance) {
   return Math.min(1, baseChance + foodBonus(stock, "carb", balance.attack.attackStunChanceBonusPerPoint, balance.attack.maxAttackStunChanceBonus));
 }
@@ -423,7 +427,7 @@ function attackCooldown(stock, balance, profile = "big", characterId = null) {
   const baseCooldown = profile === "big" && characterId
     ? ultimateSetting(balance, characterId, "bigCooldownMs", balance.attack.baseAttackCooldownMs)
     : balance.attack.baseAttackCooldownMs;
-  return baseCooldown / attackSpeedMultiplier(stock, balance);
+  return baseCooldown / attackCooldownMultiplier(stock, balance);
 }
 
 function blastRadius(stock, balance) {

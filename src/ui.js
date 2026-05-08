@@ -220,8 +220,8 @@ const directions = [
 const foodTypes = [
   { id: "protein", label: "蛋白", name: "蛋白", colorName: "紅色", foodName: "蛋白", effect: "爆炸半徑由 2 連續成長到 4，小數部分會讓最外圈承受對應比例傷害", color: "#ef4444", line: "#fecaca" },
   { id: "fat", label: "脂肪", name: "脂肪", colorName: "黃色", foodName: "脂肪", effect: "攻擊傷害係數基礎 2，滿庫存約 3.4", color: "#facc15", line: "#fef08a" },
-  { id: "fiber", label: "纖維", name: "纖維", colorName: "綠色", foodName: "纖維", effect: "提升移動速度，滿庫存約 1.8x", color: "#22c55e", line: "#bbf7d0" },
-  { id: "carb", label: "碳水", name: "碳水", colorName: "藍色", foodName: "碳水", effect: "提升攻擊施展與冷卻速度，並提高命中暈眩機率", color: "#3b82f6", line: "#bfdbfe" }
+  { id: "fiber", label: "纖維", name: "纖維", colorName: "綠色", foodName: "纖維", effect: "提升移動速度並縮短招式冷卻，滿庫存約 1.8x", color: "#22c55e", line: "#bbf7d0" },
+  { id: "carb", label: "碳水", name: "碳水", colorName: "藍色", foodName: "碳水", effect: "提升攻擊施展速度，並提高命中暈眩機率", color: "#3b82f6", line: "#bfdbfe" }
 ];
 const blackFoodType = { id: "black", label: "迷幻菇", name: "迷幻菇", colorName: "黑色", foodName: "迷幻菇", effect: "特殊食物；吃下後蛋白、脂肪、纖維、碳水隨機一種庫存 +1，並獲得 3 點能量", color: "#050505", line: "#e5e7eb" };
 const dualFoodName = "蟠桃(雙色)";
@@ -689,7 +689,7 @@ const tutorialSlides = [
     tag: "資源圖表 + 食物效果",
     lead: "四種自然食物與特殊食物的效果列在這裡；庫存上限已併在食物效果區塊最後面。",
     points: [
-      "蛋白拉大爆炸半徑、脂肪增加傷害、纖維提高速度、碳水加快攻擊並提高暈眩。",
+      "蛋白拉大爆炸半徑、脂肪增加傷害、纖維提高移動並縮短冷卻、碳水加快施展並提高暈眩。",
       `能量滿 ${attackNeedTotal} 點轉成炸彈，炸彈最多 ${maxAmmo} 枚，是招式的主要消耗。`
     ]
   },
@@ -1677,6 +1677,10 @@ function attackSpeedMultiplier(stock) {
   return 1 + foodBonus(stock, "carb", attackSpeedBonusPerPoint, maxAttackSpeedBonus);
 }
 
+function attackCooldownMultiplier(stock) {
+  return 1 + foodBonus(stock, "fiber", attackSpeedBonusPerPoint, maxAttackSpeedBonus);
+}
+
 function attackStunChance(stock, baseChance = baseAttackStunChance) {
   return Math.min(1, baseChance + foodBonus(stock, "carb", attackStunChanceBonusPerPoint, maxAttackStunChanceBonus));
 }
@@ -1704,7 +1708,7 @@ function attackCooldown(stock, profile = "big", characterId = null) {
   const baseCooldown = profile === "big" && characterId
     ? attackUltimateBalance?.[characterId]?.bigCooldownMs ?? baseAttackCooldownMs
     : baseAttackCooldownMs;
-  return baseCooldown / attackSpeedMultiplier(stock);
+  return baseCooldown / attackCooldownMultiplier(stock);
 }
 
 function attackProfileCooldown(stock, profile = "big", characterId = null) {
