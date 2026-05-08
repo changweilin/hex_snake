@@ -7,6 +7,7 @@ const root = path.resolve(__dirname, "..");
 const reportsDir = path.join(root, "reports");
 const outputPath = path.join(reportsDir, "dashboard.html");
 const characterOrder = ["dragon", "sandworm", "quetzal", "moray", "lobster", "gu_king"];
+const ignoredRootReports = new Set(["dashboard.html", "dashboard-jobs.json"]);
 
 function exists(filePath) {
   return fs.existsSync(filePath);
@@ -366,7 +367,7 @@ function collectReports() {
   const filesByBase = new Map();
   entries.filter(entry => entry.isFile()).forEach(entry => {
     if (!/\.(json|csv|md)$/i.test(entry.name)) return;
-    if (entry.name === "dashboard.html") return;
+    if (ignoredRootReports.has(entry.name)) return;
     const base = rootReportBase(entry.name);
     const rows = filesByBase.get(base) || [];
     rows.push(entry.name);
@@ -579,6 +580,30 @@ function dashboardHtml(data) {
       display: flex;
       align-items: center;
       gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .server-status {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      border-radius: 5px;
+      padding: 0 8px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      background: #f7fafb;
+      font-size: 11px;
+      font-weight: 760;
+    }
+    .server-status.live {
+      color: #16664c;
+      background: #e5f5ee;
+      border-color: #b9decf;
+    }
+    .server-status.busy {
+      color: #875908;
+      background: #fff4de;
+      border-color: #ead29a;
     }
     .icon-btn {
       border: 1px solid var(--border);
@@ -806,6 +831,86 @@ function dashboardHtml(data) {
       align-items: start;
       min-width: 0;
     }
+    .runner-grid {
+      display: grid;
+      grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+      gap: 14px;
+      align-items: start;
+      min-width: 0;
+    }
+    .script-list, .job-list, .summary-list {
+      display: grid;
+      gap: 10px;
+    }
+    .script-card, .job-card {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px;
+      background: white;
+      display: grid;
+      gap: 8px;
+      min-width: 0;
+    }
+    .script-card strong, .job-card strong {
+      font-size: 13px;
+    }
+    .runner-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .runner-actions .field {
+      flex: 1 1 180px;
+    }
+    .log-tail {
+      max-height: 260px;
+      overflow: auto;
+      border-radius: 6px;
+      padding: 10px;
+      background: #111820;
+      color: #d7e5ea;
+      white-space: pre-wrap;
+      line-height: 1.45;
+    }
+    .job-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: start;
+    }
+    .metric-list {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .metric {
+      background: var(--panel-2);
+      border-radius: 6px;
+      padding: 8px;
+    }
+    .metric label {
+      display: block;
+      color: var(--muted);
+      font-size: 10px;
+      text-transform: uppercase;
+      font-weight: 760;
+    }
+    .metric strong {
+      display: block;
+      margin-top: 4px;
+      font-size: 13px;
+      overflow-wrap: anywhere;
+    }
+    .summary-list {
+      margin: 0;
+      padding-left: 17px;
+    }
+    .summary-list li {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.45;
+    }
     .mono {
       font-family: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
       font-size: 12px;
@@ -819,13 +924,13 @@ function dashboardHtml(data) {
     @media (max-width: 1100px) {
       .app { grid-template-columns: 1fr; }
       .sidebar { min-height: auto; max-height: 44vh; border-right: 0; border-bottom: 1px solid var(--border); }
-      .overview-grid, .split { grid-template-columns: 1fr; }
+      .overview-grid, .split, .runner-grid { grid-template-columns: 1fr; }
       .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
     @media (max-width: 680px) {
       .topbar { height: auto; align-items: flex-start; flex-direction: column; padding: 12px 14px; gap: 10px; }
       .content { padding: 14px; }
-      .kpis, .meta-grid { grid-template-columns: 1fr; }
+      .kpis, .meta-grid, .metric-list { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -849,6 +954,7 @@ function dashboardHtml(data) {
           <span id="selectedSub">Generated snapshot</span>
         </div>
         <div class="toolbar">
+          <span id="liveStatus" class="server-status">Snapshot</span>
           <button id="copyPath" class="icon-btn" type="button">Copy path</button>
           <button id="openLatest" class="icon-btn" type="button">Latest</button>
         </div>
@@ -861,19 +967,27 @@ function dashboardHtml(data) {
   </div>
   <script>window.REPORT_DASHBOARD_DATA = ${payload};</script>
   <script>
-    const data = window.REPORT_DASHBOARD_DATA;
+    let data = window.REPORT_DASHBOARD_DATA;
+    let runner = data.runner || { profiles: [], jobs: [], observedRuns: [] };
+    const serverToken = data.server && data.server.token;
+    const canControlScripts = location.protocol.indexOf("http") === 0 && Boolean(serverToken);
+    let pollTimer = null;
     const state = {
       tab: "overview",
       runId: data.runs[0] ? data.runs[0].id : null,
       search: "",
-      type: "all"
+      type: "all",
+      profileId: runner.profiles && runner.profiles[0] ? runner.profiles[0].id : "",
+      extraArgs: "",
+      runnerMessage: ""
     };
     const tabs = [
       ["overview", "Overview"],
       ["matrix", "Matrix"],
       ["training", "Training"],
       ["strategy", "Strategy"],
-      ["compare", "Compare"]
+      ["compare", "Compare"],
+      ["runner", "Runner"]
     ];
     const fmt = new Intl.NumberFormat("en-US");
     const pct = value => Number.isFinite(Number(value)) ? (Number(value) * 100).toFixed(1) + "%" : "-";
@@ -955,6 +1069,22 @@ function dashboardHtml(data) {
       document.getElementById("selectedSub").textContent = run
         ? run.type + " / " + run.status + " / " + shortDate(run.generatedAt || run.modifiedAt)
         : "Generated " + shortDate(data.generatedAt);
+      renderLiveStatus();
+    }
+    function renderLiveStatus() {
+      const live = document.getElementById("liveStatus");
+      if (!live) return;
+      const runningJobs = (runner.jobs || []).filter(job => job.status === "running" || job.status === "stopping").length;
+      const observedRuns = (runner.observedRuns || []).filter(run => run.status === "running").length;
+      if (!canControlScripts) {
+        live.textContent = "Snapshot";
+        live.className = "server-status";
+        live.title = "Open the localhost server to enable script controls.";
+        return;
+      }
+      live.textContent = runningJobs || observedRuns ? "Live: " + (runningJobs + observedRuns) + " active" : "Live";
+      live.className = "server-status " + (runningJobs || observedRuns ? "busy" : "live");
+      live.title = "Connected to the local dashboard server.";
     }
     function renderKpis(run) {
       const matrix = matrixForDisplay(run);
@@ -1034,6 +1164,95 @@ function dashboardHtml(data) {
         '<tbody>' + rows.map(item => '<tr><td><strong>' + esc(item.run.name) + '</strong><div class="note mono">' + esc(item.run.path) + '</div></td><td>' + esc(item.run.type) + '</td><td><span class="tag ' + (statusClass(item.run.status) === "running" ? "warn" : "good") + '">' + esc(item.run.status) + '</span></td><td>' + esc(item.matrixLabel) + '</td><td>' + pct(item.avg) + '</td><td class="' + deltaClass(item.delta) + '">' + pct(item.delta) + '</td><td>' + shortDate(item.run.generatedAt || item.run.modifiedAt) + '</td></tr>').join("") + '</tbody>' +
         '</table></div></div>';
     }
+    function renderMetric(label, value) {
+      return '<div class="metric"><label>' + esc(label) + '</label><strong>' + esc(value ?? "-") + '</strong></div>';
+    }
+    function renderProgressMini(progress) {
+      if (!progress) return '<div class="note">No structured progress detected yet.</div>';
+      const width = Math.max(0, Math.min(100, Number(progress.percent || 0) * 100));
+      const games = Number.isFinite(Number(progress.completedGames)) && Number.isFinite(Number(progress.plannedGames))
+        ? fmt.format(progress.completedGames || 0) + " / " + fmt.format(progress.plannedGames || 0) + " games"
+        : "games unknown";
+      const estimate = progress.estimate && Number.isFinite(Number(progress.estimate.winRate))
+        ? " / est win " + pct(progress.estimate.winRate)
+        : "";
+      return '<div class="progress-line"><div class="bar"><span style="width:' + width + '%"></span></div>' +
+        '<div class="note">' + pct(progress.percent) + ' / ' + games + ' / ETA ' + esc(progress.eta || "-") + estimate + '</div></div>';
+    }
+    function renderObservedRuns() {
+      const observed = runner.observedRuns || [];
+      const rows = observed.length
+        ? observed.map(run => '<div class="script-card">' +
+            '<strong>' + esc(run.name) + '</strong>' +
+            '<div class="note mono">' + esc(run.path) + '</div>' +
+            renderProgressMini(run.progress) +
+            '<div class="run-meta"><span>' + esc(run.phase || run.status) + '</span><span>' + esc(run.current && run.current.label ? run.current.label : "") + '</span><span>' + shortDate(run.updatedAt) + '</span></div>' +
+          '</div>').join("")
+        : '<div class="note">No active or recently updated training-progress.json files detected.</div>';
+      return '<div class="panel"><div class="panel-head"><div><h2>Detected live reports</h2><p>Tracks scripts that write reports/training-progress.json, including runs started outside this page.</p></div></div><div class="panel-body"><div class="script-list">' + rows + '</div></div></div>';
+    }
+    function renderRunnerSetup() {
+      return '<div class="panel"><div class="panel-head"><div><h2>Script runner unavailable from file://</h2><p>Browsers block local HTML from starting local processes directly.</p></div></div>' +
+        '<div class="panel-body">' +
+        '<p class="note">Start the local dashboard server, then open the localhost URL to enable run/stop controls, live stdout tracking, progress polling, and completion summaries.</p>' +
+        '<pre class="mono note">npm.cmd run reports:dashboard:serve\\nhttp://127.0.0.1:8765/</pre>' +
+        '</div></div>';
+    }
+    function renderRunnerControls() {
+      const profiles = runner.profiles || [];
+      if (!state.profileId && profiles[0]) state.profileId = profiles[0].id;
+      const selected = profiles.find(profile => profile.id === state.profileId) || profiles[0] || null;
+      const cards = profiles.map(profile => '<div class="script-card">' +
+        '<strong>' + esc(profile.label) + '</strong>' +
+        '<div class="note">' + esc(profile.description) + '</div>' +
+        '<div class="mono note">npm run ' + esc(profile.script) + (profile.args && profile.args.length ? ' -- ' + esc(profile.args.join(" ")) : '') + '</div>' +
+      '</div>').join("");
+      return '<div class="panel"><div class="panel-head"><div><h2>Run script</h2><p>Allowlisted npm scripts run through the local server, without shell expansion.</p></div></div>' +
+        '<div class="panel-body script-list">' +
+        '<select id="profileSelect" class="field">' + profiles.map(profile => '<option value="' + esc(profile.id) + '"' + (profile.id === state.profileId ? ' selected' : '') + '>' + esc(profile.label) + '</option>').join("") + '</select>' +
+        '<input id="extraArgs" class="field mono" type="text" placeholder="Extra args, e.g. --character sandworm --ga-runs 5" value="' + esc(state.extraArgs) + '">' +
+        '<div class="runner-actions"><button id="startJob" class="icon-btn" type="button"' + (!selected ? ' disabled' : '') + '>Run</button><span class="note">' + esc(selected ? selected.script : "No profile") + '</span></div>' +
+        (state.runnerMessage ? '<div class="note">' + esc(state.runnerMessage) + '</div>' : '') +
+        '<div class="script-list">' + cards + '</div>' +
+        '</div></div>';
+    }
+    function renderJob(job) {
+      const status = job.status === "running" || job.status === "stopping" ? "warn" : job.status === "completed" ? "good" : "";
+      const logs = (job.logs || []).slice(-120).map(entry => '[' + entry.stream + '] ' + entry.line).join("\\n");
+      const summary = job.summary
+        ? '<div class="script-card"><strong>' + esc(job.summary.headline) + '</strong>' +
+          '<div class="metric-list">' + (job.summary.metrics || []).slice(0, 6).map(item => renderMetric(item.label, item.value)).join("") + '</div>' +
+          '<ul class="summary-list">' + (job.summary.findings || []).map(item => '<li>' + esc(item) + '</li>').join("") + '</ul></div>'
+        : "";
+      return '<div class="job-card">' +
+        '<div class="job-head"><div><strong>' + esc(job.label) + '</strong><div class="note mono">' + esc(job.command || job.script) + '</div></div>' +
+        '<span class="tag ' + status + '">' + esc(job.status) + '</span></div>' +
+        '<div class="metric-list">' +
+        renderMetric("pid", job.pid || "-") +
+        renderMetric("duration", job.duration || "-") +
+        renderMetric("exit", job.exitCode === null || job.exitCode === undefined ? "-" : job.exitCode) +
+        '</div>' +
+        renderProgressMini(job.progress) +
+        (job.outputDir ? '<div class="note mono">' + esc(job.outputDir) + '</div>' : '') +
+        (job.status === "running" || job.status === "stopping" ? '<button class="icon-btn" data-stop-job="' + esc(job.id) + '" type="button">Stop</button>' : '') +
+        summary +
+        '<pre class="log-tail mono">' + esc(logs || "Waiting for output...") + '</pre>' +
+      '</div>';
+    }
+    function renderJobs() {
+      const jobs = runner.jobs || [];
+      if (!jobs.length) return '<div class="panel"><div class="panel-body note">No dashboard-started jobs yet.</div></div>';
+      return '<div class="job-list">' + jobs.map(renderJob).join("") + '</div>';
+    }
+    function renderRunner() {
+      if (!canControlScripts) {
+        return '<div class="grid">' + renderRunnerSetup() + renderObservedRuns() + '</div>';
+      }
+      return '<div class="runner-grid">' +
+        '<div class="side-stack">' + renderRunnerControls() + renderObservedRuns() + '</div>' +
+        '<div class="grid">' + renderJobs() + '</div>' +
+      '</div>';
+    }
     function renderOverview(run) {
       return '<div class="grid">' +
         renderKpis(run) +
@@ -1054,6 +1273,7 @@ function dashboardHtml(data) {
       if (state.tab === "training") return '<div class="split">' + renderProgress(run) + renderCompare() + '</div>';
       if (state.tab === "strategy") return renderStrategies(false);
       if (state.tab === "compare") return renderCompare();
+      if (state.tab === "runner") return renderRunner();
       return "";
     }
     function render() {
@@ -1062,6 +1282,84 @@ function dashboardHtml(data) {
       renderRunList();
       renderHeader(activeRun());
       document.getElementById("view").innerHTML = renderView();
+      attachRunnerEvents();
+    }
+    function attachRunnerEvents() {
+      const profileSelect = document.getElementById("profileSelect");
+      if (profileSelect) {
+        profileSelect.addEventListener("change", event => {
+          state.profileId = event.target.value;
+          render();
+        });
+      }
+      const extraArgs = document.getElementById("extraArgs");
+      if (extraArgs) {
+        extraArgs.addEventListener("input", event => {
+          state.extraArgs = event.target.value;
+        });
+      }
+      const startJob = document.getElementById("startJob");
+      if (startJob) startJob.addEventListener("click", startDashboardJob);
+      document.querySelectorAll("[data-stop-job]").forEach(button => {
+        button.addEventListener("click", () => stopDashboardJob(button.dataset.stopJob));
+      });
+    }
+    async function refreshLiveData(options = {}) {
+      if (!canControlScripts) return;
+      try {
+        const response = await fetch("/api/state", { cache: "no-store" });
+        if (!response.ok) throw new Error("state " + response.status);
+        const next = await response.json();
+        next.server = { ...(next.server || {}), token: serverToken };
+        data = next;
+        runner = next.runner || { profiles: [], jobs: [], observedRuns: [] };
+        const focused = document.activeElement && (document.activeElement.id === "extraArgs" || document.activeElement.id === "profileSelect");
+        if (options.force || !focused) render();
+        else renderLiveStatus();
+      } catch (error) {
+        state.runnerMessage = "Live refresh failed: " + error.message;
+        renderLiveStatus();
+      }
+    }
+    async function startDashboardJob() {
+      if (!canControlScripts || !state.profileId) return;
+      state.runnerMessage = "Starting script...";
+      render();
+      try {
+        const response = await fetch("/api/jobs", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-dashboard-token": serverToken
+          },
+          body: JSON.stringify({ profileId: state.profileId, extraArgs: state.extraArgs })
+        });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || "start failed");
+        state.runnerMessage = "Started " + payload.job.id;
+        await refreshLiveData({ force: true });
+      } catch (error) {
+        state.runnerMessage = "Start failed: " + error.message;
+        render();
+      }
+    }
+    async function stopDashboardJob(jobId) {
+      if (!canControlScripts || !jobId) return;
+      try {
+        const response = await fetch("/api/jobs/" + encodeURIComponent(jobId) + "/stop", {
+          method: "POST",
+          headers: { "x-dashboard-token": serverToken }
+        });
+        if (!response.ok) throw new Error("stop " + response.status);
+        await refreshLiveData({ force: true });
+      } catch (error) {
+        state.runnerMessage = "Stop failed: " + error.message;
+        render();
+      }
+    }
+    function startPolling() {
+      if (!canControlScripts || pollTimer) return;
+      pollTimer = setInterval(() => refreshLiveData(), 1500);
     }
     document.getElementById("search").addEventListener("input", event => {
       state.search = event.target.value;
@@ -1087,6 +1385,7 @@ function dashboardHtml(data) {
       }
     });
     render();
+    startPolling();
   </script>
 </body>
 </html>`;

@@ -57,6 +57,8 @@ const {
 
 const {
   buildTrainingTargetAnalysis,
+  confidencePruneDecision,
+  confidencePruneRule,
   runOptimization
 } = require("./run-strategy-optimization");
 
@@ -1320,9 +1322,12 @@ test("dragon radiation and quetzal swamp do not stun", () => {
   dragonDefender.hp = 1000;
   assert.equal(launchAttack(dragonState, dragon, dragonDefender, "big", dragonState.now, tunedBalance), true);
   const spirit = dragonState.projectiles.find(projectile => projectile.kind === "headCircle");
+  assert.equal(spirit.ignoreCasterInterrupt, true);
   resolveProjectiles(dragonState, spirit.impactAt, tunedBalance);
   const radiation = dragonState.hazards.find(hazard => hazard.kind === "radiation");
   assert.equal(radiation.stunChance, 0);
+  assert.equal(radiation.endAt - radiation.startedAt, tunedBalance.attack.ultimates.dragon.radiationDurationMs);
+  assert.ok(Math.abs(radiation.damage * Math.ceil(tunedBalance.attack.ultimates.dragon.radiationDurationMs / tunedBalance.attack.ultimates.dragon.radiationTickMs) - attackStats(dragon.stock, "big", tunedBalance).damage * tunedBalance.attack.ultimates.dragon.radiationDamageMultiplier) < 1e-9);
   dragonDefender.stunUntil = 0;
   dragonDefender.slowUntil = 0;
   resolveHazards(dragonState, radiation.nextTickAt, tunedBalance);
@@ -1348,6 +1353,72 @@ test("dragon radiation and quetzal swamp do not stun", () => {
   assert.equal(swamp.tickMs, tunedBalance.attack.ultimates.quetzal.tickMs);
   resolveHazards(quetzalState, swamp.nextTickAt, tunedBalance);
   assert.equal(quetzalDefender.stunUntil, 0);
+});
+
+test("dragon and quetzal floor effects survive caster interruption", () => {
+  const tunedBalance = JSON.parse(JSON.stringify(balance));
+  const dragonState = createMatchState({
+    balance: tunedBalance,
+    playerCharacter: characterById.get("dragon"),
+    computerCharacter: characterById.get("moray"),
+    seed: "dragon-floor-survives-interrupt",
+    initialBombs: tunedBalance.attack.bigAttackBombCost,
+    initialStock: Object.fromEntries(FOOD_TYPES.map(type => [type, 2]))
+  });
+  const dragon = dragonState.fighters.player;
+  const dragonDefender = dragonState.fighters.computer;
+  dragon.hp = 1000;
+  dragonDefender.hp = 1000;
+  assert.equal(launchAttack(dragonState, dragon, dragonDefender, "big", dragonState.now, tunedBalance), true);
+  const spirit = dragonState.projectiles.find(projectile => projectile.owner === "player" && projectile.kind === "headCircle");
+  dragonState.projectiles.push({
+    kind: "circle",
+    owner: "computer",
+    profile: "small",
+    target: { ...dragon.snake[0] },
+    impactAt: dragonState.now + 1,
+    radius: 1,
+    damage: 1,
+    stunChance: 1,
+    headStunChance: 1
+  });
+  resolveProjectiles(dragonState, dragonState.now + 1, tunedBalance);
+  assert.ok(dragonState.projectiles.some(projectile => projectile === spirit));
+  resolveProjectiles(dragonState, spirit.impactAt, tunedBalance);
+  assert.ok(dragonState.hazards.some(hazard => hazard.kind === "radiation" && hazard.owner === "player"));
+
+  const quetzalState = createMatchState({
+    balance: tunedBalance,
+    playerCharacter: characterById.get("quetzal"),
+    computerCharacter: characterById.get("moray"),
+    seed: "quetzal-floor-survives-interrupt",
+    initialBombs: tunedBalance.attack.bigAttackBombCost,
+    initialStock: Object.fromEntries(FOOD_TYPES.map(type => [type, 2]))
+  });
+  const quetzal = quetzalState.fighters.player;
+  const quetzalDefender = quetzalState.fighters.computer;
+  quetzal.hp = 1000;
+  quetzal.snake = [{ q: 0, r: 0 }, { q: 1, r: 0 }];
+  quetzalDefender.hp = 1000;
+  quetzalDefender.snake = [{ q: 1, r: 0 }];
+  assert.equal(launchAttack(quetzalState, quetzal, quetzalDefender, "big", quetzalState.now, tunedBalance), true);
+  const swamp = quetzalState.hazards.find(hazard => hazard.kind === "swamp");
+  quetzalState.projectiles.push({
+    kind: "circle",
+    owner: "computer",
+    profile: "small",
+    target: { ...quetzal.snake[0] },
+    impactAt: quetzalState.now + 1,
+    radius: 1,
+    damage: 1,
+    stunChance: 1,
+    headStunChance: 1
+  });
+  resolveProjectiles(quetzalState, quetzalState.now + 1, tunedBalance);
+  assert.ok(quetzalState.hazards.some(hazard => hazard === swamp));
+  const beforeHp = quetzalDefender.hp;
+  resolveHazards(quetzalState, swamp.nextTickAt, tunedBalance);
+  assert.ok(quetzalDefender.hp < beforeHp);
 });
 
 test("lobster palm uses split hit stun and separate vulnerability chance", () => {
@@ -1732,7 +1803,7 @@ test("lobster palm big attack stops the fist at the first collision", () => {
   assert.equal(firstBurst.burstDamage, bigDamage * 1.6);
 });
 
-test("gu king big attack uses 1.5x damage on each poison blast", () => {
+test("gu king big attack uses 1.5x damage and steps toward highest damage", () => {
   const state = createMatchState({
     balance,
     playerCharacter: characterById.get("gu_king"),
@@ -1743,12 +1814,29 @@ test("gu king big attack uses 1.5x damage on each poison blast", () => {
   });
   const player = state.fighters.player;
   const computer = state.fighters.computer;
+  computer.snake = [
+    { q: 0, r: 0 },
+    { q: 1, r: 0 },
+    { q: 2, r: 0 },
+    { q: 2, r: -1 },
+    { q: 3, r: -1 }
+  ];
 
   assert.equal(launchAttack(state, player, computer, "big", state.now, balance), true);
   const bigDamage = attackStats(player.stock, "big", balance).damage;
   const blasts = state.projectiles.filter(projectile => projectile.kind === "circle" && projectile.profile === "big");
   assert.equal(blasts.length, 3);
   blasts.forEach(projectile => assert.equal(projectile.damage, bigDamage * 1.5));
+  const bestStep = currentTarget => DIRECTIONS
+    .map((_, direction) => nextWrappedCell(currentTarget, direction, state.radius))
+    .map(candidate => ({
+      target: candidate,
+      damage: damageSnake(computer.snake, candidate, blasts[0].radius, blasts[0].damage, balance),
+      headDistance: hexDistance(candidate, computer.snake[0])
+    }))
+    .sort((left, right) => (right.damage - left.damage) || (left.headDistance - right.headDistance))[0].target;
+  assert.deepEqual(blasts[1].target, bestStep(blasts[0].target));
+  assert.deepEqual(blasts[2].target, bestStep(blasts[1].target));
 });
 
 test("protein fractional radius uses linear falloff only inside the circle", () => {
@@ -2070,6 +2158,16 @@ test("strategy optimizer writes live progress, target analysis, and checkpoint",
   assert.equal(checkpoint.cross.bestCross.completed, true);
   assert.equal(result.manifest.outputs.progress, progressPath);
   assert.equal(result.manifest.outputs.checkpoint, checkpointPath);
+});
+
+test("confidence pruning waits for the minimum sample and uses Wilson upper bound", () => {
+  const rule = confidencePruneRule(250, 0.5, 1.96);
+  assert.equal(confidencePruneDecision({ games: 249, wins: 0 }, rule), null);
+  assert.equal(confidencePruneDecision({ games: 250, wins: 125 }, rule), null);
+  const decision = confidencePruneDecision({ games: 250, wins: 100 }, rule);
+  assert.equal(decision.pruned, true);
+  assert.equal(decision.pruneAtGames, 250);
+  assert.ok(decision.pruneCiHigh <= 0.5);
 });
 
 test("basic strategy weights are fixed and not role-adjusted", () => {

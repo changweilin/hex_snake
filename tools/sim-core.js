@@ -1812,6 +1812,18 @@ function pushCircleAttack(state, attack) {
   state.projectiles.push({ kind: "circle", ...attack });
 }
 
+function guKingBestDamageStep(state, currentTarget, targetSnake, radius, damage, balance) {
+  const head = targetSnake[0];
+  return DIRECTIONS
+    .map((_, direction) => nextWrappedCell(currentTarget, direction, state.radius))
+    .map(candidate => ({
+      target: candidate,
+      damage: damageSnake(targetSnake, candidate, radius, damage, balance),
+      headDistance: head ? hexDistance(candidate, head) : 0
+    }))
+    .sort((left, right) => (right.damage - left.damage) || (left.headDistance - right.headDistance))[0]?.target || currentTarget;
+}
+
 function lobsterPalmVulnerabilityChance(stock, balance) {
   return attackStunChance(stock, balance, ultimateSetting(balance, "lobster", "vulnerabilityChance", 0.3));
 }
@@ -1951,8 +1963,8 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
   if (characterId === "dragon") {
     const spiritRadius = small.radius * ultimateSetting(balance, characterId, "radiusMultiplier", 2);
     const impactDamage = bigDamage * ultimateSetting(balance, characterId, "impactDamageMultiplier", 1.5);
-    const radiationTotalDamage = bigDamage * ultimateSetting(balance, characterId, "radiationDamageMultiplier", 2);
-    const radiationDurationMs = ultimateSetting(balance, characterId, "radiationDurationMs", 4000);
+    const radiationTotalDamage = bigDamage * ultimateSetting(balance, characterId, "radiationDamageMultiplier", 2.5);
+    const radiationDurationMs = ultimateSetting(balance, characterId, "radiationDurationMs", 5000);
     const radiationTickMs = ultimateSetting(balance, characterId, "radiationTickMs", 500);
     const firstImpactDelay = small.delay * ultimateSetting(balance, characterId, "firstImpactDelayMultiplier", 2);
     const volleys = 1;
@@ -1971,7 +1983,8 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
         radiationTotalDamage,
         stunChance,
         headStunChance: hitStunChances?.head ?? stunChance,
-        flat: true
+        flat: true,
+        ignoreCasterInterrupt: true
       });
     }
     return;
@@ -1979,15 +1992,18 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
   if (characterId === "gu_king") {
     const volleyIntervalMs = small.delay;
     const firstImpactDelay = small.delay;
+    const damage = bigDamage * ultimateSetting(balance, characterId, "damageMultiplier", 1.5);
+    let waveTarget = { ...target };
     for (let index = 0; index < 3; index += 1) {
       const impactDelay = firstImpactDelay + index * volleyIntervalMs;
+      if (index > 0) waveTarget = guKingBestDamageStep(state, waveTarget, defender.snake, small.radius, damage, balance);
       pushCircleAttack(state, {
         owner: attacker.owner,
         profile: "big",
-        target,
+        target: { ...waveTarget },
         impactAt: now + impactDelay,
         radius: small.radius,
-        damage: bigDamage * ultimateSetting(balance, characterId, "damageMultiplier", 1.5),
+        damage,
         stunChance,
         headStunChance: hitStunChances?.head ?? stunChance
       });
@@ -2085,7 +2101,7 @@ function applyVulnerability(state, target, chance, now) {
 
 function interruptCasting(state, owner) {
   const beforeCount = state.projectiles.length;
-  state.projectiles = state.projectiles.filter(projectile => projectile.owner !== owner);
+  state.projectiles = state.projectiles.filter(projectile => projectile.owner !== owner || projectile.ignoreCasterInterrupt);
   return state.projectiles.length !== beforeCount;
 }
 

@@ -20,6 +20,7 @@
     "simulate:ai-cross": "node tools/run-ai-cross-play.js",
     "optimize:strategy": "node tools/run-strategy-optimization.js",
     "reports:dashboard": "node tools/build-report-dashboard.js",
+    "reports:dashboard:serve": "node tools/report-dashboard-server.js",
     "generate:sfx": "node tools/generate-character-sfx.js",
     "characters:show": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/show-characters.ps1",
     "data:check": "node tools/check-utf8-json.js",

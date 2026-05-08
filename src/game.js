@@ -1350,6 +1350,18 @@
       });
     }
 
+    function guKingBestDamageStep(currentTarget, targetSnake, radius, damage) {
+      const head = targetSnake[0];
+      return directions
+        .map((_, direction) => nextWrappedCell(currentTarget, direction))
+        .map(candidate => ({
+          target: candidate,
+          damage: damageSnake(targetSnake, candidate, radius, damage),
+          headDistance: head ? hexDistance(candidate, head) : 0
+        }))
+        .sort((left, right) => (right.damage - left.damage) || (left.headDistance - right.headDistance))[0]?.target || currentTarget;
+    }
+
     function lobsterPalmVulnerabilityChance(stock) {
       return attackStunChance(stock, ultimateSetting("lobster", "vulnerabilityChance", 0.3));
     }
@@ -1537,8 +1549,8 @@
       if (character.id === "dragon") {
         const spiritRadius = small.radius * ultimateSetting(character.id, "radiusMultiplier", 2);
         const impactDamage = bigDamage * ultimateSetting(character.id, "impactDamageMultiplier", 1.5);
-        const radiationTotalDamage = bigDamage * ultimateSetting(character.id, "radiationDamageMultiplier", 2);
-        const radiationDurationMs = ultimateSetting(character.id, "radiationDurationMs", 4000);
+        const radiationTotalDamage = bigDamage * ultimateSetting(character.id, "radiationDamageMultiplier", 2.5);
+        const radiationDurationMs = ultimateSetting(character.id, "radiationDurationMs", 5000);
         const radiationTickMs = ultimateSetting(character.id, "radiationTickMs", 500);
         const firstImpactDelay = small.delay * ultimateSetting(character.id, "firstImpactDelayMultiplier", 2);
         const visualType = "dragon-spirit-big";
@@ -1562,6 +1574,7 @@
             stunChance,
             headStunChance: options.hitStunChances?.head ?? stunChance,
             flat: true,
+            ignoreCasterInterrupt: true,
             visualType
           });
         }
@@ -1571,17 +1584,21 @@
       if (character.id === "gu_king") {
         const volleyIntervalMs = small.delay;
         const firstImpactDelay = small.delay;
+        const targetSnake = owner === "player" ? computerSnake : snake;
+        const damage = bigDamage * ultimateSetting(character.id, "damageMultiplier", 1.5);
+        let waveTarget = { q: target.q, r: target.r };
         for (let index = 0; index < 3; index += 1) {
           const impactDelay = firstImpactDelay + index * volleyIntervalMs;
+          if (index > 0) waveTarget = guKingBestDamageStep(waveTarget, targetSnake, small.radius, damage);
           pushCircleAttack({
             owner,
             profile: "big",
-            target,
+            target: waveTarget,
             createdAt: now,
             impactAt: now + impactDelay,
             delay: impactDelay,
             radius: small.radius,
-            damage: bigDamage * ultimateSetting(character.id, "damageMultiplier", 1.5),
+            damage,
             stunChance,
             headStunChance: options.hitStunChances?.head ?? stunChance
           });
@@ -1727,7 +1744,7 @@
 
     function interruptCasting(owner) {
       const beforeCount = projectiles.length;
-      projectiles = projectiles.filter(projectile => projectile.owner !== owner);
+      projectiles = projectiles.filter(projectile => projectile.owner !== owner || projectile.ignoreCasterInterrupt);
       return projectiles.length !== beforeCount;
     }
 

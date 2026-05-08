@@ -83,6 +83,30 @@ These defaults still apply unless overridden:
 - `--seed strategy-optimization`
 - all six characters are included unless `--character` is provided
 
+## Confidence-Interval Pruning
+
+GA and RL mirror-gate evaluation use Wilson confidence pruning by default. This is an early-stop filter for weak candidates only; cross-play validation still runs the full requested sample count.
+
+Default pruning settings:
+
+- `--ga-prune-ci-min-games 250`
+- `--rl-prune-ci-min-games 150`
+- `--prune-ci-target-win-rate 0.5`
+- `--prune-ci-z 1.96`
+
+Meaning:
+
+- GA candidates run at least 250 games before pruning can happen.
+- RL candidates run at least 150 games before pruning can happen.
+- After the minimum, if the candidate's Wilson upper bound is still `<= 50%`, it is marked `pruned` and stops early.
+- Pruned candidates are never counted as qualified strategies.
+
+To disable confidence pruning for a run:
+
+```powershell
+npm.cmd run optimize:strategy -- --no-prune-ci
+```
+
 ## Cross-Play Validation
 
 Cross-play is a zero-sum matchup matrix when every character switches strategy at the same time, so a global average cannot prove that a single character's strategy improved.

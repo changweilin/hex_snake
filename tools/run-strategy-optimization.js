@@ -42,6 +42,9 @@ const DEFAULT_GA_DURATION_HOURS = 0;
 const DEFAULT_RL_DURATION_HOURS = 0;
 const DEFAULT_RL_SIGMA = 0.42;
 const DEFAULT_RL_TEMPERATURE = 0.08;
+const DEFAULT_PRUNE_CI_TARGET_WIN_RATE = 0.5;
+const DEFAULT_PRUNE_CI_Z = 1.96;
+const DEFAULT_PRUNE_CI_SCHEDULE = "10-50:0.45,51-100:0.48,101-:0.5";
 
 const weightShape = {
   movement: ["safePath", "leastDamage", "fastestArrival"],
@@ -79,8 +82,21 @@ function numberArg(args, key, fallback) {
   return value;
 }
 
+function nonNegativeNumberArg(args, key, fallback) {
+  if (args[key] === undefined) return fallback;
+  const value = Number(args[key]);
+  if (!Number.isFinite(value) || value < 0) throw new Error(`--${key} must be a non-negative number.`);
+  return value;
+}
+
 function integerArg(args, key, fallback) {
   const value = numberArg(args, key, fallback);
+  if (!Number.isInteger(value)) throw new Error(`--${key} must be an integer.`);
+  return value;
+}
+
+function nonNegativeIntegerArg(args, key, fallback) {
+  const value = nonNegativeNumberArg(args, key, fallback);
   if (!Number.isInteger(value)) throw new Error(`--${key} must be an integer.`);
   return value;
 }
@@ -191,6 +207,32 @@ function withWinRateEstimate(row) {
   };
 }
 
+function confidencePruneRule(minGames, targetWinRate, z) {
+  const normalizedMinGames = Math.max(0, Math.floor(Number(minGames || 0)));
+  if (!normalizedMinGames) return null;
+  return {
+    minGames: normalizedMinGames,
+    targetWinRate: Number(targetWinRate),
+    z: Number(z)
+  };
+}
+
+function confidencePruneDecision(totals, rule) {
+  if (!rule || totals.games < rule.minGames) return null;
+  const interval = wilsonInterval(totals.wins || 0, totals.games || 0, rule.z);
+  if (interval.high > rule.targetWinRate) return null;
+  return {
+    pruned: true,
+    pruneMethod: "wilson-upper-bound",
+    pruneAtGames: totals.games,
+    pruneTargetWinRate: round(rule.targetWinRate),
+    pruneCiZ: round(rule.z),
+    pruneCiLow: round(interval.low),
+    pruneCiHigh: round(interval.high),
+    pruneReason: `Wilson upper bound ${percent(interval.high)} <= target ${percent(rule.targetWinRate)} after ${formatNumber(totals.games)} games`
+  };
+}
+
 function objectFromMap(map) {
   return Object.fromEntries([...map.entries()]);
 }
@@ -204,6 +246,10 @@ function configFingerprint(config) {
 }
 
 function buildTrainingTargetAnalysis(config, characters) {
+  const pruneCiTargetWinRate = Number(config.pruneCiTargetWinRate ?? DEFAULT_PRUNE_CI_TARGET_WIN_RATE);
+  const pruneCiZ = Number(config.pruneCiZ ?? DEFAULT_PRUNE_CI_Z);
+  const gaPruneCiMinGames = Math.max(0, Math.floor(config.gaPruneCiMinGames ?? 0));
+  const rlPruneCiMinGames = Math.max(0, Math.floor(config.rlPruneCiMinGames ?? 0));
   const characterCount = characters.length;
   const orderedPairs = characterCount * Math.max(0, characterCount - 1);
   const gaCandidateEvaluations = config.gaRounds * characterCount * config.gaPopulation;
@@ -221,7 +267,13 @@ function buildTrainingTargetAnalysis(config, characters) {
       baselineDistance: config.baselineDistance,
       diversityDistance: config.diversityDistance,
       minQualified: config.minQualified,
-      minQualifiedPerCharacter: config.minQualifiedPerCharacter
+      minQualifiedPerCharacter: config.minQualifiedPerCharacter,
+      confidencePruning: {
+        targetWinRate: pruneCiTargetWinRate,
+        z: pruneCiZ,
+        gaMinGames: gaPruneCiMinGames,
+        rlMinGames: rlPruneCiMinGames
+      }
     },
     plannedWork: {
       characterCount,
@@ -257,10 +309,22 @@ function buildTrainingTargetAnalysis(config, characters) {
       config.minQualifiedPerCharacter
         ? `At least ${config.minQualifiedPerCharacter} diverse GA-qualified strategies for every selected character.`
         : "No per-character minimum is required for this run.",
+      gaPruneCiMinGames || rlPruneCiMinGames
+        ? `GA/RL candidates may be pruned early when their ${percentFromConfig(pruneCiZ)} Wilson upper bound cannot exceed ${percent(pruneCiTargetWinRate)}.`
+        : "No confidence-interval pruning is enabled.",
       "Optimized target-vs-field average should beat the baseline target-vs-field average.",
       "Review per-character deltas before applying generated strategies."
     ]
   };
+}
+
+function percentFromConfig(z) {
+  if (Math.abs(Number(z) - 1.96) < 0.001) return "95%";
+  return `z=${z}`;
+}
+
+function pruneStageLabel(value) {
+  return value ? `after ${value} games` : "disabled";
 }
 
 function trainingTargetMarkdown(analysis) {
@@ -281,6 +345,7 @@ function trainingTargetMarkdown(analysis) {
     `- Diversity distance: ${analysis.gate.diversityDistance}`,
     `- Minimum qualified strategies: ${analysis.gate.minQualified}`,
     `- Minimum per character: ${analysis.gate.minQualifiedPerCharacter || "not required"}`,
+    `- Confidence pruning: GA ${pruneStageLabel(analysis.gate.confidencePruning.gaMinGames)}, RL ${pruneStageLabel(analysis.gate.confidencePruning.rlMinGames)}, target ${percent(analysis.gate.confidencePruning.targetWinRate)}, ${percentFromConfig(analysis.gate.confidencePruning.z)} Wilson upper bound`,
     "",
     "## Planned Work",
     "",
@@ -622,7 +687,7 @@ function recordMatch(totals, match, candidateIsPlayer) {
   else totals.losses += 1;
 }
 
-function finalizeTotals(totals, strategyWeights) {
+function finalizeTotals(totals, strategyWeights, extra = {}) {
   const decisiveGames = totals.wins + totals.losses;
   const winRate = totals.games ? totals.wins / totals.games : 0;
   const drawRate = totals.games ? totals.draws / totals.games : 0;
@@ -643,13 +708,16 @@ function finalizeTotals(totals, strategyWeights) {
     averageScoreDiff: round(averageScoreDiff),
     reward: round(clamp(winRate + shaping, 0, 1)),
     passedGate: winRate > 0.5,
-    strategyWeights
+    strategyWeights,
+    ...extra
   };
 }
 
-function evaluateAgainstBasic({ balance, character, candidate, runs, seed, phase, resume = null, onProgress = null }) {
+function evaluateAgainstBasic({ balance, character, candidate, runs, seed, phase, resume = null, onProgress = null, pruneRule = null }) {
   const totals = resume?.totals ? { ...emptyTotals(character.id, candidate.id), ...clone(resume.totals) } : emptyTotals(character.id, candidate.id);
   const startIndex = Math.max(0, Math.min(runs, Math.floor(Number(resume?.nextIndex || 0))));
+  const resumedPrune = confidencePruneDecision(totals, pruneRule);
+  if (resumedPrune) return finalizeTotals(totals, candidate.strategyWeights, { ...resumedPrune, passedGate: false });
   for (let index = startIndex; index < runs; index += 1) {
     const candidateIsPlayer = index % 2 === 0;
     const match = simulateMatch({
@@ -669,6 +737,8 @@ function evaluateAgainstBasic({ balance, character, candidate, runs, seed, phase
         estimate: withWinRateEstimate(finalizeTotals(totals, candidate.strategyWeights))
       });
     }
+    const prune = confidencePruneDecision(totals, pruneRule);
+    if (prune) return finalizeTotals(totals, candidate.strategyWeights, { ...prune, passedGate: false });
   }
   return finalizeTotals(totals, candidate.strategyWeights);
 }
@@ -744,7 +814,7 @@ function qualifiedRows(rows) {
   return rows.filter(row => row.passedGate && row.novelFromBaseline);
 }
 
-function runGaSearch({ balance, characters, seed, runs, rounds, populationSize, eliteCount, diversityDistance, baselineDistance, minQualified, minQualifiedPerCharacter, durationHours, outputDir, progress = null, checkpointManager = null }) {
+function runGaSearch({ balance, characters, seed, runs, rounds, populationSize, eliteCount, diversityDistance, baselineDistance, minQualified, minQualifiedPerCharacter, durationHours, outputDir, progress = null, checkpointManager = null, pruneRule = null }) {
   const rng = createRng(`${seed}:ga`);
   const saved = checkpointManager?.data?.ga;
   const populations = saved?.populations
@@ -849,6 +919,7 @@ function runGaSearch({ balance, characters, seed, runs, rounds, populationSize, 
           seed,
           phase: `ga-round-${roundIndex}`,
           resume: continuingCandidate ? resumedCurrent.partial : null,
+          pruneRule,
           onProgress: partial => {
             progress?.recordGame({
               label: `${character.id} GA r${roundIndex} candidate ${candidateIndex + 1}/${population.length}`,
@@ -996,7 +1067,7 @@ function sampleAroundVector(prefix, center, rng, sigma, count) {
   });
 }
 
-function runBanditRl({ balance, characters, gaRows, bestByCharacter, seed, runs, rounds, samples, sigma, temperature, durationHours, outputDir, progress = null, checkpointManager = null }) {
+function runBanditRl({ balance, characters, gaRows, bestByCharacter, seed, runs, rounds, samples, sigma, temperature, durationHours, outputDir, progress = null, checkpointManager = null, pruneRule = null }) {
   const rng = createRng(`${seed}:rl`);
   const saved = checkpointManager?.data?.rl;
   const history = saved?.history || [];
@@ -1118,6 +1189,7 @@ function runBanditRl({ balance, characters, gaRows, bestByCharacter, seed, runs,
           seed,
           phase: `rl-round-${roundIndex}`,
           resume: continuingCandidate ? resumedCurrent.partial : null,
+          pruneRule,
           onProgress: partial => {
             progress?.recordGame({
               label: `${character.id} RL r${roundIndex} candidate ${candidateIndex + 1}/${candidates.length}`,
@@ -1618,6 +1690,11 @@ function rowsToCsv(rows) {
       "passedGate",
       "baselineDistance",
       "novelFromBaseline",
+      "pruned",
+      "pruneMethod",
+      "pruneAtGames",
+      "pruneCiHigh",
+      "pruneReason",
       "averageDurationMs",
       "averageHpDiff",
       "averageScoreDiff",
@@ -1639,6 +1716,11 @@ function rowsToCsv(rows) {
       row.passedGate,
       row.baselineDistance ?? "",
       row.novelFromBaseline ?? "",
+      row.pruned ?? false,
+      row.pruneMethod ?? "",
+      row.pruneAtGames ?? "",
+      row.pruneCiHigh ?? "",
+      row.pruneReason ?? "",
       row.averageDurationMs,
       row.averageHpDiff,
       row.averageScoreDiff,
@@ -1676,8 +1758,18 @@ function runOptimization(options = {}) {
     rlDurationHours: Number(options.rlDurationHours ?? DEFAULT_RL_DURATION_HOURS),
     rlSigma: Number(options.rlSigma ?? DEFAULT_RL_SIGMA),
     rlTemperature: Number(options.rlTemperature ?? DEFAULT_RL_TEMPERATURE),
+    gaPruneCiMinGames: Math.max(0, Math.floor(options.gaPruneCiMinGames ?? DEFAULT_GA_PRUNE_CI_MIN_GAMES)),
+    rlPruneCiMinGames: Math.max(0, Math.floor(options.rlPruneCiMinGames ?? DEFAULT_RL_PRUNE_CI_MIN_GAMES)),
+    pruneCiTargetWinRate: Number(options.pruneCiTargetWinRate ?? DEFAULT_PRUNE_CI_TARGET_WIN_RATE),
+    pruneCiZ: Number(options.pruneCiZ ?? DEFAULT_PRUNE_CI_Z),
     characterIds: characters.map(character => character.id)
   };
+  if (!Number.isFinite(config.pruneCiTargetWinRate) || config.pruneCiTargetWinRate <= 0 || config.pruneCiTargetWinRate >= 1) {
+    throw new Error("--prune-ci-target-win-rate must be between 0 and 1.");
+  }
+  if (!Number.isFinite(config.pruneCiZ) || config.pruneCiZ <= 0) {
+    throw new Error("--prune-ci-z must be a positive number.");
+  }
   ensureDir(outputDir);
   writeJson(path.join(outputDir, "config.json"), config);
   const checkpoint = loadCompatibleCheckpoint(outputDir, config, options.resume !== false);
@@ -1718,7 +1810,8 @@ function runOptimization(options = {}) {
     durationHours: config.gaDurationHours,
     outputDir,
     progress,
-    checkpointManager
+    checkpointManager,
+    pruneRule: confidencePruneRule(config.gaPruneCiMinGames, config.pruneCiTargetWinRate, config.pruneCiZ)
   });
   const gaRowsForRl = qualifiedRows(ga.allRows);
   const rl = runBanditRl({
@@ -1735,7 +1828,8 @@ function runOptimization(options = {}) {
     durationHours: config.rlDurationHours,
     outputDir,
     progress,
-    checkpointManager
+    checkpointManager,
+    pruneRule: confidencePruneRule(config.rlPruneCiMinGames, config.pruneCiTargetWinRate, config.pruneCiZ)
   });
 
   const baselineStrategyFile = buildStrategyFile(characters.map(character => ({
@@ -1907,6 +2001,7 @@ function runMultiCycleOptimization(options = {}) {
 
 function main() {
   const args = parseArgs(process.argv.slice(2));
+  const pruneCiDisabled = Boolean(args["no-prune-ci"]);
   const options = {
     seed: stringArg(args, "seed", DEFAULT_SEED),
     characterId: args.character ? String(args.character) : undefined,
@@ -1928,6 +2023,10 @@ function main() {
     rlDurationHours: numberArg(args, "rl-duration-hours", DEFAULT_RL_DURATION_HOURS),
     rlSigma: numberArg(args, "rl-sigma", DEFAULT_RL_SIGMA),
     rlTemperature: numberArg(args, "rl-temperature", DEFAULT_RL_TEMPERATURE),
+    gaPruneCiMinGames: pruneCiDisabled ? 0 : nonNegativeIntegerArg(args, "ga-prune-ci-min-games", DEFAULT_GA_PRUNE_CI_MIN_GAMES),
+    rlPruneCiMinGames: pruneCiDisabled ? 0 : nonNegativeIntegerArg(args, "rl-prune-ci-min-games", DEFAULT_RL_PRUNE_CI_MIN_GAMES),
+    pruneCiTargetWinRate: numberArg(args, "prune-ci-target-win-rate", DEFAULT_PRUNE_CI_TARGET_WIN_RATE),
+    pruneCiZ: numberArg(args, "prune-ci-z", DEFAULT_PRUNE_CI_Z),
     resume: !args.fresh,
     progress: !args["no-progress"],
     progressLogIntervalMs: numberArg(args, "progress-log-ms", 5000)
@@ -1959,6 +2058,8 @@ module.exports = {
   DEFAULT_DIVERSITY_DISTANCE,
   buildTrainingTargetAnalysis,
   compareRows,
+  confidencePruneDecision,
+  confidencePruneRule,
   evaluateAgainstBasic,
   normalizedDistance,
   qualifiedRows,
