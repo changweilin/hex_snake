@@ -81,7 +81,26 @@ These defaults still apply unless overridden:
 - `--rl-rounds 12`
 - `--rl-samples 16`
 - `--seed strategy-optimization`
+- `--jobs 1`
+- `--parallel-chunk-games 50`
 - all six characters are included unless `--character` is provided
+
+## Multi-Core Parallelism
+
+Use `--jobs N` to evaluate each GA/RL candidate in parallel with Node worker threads. This splits a candidate's mirror-gate games across workers, then merges the totals before ranking or pruning. Cross-play validation remains serial so the final matchup matrix stays easy to resume and inspect.
+
+Recommended desktop setting:
+
+```powershell
+npm.cmd run optimize:strategy -- --jobs 4 --parallel-chunk-games 50
+```
+
+Notes:
+
+- `--jobs` is capped at the machine's available CPU parallelism.
+- `--parallel-chunk-games` controls the post-101-game batch size for each candidate. Smaller values check pruning more often; larger values reduce worker overhead.
+- Before game 101, the optimizer checks in small batches so the 10-50 and 51-100 pruning stages can discard weak candidates early.
+- Checkpoints include `jobs` and `parallelChunkGames`; changing either setting intentionally starts from a fresh compatible checkpoint for that output directory.
 
 ## Confidence-Interval Pruning
 
@@ -89,17 +108,23 @@ GA and RL mirror-gate evaluation use Wilson confidence pruning by default. This 
 
 Default pruning settings:
 
-- `--ga-prune-ci-min-games 250`
-- `--rl-prune-ci-min-games 150`
-- `--prune-ci-target-win-rate 0.5`
+- `--ga-prune-ci-schedule 10-50:0.45,51-100:0.48,101-:0.5`
+- `--rl-prune-ci-schedule 10-50:0.45,51-100:0.48,101-:0.5`
 - `--prune-ci-z 1.96`
 
 Meaning:
 
-- GA candidates run at least 250 games before pruning can happen.
-- RL candidates run at least 150 games before pruning can happen.
-- After the minimum, if the candidate's Wilson upper bound is still `<= 50%`, it is marked `pruned` and stops early.
+- From games 10-50, a candidate is pruned when the Wilson upper bound is `< 45%`.
+- From games 51-100, a candidate is pruned when the Wilson upper bound is `< 48%`.
+- From game 101 onward, a candidate is pruned when the Wilson upper bound is `< 50%`.
+- Thresholds use strict `<`, so a candidate exactly at the threshold keeps running.
 - Pruned candidates are never counted as qualified strategies.
+
+To use the older single-stage shape, pass a schedule with an open range:
+
+```powershell
+npm.cmd run optimize:strategy -- --ga-prune-ci-schedule 250-:0.5 --rl-prune-ci-schedule 150-:0.5
+```
 
 To disable confidence pruning for a run:
 
@@ -137,6 +162,7 @@ npm.cmd run optimize:strategy -- `
   --rl-runs 1000 `
   --cross-runs 1000 `
   --min-qualified-per-character 8 `
+  --jobs 4 `
   --output reports\strategy-full
 ```
 
@@ -163,7 +189,7 @@ $profileArgs = '--ga-runs 50 --rl-runs 50 --cross-runs 100'
 Full training:
 
 ```powershell
-$profileArgs = '--ga-runs 1000 --rl-runs 1000 --cross-runs 1000 --min-qualified-per-character 8'
+$profileArgs = '--ga-runs 1000 --rl-runs 1000 --cross-runs 1000 --min-qualified-per-character 8 --jobs 4'
 ```
 
 Start the detached run:

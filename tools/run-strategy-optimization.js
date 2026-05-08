@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
+const { Worker, isMainThread, parentPort, workerData } = require("worker_threads");
 const {
   buildCharacterMap,
   createRng,
@@ -45,6 +47,8 @@ const DEFAULT_RL_TEMPERATURE = 0.08;
 const DEFAULT_PRUNE_CI_TARGET_WIN_RATE = 0.5;
 const DEFAULT_PRUNE_CI_Z = 1.96;
 const DEFAULT_PRUNE_CI_SCHEDULE = "10-50:0.45,51-100:0.48,101-:0.5";
+const DEFAULT_JOBS = 1;
+const DEFAULT_PARALLEL_CHUNK_GAMES = 50;
 
 const weightShape = {
   movement: ["safePath", "leastDamage", "fastestArrival"],
@@ -99,6 +103,12 @@ function nonNegativeIntegerArg(args, key, fallback) {
   const value = nonNegativeNumberArg(args, key, fallback);
   if (!Number.isInteger(value)) throw new Error(`--${key} must be an integer.`);
   return value;
+}
+
+function positiveIntegerValue(value, fallback) {
+  const number = Number(value ?? fallback);
+  if (!Number.isFinite(number) || number <= 0) return fallback;
+  return Math.floor(number);
 }
 
 function stringArg(args, key, fallback) {
@@ -173,6 +183,11 @@ function formatDuration(ms) {
   return `${seconds}s`;
 }
 
+function availableParallelism() {
+  if (typeof os.availableParallelism === "function") return os.availableParallelism();
+  return os.cpus().length || 1;
+}
+
 function wilsonInterval(wins, games, z = 1.96) {
   if (!games) return { low: 0, high: 1 };
   const p = wins / games;
@@ -207,29 +222,69 @@ function withWinRateEstimate(row) {
   };
 }
 
-function confidencePruneRule(minGames, targetWinRate, z) {
-  const normalizedMinGames = Math.max(0, Math.floor(Number(minGames || 0)));
+function parsePruneCiSchedule(scheduleText) {
+  const text = String(scheduleText || "").trim();
+  if (!text || text === "0" || text.toLowerCase() === "off" || text.toLowerCase() === "false") return [];
+  return text.split(",").map(rawRule => {
+    const [rawRange, rawTarget] = rawRule.split(":").map(part => part.trim());
+    if (!rawRange || !rawTarget) throw new Error(`Invalid prune CI schedule rule: ${rawRule}`);
+    const targetWinRate = Number(rawTarget);
+    if (!Number.isFinite(targetWinRate) || targetWinRate <= 0 || targetWinRate >= 1) {
+      throw new Error(`Invalid prune CI target win rate in rule: ${rawRule}`);
+    }
+    const [rawMin, rawMax] = rawRange.split("-").map(part => part.trim());
+    const minGames = Math.max(1, Math.floor(Number(rawMin)));
+    const maxGames = rawRange.includes("-") && rawMax ? Math.floor(Number(rawMax)) : null;
+    if (!Number.isFinite(minGames)) throw new Error(`Invalid prune CI min games in rule: ${rawRule}`);
+    if (maxGames !== null && (!Number.isFinite(maxGames) || maxGames < minGames)) {
+      throw new Error(`Invalid prune CI max games in rule: ${rawRule}`);
+    }
+    return { minGames, maxGames, targetWinRate };
+  }).sort((left, right) => left.minGames - right.minGames);
+}
+
+function confidencePruneRule(scheduleOrMinGames, targetWinRateOrZ, maybeZ) {
+  if (typeof scheduleOrMinGames === "string") {
+    const rules = parsePruneCiSchedule(scheduleOrMinGames);
+    if (!rules.length) return null;
+    return {
+      z: Number(targetWinRateOrZ),
+      rules
+    };
+  }
+  const normalizedMinGames = Math.max(0, Math.floor(Number(scheduleOrMinGames || 0)));
   if (!normalizedMinGames) return null;
   return {
-    minGames: normalizedMinGames,
-    targetWinRate: Number(targetWinRate),
-    z: Number(z)
+    z: Number(maybeZ),
+    rules: [{
+      minGames: normalizedMinGames,
+      maxGames: null,
+      targetWinRate: Number(targetWinRateOrZ)
+    }]
   };
 }
 
 function confidencePruneDecision(totals, rule) {
-  if (!rule || totals.games < rule.minGames) return null;
+  if (!rule) return null;
+  const activeRule = (rule.rules || []).find(candidate =>
+    totals.games >= candidate.minGames && (candidate.maxGames === null || totals.games <= candidate.maxGames)
+  );
+  if (!activeRule) return null;
   const interval = wilsonInterval(totals.wins || 0, totals.games || 0, rule.z);
-  if (interval.high > rule.targetWinRate) return null;
+  if (interval.high >= activeRule.targetWinRate) return null;
+  const stage = activeRule.maxGames === null
+    ? `${formatNumber(activeRule.minGames)}+`
+    : `${formatNumber(activeRule.minGames)}-${formatNumber(activeRule.maxGames)}`;
   return {
     pruned: true,
     pruneMethod: "wilson-upper-bound",
     pruneAtGames: totals.games,
-    pruneTargetWinRate: round(rule.targetWinRate),
+    pruneTargetWinRate: round(activeRule.targetWinRate),
+    pruneStage: stage,
     pruneCiZ: round(rule.z),
     pruneCiLow: round(interval.low),
     pruneCiHigh: round(interval.high),
-    pruneReason: `Wilson upper bound ${percent(interval.high)} <= target ${percent(rule.targetWinRate)} after ${formatNumber(totals.games)} games`
+    pruneReason: `Wilson upper bound ${percentPrecise(interval.high)} < target ${percent(activeRule.targetWinRate)} in ${stage} games stage`
   };
 }
 
@@ -248,8 +303,8 @@ function configFingerprint(config) {
 function buildTrainingTargetAnalysis(config, characters) {
   const pruneCiTargetWinRate = Number(config.pruneCiTargetWinRate ?? DEFAULT_PRUNE_CI_TARGET_WIN_RATE);
   const pruneCiZ = Number(config.pruneCiZ ?? DEFAULT_PRUNE_CI_Z);
-  const gaPruneCiMinGames = Math.max(0, Math.floor(config.gaPruneCiMinGames ?? 0));
-  const rlPruneCiMinGames = Math.max(0, Math.floor(config.rlPruneCiMinGames ?? 0));
+  const gaPruneCiSchedule = String(config.gaPruneCiSchedule ?? "");
+  const rlPruneCiSchedule = String(config.rlPruneCiSchedule ?? "");
   const characterCount = characters.length;
   const orderedPairs = characterCount * Math.max(0, characterCount - 1);
   const gaCandidateEvaluations = config.gaRounds * characterCount * config.gaPopulation;
@@ -271,13 +326,17 @@ function buildTrainingTargetAnalysis(config, characters) {
       confidencePruning: {
         targetWinRate: pruneCiTargetWinRate,
         z: pruneCiZ,
-        gaMinGames: gaPruneCiMinGames,
-        rlMinGames: rlPruneCiMinGames
+        gaSchedule: gaPruneCiSchedule,
+        rlSchedule: rlPruneCiSchedule,
+        gaRules: parsePruneCiSchedule(gaPruneCiSchedule),
+        rlRules: parsePruneCiSchedule(rlPruneCiSchedule)
       }
     },
     plannedWork: {
       characterCount,
       characterIds: characters.map(character => character.id),
+      parallelJobs: config.jobs || DEFAULT_JOBS,
+      parallelChunkGames: config.parallelChunkGames || DEFAULT_PARALLEL_CHUNK_GAMES,
       gaCandidateEvaluations,
       gaGames,
       rlCandidateEvaluations,
@@ -309,8 +368,8 @@ function buildTrainingTargetAnalysis(config, characters) {
       config.minQualifiedPerCharacter
         ? `At least ${config.minQualifiedPerCharacter} diverse GA-qualified strategies for every selected character.`
         : "No per-character minimum is required for this run.",
-      gaPruneCiMinGames || rlPruneCiMinGames
-        ? `GA/RL candidates may be pruned early when their ${percentFromConfig(pruneCiZ)} Wilson upper bound cannot exceed ${percent(pruneCiTargetWinRate)}.`
+      gaPruneCiSchedule || rlPruneCiSchedule
+        ? `GA/RL candidates may be pruned early when their ${percentFromConfig(pruneCiZ)} Wilson upper bound is below the active stage threshold.`
         : "No confidence-interval pruning is enabled.",
       "Optimized target-vs-field average should beat the baseline target-vs-field average.",
       "Review per-character deltas before applying generated strategies."
@@ -323,8 +382,13 @@ function percentFromConfig(z) {
   return `z=${z}`;
 }
 
-function pruneStageLabel(value) {
-  return value ? `after ${value} games` : "disabled";
+function formatPruneRule(rule) {
+  const range = rule.maxGames === null ? `${formatNumber(rule.minGames)}+` : `${formatNumber(rule.minGames)}-${formatNumber(rule.maxGames)}`;
+  return `${range}: upper < ${percent(rule.targetWinRate)}`;
+}
+
+function formatPruneSchedule(rules) {
+  return rules && rules.length ? rules.map(formatPruneRule).join("; ") : "disabled";
 }
 
 function trainingTargetMarkdown(analysis) {
@@ -345,11 +409,12 @@ function trainingTargetMarkdown(analysis) {
     `- Diversity distance: ${analysis.gate.diversityDistance}`,
     `- Minimum qualified strategies: ${analysis.gate.minQualified}`,
     `- Minimum per character: ${analysis.gate.minQualifiedPerCharacter || "not required"}`,
-    `- Confidence pruning: GA ${pruneStageLabel(analysis.gate.confidencePruning.gaMinGames)}, RL ${pruneStageLabel(analysis.gate.confidencePruning.rlMinGames)}, target ${percent(analysis.gate.confidencePruning.targetWinRate)}, ${percentFromConfig(analysis.gate.confidencePruning.z)} Wilson upper bound`,
+    `- Confidence pruning: GA ${formatPruneSchedule(analysis.gate.confidencePruning.gaRules)}, RL ${formatPruneSchedule(analysis.gate.confidencePruning.rlRules)}, ${percentFromConfig(analysis.gate.confidencePruning.z)} Wilson upper bound`,
     "",
     "## Planned Work",
     "",
     `- Characters: ${work.characterIds.join(", ")}`,
+    `- Parallel jobs: ${formatNumber(work.parallelJobs)} worker(s), ${formatNumber(work.parallelChunkGames)} games per post-101 batch`,
     `- GA: ${formatNumber(work.gaCandidateEvaluations)} candidate evaluations / ${formatNumber(work.gaGames)} games`,
     `- RL: ${formatNumber(work.rlCandidateEvaluations)} candidate evaluations / ${formatNumber(work.rlGames)} games`,
     `- Cross-play: ${formatNumber(work.crossSeatSeriesPerReport * work.crossReports)} seat series / ${formatNumber(work.crossGames)} games`,
@@ -456,6 +521,12 @@ function createProgressTracker({ outputDir, config, characters, checkpoint = nul
     }
   }
 
+  function addCompletedGames(count = 1, current = null) {
+    completedGames += Math.max(0, Math.floor(Number(count) || 0));
+    if (current) state.current = current;
+    flush({ log: true });
+  }
+
   return {
     filePath,
     analysis,
@@ -472,9 +543,10 @@ function createProgressTracker({ outputDir, config, characters, checkpoint = nul
       flush({ force, log: force });
     },
     recordGame(current = null) {
-      completedGames += 1;
-      if (current) state.current = current;
-      flush({ log: true });
+      addCompletedGames(1, current);
+    },
+    recordGames(count = 1, current = null) {
+      addCompletedGames(count, current);
     },
     updateCurrent(current = null, force = false) {
       if (current) state.current = current;
@@ -713,6 +785,84 @@ function finalizeTotals(totals, strategyWeights, extra = {}) {
   };
 }
 
+function mergeTotals(target, source) {
+  [
+    "games",
+    "wins",
+    "losses",
+    "draws",
+    "totalDurationMs",
+    "totalHpDiff",
+    "totalScoreDiff"
+  ].forEach(key => {
+    target[key] += Number(source[key] || 0);
+  });
+  return target;
+}
+
+function evaluateBasicChunk({ balance, character, candidate, seed, phase, startIndex, endIndex }) {
+  const totals = emptyTotals(character.id, candidate.id);
+  for (let index = startIndex; index < endIndex; index += 1) {
+    const candidateIsPlayer = index % 2 === 0;
+    const match = simulateMatch({
+      balance,
+      playerCharacter: character,
+      computerCharacter: character,
+      playerModel: candidateIsPlayer ? makePolicyFromWeights(candidate, character.id) : makeBasicPolicy(character.id),
+      computerModel: candidateIsPlayer ? makeBasicPolicy(character.id) : makePolicyFromWeights(candidate, character.id),
+      seed: `${seed}:${character.id}:${phase}:${candidate.id}:match-${index}`
+    });
+    recordMatch(totals, match, candidateIsPlayer);
+  }
+  return totals;
+}
+
+function parallelBatchEnd(startIndex, runs, pruneRule, chunkGames) {
+  const requestedSize = pruneRule && startIndex < 101 ? Math.min(10, chunkGames) : chunkGames;
+  let endIndex = Math.min(runs, startIndex + Math.max(1, requestedSize));
+  for (const rule of pruneRule?.rules || []) {
+    if (startIndex < rule.minGames && rule.minGames < endIndex) endIndex = rule.minGames;
+    if (rule.maxGames !== null && startIndex < rule.maxGames && rule.maxGames < endIndex) endIndex = rule.maxGames;
+  }
+  return Math.max(startIndex + 1, endIndex);
+}
+
+function splitRange(startIndex, endIndex, jobs) {
+  const games = endIndex - startIndex;
+  const workerCount = Math.min(Math.max(1, jobs), games);
+  const base = Math.floor(games / workerCount);
+  const remainder = games % workerCount;
+  const ranges = [];
+  let cursor = startIndex;
+  for (let workerIndex = 0; workerIndex < workerCount; workerIndex += 1) {
+    const size = base + (workerIndex < remainder ? 1 : 0);
+    ranges.push({ startIndex: cursor, endIndex: cursor + size });
+    cursor += size;
+  }
+  return ranges;
+}
+
+function runWorkerChunk(payload) {
+  return new Promise((resolve, reject) => {
+    const worker = new Worker(__filename, { workerData: payload });
+    let settled = false;
+    function finish(error, message) {
+      if (settled) return;
+      settled = true;
+      if (error) reject(error);
+      else resolve(message);
+    }
+    worker.once("message", message => {
+      if (message && message.error) finish(new Error(message.error));
+      else finish(null, message);
+    });
+    worker.once("error", error => finish(error));
+    worker.once("exit", code => {
+      if (code !== 0) finish(new Error(`Strategy optimization worker exited with code ${code}.`));
+    });
+  });
+}
+
 function evaluateAgainstBasic({ balance, character, candidate, runs, seed, phase, resume = null, onProgress = null, pruneRule = null }) {
   const totals = resume?.totals ? { ...emptyTotals(character.id, candidate.id), ...clone(resume.totals) } : emptyTotals(character.id, candidate.id);
   const startIndex = Math.max(0, Math.min(runs, Math.floor(Number(resume?.nextIndex || 0))));
@@ -732,11 +882,57 @@ function evaluateAgainstBasic({ balance, character, candidate, runs, seed, phase
     if (typeof onProgress === "function") {
       onProgress({
         nextIndex: index + 1,
+        gamesCompleted: 1,
         runs,
         totals: clone(totals),
         estimate: withWinRateEstimate(finalizeTotals(totals, candidate.strategyWeights))
       });
     }
+    const prune = confidencePruneDecision(totals, pruneRule);
+    if (prune) return finalizeTotals(totals, candidate.strategyWeights, { ...prune, passedGate: false });
+  }
+  return finalizeTotals(totals, candidate.strategyWeights);
+}
+
+async function evaluateAgainstBasicParallel({ balance, character, candidate, runs, seed, phase, resume = null, onProgress = null, pruneRule = null, jobs = DEFAULT_JOBS, parallelChunkGames = DEFAULT_PARALLEL_CHUNK_GAMES }) {
+  const workerJobs = Math.max(1, Math.floor(Number(jobs) || DEFAULT_JOBS));
+  const chunkGames = Math.max(1, Math.floor(Number(parallelChunkGames) || DEFAULT_PARALLEL_CHUNK_GAMES));
+  if (workerJobs <= 1) {
+    return evaluateAgainstBasic({ balance, character, candidate, runs, seed, phase, resume, onProgress, pruneRule });
+  }
+
+  const totals = resume?.totals ? { ...emptyTotals(character.id, candidate.id), ...clone(resume.totals) } : emptyTotals(character.id, candidate.id);
+  let nextIndex = Math.max(0, Math.min(runs, Math.floor(Number(resume?.nextIndex || 0))));
+  const resumedPrune = confidencePruneDecision(totals, pruneRule);
+  if (resumedPrune) return finalizeTotals(totals, candidate.strategyWeights, { ...resumedPrune, passedGate: false });
+
+  while (nextIndex < runs) {
+    const batchStart = nextIndex;
+    const batchEnd = parallelBatchEnd(batchStart, runs, pruneRule, chunkGames);
+    const ranges = splitRange(batchStart, batchEnd, workerJobs);
+    const chunks = await Promise.all(ranges.map(range => runWorkerChunk({
+      task: "evaluate-basic-chunk",
+      balance,
+      character,
+      candidate,
+      seed,
+      phase,
+      startIndex: range.startIndex,
+      endIndex: range.endIndex
+    })));
+    chunks.forEach(chunk => mergeTotals(totals, chunk.totals));
+    nextIndex = batchEnd;
+
+    if (typeof onProgress === "function") {
+      onProgress({
+        nextIndex,
+        gamesCompleted: batchEnd - batchStart,
+        runs,
+        totals: clone(totals),
+        estimate: withWinRateEstimate(finalizeTotals(totals, candidate.strategyWeights))
+      });
+    }
+
     const prune = confidencePruneDecision(totals, pruneRule);
     if (prune) return finalizeTotals(totals, candidate.strategyWeights, { ...prune, passedGate: false });
   }
@@ -814,7 +1010,7 @@ function qualifiedRows(rows) {
   return rows.filter(row => row.passedGate && row.novelFromBaseline);
 }
 
-function runGaSearch({ balance, characters, seed, runs, rounds, populationSize, eliteCount, diversityDistance, baselineDistance, minQualified, minQualifiedPerCharacter, durationHours, outputDir, progress = null, checkpointManager = null, pruneRule = null }) {
+async function runGaSearch({ balance, characters, seed, runs, rounds, populationSize, eliteCount, diversityDistance, baselineDistance, minQualified, minQualifiedPerCharacter, durationHours, outputDir, progress = null, checkpointManager = null, pruneRule = null, jobs = DEFAULT_JOBS, parallelChunkGames = DEFAULT_PARALLEL_CHUNK_GAMES }) {
   const rng = createRng(`${seed}:ga`);
   const saved = checkpointManager?.data?.ga;
   const populations = saved?.populations
@@ -911,7 +1107,7 @@ function runGaSearch({ balance, characters, seed, runs, rounds, populationSize, 
             partial: continuingCandidate ? resumedCurrent.partial || null : null
           }
         }, true);
-        const rankedRow = evaluateAgainstBasic({
+        const rankedRow = await evaluateAgainstBasicParallel({
           balance,
           character,
           candidate,
@@ -920,8 +1116,10 @@ function runGaSearch({ balance, characters, seed, runs, rounds, populationSize, 
           phase: `ga-round-${roundIndex}`,
           resume: continuingCandidate ? resumedCurrent.partial : null,
           pruneRule,
+          jobs,
+          parallelChunkGames,
           onProgress: partial => {
-            progress?.recordGame({
+            progress?.recordGames(partial.gamesCompleted || 1, {
               label: `${character.id} GA r${roundIndex} candidate ${candidateIndex + 1}/${population.length}`,
               estimate: partial.estimate
             });
@@ -1067,7 +1265,7 @@ function sampleAroundVector(prefix, center, rng, sigma, count) {
   });
 }
 
-function runBanditRl({ balance, characters, gaRows, bestByCharacter, seed, runs, rounds, samples, sigma, temperature, durationHours, outputDir, progress = null, checkpointManager = null, pruneRule = null }) {
+async function runBanditRl({ balance, characters, gaRows, bestByCharacter, seed, runs, rounds, samples, sigma, temperature, durationHours, outputDir, progress = null, checkpointManager = null, pruneRule = null, jobs = DEFAULT_JOBS, parallelChunkGames = DEFAULT_PARALLEL_CHUNK_GAMES }) {
   const rng = createRng(`${seed}:rl`);
   const saved = checkpointManager?.data?.rl;
   const history = saved?.history || [];
@@ -1181,7 +1379,7 @@ function runBanditRl({ balance, characters, gaRows, bestByCharacter, seed, runs,
             partial: continuingCandidate ? resumedCurrent.partial || null : null
           }
         }, true);
-        const row = evaluateAgainstBasic({
+        const row = await evaluateAgainstBasicParallel({
           balance,
           character,
           candidate,
@@ -1190,8 +1388,10 @@ function runBanditRl({ balance, characters, gaRows, bestByCharacter, seed, runs,
           phase: `rl-round-${roundIndex}`,
           resume: continuingCandidate ? resumedCurrent.partial : null,
           pruneRule,
+          jobs,
+          parallelChunkGames,
           onProgress: partial => {
-            progress?.recordGame({
+            progress?.recordGames(partial.gamesCompleted || 1, {
               label: `${character.id} RL r${roundIndex} candidate ${candidateIndex + 1}/${candidates.length}`,
               estimate: partial.estimate
             });
@@ -1262,22 +1462,25 @@ function runBanditRl({ balance, characters, gaRows, bestByCharacter, seed, runs,
   }
   if (deadlineMs && Date.now() >= deadlineMs && roundIndex >= rounds) stopReason = "duration";
 
-  const bestStrategies = characters.map(character => {
+  const bestStrategies = [];
+  for (const character of characters) {
     const state = states.get(character.id);
-    const best = state.best || annotateNovelty(evaluateAgainstBasic({
+    const best = state.best || annotateNovelty(await evaluateAgainstBasicParallel({
       balance,
       character,
       candidate: makeStrategy(`${character.id}-rl-fallback`, vectorToWeights(state.center)),
       runs,
       seed,
-      phase: "rl-fallback"
+      phase: "rl-fallback",
+      jobs,
+      parallelChunkGames
     }), 0);
-    return {
+    bestStrategies.push({
       ...best,
       characterName: character.name,
       phase: "rl-best"
-    };
-  });
+    });
+  }
   writeJson(path.join(outputDir, "rl-history.json"), history);
   writeJson(path.join(outputDir, "rl-best-strategies.json"), {
     durationHours,
@@ -1633,6 +1836,10 @@ function percent(value) {
   return `${(value * 100).toFixed(1)}%`;
 }
 
+function percentPrecise(value) {
+  return `${(value * 100).toFixed(3)}%`;
+}
+
 function comparisonMarkdown({ config, gaQualified, rlBest, baselineCross, bestCross, characters }) {
   const baselineAverage = baselineCross.matrix.averages.reduce((sum, row) => sum + row.averageWinRate, 0) / baselineCross.matrix.averages.length;
   const bestAverage = bestCross.matrix.averages.reduce((sum, row) => sum + row.averageWinRate, 0) / bestCross.matrix.averages.length;
@@ -1693,6 +1900,7 @@ function rowsToCsv(rows) {
       "pruned",
       "pruneMethod",
       "pruneAtGames",
+      "pruneStage",
       "pruneCiHigh",
       "pruneReason",
       "averageDurationMs",
@@ -1719,6 +1927,7 @@ function rowsToCsv(rows) {
       row.pruned ?? false,
       row.pruneMethod ?? "",
       row.pruneAtGames ?? "",
+      row.pruneStage ?? "",
       row.pruneCiHigh ?? "",
       row.pruneReason ?? "",
       row.averageDurationMs,
@@ -1729,7 +1938,7 @@ function rowsToCsv(rows) {
   ];
 }
 
-function runOptimization(options = {}) {
+async function runOptimization(options = {}) {
   const balance = options.balance || loadBalance(root);
   const allCharacters = options.characters || loadCharacters(root);
   const selected = options.characterId
@@ -1758,8 +1967,22 @@ function runOptimization(options = {}) {
     rlDurationHours: Number(options.rlDurationHours ?? DEFAULT_RL_DURATION_HOURS),
     rlSigma: Number(options.rlSigma ?? DEFAULT_RL_SIGMA),
     rlTemperature: Number(options.rlTemperature ?? DEFAULT_RL_TEMPERATURE),
-    gaPruneCiMinGames: Math.max(0, Math.floor(options.gaPruneCiMinGames ?? DEFAULT_GA_PRUNE_CI_MIN_GAMES)),
-    rlPruneCiMinGames: Math.max(0, Math.floor(options.rlPruneCiMinGames ?? DEFAULT_RL_PRUNE_CI_MIN_GAMES)),
+    jobs: Math.max(1, Math.min(availableParallelism(), positiveIntegerValue(options.jobs, DEFAULT_JOBS))),
+    parallelChunkGames: positiveIntegerValue(options.parallelChunkGames, DEFAULT_PARALLEL_CHUNK_GAMES),
+    gaPruneCiSchedule: options.gaPruneCiSchedule !== undefined
+      ? String(options.gaPruneCiSchedule)
+      : options.gaPruneCiMinGames !== undefined
+        ? Number(options.gaPruneCiMinGames) > 0
+          ? `${Math.max(1, Math.floor(options.gaPruneCiMinGames))}-:${Number(options.pruneCiTargetWinRate ?? DEFAULT_PRUNE_CI_TARGET_WIN_RATE)}`
+          : ""
+        : DEFAULT_PRUNE_CI_SCHEDULE,
+    rlPruneCiSchedule: options.rlPruneCiSchedule !== undefined
+      ? String(options.rlPruneCiSchedule)
+      : options.rlPruneCiMinGames !== undefined
+        ? Number(options.rlPruneCiMinGames) > 0
+          ? `${Math.max(1, Math.floor(options.rlPruneCiMinGames))}-:${Number(options.pruneCiTargetWinRate ?? DEFAULT_PRUNE_CI_TARGET_WIN_RATE)}`
+          : ""
+        : DEFAULT_PRUNE_CI_SCHEDULE,
     pruneCiTargetWinRate: Number(options.pruneCiTargetWinRate ?? DEFAULT_PRUNE_CI_TARGET_WIN_RATE),
     pruneCiZ: Number(options.pruneCiZ ?? DEFAULT_PRUNE_CI_Z),
     characterIds: characters.map(character => character.id)
@@ -1795,7 +2018,7 @@ function runOptimization(options = {}) {
     data.targetAnalysis = targetAnalysis;
   }, true);
 
-  const ga = runGaSearch({
+  const ga = await runGaSearch({
     balance,
     characters,
     seed,
@@ -1811,10 +2034,12 @@ function runOptimization(options = {}) {
     outputDir,
     progress,
     checkpointManager,
-    pruneRule: confidencePruneRule(config.gaPruneCiMinGames, config.pruneCiTargetWinRate, config.pruneCiZ)
+    pruneRule: confidencePruneRule(config.gaPruneCiSchedule, config.pruneCiZ),
+    jobs: config.jobs,
+    parallelChunkGames: config.parallelChunkGames
   });
   const gaRowsForRl = qualifiedRows(ga.allRows);
-  const rl = runBanditRl({
+  const rl = await runBanditRl({
     balance,
     characters,
     gaRows: gaRowsForRl,
@@ -1829,7 +2054,9 @@ function runOptimization(options = {}) {
     outputDir,
     progress,
     checkpointManager,
-    pruneRule: confidencePruneRule(config.rlPruneCiMinGames, config.pruneCiTargetWinRate, config.pruneCiZ)
+    pruneRule: confidencePruneRule(config.rlPruneCiSchedule, config.pruneCiZ),
+    jobs: config.jobs,
+    parallelChunkGames: config.parallelChunkGames
   });
 
   const baselineStrategyFile = buildStrategyFile(characters.map(character => ({
@@ -1965,7 +2192,7 @@ function writeCycleSummary(outputDir, rows) {
   fs.writeFileSync(path.join(outputDir, "cycles-summary.md"), `${lines.join("\n")}\n`, "utf8");
 }
 
-function runMultiCycleOptimization(options = {}) {
+async function runMultiCycleOptimization(options = {}) {
   const cycles = Math.max(1, Math.floor(options.cycles ?? DEFAULT_CYCLES));
   if (cycles === 1) return runOptimization(options);
   const seed = String(options.seed || DEFAULT_SEED);
@@ -1975,7 +2202,7 @@ function runMultiCycleOptimization(options = {}) {
   for (let cycle = 1; cycle <= cycles; cycle += 1) {
     const cycleSeed = `${seed}-cycle-${cycle}`;
     console.log(`Cycle ${cycle}/${cycles}: ${cycleSeed}`);
-    cycleResults.push(runOptimization({
+    cycleResults.push(await runOptimization({
       ...options,
       cycles: 1,
       seed: cycleSeed,
@@ -1999,9 +2226,10 @@ function runMultiCycleOptimization(options = {}) {
   return { manifest, cycles: cycleResults, cycleSummary: rows };
 }
 
-function main() {
+async function main() {
   const args = parseArgs(process.argv.slice(2));
   const pruneCiDisabled = Boolean(args["no-prune-ci"]);
+  const pruneCiTargetWinRate = numberArg(args, "prune-ci-target-win-rate", DEFAULT_PRUNE_CI_TARGET_WIN_RATE);
   const options = {
     seed: stringArg(args, "seed", DEFAULT_SEED),
     characterId: args.character ? String(args.character) : undefined,
@@ -2023,15 +2251,35 @@ function main() {
     rlDurationHours: numberArg(args, "rl-duration-hours", DEFAULT_RL_DURATION_HOURS),
     rlSigma: numberArg(args, "rl-sigma", DEFAULT_RL_SIGMA),
     rlTemperature: numberArg(args, "rl-temperature", DEFAULT_RL_TEMPERATURE),
-    gaPruneCiMinGames: pruneCiDisabled ? 0 : nonNegativeIntegerArg(args, "ga-prune-ci-min-games", DEFAULT_GA_PRUNE_CI_MIN_GAMES),
-    rlPruneCiMinGames: pruneCiDisabled ? 0 : nonNegativeIntegerArg(args, "rl-prune-ci-min-games", DEFAULT_RL_PRUNE_CI_MIN_GAMES),
-    pruneCiTargetWinRate: numberArg(args, "prune-ci-target-win-rate", DEFAULT_PRUNE_CI_TARGET_WIN_RATE),
+    jobs: integerArg(args, "jobs", DEFAULT_JOBS),
+    parallelChunkGames: integerArg(args, "parallel-chunk-games", DEFAULT_PARALLEL_CHUNK_GAMES),
+    gaPruneCiSchedule: pruneCiDisabled
+      ? ""
+      : args["ga-prune-ci-schedule"] !== undefined
+        ? stringArg(args, "ga-prune-ci-schedule", DEFAULT_PRUNE_CI_SCHEDULE)
+        : args["ga-prune-ci-min-games"] !== undefined
+          ? (() => {
+              const minGames = nonNegativeIntegerArg(args, "ga-prune-ci-min-games", 0);
+              return minGames ? `${minGames}-:${pruneCiTargetWinRate}` : "";
+            })()
+          : DEFAULT_PRUNE_CI_SCHEDULE,
+    rlPruneCiSchedule: pruneCiDisabled
+      ? ""
+      : args["rl-prune-ci-schedule"] !== undefined
+        ? stringArg(args, "rl-prune-ci-schedule", DEFAULT_PRUNE_CI_SCHEDULE)
+        : args["rl-prune-ci-min-games"] !== undefined
+          ? (() => {
+              const minGames = nonNegativeIntegerArg(args, "rl-prune-ci-min-games", 0);
+              return minGames ? `${minGames}-:${pruneCiTargetWinRate}` : "";
+            })()
+          : DEFAULT_PRUNE_CI_SCHEDULE,
+    pruneCiTargetWinRate,
     pruneCiZ: numberArg(args, "prune-ci-z", DEFAULT_PRUNE_CI_Z),
     resume: !args.fresh,
     progress: !args["no-progress"],
     progressLogIntervalMs: numberArg(args, "progress-log-ms", 5000)
   };
-  const result = runMultiCycleOptimization(options);
+  const result = await runMultiCycleOptimization(options);
   console.log(`Manifest: ${result.manifest.outputs.directory}\\manifest.json`);
   if (result.cycleSummary) {
     result.cycleSummary.forEach(row => {
@@ -2045,13 +2293,26 @@ function main() {
   }
 }
 
-if (require.main === module) {
+function runWorkerProcess() {
   try {
-    main();
+    if (workerData?.task !== "evaluate-basic-chunk") {
+      throw new Error(`Unknown strategy optimization worker task: ${workerData?.task || "none"}`);
+    }
+    parentPort.postMessage({
+      totals: evaluateBasicChunk(workerData)
+    });
   } catch (error) {
+    parentPort.postMessage({ error: error.stack || error.message });
+  }
+}
+
+if (!isMainThread) {
+  runWorkerProcess();
+} else if (require.main === module) {
+  main().catch(error => {
     console.error(error.stack || error.message);
     process.exitCode = 1;
-  }
+  });
 }
 
 module.exports = {
@@ -2061,6 +2322,7 @@ module.exports = {
   confidencePruneDecision,
   confidencePruneRule,
   evaluateAgainstBasic,
+  evaluateAgainstBasicParallel,
   normalizedDistance,
   qualifiedRows,
   runBanditRl,

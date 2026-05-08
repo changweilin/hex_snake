@@ -59,6 +59,8 @@ const {
   buildTrainingTargetAnalysis,
   confidencePruneDecision,
   confidencePruneRule,
+  evaluateAgainstBasic,
+  evaluateAgainstBasicParallel,
   runOptimization
 } = require("./run-strategy-optimization");
 
@@ -1803,6 +1805,40 @@ test("lobster palm big attack stops the fist at the first collision", () => {
   assert.equal(firstBurst.burstDamage, bigDamage * 1.6);
 });
 
+test("lobster second palm volley starts from current head and retracks the turn", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("lobster"),
+    computerCharacter: characterById.get("dragon"),
+    seed: "lobster-palm-second-volley-retrack",
+    initialBombs: balance.attack.bigAttackBombCost,
+    initialStock: Object.fromEntries(FOOD_TYPES.map(type => [type, 6]))
+  });
+  const player = state.fighters.player;
+  const computer = state.fighters.computer;
+  player.snake = [{ q: 0, r: 0 }];
+  player.dir = 2;
+  player.hp = 1000;
+  computer.hp = 1000;
+  computer.snake = [{ q: 2, r: 0 }];
+  state.foods = [];
+
+  assert.equal(launchAttack(state, player, computer, "big", state.now, balance), true);
+  const setup = state.projectiles.find(projectile => projectile.kind === "lobsterPalmSetup");
+  assert.ok(setup);
+
+  player.snake = [{ q: 0, r: 1 }];
+  computer.snake = [{ q: 6, r: 0 }, { q: 6, r: -1 }];
+  resolveProjectiles(state, setup.impactAt, balance);
+  const secondFist = state.projectiles
+    .filter(projectile => projectile.kind === "lobsterPalm" && projectile.createdAt === setup.impactAt)
+    .sort((left, right) => left.impactAt - right.impactAt)[0];
+  assert.ok(secondFist);
+  assert.deepEqual(secondFist.source, player.snake[0]);
+  assert.deepEqual(secondFist.target, computer.snake[0]);
+  assert.deepEqual(secondFist.pathCells.at(-1), computer.snake[0]);
+});
+
 test("gu king big attack uses 1.5x damage and steps toward highest damage", () => {
   const state = createMatchState({
     balance,
@@ -1822,6 +1858,7 @@ test("gu king big attack uses 1.5x damage and steps toward highest damage", () =
     { q: 3, r: -1 }
   ];
 
+  const originalTarget = chooseAttackTarget(state, player, computer, balance, "big");
   assert.equal(launchAttack(state, player, computer, "big", state.now, balance), true);
   const bigDamage = attackStats(player.stock, "big", balance).damage;
   const blasts = state.projectiles.filter(projectile => projectile.kind === "circle" && projectile.profile === "big");
@@ -1829,14 +1866,36 @@ test("gu king big attack uses 1.5x damage and steps toward highest damage", () =
   blasts.forEach(projectile => assert.equal(projectile.damage, bigDamage * 1.5));
   const bestStep = currentTarget => DIRECTIONS
     .map((_, direction) => nextWrappedCell(currentTarget, direction, state.radius))
-    .map(candidate => ({
-      target: candidate,
-      damage: damageSnake(computer.snake, candidate, blasts[0].radius, blasts[0].damage, balance),
-      headDistance: hexDistance(candidate, computer.snake[0])
-    }))
-    .sort((left, right) => (right.damage - left.damage) || (left.headDistance - right.headDistance))[0].target;
+    .reduce((best, candidate) => {
+      const damage = damageSnake(computer.snake, candidate, blasts[0].radius, blasts[0].damage, balance);
+      return damage > best.damage ? { target: candidate, damage } : best;
+    }, {
+      target: currentTarget,
+      damage: damageSnake(computer.snake, currentTarget, blasts[0].radius, blasts[0].damage, balance)
+    }).target;
+  assert.deepEqual(blasts[0].target, bestStep(originalTarget));
   assert.deepEqual(blasts[1].target, bestStep(blasts[0].target));
   assert.deepEqual(blasts[2].target, bestStep(blasts[1].target));
+
+  const stableState = createMatchState({
+    balance,
+    playerCharacter: characterById.get("gu_king"),
+    computerCharacter: characterById.get("dragon"),
+    seed: "gu-king-stay-on-best",
+    initialBombs: balance.attack.bigAttackBombCost,
+    initialStock: Object.fromEntries(FOOD_TYPES.map(type => [type, 2]))
+  });
+  const stablePlayer = stableState.fighters.player;
+  const stableComputer = stableState.fighters.computer;
+  stableComputer.snake = [{ q: 0, r: 0 }];
+  stableComputer.hp = 1000;
+  stableState.foods = [];
+  stablePlayer.policy.aiDifficulty = "high";
+  stablePlayer.policy.strategyWeights.castTarget = { targetHead: 3, bodyCluster: 0, targetNearestFood: 0 };
+  const stableTarget = chooseAttackTarget(stableState, stablePlayer, stableComputer, balance, "big");
+  assert.equal(launchAttack(stableState, stablePlayer, stableComputer, "big", stableState.now, balance), true);
+  const stableBlast = stableState.projectiles.find(projectile => projectile.kind === "circle" && projectile.profile === "big");
+  assert.deepEqual(stableBlast.target, stableTarget);
 });
 
 test("protein fractional radius uses linear falloff only inside the circle", () => {
@@ -2123,10 +2182,10 @@ test("AI strategy tuner defaults to two-hour full-character rounds", () => {
   assert.deepEqual([...roundsByCharacter.values()], characters.map(() => 1));
 });
 
-test("strategy optimizer writes live progress, target analysis, and checkpoint", () => {
+test("strategy optimizer writes live progress, target analysis, and checkpoint", async () => {
   const selectedCharacters = characters.slice(0, 2);
   const outputDir = path.join(root, "reports", "strategy-optimization-progress-test");
-  const result = runOptimization({
+  const result = await runOptimization({
     balance,
     characters: selectedCharacters,
     seed: "strategy-progress-test",
@@ -2138,6 +2197,8 @@ test("strategy optimizer writes live progress, target analysis, and checkpoint",
     rlRuns: 1,
     crossRuns: 1,
     minQualified: 1,
+    jobs: 2,
+    parallelChunkGames: 2,
     outputDir,
     resume: false,
     progressLogIntervalMs: Number.MAX_SAFE_INTEGER
@@ -2160,14 +2221,47 @@ test("strategy optimizer writes live progress, target analysis, and checkpoint",
   assert.equal(result.manifest.outputs.checkpoint, checkpointPath);
 });
 
-test("confidence pruning waits for the minimum sample and uses Wilson upper bound", () => {
-  const rule = confidencePruneRule(250, 0.5, 1.96);
-  assert.equal(confidencePruneDecision({ games: 249, wins: 0 }, rule), null);
-  assert.equal(confidencePruneDecision({ games: 250, wins: 125 }, rule), null);
-  const decision = confidencePruneDecision({ games: 250, wins: 100 }, rule);
+test("confidence pruning uses staged Wilson upper-bound thresholds", () => {
+  const rule = confidencePruneRule("10-50:0.45,51-100:0.48,101-:0.5", 1.96);
+  assert.equal(confidencePruneDecision({ games: 9, wins: 0 }, rule), null);
+  assert.equal(confidencePruneDecision({ games: 10, wins: 2 }, rule), null);
+  const earlyDecision = confidencePruneDecision({ games: 10, wins: 1 }, rule);
+  assert.equal(earlyDecision.pruned, true);
+  assert.equal(earlyDecision.pruneStage, "10-50");
+  assert.ok(earlyDecision.pruneCiHigh < 0.45);
+  assert.equal(confidencePruneDecision({ games: 100, wins: 40 }, rule), null);
+  const midDecision = confidencePruneDecision({ games: 100, wins: 38 }, rule);
+  assert.equal(midDecision.pruned, true);
+  assert.equal(midDecision.pruneStage, "51-100");
+  assert.ok(midDecision.pruneCiHigh < 0.48);
+  const decision = confidencePruneDecision({ games: 101, wins: 39 }, rule);
   assert.equal(decision.pruned, true);
-  assert.equal(decision.pruneAtGames, 250);
-  assert.ok(decision.pruneCiHigh <= 0.5);
+  assert.equal(decision.pruneAtGames, 101);
+  assert.equal(decision.pruneStage, "101+");
+  assert.ok(decision.pruneCiHigh < 0.5);
+});
+
+test("parallel strategy evaluation matches serial totals", async () => {
+  const character = characters[0];
+  const candidate = {
+    id: "parallel-equivalence-basic",
+    strategyWeights: basicStrategyWeights()
+  };
+  const options = {
+    balance,
+    character,
+    candidate,
+    runs: 12,
+    seed: "parallel-equivalence",
+    phase: "test"
+  };
+  const serial = evaluateAgainstBasic(options);
+  const parallel = await evaluateAgainstBasicParallel({
+    ...options,
+    jobs: 3,
+    parallelChunkGames: 5
+  });
+  assert.deepEqual(parallel, serial);
 });
 
 test("basic strategy weights are fixed and not role-adjusted", () => {
@@ -2296,25 +2390,29 @@ test("apply-ai-strategy builds complete character strategy data", () => {
   assert.equal(updateIndex(strategyData, characters), false);
 });
 
-let failed = 0;
 const selectedTests = quickMode
   ? tests.filter(({ name }) => !slowTestPatterns.some(pattern => pattern.test(name)))
   : tests;
 
-selectedTests.forEach(({ name, fn }) => {
-  try {
-    fn();
-    console.log(`ok - ${name}`);
-  } catch (error) {
-    failed += 1;
-    console.error(`not ok - ${name}`);
-    console.error(error.stack || error.message);
+async function runSelectedTests() {
+  let failed = 0;
+  for (const { name, fn } of selectedTests) {
+    try {
+      await fn();
+      console.log(`ok - ${name}`);
+    } catch (error) {
+      failed += 1;
+      console.error(`not ok - ${name}`);
+      console.error(error.stack || error.message);
+    }
   }
-});
 
-if (failed) {
-  process.exit(1);
-} else {
-  console.log(`${selectedTests.length}${quickMode ? `/${tests.length}` : ""} tests passed.`);
-  process.exit(0);
+  if (failed) {
+    process.exit(1);
+  } else {
+    console.log(`${selectedTests.length}${quickMode ? `/${tests.length}` : ""} tests passed.`);
+    process.exit(0);
+  }
 }
+
+runSelectedTests();

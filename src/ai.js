@@ -1027,6 +1027,7 @@
     }
 
     function isProjectileVisibleTo(observer, projectile, now) {
+      if (projectile.kind === "lobsterPalmSetup") return false;
       if (projectile.owner === observer) return true;
       if (!projectile.sandwormHidden) return true;
       return projectile.impactAt - now <= sandwormRevealBeforeImpactMs;

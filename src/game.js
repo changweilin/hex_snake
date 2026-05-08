@@ -1352,14 +1352,93 @@
 
     function guKingBestDamageStep(currentTarget, targetSnake, radius, damage) {
       const head = targetSnake[0];
+      const current = {
+        target: { q: currentTarget.q, r: currentTarget.r },
+        damage: damageSnake(targetSnake, currentTarget, radius, damage),
+        headDistance: head ? hexDistance(currentTarget, head) : 0
+      };
       return directions
         .map((_, direction) => nextWrappedCell(currentTarget, direction))
-        .map(candidate => ({
-          target: candidate,
-          damage: damageSnake(targetSnake, candidate, radius, damage),
-          headDistance: head ? hexDistance(candidate, head) : 0
-        }))
-        .sort((left, right) => (right.damage - left.damage) || (left.headDistance - right.headDistance))[0]?.target || currentTarget;
+        .reduce((best, candidate) => {
+          const next = {
+            target: candidate,
+            damage: damageSnake(targetSnake, candidate, radius, damage),
+            headDistance: head ? hexDistance(candidate, head) : 0
+          };
+          if (next.damage > best.damage) return next;
+          if (next.damage === best.damage && keyOf(best.target) !== keyOf(current.target) && next.headDistance < best.headDistance) return next;
+          return best;
+        }, current).target;
+    }
+
+    function scheduleLobsterPalmVolley({
+      owner,
+      source,
+      direction,
+      targetSnake,
+      now,
+      smallDelay,
+      fistStepMs,
+      contactRadius,
+      contactDamage,
+      burstRadius,
+      burstDamage,
+      stunChance,
+      headStunChance,
+      vulnerabilityChance,
+      visualType,
+      hand
+    }) {
+      const path = lobsterFistPath(source, direction, targetSnake);
+      const hits = pathHits(path, targetSnake);
+      const firstHit = hits[0];
+      const travelPath = firstHit ? path.slice(0, firstHit.index + 1) : path;
+      const endCell = firstHit?.cell || path[path.length - 1] || source;
+      const travelDelay = smallDelay + travelPath.length * fistStepMs;
+      projectiles.push({
+        kind: "lobsterPalm",
+        owner,
+        profile: "big",
+        source: { q: source.q, r: source.r },
+        target: { q: endCell.q, r: endCell.r },
+        pathCells: travelPath,
+        visualType,
+        hand,
+        createdAt: now,
+        impactAt: now + travelDelay,
+        delay: travelDelay,
+        radius: contactRadius,
+        damage: contactDamage,
+        burstRadius,
+        burstDamage,
+        stunChance,
+        headStunChance,
+        vulnerabilityChance
+      });
+      const burstHits = firstHit ? [firstHit] : [{ cell: endCell, index: Math.max(0, travelPath.length - 1) }];
+      burstHits.forEach(hit => {
+        projectiles.push({
+          kind: "lobsterPalmBurst",
+          owner,
+          profile: "big",
+          source: { q: source.q, r: source.r },
+          target: { q: hit.cell.q, r: hit.cell.r },
+          visualType,
+          hand,
+          hidden: true,
+          createdAt: now,
+          impactAt: now + smallDelay + (hit.index + 1) * fistStepMs,
+          delay: smallDelay + (hit.index + 1) * fistStepMs,
+          radius: contactRadius,
+          damage: contactDamage,
+          burstRadius,
+          burstDamage,
+          stunChance,
+          headStunChance,
+          vulnerabilityChance
+        });
+      });
+      return travelDelay;
     }
 
     function lobsterPalmVulnerabilityChance(stock) {
@@ -1381,14 +1460,7 @@
         : directionFromSourceToTarget(source, target, ownerDirection(owner));
 
       if (character.id === "lobster") {
-        const targetSnake = owner === "player" ? computerSnake : snake;
-        const path = lobsterFistPath(source, direction, targetSnake);
-        const hits = pathHits(path, targetSnake);
-        const firstHit = hits[0];
-        const travelPath = firstHit ? path.slice(0, firstHit.index + 1) : path;
-        const endCell = firstHit?.cell || path[path.length - 1] || source;
         const fistStepMs = ultimateSetting(character.id, "fistStepMs", lobsterPalmStepMs);
-        const travelDelay = small.delay + travelPath.length * fistStepMs;
         const volleys = Math.max(1, Math.round(ultimateSetting(character.id, "volleyCount", 2)));
         const contactDamage = bigDamage * ultimateSetting(character.id, "contactDamageMultiplier", 0.6);
         const contactRadius = Math.max(0.25, ultimateSetting(character.id, "contactRadius", 1));
@@ -1399,43 +1471,46 @@
           : lobsterPalmVulnerabilityChance(stock);
         const visualType = "lobster-palm-big";
         const volleyIntervalMs = attackDelay(stock);
+        let maxTravelDelay = 0;
         for (let volley = 0; volley < volleys; volley += 1) {
           const volleyDelay = volley * volleyIntervalMs;
           const hand = volley % 2 === 0 ? "right" : "left";
-          projectiles.push({
-            kind: "lobsterPalm",
-            owner,
-            profile: "big",
-            source: { q: source.q, r: source.r },
-            target: { q: endCell.q, r: endCell.r },
-            pathCells: travelPath,
-            visualType,
-            hand,
-            createdAt: now + volleyDelay,
-            impactAt: now + volleyDelay + travelDelay,
-            delay: travelDelay,
-            radius: contactRadius,
-            damage: contactDamage,
-            burstRadius,
-            burstDamage,
-            stunChance,
-            headStunChance: options.hitStunChances?.head ?? stunChance,
-            vulnerabilityChance: palmVulnerabilityChance
-          });
-          const burstHits = firstHit ? [firstHit] : [{ cell: endCell, index: Math.max(0, travelPath.length - 1) }];
-          burstHits.forEach(hit => {
+          if (volley === 0) {
+            maxTravelDelay = Math.max(maxTravelDelay, scheduleLobsterPalmVolley({
+              owner,
+              source,
+              direction,
+              targetSnake: owner === "player" ? computerSnake : snake,
+              now,
+              smallDelay: small.delay,
+              fistStepMs,
+              contactRadius,
+              contactDamage,
+              burstRadius,
+              burstDamage,
+              stunChance,
+              headStunChance: options.hitStunChances?.head ?? stunChance,
+              vulnerabilityChance: palmVulnerabilityChance,
+              visualType,
+              hand
+            }));
+          } else {
+            const maxSteps = Math.max(1, Math.ceil((radius * 2 + 1) / 2));
+            maxTravelDelay = Math.max(maxTravelDelay, small.delay + maxSteps * fistStepMs);
             projectiles.push({
-              kind: "lobsterPalmBurst",
+              kind: "lobsterPalmSetup",
               owner,
               profile: "big",
-              source: { q: source.q, r: source.r },
-              target: { q: hit.cell.q, r: hit.cell.r },
+              target: { q: target.q, r: target.r },
+              direction,
               visualType,
               hand,
               hidden: true,
               createdAt: now + volleyDelay,
-              impactAt: now + volleyDelay + small.delay + (hit.index + 1) * fistStepMs,
-              delay: small.delay + (hit.index + 1) * fistStepMs,
+              impactAt: now + volleyDelay,
+              delay: 0,
+              smallDelay: small.delay,
+              fistStepMs,
               radius: contactRadius,
               damage: contactDamage,
               burstRadius,
@@ -1444,9 +1519,9 @@
               headStunChance: options.hitStunChances?.head ?? stunChance,
               vulnerabilityChance: palmVulnerabilityChance
             });
-          });
+          }
         }
-        return travelDelay + (volleys - 1) * volleyIntervalMs;
+        return maxTravelDelay + (volleys - 1) * volleyIntervalMs;
       }
 
       if (character.id === "moray") {
@@ -1589,7 +1664,7 @@
         let waveTarget = { q: target.q, r: target.r };
         for (let index = 0; index < 3; index += 1) {
           const impactDelay = firstImpactDelay + index * volleyIntervalMs;
-          if (index > 0) waveTarget = guKingBestDamageStep(waveTarget, targetSnake, small.radius, damage);
+          waveTarget = guKingBestDamageStep(waveTarget, targetSnake, small.radius, damage);
           pushCircleAttack({
             owner,
             profile: "big",
@@ -1839,7 +1914,30 @@
         let computerDamage = 0;
         let playerStunChance = projectile.stunChance;
         let computerStunChance = projectile.stunChance;
-        if (projectile.kind === "lobsterPalm") {
+        if (projectile.kind === "lobsterPalmSetup") {
+          const source = ownerHead(projectile.owner);
+          if (source) {
+            scheduleLobsterPalmVolley({
+              owner: projectile.owner,
+              source,
+              direction: Number.isInteger(projectile.direction) ? projectile.direction : ownerDirection(projectile.owner),
+              targetSnake: projectile.owner === "player" ? computerSnake : snake,
+              now,
+              smallDelay: projectile.smallDelay,
+              fistStepMs: projectile.fistStepMs,
+              contactRadius: projectile.radius,
+              contactDamage: projectile.damage,
+              burstRadius: projectile.burstRadius,
+              burstDamage: projectile.burstDamage,
+              stunChance: projectile.stunChance,
+              headStunChance: projectile.headStunChance,
+              vulnerabilityChance: projectile.vulnerabilityChance,
+              visualType: projectile.visualType,
+              hand: projectile.hand
+            });
+          }
+          return;
+        } else if (projectile.kind === "lobsterPalm") {
           return;
         } else if (projectile.kind === "lobsterPalmBurst") {
           const defenderOwner = projectile.owner === "player" ? "computer" : "player";
@@ -1954,6 +2052,7 @@
     }
 
     function addProjectileImpactVisual(projectile, now) {
+      if (projectile.kind === "lobsterPalmSetup") return;
       if (projectile.kind === "lobsterPalm") return;
       if (projectile.kind === "lobsterPalmBurst") {
         blasts.push({
