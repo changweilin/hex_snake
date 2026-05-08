@@ -581,9 +581,11 @@
       playerStunUntil = 0;
       playerSlowUntil = 0;
       playerCollisionParalysisMs = 0;
+      playerVulnerable = false;
       computerStunUntil = 0;
       computerSlowUntil = 0;
       computerCollisionParalysisMs = 0;
+      computerVulnerable = false;
       playerUndergroundFrom = 0;
       playerUndergroundUntil = 0;
       computerUndergroundFrom = 0;
@@ -1070,10 +1072,12 @@
         playerStunUntil = Math.min(playerStunUntil, now);
         playerSlowUntil = Math.min(playerSlowUntil, now);
         playerCollisionParalysisMs = 0;
+        playerVulnerable = false;
       } else {
         computerStunUntil = Math.min(computerStunUntil, now);
         computerSlowUntil = Math.min(computerSlowUntil, now);
         computerCollisionParalysisMs = 0;
+        computerVulnerable = false;
       }
     }
 
@@ -1171,10 +1175,6 @@
       if (distance > (band?.width ?? 0)) return 0;
       if (distance <= (band?.fullDamageWidth ?? 0)) return 1;
       return band?.outerDamageMultiplier ?? 1;
-    }
-
-    function lineHitSegmentMultiplier(segmentIndex, options = {}) {
-      return segmentIndex === 0 ? (options.headDamageMultiplier ?? 1) : 1;
     }
 
     function ownerDirection(owner) {
@@ -1350,6 +1350,17 @@
       });
     }
 
+    function lobsterPalmVulnerabilityChance(stock) {
+      return attackStunChance(stock, ultimateSetting("lobster", "vulnerabilityChance", 0.3));
+    }
+
+    function attackHitStunChances(stock) {
+      return {
+        body: Math.min(1, bodyHitStunChance + foodBonus(stock, "carb", bodyHitStunChanceBonusPerPoint, bodyHitMaxStunChanceBonus)),
+        head: Math.min(1, headHitStunChance + foodBonus(stock, "carb", headHitStunChanceBonusPerPoint, headHitMaxStunChanceBonus))
+      };
+    }
+
     function scheduleCharacterBigAttack(owner, character, source, target, now, stock, stunChance, options = {}) {
       const small = attackStats(stock, "small");
       const bigDamage = attackDamage(stock, "big");
@@ -1369,8 +1380,11 @@
         const volleys = Math.max(1, Math.round(ultimateSetting(character.id, "volleyCount", 2)));
         const contactDamage = bigDamage * ultimateSetting(character.id, "contactDamageMultiplier", 0.6);
         const contactRadius = Math.max(0.25, ultimateSetting(character.id, "contactRadius", 1));
-        const burstRadius = small.radius * ultimateSetting(character.id, "burstRadiusMultiplier", 1.5);
+        const burstRadius = small.radius * ultimateSetting(character.id, "burstRadiusMultiplier", 1.6);
         const burstDamage = bigDamage * ultimateSetting(character.id, "burstDamageMultiplier", 1.6);
+        const palmVulnerabilityChance = Number.isFinite(options.vulnerabilityChance)
+          ? options.vulnerabilityChance
+          : lobsterPalmVulnerabilityChance(stock);
         const visualType = "lobster-palm-big";
         const volleyIntervalMs = attackDelay(stock);
         for (let volley = 0; volley < volleys; volley += 1) {
@@ -1392,7 +1406,9 @@
             damage: contactDamage,
             burstRadius,
             burstDamage,
-            stunChance
+            stunChance,
+            headStunChance: options.hitStunChances?.head ?? stunChance,
+            vulnerabilityChance: palmVulnerabilityChance
           });
           const burstHits = firstHit ? [firstHit] : [{ cell: endCell, index: Math.max(0, travelPath.length - 1) }];
           burstHits.forEach(hit => {
@@ -1412,7 +1428,9 @@
               damage: contactDamage,
               burstRadius,
               burstDamage,
-              stunChance
+              stunChance,
+              headStunChance: options.hitStunChances?.head ?? stunChance,
+              vulnerabilityChance: palmVulnerabilityChance
             });
           });
         }
@@ -1424,9 +1442,9 @@
         const lineCells = boardLineThrough(lineOrigin, direction);
         const lineShape = bandShapeFromTotalWidth(small.radius);
         const excludedCells = (owner === "player" ? snake : computerSnake).map(segment => ({ q: segment.q, r: segment.r }));
-        const strikeCount = Math.max(1, Math.round(ultimateSetting(character.id, "strikeCount", 1)));
+        const strikeCount = Math.max(1, Math.round(ultimateSetting(character.id, "strikeCount", 8)));
         const strikeIntervalMs = small.delay * Math.max(0, ultimateSetting(character.id, "strikeIntervalMultiplier", 0.5));
-        const damage = bigDamage * ultimateSetting(character.id, "damageMultiplier", 0.4);
+        const damage = bigDamage * ultimateSetting(character.id, "damageMultiplier", 0.5);
         for (let index = 0; index < strikeCount; index += 1) {
           const strikeDelay = index * strikeIntervalMs;
           projectiles.push({
@@ -1440,13 +1458,13 @@
             width: lineShape.width,
             fullDamageWidth: lineShape.fullDamageWidth,
             outerDamageMultiplier: lineShape.outerDamageMultiplier,
-            headDamageMultiplier: 2,
             visualType: attackVisualType(owner, "big"),
             createdAt: now + strikeDelay,
             impactAt: now + strikeDelay + small.delay,
             delay: small.delay,
             damage,
             stunChance,
+            headStunChance: options.hitStunChances?.head ?? stunChance,
             stackStun: strikeCount > 1
           });
         }
@@ -1458,6 +1476,7 @@
         const duration = 3000;
         const extensionDamageMultiplier = Math.max(0, Math.min(1, (stock.protein || 0) / maxFoodStock));
         const outwardWidth = extensionDamageMultiplier > 0 ? 1 : 0;
+        const tickMs = ultimateSetting(character.id, "tickMs", baseStepMs);
         hazards.push({
           kind: "swamp",
           owner,
@@ -1469,10 +1488,10 @@
           outerDamageMultiplier: extensionDamageMultiplier,
           visualType: attackVisualType(owner, "big"),
           damage: bigDamage * ultimateDamageMultiplier(character.id),
-          stunChance,
+          stunChance: 0,
           startedAt: now + small.delay,
           nextTickAt: now + small.delay,
-          tickMs: moveInterval(stock),
+          tickMs,
           endAt: now + small.delay + duration
         });
         return small.delay + duration;
@@ -1506,10 +1525,9 @@
           radius: Math.max(0.5, small.radius * 0.5),
           damage: bigDamage * ultimateSetting(character.id, "damageMultiplier", 6),
           stunChance,
+          headStunChance: options.hitStunChances?.head ?? stunChance,
           hidden: true,
-          sandwormHidden: true,
-          sandwormParalyzeOnBody: true,
-          sandwormKillOnHead: true
+          sandwormHidden: true
         });
         return delay;
       }
@@ -1540,6 +1558,7 @@
             radiationTickMs,
             radiationTotalDamage,
             stunChance,
+            headStunChance: options.hitStunChances?.head ?? stunChance,
             flat: true,
             visualType
           });
@@ -1561,14 +1580,15 @@
             delay: impactDelay,
             radius: small.radius,
             damage: bigDamage * ultimateSetting(character.id, "damageMultiplier", 1.5),
-            stunChance
+            stunChance,
+            headStunChance: options.hitStunChances?.head ?? stunChance
           });
         }
         return firstImpactDelay + volleyIntervalMs * 2;
       }
 
       const big = attackStats(stock, "big");
-      pushCircleAttack({ owner, profile: "big", target, createdAt: now, impactAt: now + big.delay, delay: big.delay, radius: big.radius, damage: big.damage * ultimateDamageMultiplier(character.id), stunChance });
+      pushCircleAttack({ owner, profile: "big", target, createdAt: now, impactAt: now + big.delay, delay: big.delay, radius: big.radius, damage: big.damage * ultimateDamageMultiplier(character.id), stunChance, headStunChance: options.hitStunChances?.head ?? stunChance });
       return big.delay;
     }
 
@@ -1581,7 +1601,11 @@
       if (!canAttack(owner, profile)) return false;
       if (now - lastAttack < attackProfileCooldown(stock, profile, character.id)) return false;
       const stats = attackStats(stock, profile);
-      const stunChance = attackStunChance(stock);
+      const hitStunChances = attackHitStunChances(stock);
+      const stunChance = hitStunChances.body;
+      const vulnerabilityChance = !isSmall && character.id === "lobster"
+        ? lobsterPalmVulnerabilityChance(stock)
+        : 0;
       consumeAttackCost(owner, stock, profile);
       if (owner === "player") {
         setLastAttackMsFor(owner, profile, now);
@@ -1593,7 +1617,7 @@
       HexSnakeAudio.playCharacter(owner, isSmall ? "small" : "big");
       const poseDuration = isSmall
         ? stats.delay
-        : scheduleCharacterBigAttack(owner, character, source, target, now, stock, stunChance, options);
+        : scheduleCharacterBigAttack(owner, character, source, target, now, stock, stunChance, { ...options, vulnerabilityChance, hitStunChances });
       if (isSmall) {
         projectiles.push({
           kind: "circle",
@@ -1607,7 +1631,8 @@
           delay: stats.delay,
           radius: stats.radius,
           damage: stats.damage,
-          stunChance
+          stunChance,
+          headStunChance: hitStunChances.head
         });
       }
       setFighterPose(owner, "attack", Math.max(180, Math.min(poseDuration, 520)));
@@ -1628,34 +1653,65 @@
       return Math.max(0, Math.min(1, 1 - distance / radius));
     }
 
-    function damageSnakeCells(parts, effectCells, width, damageScale, excludedCells = [], minDistance = 0, outerDamageMultiplier = 1, fullDamageWidth = 0, headDamageMultiplier = 1) {
+    function circleAttackHitsHead(parts, target, radius) {
+      const head = parts[0];
+      return Boolean(head && target && circleDamageMultiplier(hexDistance(head, target), radius) > 0);
+    }
+
+    function stunChanceForHeadHit(hitHead, projectile) {
+      return hitHead ? projectile.headStunChance ?? projectile.stunChance : projectile.stunChance;
+    }
+
+    function damageSnakeCells(parts, effectCells, width, damageScale, excludedCells = [], minDistance = 0, outerDamageMultiplier = 1, fullDamageWidth = 0) {
       const excluded = cellKeySet(excludedCells);
-      return parts.reduce((total, segment, index) => {
+      return parts.reduce((total, segment) => {
         if (excluded.has(keyOf(segment))) return total;
         const bestMultiplier = effectCells.reduce((best, cell) => {
           const distance = hexDistance(segment, cell);
           if (distance < minDistance || distance > width) return best;
           return Math.max(best, lineBandDamageMultiplier(distance, { width, fullDamageWidth, outerDamageMultiplier }));
         }, 0);
-        return bestMultiplier > 0 ? total + damageScale * bestMultiplier * lineHitSegmentMultiplier(index, { headDamageMultiplier }) : total;
+        return bestMultiplier > 0 ? total + damageScale * bestMultiplier : total;
       }, 0);
     }
 
-    function snakeBodyHitAtCenter(parts, target) {
-      return parts.slice(1).some(segment => keyOf(segment) === keyOf(target));
+    function lineProjectileHitsHead(parts, projectile) {
+      const head = parts[0];
+      if (!head) return false;
+      if (cellKeySet(projectile.excludedCells || []).has(keyOf(head))) return false;
+      return (projectile.lineCells || []).some(cell => {
+        const distance = hexDistance(head, cell);
+        if (distance < (projectile.minDistance || 0) || distance > (projectile.width || 0)) return false;
+        return lineBandDamageMultiplier(distance, {
+          width: projectile.width || 0,
+          fullDamageWidth: projectile.fullDamageWidth || 0,
+          outerDamageMultiplier: projectile.outerDamageMultiplier ?? 1
+        }) > 0;
+      });
     }
 
-    function snakeHeadHitAtCenter(parts, target) {
-      return Boolean(parts[0] && keyOf(parts[0]) === keyOf(target));
+    function lineProjectileStunChance(parts, projectile) {
+      return stunChanceForHeadHit(lineProjectileHitsHead(parts, projectile), projectile);
+    }
+
+    function isOwnerVulnerable(owner) {
+      return owner === "player" ? playerVulnerable : computerVulnerable;
+    }
+
+    function setOwnerVulnerable(owner, vulnerable) {
+      if (owner === "player") playerVulnerable = vulnerable;
+      else computerVulnerable = vulnerable;
     }
 
     function applyBlastDamage(owner, damage, now = performance.now()) {
       if (damage <= 0) return;
       if (isOwnerDamageImmune(owner, now)) return;
+      const finalDamage = isOwnerVulnerable(owner) ? damage * 2 : damage;
+      if (isOwnerVulnerable(owner)) setOwnerVulnerable(owner, false);
       if (owner === "player") {
-        playerHp = Math.max(0, playerHp - damage);
+        playerHp = Math.max(0, playerHp - finalDamage);
       } else {
-        computerHp = Math.max(0, computerHp - damage);
+        computerHp = Math.max(0, computerHp - finalDamage);
       }
     }
 
@@ -1684,6 +1740,17 @@
         computerSlowUntil = Math.max(computerSlowUntil, slowUntil);
       }
       showStatusCallout(owner, interrupted ? "暈眩！招式中斷" : "暈眩！", { interrupted });
+      return true;
+    }
+
+    function applyVulnerability(owner, chance = baseAttackStunChance, now = performance.now()) {
+      if (Math.random() >= chance) return false;
+      if (isOwnerSandwormArmored(owner, now)) {
+        clearOwnerAbnormalStatus(owner, now);
+        return false;
+      }
+      setOwnerVulnerable(owner, true);
+      showStatusCallout(owner, "易傷");
       return true;
     }
 
@@ -1740,6 +1807,8 @@
       landed.forEach(projectile => {
         let playerDamage = 0;
         let computerDamage = 0;
+        let playerStunChance = projectile.stunChance;
+        let computerStunChance = projectile.stunChance;
         if (projectile.kind === "lobsterPalm") {
           return;
         } else if (projectile.kind === "lobsterPalmBurst") {
@@ -1750,6 +1819,12 @@
           else computerDamage += contactDamage;
           playerDamage += damageSnake(snake, projectile.target, projectile.burstRadius, projectile.burstDamage);
           computerDamage += damageSnake(computerSnake, projectile.target, projectile.burstRadius, projectile.burstDamage);
+          const playerHeadHit = (defenderOwner === "player" && projectile.damage > 0 && circleAttackHitsHead(snake, projectile.target, projectile.radius))
+            || (projectile.burstDamage > 0 && circleAttackHitsHead(snake, projectile.target, projectile.burstRadius));
+          const computerHeadHit = (defenderOwner === "computer" && projectile.damage > 0 && circleAttackHitsHead(computerSnake, projectile.target, projectile.radius))
+            || (projectile.burstDamage > 0 && circleAttackHitsHead(computerSnake, projectile.target, projectile.burstRadius));
+          playerStunChance = stunChanceForHeadHit(playerHeadHit, projectile);
+          computerStunChance = stunChanceForHeadHit(computerHeadHit, projectile);
           blasts.push({
             kind: "circle",
             target: projectile.target,
@@ -1762,8 +1837,10 @@
           });
           triggerBoardShake(burstVisualType(projectile), now);
         } else if (projectile.kind === "line") {
-          playerDamage = damageSnakeCells(snake, projectile.lineCells, projectile.width, projectile.damage, projectile.excludedCells, 0, projectile.outerDamageMultiplier ?? 1, projectile.fullDamageWidth ?? 0, projectile.headDamageMultiplier ?? 1);
-          computerDamage = damageSnakeCells(computerSnake, projectile.lineCells, projectile.width, projectile.damage, projectile.excludedCells, 0, projectile.outerDamageMultiplier ?? 1, projectile.fullDamageWidth ?? 0, projectile.headDamageMultiplier ?? 1);
+          playerDamage = damageSnakeCells(snake, projectile.lineCells, projectile.width, projectile.damage, projectile.excludedCells, 0, projectile.outerDamageMultiplier ?? 1, projectile.fullDamageWidth ?? 0);
+          computerDamage = damageSnakeCells(computerSnake, projectile.lineCells, projectile.width, projectile.damage, projectile.excludedCells, 0, projectile.outerDamageMultiplier ?? 1, projectile.fullDamageWidth ?? 0);
+          playerStunChance = lineProjectileStunChance(snake, projectile);
+          computerStunChance = lineProjectileStunChance(computerSnake, projectile);
           blasts.push({
             kind: "line",
             lineCells: projectile.lineCells,
@@ -1771,7 +1848,6 @@
             width: projectile.width,
             fullDamageWidth: projectile.fullDamageWidth,
             outerDamageMultiplier: projectile.outerDamageMultiplier,
-            headDamageMultiplier: projectile.headDamageMultiplier,
             target: projectile.target,
             owner: projectile.owner,
             visualType: projectile.visualType || attackVisualType(projectile.owner, projectile.profile),
@@ -1790,6 +1866,8 @@
           const damage = projectile.damage || 1;
           playerDamage = damageSnake(snake, explosionTarget, radius, damage);
           computerDamage = damageSnake(computerSnake, explosionTarget, radius, damage);
+          playerStunChance = stunChanceForHeadHit(circleAttackHitsHead(snake, explosionTarget, radius), projectile);
+          computerStunChance = stunChanceForHeadHit(circleAttackHitsHead(computerSnake, explosionTarget, radius), projectile);
           blasts.push({
             kind: "circle",
             target: explosionTarget,
@@ -1811,22 +1889,12 @@
               width: radius,
               visualType: projectile.visualType === "dragon-spirit-big" ? "dragon-spirit-radiation" : "lobster-radiation",
               damage: projectile.radiationTotalDamage / ticks,
-              stunChance: projectile.stunChance,
+              stunChance: 0,
               startedAt: now,
               nextTickAt: now + projectile.radiationTickMs,
               tickMs: projectile.radiationTickMs,
               endAt: now + projectile.radiationDurationMs
             });
-          }
-          if (projectile.sandwormParalyzeOnBody || projectile.sandwormKillOnHead) {
-            if (projectile.owner !== "player") {
-              if (projectile.sandwormKillOnHead && snakeHeadHitAtCenter(snake, explosionTarget)) playerDamage = Math.max(playerDamage, playerHp);
-              else if (projectile.sandwormParalyzeOnBody && snakeBodyHitAtCenter(snake, explosionTarget)) applyCollisionParalysis("player", now);
-            }
-            if (projectile.owner !== "computer") {
-              if (projectile.sandwormKillOnHead && snakeHeadHitAtCenter(computerSnake, explosionTarget)) computerDamage = Math.max(computerDamage, computerHp);
-              else if (projectile.sandwormParalyzeOnBody && snakeBodyHitAtCenter(computerSnake, explosionTarget)) applyCollisionParalysis("computer", now);
-            }
           }
         }
         if (projectile.owner === "player") playerDamage = 0;
@@ -1836,8 +1904,10 @@
         triggerSmallHitShake(projectile, playerDamage, computerDamage, now);
         applyBlastDamage("player", playerDamage, now);
         applyBlastDamage("computer", computerDamage, now);
-        if (projectile.owner !== "player" && playerDamage > 0) applyAttackStun("player", projectile.stunChance, now, { stack: projectile.stackStun });
-        if (projectile.owner !== "computer" && computerDamage > 0) applyAttackStun("computer", projectile.stunChance, now, { stack: projectile.stackStun });
+        if (projectile.owner !== "player" && playerDamage > 0) applyAttackStun("player", playerStunChance, now, { stack: projectile.stackStun });
+        if (projectile.owner !== "computer" && computerDamage > 0) applyAttackStun("computer", computerStunChance, now, { stack: projectile.stackStun });
+        if (projectile.owner !== "player" && playerDamage > 0 && projectile.vulnerabilityChance > 0) applyVulnerability("player", projectile.vulnerabilityChance, now);
+        if (projectile.owner !== "computer" && computerDamage > 0 && projectile.vulnerabilityChance > 0) applyVulnerability("computer", projectile.vulnerabilityChance, now);
       });
       blasts = blasts.filter(blast => now <= blast.endAt);
       if (playerHp <= 0 || computerHp <= 0) endGame(playerHp <= 0, computerHp <= 0);
@@ -1867,7 +1937,6 @@
           width: projectile.width,
           fullDamageWidth: projectile.fullDamageWidth,
           outerDamageMultiplier: projectile.outerDamageMultiplier,
-          headDamageMultiplier: projectile.headDamageMultiplier,
           target: projectile.target,
           owner: projectile.owner,
           visualType: projectile.visualType || attackVisualType(projectile.owner, projectile.profile),
@@ -1905,7 +1974,7 @@
           width: radius,
           visualType: projectile.visualType === "dragon-spirit-big" ? "dragon-spirit-radiation" : "lobster-radiation",
           damage: 0,
-          stunChance: projectile.stunChance,
+          stunChance: 0,
           startedAt: now,
           nextTickAt: now + projectile.radiationTickMs,
           tickMs: projectile.radiationTickMs,

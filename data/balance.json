@@ -63,6 +63,12 @@
     "baseAttackStunChance": 0.3,
     "attackStunChanceBonusPerPoint": 0.01,
     "maxAttackStunChanceBonus": 0.2,
+    "bodyHitStunChance": 0.15,
+    "bodyHitStunChanceBonusPerPoint": 0.01,
+    "bodyHitMaxStunChanceBonus": 0.2,
+    "headHitStunChance": 0.3,
+    "headHitStunChanceBonusPerPoint": 0.02,
+    "headHitMaxStunChanceBonus": 0.4,
     "attackStunMs": 500,
     "attackSlowMs": 500,
     "rangeDamageFalloffEnabled": false,
@@ -80,8 +86,9 @@
         "fistStepMs": 45,
         "contactDamageMultiplier": 0.6,
         "contactRadius": 1,
-        "burstRadiusMultiplier": 1.5,
+        "burstRadiusMultiplier": 1.6,
         "burstDamageMultiplier": 1.6,
+        "vulnerabilityChance": 0.3,
         "volleyCount": 2
       },
       "sandworm": {
@@ -95,12 +102,13 @@
       },
       "quetzal": {
         "bigCooldownMs": 3600,
-        "damageMultiplier": 1.25
+        "damageMultiplier": 1.25,
+        "tickMs": 460
       },
       "moray": {
         "bigCooldownMs": 2400,
-        "damageMultiplier": 0.4,
-        "strikeCount": 1,
+        "damageMultiplier": 0.5,
+        "strikeCount": 8,
         "strikeIntervalMultiplier": 0.5
       },
       "gu_king": {

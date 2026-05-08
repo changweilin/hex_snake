@@ -46,6 +46,12 @@ let attackSlowMs = 500;
 let baseAttackStunChance = 0.3;
 let attackStunChanceBonusPerPoint = 0.01;
 let maxAttackStunChanceBonus = 0.2;
+let bodyHitStunChance = 0.15;
+let bodyHitStunChanceBonusPerPoint = 0.01;
+let bodyHitMaxStunChanceBonus = 0.2;
+let headHitStunChance = 0.3;
+let headHitStunChanceBonusPerPoint = 0.02;
+let headHitMaxStunChanceBonus = 0.4;
 let attackUltimateBalance = {};
 let maxCollisionParalysisMs = 8000;
 let rangeDamageFalloffEnabled = false;
@@ -136,6 +142,12 @@ function applyBalanceConfig(config) {
   baseAttackStunChance = config.attack?.baseAttackStunChance ?? baseAttackStunChance;
   attackStunChanceBonusPerPoint = config.attack?.attackStunChanceBonusPerPoint ?? attackStunChanceBonusPerPoint;
   maxAttackStunChanceBonus = config.attack?.maxAttackStunChanceBonus ?? maxAttackStunChanceBonus;
+  bodyHitStunChance = config.attack?.bodyHitStunChance ?? bodyHitStunChance;
+  bodyHitStunChanceBonusPerPoint = config.attack?.bodyHitStunChanceBonusPerPoint ?? bodyHitStunChanceBonusPerPoint;
+  bodyHitMaxStunChanceBonus = config.attack?.bodyHitMaxStunChanceBonus ?? bodyHitMaxStunChanceBonus;
+  headHitStunChance = config.attack?.headHitStunChance ?? headHitStunChance;
+  headHitStunChanceBonusPerPoint = config.attack?.headHitStunChanceBonusPerPoint ?? headHitStunChanceBonusPerPoint;
+  headHitMaxStunChanceBonus = config.attack?.headHitMaxStunChanceBonus ?? headHitMaxStunChanceBonus;
   attackStunMs = config.attack?.attackStunMs ?? attackStunMs;
   attackSlowMs = config.attack?.attackSlowMs ?? attackSlowMs;
   rangeDamageFalloffEnabled = config.attack?.rangeDamageFalloffEnabled ?? rangeDamageFalloffEnabled;
@@ -431,9 +443,11 @@ let lastComputerStep = 0;
 let playerStunUntil = 0;
 let playerSlowUntil = 0;
 let playerCollisionParalysisMs = 0;
+let playerVulnerable = false;
 let computerStunUntil = 0;
 let computerSlowUntil = 0;
 let computerCollisionParalysisMs = 0;
+let computerVulnerable = false;
 let playerUndergroundFrom = 0;
 let playerUndergroundUntil = 0;
 let computerUndergroundFrom = 0;
@@ -594,19 +608,19 @@ const characterMoveGuides = {
     tip: "長按棋盤可把落點放在敵方必經路線；爆發傷害較低，但持續區域能逼迫對手轉向。"
   },
   sandworm: {
-    big: "按大招鍵或點「大招」會依 Y 鍵選擇的大招目標快速施放；也可在棋盤長按指定突襲格。沙蟲會<strong>潛地延遲突襲</strong>，命中頭部可<strong>直接擊倒</strong>，命中身體會造成<strong>麻痺</strong>。",
+    big: "按大招鍵或點「大招」會依 Y 鍵選擇的大招目標快速施放；也可在棋盤長按指定突襲格。沙蟲會<strong>潛地延遲突襲</strong>，頭部與身體受到相同傷害，頭部命中的暈眩率較高。",
     tip: "長按棋盤可預判敵方頭部下一步；施放後接近命中時會短暫潛地，可用來躲開危險。"
   },
   quetzal: {
-    big: "按大招鍵、點「大招」，或在棋盤長按都會施放；羽蛇會沿自身蛇身留下<strong>持續 3 秒</strong>的<strong>藤沼區域</strong>，不需要指定落點，蛋白（紅色）庫存越高外擴傷害越完整。",
+    big: "按大招鍵、點「大招」，或在棋盤長按都會施放；羽蛇會沿自身蛇身留下<strong>持續 3 秒</strong>的<strong>藤沼區域</strong>，不需要指定落點，蛋白（紅色）庫存越高外擴傷害越完整，藤沼傷害不會造成暈眩。",
     tip: "適合在敵方靠近你身體或追逐時施放，用身體路徑封鎖空間。"
   },
   moray: {
-    big: "在棋盤拖曳可指定電擊起點與方向，放開施放；按大招鍵或點「大招」則依 Y 鍵選擇的大招方向施放。電鰻會打出貫穿棋盤的<strong>單次直線電擊</strong>，命中可造成<strong>暈眩</strong>。",
+    big: "在棋盤拖曳可指定電擊起點與方向，放開施放；按大招鍵或點「大招」則依 Y 鍵選擇的大招方向施放。電鰻會打出貫穿棋盤的<strong>8 段直線電擊</strong>，頭部與身體受到相同傷害，頭部命中的暈眩率較高。",
     tip: "棋盤拖曳時，拖曳方向比落點更重要；沿敵方身體長軸掃線最容易命中多段。"
   },
   lobster: {
-    big: "在棋盤拖曳可指定出拳方向，放開施放；按大招鍵或點「大招」則依 Y 鍵選擇的大招方向施放。智蝦會從頭部打出<strong>兩波追蹤連拳</strong>，拳路遇到第一個敵方蛇身會<strong>停下並爆發</strong>。",
+    big: "在棋盤拖曳可指定出拳方向，放開施放；按大招鍵或點「大招」則依 Y 鍵選擇的大招方向施放。智蝦會從頭部打出<strong>兩波追蹤連拳</strong>，拳路遇到第一個敵方蛇身會<strong>停下並爆發</strong>，小拳命中可能附加易傷，使下一次受到的傷害加倍。",
     tip: "拖曳方向從自己頭部出拳；對準敵方頭部或彎折蛇身，兩波連拳更容易打滿。"
   },
   gu_king: {
@@ -660,7 +674,7 @@ const tutorialSlides = [
       },
       {
         title: "控制效果",
-        text: `攻擊命中後有 ${Math.round(baseAttackStunChance * 100)}% 基礎機率暈眩，碳水（藍色）庫存會提高暈眩率；暈眩會讓對手短時間無法順利走位。`
+        text: `攻擊命中身體時有 ${Math.round(bodyHitStunChance * 100)}% 基礎機率暈眩，命中頭部時有 ${Math.round(headHitStunChance * 100)}% 基礎機率暈眩，碳水（藍色）庫存會提高暈眩率；暈眩會讓對手短時間無法順利走位。`
       },
       {
         title: "撞擊懲罰",
@@ -1663,8 +1677,8 @@ function attackSpeedMultiplier(stock) {
   return 1 + foodBonus(stock, "carb", attackSpeedBonusPerPoint, maxAttackSpeedBonus);
 }
 
-function attackStunChance(stock) {
-  return Math.min(1, baseAttackStunChance + foodBonus(stock, "carb", attackStunChanceBonusPerPoint, maxAttackStunChanceBonus));
+function attackStunChance(stock, baseChance = baseAttackStunChance) {
+  return Math.min(1, baseChance + foodBonus(stock, "carb", attackStunChanceBonusPerPoint, maxAttackStunChanceBonus));
 }
 
 function moveInterval(stock) {

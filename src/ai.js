@@ -678,7 +678,7 @@
       const allocation = aiStrategyWeightsFor(owner).skillAllocation;
       const allocationScore = profile === "small" ? allocation.preferSmall : allocation.preferBig;
       const resourcePenalty = attackResourceCost(profile) * (profile === "big" ? 0.34 : 0.24);
-      const controlValue = attackStunChance(ownerStock(owner)) * 1.4 + (hasOpponentDebuff(owner, now) ? 0.75 : 0);
+      const controlValue = attackHitStunChances(ownerStock(owner)).body * 1.4 + (hasOpponentDebuff(owner, now) ? 0.75 : 0);
       return cappedDamage * 1.15
         + targetWeight * 0.6
         + castTimingScore(owner, profile, now)
@@ -818,12 +818,11 @@
       return targetSnake.reduce((stats, segment, index) => {
         const distance = lineCells.reduce((best, lineCell) => Math.min(best, hexDistance(segment, lineCell)), Infinity);
         const damageMultiplier = lineBandDamageMultiplier(distance, lineShape);
-        const segmentMultiplier = lineHitSegmentMultiplier(index, lineShape);
         if (index === 0) stats.headDistance = distance;
         if (damageMultiplier > 0) {
-          stats.hits += segmentMultiplier;
-          stats.damageScore += damageMultiplier * segmentMultiplier;
-          if (distance === 0) stats.exactHits += segmentMultiplier;
+          stats.hits += 1;
+          stats.damageScore += damageMultiplier;
+          if (distance === 0) stats.exactHits += 1;
         }
         return stats;
       }, { hits: 0, exactHits: 0, damageScore: 0, headDistance: Infinity });
@@ -847,7 +846,7 @@
       const fallbackDirection = ownerDirection(owner);
       if (!targetSnake.length || !fallbackTarget) return { target: fallbackTarget, direction: fallbackDirection };
 
-      const lineShape = { ...bandShapeFromTotalWidth(attackStats(ownerStock(owner), "small").radius), headDamageMultiplier: 2 };
+      const lineShape = bandShapeFromTotalWidth(attackStats(ownerStock(owner), "small").radius);
       const idealDirection = directionForLongestBodyAxis(targetSnake, fallbackDirection);
       let best = null;
       targetSnake.forEach((origin, originIndex) => {
@@ -874,10 +873,10 @@
       const opponent = opponentOf(owner);
       const targetSnake = perceivedSnakeFor(owner, opponent, now);
       if (!targetSnake.length || !plan?.target) return 0;
-      const lineShape = { ...bandShapeFromTotalWidth(attackStats(ownerStock(owner), "small").radius), headDamageMultiplier: 2 };
+      const lineShape = bandShapeFromTotalWidth(attackStats(ownerStock(owner), "small").radius);
       const stats = morayLineCandidateStats(targetSnake, boardLineThrough(plan.target, plan.direction), lineShape);
-      const strikeCount = Math.max(1, Math.round(ultimateSetting("moray", "strikeCount", 1)));
-      const damageMultiplier = ultimateSetting("moray", "damageMultiplier", 0.4);
+      const strikeCount = Math.max(1, Math.round(ultimateSetting("moray", "strikeCount", 8)));
+      const damageMultiplier = ultimateSetting("moray", "damageMultiplier", 0.5);
       return stats.damageScore * attackDamage(ownerStock(owner), "big") * damageMultiplier * strikeCount;
     }
 
@@ -988,7 +987,7 @@
           const multiplier = projectile.lineCells?.reduce((best, lineCell) => (
             Math.max(best, lineBandDamageMultiplier(hexDistance(lineCell, cell), projectile))
           ), 0) || 0;
-          damage += (projectile.damage || 0) * multiplier * (projectile.headDamageMultiplier ?? 1);
+          damage += (projectile.damage || 0) * multiplier;
           return;
         }
         const target = projectile.explosionTarget || projectile.target;
