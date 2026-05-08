@@ -698,6 +698,20 @@
       const maxDamageTarget = bestBodyClusterTarget(targetSnake, stats) || targetHead;
       const weights = aiStrategyWeightsFor(owner).castTarget;
       const nearestFood = nearestFoodFor(targetHead);
+      if (profile === "big" && characterFor(owner).id === "moray") {
+        const plan = chooseMorayLineAttackPlan(owner, now);
+        const target = plan.target || targetHead;
+        const weight = Math.max(weights.targetHead, weights.bodyCluster, nearestFood ? weights.targetNearestFood : 0);
+        const damage = morayLinePlanDamage(owner, plan, now);
+        const expectedValue = attackExpectedValue(owner, profile, target, weight, now, damage);
+        return [{
+          target,
+          weight,
+          damage,
+          expectedValue,
+          targetScore: expectedValue + damage * 1.1 + weight * 1.2 + (damage <= 0 ? weight * 5 : 0)
+        }];
+      }
       const seen = new Set();
       return [
         { target: targetHead, weight: weights.targetHead },
@@ -804,11 +818,12 @@
       return targetSnake.reduce((stats, segment, index) => {
         const distance = lineCells.reduce((best, lineCell) => Math.min(best, hexDistance(segment, lineCell)), Infinity);
         const damageMultiplier = lineBandDamageMultiplier(distance, lineShape);
+        const segmentMultiplier = lineHitSegmentMultiplier(index, lineShape);
         if (index === 0) stats.headDistance = distance;
         if (damageMultiplier > 0) {
-          stats.hits += 1;
-          stats.damageScore += damageMultiplier;
-          if (distance === 0) stats.exactHits += 1;
+          stats.hits += segmentMultiplier;
+          stats.damageScore += damageMultiplier * segmentMultiplier;
+          if (distance === 0) stats.exactHits += segmentMultiplier;
         }
         return stats;
       }, { hits: 0, exactHits: 0, damageScore: 0, headDistance: Infinity });
@@ -832,7 +847,7 @@
       const fallbackDirection = ownerDirection(owner);
       if (!targetSnake.length || !fallbackTarget) return { target: fallbackTarget, direction: fallbackDirection };
 
-      const lineShape = bandShapeFromTotalWidth(attackStats(ownerStock(owner), "small").radius);
+      const lineShape = { ...bandShapeFromTotalWidth(attackStats(ownerStock(owner), "small").radius), headDamageMultiplier: 2 };
       const idealDirection = directionForLongestBodyAxis(targetSnake, fallbackDirection);
       let best = null;
       targetSnake.forEach((origin, originIndex) => {
@@ -853,6 +868,15 @@
         target: best?.target || fallbackTarget,
         direction: Number.isInteger(best?.direction) ? best.direction : fallbackDirection
       };
+    }
+
+    function morayLinePlanDamage(owner, plan, now) {
+      const opponent = opponentOf(owner);
+      const targetSnake = perceivedSnakeFor(owner, opponent, now);
+      if (!targetSnake.length || !plan?.target) return 0;
+      const lineShape = { ...bandShapeFromTotalWidth(attackStats(ownerStock(owner), "small").radius), headDamageMultiplier: 2 };
+      const stats = morayLineCandidateStats(targetSnake, boardLineThrough(plan.target, plan.direction), lineShape);
+      return stats.damageScore * attackDamage(ownerStock(owner), "big") * 0.8 * ultimateDamageMultiplier("moray");
     }
 
     function chooseAiAttackDirection(owner, target, now) {
@@ -961,7 +985,7 @@
           const multiplier = projectile.lineCells?.reduce((best, lineCell) => (
             Math.max(best, lineBandDamageMultiplier(hexDistance(lineCell, cell), projectile))
           ), 0) || 0;
-          damage += (projectile.damage || 0) * multiplier;
+          damage += (projectile.damage || 0) * multiplier * (projectile.headDamageMultiplier ?? 1);
           return;
         }
         const target = projectile.explosionTarget || projectile.target;

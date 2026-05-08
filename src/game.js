@@ -1093,6 +1093,10 @@
       return band?.outerDamageMultiplier ?? 1;
     }
 
+    function lineHitSegmentMultiplier(segmentIndex, options = {}) {
+      return segmentIndex === 0 ? (options.headDamageMultiplier ?? 1) : 1;
+    }
+
     function ownerDirection(owner) {
       return owner === "player" ? nextDir : computerDir;
     }
@@ -1157,8 +1161,10 @@
       return cellsForwardFrom(start, direction, true);
     }
 
-    function lobsterFistDirection(cursor, direction, targetSnake) {
-      const target = targetSnake[0];
+    function lobsterFistDirection(cursor, direction, targetSnake, remainingSteps = 0) {
+      const head = targetSnake[0];
+      const bodyTarget = targetSnake.slice(1).sort((a, b) => hexDistance(cursor, a) - hexDistance(cursor, b))[0];
+      const target = head && hexDistance(cursor, head) <= remainingSteps ? head : (bodyTarget || head);
       if (!target) return direction;
       const candidates = [direction, (direction + 1) % directions.length, (direction + 5) % directions.length];
       candidates.sort((a, b) => {
@@ -1180,7 +1186,7 @@
       const turnStep = Math.ceil(maxSteps / 2);
       for (let step = 0; step < maxSteps; step += 1) {
         if (step === turnStep) {
-          currentDirection = lobsterFistDirection(cursor, currentDirection, targetSnake);
+          currentDirection = lobsterFistDirection(cursor, currentDirection, targetSnake, maxSteps - step);
         }
         cursor = nextWrappedCell(cursor, currentDirection);
         if (keyOf(cursor) === keyOf(source)) break;
@@ -1349,6 +1355,7 @@
           width: lineShape.width,
           fullDamageWidth: lineShape.fullDamageWidth,
           outerDamageMultiplier: lineShape.outerDamageMultiplier,
+          headDamageMultiplier: 2,
           visualType: attackVisualType(owner, "big"),
           createdAt: now,
           impactAt: now + small.delay,
@@ -1541,16 +1548,16 @@
       ), 0);
     }
 
-    function damageSnakeCells(parts, effectCells, width, damageScale, excludedCells = [], minDistance = 0, outerDamageMultiplier = 1, fullDamageWidth = 0) {
+    function damageSnakeCells(parts, effectCells, width, damageScale, excludedCells = [], minDistance = 0, outerDamageMultiplier = 1, fullDamageWidth = 0, headDamageMultiplier = 1) {
       const excluded = cellKeySet(excludedCells);
-      return parts.reduce((total, segment) => {
+      return parts.reduce((total, segment, index) => {
         if (excluded.has(keyOf(segment))) return total;
         const bestMultiplier = effectCells.reduce((best, cell) => {
           const distance = hexDistance(segment, cell);
           if (distance < minDistance || distance > width) return best;
           return Math.max(best, lineBandDamageMultiplier(distance, { width, fullDamageWidth, outerDamageMultiplier }));
         }, 0);
-        return bestMultiplier > 0 ? total + damageScale * bestMultiplier : total;
+        return bestMultiplier > 0 ? total + damageScale * bestMultiplier * lineHitSegmentMultiplier(index, { headDamageMultiplier }) : total;
       }, 0);
     }
 
@@ -1662,8 +1669,8 @@
           });
           triggerBoardShake(burstVisualType(projectile), now);
         } else if (projectile.kind === "line") {
-          playerDamage = damageSnakeCells(snake, projectile.lineCells, projectile.width, projectile.damage, projectile.excludedCells, 0, projectile.outerDamageMultiplier ?? 1, projectile.fullDamageWidth ?? 0);
-          computerDamage = damageSnakeCells(computerSnake, projectile.lineCells, projectile.width, projectile.damage, projectile.excludedCells, 0, projectile.outerDamageMultiplier ?? 1, projectile.fullDamageWidth ?? 0);
+          playerDamage = damageSnakeCells(snake, projectile.lineCells, projectile.width, projectile.damage, projectile.excludedCells, 0, projectile.outerDamageMultiplier ?? 1, projectile.fullDamageWidth ?? 0, projectile.headDamageMultiplier ?? 1);
+          computerDamage = damageSnakeCells(computerSnake, projectile.lineCells, projectile.width, projectile.damage, projectile.excludedCells, 0, projectile.outerDamageMultiplier ?? 1, projectile.fullDamageWidth ?? 0, projectile.headDamageMultiplier ?? 1);
           blasts.push({
             kind: "line",
             lineCells: projectile.lineCells,
@@ -1671,6 +1678,7 @@
             width: projectile.width,
             fullDamageWidth: projectile.fullDamageWidth,
             outerDamageMultiplier: projectile.outerDamageMultiplier,
+            headDamageMultiplier: projectile.headDamageMultiplier,
             target: projectile.target,
             owner: projectile.owner,
             visualType: projectile.visualType || attackVisualType(projectile.owner, projectile.profile),
@@ -1765,6 +1773,7 @@
           width: projectile.width,
           fullDamageWidth: projectile.fullDamageWidth,
           outerDamageMultiplier: projectile.outerDamageMultiplier,
+          headDamageMultiplier: projectile.headDamageMultiplier,
           target: projectile.target,
           owner: projectile.owner,
           visualType: projectile.visualType || attackVisualType(projectile.owner, projectile.profile),
