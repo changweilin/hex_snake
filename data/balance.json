@@ -76,7 +76,7 @@
       "dragon": {
         "bigCooldownMs": 4800,
         "radiusMultiplier": 2,
-        "impactDamageMultiplier": 1,
+        "impactDamageMultiplier": 1.5,
         "radiationDamageMultiplier": 2,
         "radiationDurationMs": 4000,
         "radiationTickMs": 500,
@@ -107,8 +107,8 @@
       },
       "moray": {
         "bigCooldownMs": 2400,
-        "damageMultiplier": 0.4,
-        "strikeCount": 7,
+        "damageMultiplier": 0.3,
+        "strikeCount": 1,
         "strikeIntervalMultiplier": 0.5
       },
       "gu_king": {

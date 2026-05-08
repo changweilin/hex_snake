@@ -1166,7 +1166,7 @@ test("moray big attack chooses the longest opponent body line instead of forcing
   longLine.forEach(segment => assert.equal(lineKeys.has(key(segment)), true));
 });
 
-test("moray big attack schedules seven 0.4x line strikes", () => {
+test("moray big attack schedules one 0.3x line strike", () => {
   const state = createMatchState({
     balance,
     playerCharacter: characterById.get("dragon"),
@@ -1189,11 +1189,12 @@ test("moray big attack schedules seven 0.4x line strikes", () => {
   const lines = state.projectiles
     .filter(projectile => projectile.kind === "line")
     .sort((left, right) => left.impactAt - right.impactAt);
-  assert.equal(lines.length, 7);
+  assert.equal(lines.length, 1);
   lines.forEach((line, index) => {
     assert.ok(Math.abs(line.damage - bigStats.damage * balance.attack.ultimates.moray.damageMultiplier) < 1e-9);
     assert.ok(Math.abs(line.impactAt - (state.now + smallStats.delay + index * smallStats.delay * balance.attack.ultimates.moray.strikeIntervalMultiplier)) < 1e-9);
     assert.equal(line.headDamageMultiplier, undefined);
+    assert.equal(line.stackStun, false);
     assert.ok(Math.abs(line.stunChance - 0.17) < 1e-9);
     assert.ok(Math.abs(line.headStunChance - 0.34) < 1e-9);
   });

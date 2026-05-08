@@ -1442,9 +1442,9 @@
         const lineCells = boardLineThrough(lineOrigin, direction);
         const lineShape = bandShapeFromTotalWidth(small.radius);
         const excludedCells = (owner === "player" ? snake : computerSnake).map(segment => ({ q: segment.q, r: segment.r }));
-        const strikeCount = Math.max(1, Math.round(ultimateSetting(character.id, "strikeCount", 7)));
+        const strikeCount = Math.max(1, Math.round(ultimateSetting(character.id, "strikeCount", 1)));
         const strikeIntervalMs = small.delay * Math.max(0, ultimateSetting(character.id, "strikeIntervalMultiplier", 0.5));
-        const damage = bigDamage * ultimateSetting(character.id, "damageMultiplier", 0.4);
+        const damage = bigDamage * ultimateSetting(character.id, "damageMultiplier", 0.3);
         for (let index = 0; index < strikeCount; index += 1) {
           const strikeDelay = index * strikeIntervalMs;
           projectiles.push({
@@ -1536,7 +1536,7 @@
 
       if (character.id === "dragon") {
         const spiritRadius = small.radius * ultimateSetting(character.id, "radiusMultiplier", 2);
-        const impactDamage = bigDamage * ultimateSetting(character.id, "impactDamageMultiplier", 1);
+        const impactDamage = bigDamage * ultimateSetting(character.id, "impactDamageMultiplier", 1.5);
         const radiationTotalDamage = bigDamage * ultimateSetting(character.id, "radiationDamageMultiplier", 2);
         const radiationDurationMs = ultimateSetting(character.id, "radiationDurationMs", 4000);
         const radiationTickMs = ultimateSetting(character.id, "radiationTickMs", 500);
