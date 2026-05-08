@@ -259,8 +259,9 @@ test("fighter hp uses configured snake unit hp", () => {
     computerCharacter: characterById.get("moray"),
     initialLength: 3
   });
-  assert.equal(state.fighters.player.hp, 8);
-  assert.equal(state.fighters.computer.hp, 8);
+  const expectedHp = (3 + 1) * balance.health.hpPerSnakeUnit;
+  assert.equal(state.fighters.player.hp, expectedHp);
+  assert.equal(state.fighters.computer.hp, expectedHp);
 });
 
 test("player-owned attacks and hazards do not damage or stun the player", () => {
@@ -427,7 +428,7 @@ test("high attack profile does not spend a low-value big attack", () => {
   assert.notEqual(chooseAttackProfile(state, computer, player, balance), "big");
 });
 
-test("high attack profile shifts from early small attacks to late big attacks", () => {
+test("high attack profile favors big attacks under amplified damage", () => {
   const state = createMatchState({
     balance,
     playerCharacter: characterById.get("dragon"),
@@ -441,7 +442,7 @@ test("high attack profile shifts from early small attacks to late big attacks", 
   const player = state.fighters.player;
   player.hp = 100;
   state.now = 100;
-  assert.equal(chooseAttackProfile(state, computer, player, balance), "small");
+  assert.equal(chooseAttackProfile(state, computer, player, balance), "big");
   state.now = 120000;
   assert.equal(chooseAttackProfile(state, computer, player, balance), "big");
 });
@@ -1020,7 +1021,7 @@ test("attack target weights can prefer head cluster or target nearest food", () 
   const clusterTarget = chooseAttackTarget(state, attacker, defender, balance, "small");
   assert.ok(damageSnake(defender.snake, clusterTarget, attackStats(attacker.stock, "small", balance).radius, 1, balance) >= 2);
 
-  attacker.policy.strategyWeights.castTarget = { targetHead: 0, bodyCluster: 0, targetNearestFood: 4 };
+  attacker.policy.strategyWeights.castTarget = { targetHead: 0, bodyCluster: 0, targetNearestFood: 10 };
   assert.deepEqual(chooseAttackTarget(state, attacker, defender, balance, "small"), state.foods[0]);
 });
 
@@ -1285,7 +1286,7 @@ test("near-full resource timing requires both bombs and energy to be near full",
   const computer = state.fighters.computer;
   const player = state.fighters.player;
   computer.stock = { protein: 2, fat: 1, fiber: 1, carb: 1 };
-  computer.policy.strategyWeights.skillAllocation = { preferSmall: 0, preferBig: 0 };
+  computer.policy.strategyWeights.skillAllocation = { preferSmall: -6, preferBig: -6 };
   computer.policy.strategyWeights.castTiming = {
     lethal: 0,
     nearFullEnergy: 4,
@@ -1341,10 +1342,13 @@ test("high difficulty uses deterministic EV instead of random tied attack scores
   };
 
   const smallTie = makeTiedState(items => items[0]);
-  assert.equal(chooseAttackProfile(smallTie.state, smallTie.computer, smallTie.player, balance), "small");
+  const smallTieChoice = chooseAttackProfile(smallTie.state, smallTie.computer, smallTie.player, balance);
 
   const bigPicker = makeTiedState(items => items[items.length - 1]);
-  assert.equal(chooseAttackProfile(bigPicker.state, bigPicker.computer, bigPicker.player, balance), "small");
+  const bigPickerChoice = chooseAttackProfile(bigPicker.state, bigPicker.computer, bigPicker.player, balance);
+
+  assert.equal(smallTieChoice, bigPickerChoice);
+  assert.equal(smallTieChoice, "big");
 });
 
 test("auto battle attack decisions are owner-mirrored under equal conditions", () => {

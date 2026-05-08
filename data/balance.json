@@ -37,7 +37,7 @@
     "blackFoodDoubleBonusChance": 0.06666666666666667
   },
   "health": {
-    "hpPerSnakeUnit": 2
+    "hpPerSnakeUnit": 10
   },
   "movement": {
     "baseStepMs": 460,
@@ -48,8 +48,8 @@
   "attack": {
     "smallAttackFoodCost": 2,
     "smallAttackBombCost": 1,
-    "smallAttackDamageMultiplier": 0.5,
-    "bigAttackDamageMultiplier": 1,
+    "smallAttackDamageMultiplier": 2.5,
+    "bigAttackDamageMultiplier": 5,
     "bigAttackBombCost": 2,
     "baseAttackDelayMs": 2000,
     "baseAttackCooldownMs": 2400,

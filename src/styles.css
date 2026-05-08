@@ -2931,7 +2931,6 @@
       transform: none;
     }
 
-    .fighter-module::before,
     .fighter-portrait::before {
       content: "";
       position: absolute;
@@ -2941,10 +2940,6 @@
       opacity: 0.82;
       pointer-events: none;
       z-index: 2;
-    }
-
-    .fighter-module::before {
-      z-index: 3;
     }
 
     .fighter-module::after,
@@ -2971,7 +2966,6 @@
       z-index: 3;
     }
 
-    .fighter-card[data-owner="computer"] .fighter-module::before,
     .fighter-portrait[data-owner="computer"]::before {
       border-style: dashed;
     }
@@ -2991,11 +2985,14 @@
     }
 
     .fighter-module.is-charging::before {
+      content: "";
       position: absolute;
       inset: 5px;
       border-radius: 50%;
       border: 2px solid rgba(255, 255, 255, 0.76);
       animation: charge-ring 560ms linear infinite;
+      pointer-events: none;
+      z-index: 3;
     }
 
     .fighter-avatar {
