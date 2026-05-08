@@ -161,6 +161,26 @@ Get-Content "$outDir\run.out.log" -Tail 30
 Get-Content "$outDir\run.err.log" -Tail 30
 ```
 
+The optimizer now writes live progress and resume files while it is running:
+
+- `training-progress.json`: current phase, completed/planned games, ETA, throughput, and the latest live win-rate estimate with a 95% interval.
+- `training-targets.md` / `training-targets.json`: objective, gates, planned work, and success criteria for the run.
+- `checkpoint.json`: GA/RL/cross-play resume state. Re-running the same command with the same `--output` resumes automatically.
+
+Useful progress commands:
+
+```powershell
+Get-Content "$outDir\training-progress.json"
+Get-Content "$outDir\training-targets.md"
+Test-Path "$outDir\checkpoint.json"
+```
+
+To intentionally ignore a checkpoint and start the same output directory fresh:
+
+```powershell
+npm.cmd run optimize:strategy -- --output "$outDir" --fresh
+```
+
 Expected phase order:
 
 1. GA writes files under `ga\`.

@@ -1,4 +1,5 @@
 const assert = require("node:assert/strict");
+const fs = require("fs");
 const path = require("path");
 const {
   createSchedule,
@@ -53,6 +54,11 @@ const {
   evaluateCharacterRound,
   runSearch
 } = require("./tune-ai-strategy");
+
+const {
+  buildTrainingTargetAnalysis,
+  runOptimization
+} = require("./run-strategy-optimization");
 
 const {
   BASIC_STRATEGY_ID,
@@ -1427,6 +1433,43 @@ test("AI strategy tuner defaults to two-hour full-character rounds", () => {
   const roundsByCharacter = new Map(characters.map(character => [character.id, 0]));
   result.history.forEach(entry => roundsByCharacter.set(entry.characterId, roundsByCharacter.get(entry.characterId) + 1));
   assert.deepEqual([...roundsByCharacter.values()], characters.map(() => 1));
+});
+
+test("strategy optimizer writes live progress, target analysis, and checkpoint", () => {
+  const selectedCharacters = characters.slice(0, 2);
+  const outputDir = path.join(root, "reports", "strategy-optimization-progress-test");
+  const result = runOptimization({
+    balance,
+    characters: selectedCharacters,
+    seed: "strategy-progress-test",
+    gaPopulation: 2,
+    gaRounds: 1,
+    gaRuns: 1,
+    rlRounds: 1,
+    rlSamples: 1,
+    rlRuns: 1,
+    crossRuns: 1,
+    minQualified: 1,
+    outputDir,
+    resume: false,
+    progressLogIntervalMs: Number.MAX_SAFE_INTEGER
+  });
+  const progressPath = path.join(outputDir, "training-progress.json");
+  const checkpointPath = path.join(outputDir, "checkpoint.json");
+  const targetsPath = path.join(outputDir, "training-targets.md");
+  const progress = JSON.parse(fs.readFileSync(progressPath, "utf8"));
+  const checkpoint = JSON.parse(fs.readFileSync(checkpointPath, "utf8"));
+  const expectedAnalysis = buildTrainingTargetAnalysis(result.manifest.config, selectedCharacters);
+
+  assert.ok(fs.existsSync(targetsPath));
+  assert.equal(progress.progress.plannedGames, expectedAnalysis.plannedWork.totalGames);
+  assert.equal(progress.progress.completedGames, expectedAnalysis.plannedWork.totalGames);
+  assert.equal(checkpoint.ga.completed, true);
+  assert.equal(checkpoint.rl.completed, true);
+  assert.equal(checkpoint.cross.baselineCross.completed, true);
+  assert.equal(checkpoint.cross.bestCross.completed, true);
+  assert.equal(result.manifest.outputs.progress, progressPath);
+  assert.equal(result.manifest.outputs.checkpoint, checkpointPath);
 });
 
 test("basic strategy weights are fixed and not role-adjusted", () => {

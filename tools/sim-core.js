@@ -2348,7 +2348,11 @@ function aggregateMatches(matches, playerCharacterId, computerCharacterId, balan
 function runSeries(options) {
   const matches = [];
   for (let index = 0; index < options.runs; index += 1) {
-    matches.push(simulateMatch({ ...options, seed: `${options.seed}:${index}` }));
+    const match = simulateMatch({ ...options, seed: `${options.seed}:${index}` });
+    matches.push(match);
+    if (typeof options.onMatch === "function") {
+      options.onMatch({ index: index + 1, runs: options.runs, match });
+    }
   }
   return aggregateMatches(matches, options.playerCharacter.id, options.computerCharacter.id, options.balance);
 }
