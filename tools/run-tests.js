@@ -24,7 +24,6 @@ const {
   createMatchState,
   createRng,
   damageSnake,
-  dragonTrackingOrbPath,
   directionToward,
   emptyStock,
   hexDistance,
@@ -457,6 +456,7 @@ test("sandworm big attack stays hidden until 0.2s before impact and burrows for 
   assert.equal(launchAttack(state, player, computer, "big", state.now, balance), true);
   const projectile = state.projectiles.find(item => item.owner === "player" && item.profile === "big");
   assert.ok(projectile.sandwormHidden);
+  assert.equal(projectile.damage, attackStats(player.stock, "big", balance).damage * 4 * balance.attack.ultimates.sandworm.damageMultiplier);
   assert.equal(projectile.impactAt - player.undergroundFrom, 500);
   assert.equal(player.undergroundUntil - projectile.impactAt, 500);
   assert.equal(isProjectileVisibleTo(computer, projectile, projectile.impactAt - 201), false);
@@ -824,6 +824,40 @@ test("directional cast weights can prefer each direction strategy", () => {
   assert.equal(chooseAttackDirection(state, attacker, defender, target, attacker.dir), 0);
 });
 
+test("moray big attack chooses the longest opponent body line instead of forcing the head line", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("dragon"),
+    computerCharacter: characterById.get("moray"),
+    seed: "moray-longest-body-line",
+    initialBombs: balance.attack.bigAttackBombCost,
+    initialStock: Object.fromEntries(FOOD_TYPES.map(type => [type, 2])),
+    computerModel: { aiDifficulty: "high", aimPrecision: 1, pathPrecision: 1 }
+  });
+  const attacker = state.fighters.computer;
+  const defender = state.fighters.player;
+  const key = cell => `${cell.q},${cell.r}`;
+  const longLine = [
+    { q: -2, r: 2 },
+    { q: -1, r: 2 },
+    { q: 0, r: 2 },
+    { q: 1, r: 2 }
+  ];
+  attacker.snake = [{ q: 5, r: -5 }];
+  attacker.dir = 5;
+  defender.snake = [{ q: 0, r: 0 }, ...longLine];
+  defender.hp = 100;
+  state.foods = [];
+
+  const target = chooseAttackTarget(state, attacker, defender, balance, "big");
+  assert.equal(target.r, 2);
+  assert.equal(launchAttack(state, attacker, defender, "big", state.now, balance), true);
+  const line = state.projectiles.find(projectile => projectile.kind === "line");
+  const lineKeys = new Set(line.lineCells.map(key));
+  assert.equal(lineKeys.has(key(defender.snake[0])), false);
+  longLine.forEach(segment => assert.equal(lineKeys.has(key(segment)), true));
+});
+
 test("wrapped distance and stale food target switching affect food choices", () => {
   const state = createMatchState({
     balance,
@@ -1042,41 +1076,6 @@ test("auto battle attack decisions are owner-mirrored under equal conditions", (
   assert.ok(["small", "big"].includes(playerChoice));
 });
 
-test("dragon tracking orb has limited curvature and board-width range", () => {
-  const state = createMatchState({
-    balance,
-    playerCharacter: characterById.get("dragon"),
-    computerCharacter: characterById.get("moray"),
-    seed: "dragon-tracking-path"
-  });
-  const source = { q: -3, r: 1 };
-  const targetSnake = [{ q: 3, r: -2 }, { q: 2, r: -1 }];
-  const path = dragonTrackingOrbPath(state, source, 0, targetSnake);
-  assert.ok(path.length <= Math.ceil((state.radius * 2 + 1) / 2));
-  assert.deepEqual(path[0], nextWrappedCell(source, 0, state.radius));
-  let cursor = source;
-  let direction = 0;
-  path.forEach(cell => {
-    const stepDirection = DIRECTIONS.findIndex(delta => (
-      cell.q === cursor.q + delta.q && cell.r === cursor.r + delta.r
-    ));
-    const wrappedDirection = stepDirection >= 0
-      ? stepDirection
-      : DIRECTIONS.findIndex((_, index) => {
-        const wrapped = nextWrappedCell(cursor, index, state.radius);
-        return wrapped.q === cell.q && wrapped.r === cell.r;
-      });
-    assert.ok(wrappedDirection >= 0);
-    const turn = Math.min(
-      (wrappedDirection - direction + DIRECTIONS.length) % DIRECTIONS.length,
-      (direction - wrappedDirection + DIRECTIONS.length) % DIRECTIONS.length
-    );
-    assert.ok(turn <= 2);
-    direction = wrappedDirection;
-    cursor = cell;
-  });
-});
-
 test("lobster palm big attack stops the fist at the first collision", () => {
   const state = createMatchState({
     balance,
@@ -1100,10 +1099,10 @@ test("lobster palm big attack stops the fist at the first collision", () => {
 
   assert.equal(launchAttack(state, player, computer, "big", state.now, balance), true);
   const firstFist = state.projectiles
-    .filter(projectile => projectile.kind === "dragonOrb")
+    .filter(projectile => projectile.kind === "lobsterPalm")
     .sort((left, right) => left.impactAt - right.impactAt)[0];
   const firstBurst = state.projectiles
-    .filter(projectile => projectile.kind === "dragonOrbBurst")
+    .filter(projectile => projectile.kind === "lobsterPalmBurst")
     .sort((left, right) => left.impactAt - right.impactAt)[0];
 
   assert.deepEqual(firstFist.target, computer.snake[0]);
@@ -1314,17 +1313,23 @@ test("balance tuner adjustment keeps candidate values within ultimate bounds", (
     })))
   };
   const bounds = new Map([
-    ["attack.ultimates.dragon.orbStepMs", { path: ["attack", "ultimates", "dragon", "orbStepMs"], direction: "lower-is-stronger", original: balance.attack.ultimates.dragon.orbStepMs }],
-    ["attack.ultimates.lobster.radiusMultiplier", { path: ["attack", "ultimates", "lobster", "radiusMultiplier"], direction: "higher-is-stronger", original: balance.attack.ultimates.lobster.radiusMultiplier }],
+    ["attack.ultimates.dragon.radiusMultiplier", { path: ["attack", "ultimates", "dragon", "radiusMultiplier"], direction: "higher-is-stronger", original: balance.attack.ultimates.dragon.radiusMultiplier }],
+    ["attack.ultimates.dragon.impactDamageMultiplier", { path: ["attack", "ultimates", "dragon", "impactDamageMultiplier"], direction: "higher-is-stronger", original: balance.attack.ultimates.dragon.impactDamageMultiplier }],
+    ["attack.ultimates.dragon.radiationDamageMultiplier", { path: ["attack", "ultimates", "dragon", "radiationDamageMultiplier"], direction: "higher-is-stronger", original: balance.attack.ultimates.dragon.radiationDamageMultiplier }],
+    ["attack.ultimates.dragon.firstImpactDelayMultiplier", { path: ["attack", "ultimates", "dragon", "firstImpactDelayMultiplier"], direction: "lower-is-stronger", original: balance.attack.ultimates.dragon.firstImpactDelayMultiplier }],
+    ["attack.ultimates.lobster.fistStepMs", { path: ["attack", "ultimates", "lobster", "fistStepMs"], direction: "lower-is-stronger", original: balance.attack.ultimates.lobster.fistStepMs }],
+    ["attack.ultimates.lobster.contactDamageMultiplier", { path: ["attack", "ultimates", "lobster", "contactDamageMultiplier"], direction: "higher-is-stronger", original: balance.attack.ultimates.lobster.contactDamageMultiplier }],
+    ["attack.ultimates.lobster.burstDamageMultiplier", { path: ["attack", "ultimates", "lobster", "burstDamageMultiplier"], direction: "higher-is-stronger", original: balance.attack.ultimates.lobster.burstDamageMultiplier }],
+    ["attack.ultimates.lobster.burstRadiusMultiplier", { path: ["attack", "ultimates", "lobster", "burstRadiusMultiplier"], direction: "higher-is-stronger", original: balance.attack.ultimates.lobster.burstRadiusMultiplier }],
     ["attack.ultimates.sandworm.damageMultiplier", { path: ["attack", "ultimates", "sandworm", "damageMultiplier"], direction: "higher-is-stronger", original: balance.attack.ultimates.sandworm.damageMultiplier }],
     ["attack.ultimates.quetzal.damageMultiplier", { path: ["attack", "ultimates", "quetzal", "damageMultiplier"], direction: "higher-is-stronger", original: balance.attack.ultimates.quetzal.damageMultiplier }],
     ["attack.ultimates.moray.damageMultiplier", { path: ["attack", "ultimates", "moray", "damageMultiplier"], direction: "higher-is-stronger", original: balance.attack.ultimates.moray.damageMultiplier }],
     ["attack.ultimates.gu_king.damageMultiplier", { path: ["attack", "ultimates", "gu_king", "damageMultiplier"], direction: "higher-is-stronger", original: balance.attack.ultimates.gu_king.damageMultiplier }]
   ]);
   const result = applyAdjustments(candidate, balance, bounds, summary);
-  const lobsterChange = result.changes.find(change => change.path === "attack.ultimates.lobster.radiusMultiplier");
+  const lobsterChange = result.changes.find(change => change.path === "attack.ultimates.lobster.fistStepMs");
   assert.ok(lobsterChange);
-  assert.ok(result.nextBalance.attack.ultimates.lobster.radiusMultiplier <= balance.attack.ultimates.lobster.radiusMultiplier * 10);
+  assert.ok(result.nextBalance.attack.ultimates.lobster.fistStepMs >= balance.attack.ultimates.lobster.fistStepMs * 0.1);
 });
 
 test("balance tuner parses local time deadlines", () => {

@@ -104,7 +104,7 @@ npm run simulate:jobs        # 檢視模擬任務列表
 npm run simulate:scheduled   # 啟動模擬排程器
 npm run simulate:ai-cross    # 執行 AI 交叉對戰
 npm run tune:balance         # 調整平衡參數
-npm run tune:dragon-draw     # 調整龍相關對局參數
+npm run tune:lobster-palm-draw # 調整智蝦追蹤拳對局參數
 npm run tune:ai-strategy     # 調整 AI 策略
 npm run optimize:strategy    # 執行策略最佳化
 npm run evaluate:basic-gate  # 評估基礎 AI 門檻

@@ -275,7 +275,7 @@
         console.warn(`Using built-in high AI strategies: ${error.message}`);
       }
     }
-    const dragonOrbStepMs = 45;
+    const lobsterPalmStepMs = 45;
 
     function ultimateSetting(characterId, key, fallback) {
       const value = attackUltimateBalance?.[characterId]?.[key];
@@ -284,12 +284,6 @@
 
     function ultimateDamageMultiplier(characterId) {
       return ultimateSetting(characterId, "damageMultiplier", 1);
-    }
-
-    function bigAttackAbilityId(characterId) {
-      if (characterId === "dragon") return "lobster";
-      if (characterId === "lobster") return "dragon";
-      return characterId;
     }
 
     function bigAttackUsesDrawnDirection(characterId) {
@@ -806,6 +800,58 @@
       return positive ? 4 : 1;
     }
 
+    function morayLineCandidateStats(targetSnake, lineCells, width) {
+      return targetSnake.reduce((stats, segment, index) => {
+        const distance = lineCells.reduce((best, lineCell) => Math.min(best, hexDistance(segment, lineCell)), Infinity);
+        if (index === 0) stats.headDistance = distance;
+        if (distance <= width) {
+          stats.hits += 1;
+          if (distance === 0) stats.exactHits += 1;
+        }
+        return stats;
+      }, { hits: 0, exactHits: 0, headDistance: Infinity });
+    }
+
+    function isBetterMorayLineCandidate(candidate, best) {
+      if (!best) return true;
+      if (candidate.hits !== best.hits) return candidate.hits > best.hits;
+      if (candidate.exactHits !== best.exactHits) return candidate.exactHits > best.exactHits;
+      if (candidate.directionTurn !== best.directionTurn) return candidate.directionTurn < best.directionTurn;
+      if (candidate.headDistance !== best.headDistance) return candidate.headDistance < best.headDistance;
+      if (candidate.originIndex !== best.originIndex) return candidate.originIndex < best.originIndex;
+      return candidate.ownerTurn < best.ownerTurn;
+    }
+
+    function chooseMorayLineAttackPlan(owner, now) {
+      const opponent = opponentOf(owner);
+      const targetSnake = perceivedSnakeFor(owner, opponent, now);
+      const fallbackTarget = targetSnake[0] || ownerHead(opponent) || ownerHead(owner);
+      const fallbackDirection = ownerDirection(owner);
+      if (!targetSnake.length || !fallbackTarget) return { target: fallbackTarget, direction: fallbackDirection };
+
+      const width = bandDistanceFromTotalWidth(attackStats(ownerStock(owner), "small").radius);
+      const idealDirection = directionForLongestBodyAxis(targetSnake, fallbackDirection);
+      let best = null;
+      targetSnake.forEach((origin, originIndex) => {
+        directions.forEach((_, direction) => {
+          const stats = morayLineCandidateStats(targetSnake, boardLineThrough(origin, direction), width);
+          const candidate = {
+            target: { q: origin.q, r: origin.r },
+            direction,
+            originIndex,
+            directionTurn: turnDistance(direction, idealDirection),
+            ownerTurn: turnDistance(direction, fallbackDirection),
+            ...stats
+          };
+          if (isBetterMorayLineCandidate(candidate, best)) best = candidate;
+        });
+      });
+      return {
+        target: best?.target || fallbackTarget,
+        direction: Number.isInteger(best?.direction) ? best.direction : fallbackDirection
+      };
+    }
+
     function chooseAiAttackDirection(owner, target, now) {
       const opponent = opponentOf(owner);
       const targetSnake = perceivedSnakeFor(owner, opponent, now);
@@ -837,6 +883,7 @@
       const targetSnake = perceivedSnakeFor(owner, opponent, now);
       const targetHead = targetSnake[0];
       const stats = attackStats(ownerStock(owner), profile);
+      if (profile === "big" && characterFor(owner).id === "moray") return chooseMorayLineAttackPlan(owner, now).target;
 
       if (computerDifficulty === "high") {
         const maxDamageTarget = bestBodyClusterTarget(targetSnake, stats) || targetHead;
@@ -1280,11 +1327,15 @@
       if (!profile) return;
       const target = chooseAiAttackTarget("computer", profile, now);
       const computerCharacter = characterFor("computer");
+      const morayLinePlan = profile === "big" && computerCharacter.id === "moray"
+        ? chooseMorayLineAttackPlan("computer", now)
+        : null;
+      const attackTarget = morayLinePlan?.target || target;
       const options = profile === "big" ? {
-        aimDirection: chooseAiAttackDirection("computer", target, now),
-        aimOrigin: computerCharacter.id === "moray" ? target : computerSnake[0]
+        aimDirection: morayLinePlan?.direction ?? chooseAiAttackDirection("computer", attackTarget, now),
+        aimOrigin: computerCharacter.id === "moray" ? attackTarget : computerSnake[0]
       } : {};
-      if (launchAttack("computer", target, now, profile, options)) {
+      if (launchAttack("computer", attackTarget, now, profile, options)) {
         setStatus(profile === "small" ? "P2 施放小招。" : "P2 施放大招，2 秒後落地。");
       }
     }
@@ -1303,9 +1354,13 @@
       if (!profile) return;
       const target = chooseAiAttackTarget("player", profile, now);
       const playerCharacter = characterFor("player");
+      const morayLinePlan = profile === "big" && playerCharacter.id === "moray"
+        ? chooseMorayLineAttackPlan("player", now)
+        : null;
+      const attackTarget = morayLinePlan?.target || target;
       const options = profile === "big" ? {
-        aimDirection: chooseAiAttackDirection("player", target, now),
-        aimOrigin: playerCharacter.id === "moray" ? target : snake[0]
+        aimDirection: morayLinePlan?.direction ?? chooseAiAttackDirection("player", attackTarget, now),
+        aimOrigin: playerCharacter.id === "moray" ? attackTarget : snake[0]
       } : {};
-      if (launchAttack("player", target, now, profile, options)) flashAttackButton(profile, 150);
+      if (launchAttack("player", attackTarget, now, profile, options)) flashAttackButton(profile, 150);
     }

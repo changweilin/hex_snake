@@ -1119,28 +1119,6 @@
       return Math.min(clockwise, directions.length - clockwise);
     }
 
-    function dragonTrackingDirection(cursor, direction, targetSnake, visited) {
-      const target = targetSnake[0];
-      if (!target) return direction;
-      const idealDirection = directionFromSourceToTarget(cursor, target, direction);
-      const candidates = [
-        direction,
-        (direction + 1) % directions.length,
-        (direction + 5) % directions.length,
-        (direction + 2) % directions.length,
-        (direction + 4) % directions.length
-      ];
-      candidates.sort((a, b) => {
-        const nextA = nextWrappedCell(cursor, a);
-        const nextB = nextWrappedCell(cursor, b);
-        const distanceA = hexDistance(nextA, target) + (visited.has(keyOf(nextA)) ? 0.35 : 0);
-        const distanceB = hexDistance(nextB, target) + (visited.has(keyOf(nextB)) ? 0.35 : 0);
-        if (distanceA !== distanceB) return distanceA - distanceB;
-        return turnDistance(a, idealDirection) - turnDistance(b, idealDirection);
-      });
-      return candidates[0];
-    }
-
     function cellsForwardFrom(source, direction, includeSource = true) {
       const path = includeSource ? [{ q: source.q, r: source.r }] : [];
       let cursor = source;
@@ -1160,54 +1138,6 @@
         start = nextCell(start, opposite);
       }
       return cellsForwardFrom(start, direction, true);
-    }
-
-    function dragonChargePath(source, direction, targetSnake) {
-      const targetCells = cellKeySet(targetSnake);
-      const path = [];
-      let cursor = source;
-      let carryAfterHit = false;
-      while (isInside(cursor)) {
-        path.push({ q: cursor.q, r: cursor.r });
-        if (carryAfterHit) break;
-        if (targetCells.has(keyOf(cursor))) carryAfterHit = true;
-        cursor = nextCell(cursor, direction);
-      }
-      return path;
-    }
-
-    function dragonOrbPath(source, direction) {
-      return cellsForwardFrom(source, direction, false);
-    }
-
-    function dragonWrappedOrbPath(source, direction) {
-      const path = [];
-      let cursor = { q: source.q, r: source.r };
-      const maxSteps = Math.max(1, cells.length);
-      for (let step = 0; step < maxSteps; step += 1) {
-        cursor = nextWrappedCell(cursor, direction);
-        if (keyOf(cursor) === keyOf(source)) break;
-        path.push({ q: cursor.q, r: cursor.r });
-      }
-      return path;
-    }
-
-    function dragonTrackingOrbPath(source, direction, targetSnake) {
-      const path = [];
-      const visited = new Set([keyOf(source)]);
-      let cursor = { q: source.q, r: source.r };
-      let currentDirection = direction;
-      const maxSteps = Math.max(1, Math.ceil((radius * 2 + 1) / 2));
-      for (let step = 0; step < maxSteps; step += 1) {
-        if (step > 0) {
-          currentDirection = dragonTrackingDirection(cursor, currentDirection, targetSnake, visited);
-        }
-        cursor = nextWrappedCell(cursor, currentDirection);
-        if (keyOf(cursor) === keyOf(source)) break;
-        path.push({ q: cursor.q, r: cursor.r });
-        visited.add(keyOf(cursor));
-      }
-      return path;
     }
 
     function lobsterFistDirection(cursor, direction, targetSnake) {
@@ -1323,35 +1253,28 @@
       const direction = Number.isInteger(options.aimDirection)
         ? options.aimDirection
         : directionFromSourceToTarget(source, target, ownerDirection(owner));
-      const abilityId = bigAttackAbilityId(character.id);
 
-      if (abilityId === "dragon") {
+      if (character.id === "lobster") {
         const targetSnake = owner === "player" ? computerSnake : snake;
-        const useTracking = character.id === "lobster" || isPlayerAutoControlActive() || owner === "computer";
-        const isLobsterPalm = character.id === "lobster";
-        const path = isLobsterPalm
-          ? lobsterFistPath(source, direction, targetSnake)
-          : useTracking
-          ? dragonTrackingOrbPath(source, direction, targetSnake)
-          : dragonWrappedOrbPath(source, direction);
+        const path = lobsterFistPath(source, direction, targetSnake);
         const hits = pathHits(path, targetSnake);
-        const firstHit = isLobsterPalm ? hits[0] : null;
+        const firstHit = hits[0];
         const travelPath = firstHit ? path.slice(0, firstHit.index + 1) : path;
         const endCell = firstHit?.cell || path[path.length - 1] || source;
-        const orbStepMs = ultimateSetting(abilityId, "orbStepMs", dragonOrbStepMs);
-        const travelDelay = small.delay + travelPath.length * orbStepMs;
-        const volleys = isLobsterPalm ? 2 : 1;
-        const orbDamage = bigDamage * (isLobsterPalm ? 0.3 : 1);
-        const orbRadius = isLobsterPalm ? 1 : small.radius * ultimateSetting(abilityId, "orbRadiusMultiplier", 1);
-        const burstRadius = small.radius * (isLobsterPalm ? 1.5 : 2);
-        const burstDamage = bigDamage * (isLobsterPalm ? 0.9 : 1.5);
-        const visualType = character.id === "lobster" ? "lobster-palm-big" : attackVisualType(owner, "big", abilityId);
-        const volleyIntervalMs = isLobsterPalm ? attackDelay(stock) : 500;
+        const fistStepMs = ultimateSetting(character.id, "fistStepMs", lobsterPalmStepMs);
+        const travelDelay = small.delay + travelPath.length * fistStepMs;
+        const volleys = Math.max(1, Math.round(ultimateSetting(character.id, "volleyCount", 2)));
+        const contactDamage = bigDamage * ultimateSetting(character.id, "contactDamageMultiplier", 0.3);
+        const contactRadius = Math.max(0.25, ultimateSetting(character.id, "contactRadius", 1));
+        const burstRadius = small.radius * ultimateSetting(character.id, "burstRadiusMultiplier", 1.5);
+        const burstDamage = bigDamage * ultimateSetting(character.id, "burstDamageMultiplier", 0.9);
+        const visualType = "lobster-palm-big";
+        const volleyIntervalMs = attackDelay(stock);
         for (let volley = 0; volley < volleys; volley += 1) {
           const volleyDelay = volley * volleyIntervalMs;
           const hand = volley % 2 === 0 ? "right" : "left";
           projectiles.push({
-            kind: "dragonOrb",
+            kind: "lobsterPalm",
             owner,
             profile: "big",
             source: { q: source.q, r: source.r },
@@ -1362,18 +1285,16 @@
             createdAt: now + volleyDelay,
             impactAt: now + volleyDelay + travelDelay,
             delay: travelDelay,
-            radius: orbRadius,
-            damage: orbDamage,
+            radius: contactRadius,
+            damage: contactDamage,
             burstRadius,
             burstDamage,
             stunChance
           });
-          const burstHits = isLobsterPalm
-            ? (firstHit ? [firstHit] : [{ cell: endCell, index: Math.max(0, travelPath.length - 1) }])
-            : hits;
+          const burstHits = firstHit ? [firstHit] : [{ cell: endCell, index: Math.max(0, travelPath.length - 1) }];
           burstHits.forEach(hit => {
             projectiles.push({
-              kind: "dragonOrbBurst",
+              kind: "lobsterPalmBurst",
               owner,
               profile: "big",
               source: { q: source.q, r: source.r },
@@ -1382,10 +1303,10 @@
               hand,
               hidden: true,
               createdAt: now + volleyDelay,
-              impactAt: now + volleyDelay + small.delay + (hit.index + 1) * orbStepMs,
-              delay: small.delay + (hit.index + 1) * orbStepMs,
-              radius: orbRadius,
-              damage: orbDamage,
+              impactAt: now + volleyDelay + small.delay + (hit.index + 1) * fistStepMs,
+              delay: small.delay + (hit.index + 1) * fistStepMs,
+              radius: contactRadius,
+              damage: contactDamage,
               burstRadius,
               burstDamage,
               stunChance
@@ -1464,7 +1385,7 @@
           impactAt: now + delay,
           delay,
           radius: Math.max(0.5, small.radius * 0.5),
-          damage: bigDamage * 3.5 * ultimateDamageMultiplier(character.id),
+          damage: bigDamage * 4 * ultimateDamageMultiplier(character.id),
           stunChance,
           hidden: true,
           sandwormHidden: true,
@@ -1474,15 +1395,15 @@
         return delay;
       }
 
-      if (abilityId === "lobster") {
-        const lobsterUltimateRadius = character.id === "dragon"
-          ? small.radius * 2
-          : small.radius * ultimateSetting(abilityId, "radiusMultiplier", 2.5);
-        const volleys = character.id === "dragon" ? 1 : 2;
-        const impactDamage = character.id === "dragon" ? bigDamage * 0.5 : bigDamage;
-        const radiationTotalDamage = character.id === "dragon" ? bigDamage * 1.5 : bigDamage * 0.25;
-        const firstImpactDelay = character.id === "dragon" ? small.delay * 2 : small.delay;
-        const visualType = character.id === "dragon" ? "dragon-spirit-big" : attackVisualType(owner, "big", abilityId);
+      if (character.id === "dragon") {
+        const spiritRadius = small.radius * ultimateSetting(character.id, "radiusMultiplier", 2);
+        const impactDamage = bigDamage * ultimateSetting(character.id, "impactDamageMultiplier", 0.5);
+        const radiationTotalDamage = bigDamage * ultimateSetting(character.id, "radiationDamageMultiplier", 1.5);
+        const radiationDurationMs = ultimateSetting(character.id, "radiationDurationMs", 4000);
+        const radiationTickMs = ultimateSetting(character.id, "radiationTickMs", 500);
+        const firstImpactDelay = small.delay * ultimateSetting(character.id, "firstImpactDelayMultiplier", 2);
+        const visualType = "dragon-spirit-big";
+        const volleys = 1;
         for (let index = 0; index < volleys; index += 1) {
           const impactDelay = firstImpactDelay + index * 2000;
           projectiles.push({
@@ -1494,10 +1415,10 @@
             createdAt: now,
             impactAt: now + impactDelay,
             delay: impactDelay,
-            radius: lobsterUltimateRadius,
+            radius: spiritRadius,
             damage: impactDamage,
-            radiationDurationMs: 4000,
-            radiationTickMs: 500,
+            radiationDurationMs,
+            radiationTickMs,
             radiationTotalDamage,
             stunChance,
             flat: true,
@@ -1699,14 +1620,14 @@
       landed.forEach(projectile => {
         let playerDamage = 0;
         let computerDamage = 0;
-        if (projectile.kind === "dragonOrb") {
+        if (projectile.kind === "lobsterPalm") {
           return;
-        } else if (projectile.kind === "dragonOrbBurst") {
+        } else if (projectile.kind === "lobsterPalmBurst") {
           const defenderOwner = projectile.owner === "player" ? "computer" : "player";
           const defenderSnake = defenderOwner === "player" ? snake : computerSnake;
-          const orbDamage = damageSnake(defenderSnake, projectile.target, projectile.radius, projectile.damage);
-          if (defenderOwner === "player") playerDamage += orbDamage;
-          else computerDamage += orbDamage;
+          const contactDamage = damageSnake(defenderSnake, projectile.target, projectile.radius, projectile.damage);
+          if (defenderOwner === "player") playerDamage += contactDamage;
+          else computerDamage += contactDamage;
           playerDamage += damageSnake(snake, projectile.target, projectile.burstRadius, projectile.burstDamage);
           computerDamage += damageSnake(computerSnake, projectile.target, projectile.burstRadius, projectile.burstDamage);
           blasts.push({
@@ -1799,8 +1720,8 @@
     }
 
     function addProjectileImpactVisual(projectile, now) {
-      if (projectile.kind === "dragonOrb") return;
-      if (projectile.kind === "dragonOrbBurst") {
+      if (projectile.kind === "lobsterPalm") return;
+      if (projectile.kind === "lobsterPalmBurst") {
         blasts.push({
           kind: "circle",
           target: projectile.target,
