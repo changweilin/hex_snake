@@ -2,6 +2,36 @@
 
 Use this SOP to run Hex Snake strategy optimization. The process is the same for quick exploration and full training; only the run-count profile changes.
 
+## Simulator/Game Parity Preflight
+
+Run this preflight before starting or resuming any strategy optimization. Do not treat optimizer output as usable evidence if the simulator and the browser game may be using different rules, data, or runtime assumptions.
+
+The simulator and actual game must agree on:
+
+- source data: `data/balance.json`, `data/characters.json`, and `data/high-ai-strategies.json`
+- core combat rules: food stock, energy/bombs, movement wrapping, collision, damage, stun/slow, and ultimate behavior
+- AI runtime rules: high-AI strategy loading, attack timing, target selection, food selection, and side-mirrored player/computer decisions
+- environment assumptions: local server build, browser runtime, Node version, and any speed/localStorage settings used by auto battle
+
+Required checks from the project root:
+
+```powershell
+npm.cmd run data:check
+npm.cmd run test:quick
+npm.cmd run simulate:ai-cross -- --runs 5 --jobs 1 --seed sim-game-parity-smoke
+```
+
+If recent changes touched `src/game.js`, `src/ui.js`, browser interaction, replay state, ES module loading, timing, controls, or visual/runtime-only game state, also run a browser auto-battle smoke against the local game:
+
+```powershell
+npm.cmd run dev
+$env:HEX_SNAKE_TAKE_COUNT = "1"
+$env:HEX_SNAKE_TAKE_MS = "12000"
+node tools\record-mobile-auto-battle.js
+```
+
+During the browser smoke, check that the actual game starts, both sides move and cast, no console errors appear, the selected characters and speed settings are honored, and the observed behavior does not contradict `tools/sim-core.js` expectations. If any check fails, fix the simulator/game mismatch first, then rerun this preflight before launching optimization.
+
 ## Training Profiles
 
 ### Quick Exploration
