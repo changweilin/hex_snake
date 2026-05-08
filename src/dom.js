@@ -5,6 +5,10 @@
     const targetModeBigIndicator = document.querySelector("#targetModeBigIndicator");
     const targetModeSmallIcon = document.querySelector("#targetModeSmallIcon");
     const targetModeBigIcon = document.querySelector("#targetModeBigIcon");
+    const cooldownSmallIndicator = document.querySelector("#cooldownSmallIndicator");
+    const cooldownBigIndicator = document.querySelector("#cooldownBigIndicator");
+    const cooldownSmallValue = document.querySelector("#cooldownSmallValue");
+    const cooldownBigValue = document.querySelector("#cooldownBigValue");
     const overlay = document.querySelector("#overlay");
     const overlayTitle = document.querySelector("#overlayTitle");
     const overlayText = document.querySelector("#overlayText");

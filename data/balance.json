@@ -95,8 +95,8 @@
       },
       "moray": {
         "bigCooldownMs": 2400,
-        "damageMultiplier": 0.5,
-        "strikeCount": 7,
+        "damageMultiplier": 0.4,
+        "strikeCount": 1,
         "strikeIntervalMultiplier": 0.5
       },
       "gu_king": {

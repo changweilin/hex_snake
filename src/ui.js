@@ -449,8 +449,8 @@ const hudFrameIntervalMs = 100;
 const replayRecordCheckIntervalMs = 100;
 let lastHudFrameAt = -Infinity;
 let lastReplayRecordCheckAt = -Infinity;
-let lastPlayerAttackMs = -Infinity;
-let lastComputerAttackMs = -Infinity;
+let lastPlayerAttackMs = resetAttackCooldownTracker();
+let lastComputerAttackMs = resetAttackCooldownTracker();
 let rafId = 0;
 let previewDrawRafId = 0;
 let movePointerId = null;
@@ -593,7 +593,7 @@ const characterMoveGuides = {
     tip: "適合在敵方靠近你身體或追逐時施放，用身體路徑封鎖空間。"
   },
   moray: {
-    big: "在棋盤拖曳可指定電擊起點與方向，放開施放；按大招鍵或點「大招」則依 Y 鍵選擇的大招方向施放。電鰻會打出貫穿棋盤的<strong>直線電擊</strong>，命中可<strong>堆疊暈眩</strong>。",
+    big: "在棋盤拖曳可指定電擊起點與方向，放開施放；按大招鍵或點「大招」則依 Y 鍵選擇的大招方向施放。電鰻會打出貫穿棋盤的<strong>單次直線電擊</strong>，命中可造成<strong>暈眩</strong>。",
     tip: "棋盤拖曳時，拖曳方向比落點更重要；沿敵方身體長軸掃線最容易命中多段。"
   },
   lobster: {
@@ -1682,6 +1682,47 @@ function attackCooldown(stock, profile = "big", characterId = null) {
     ? attackUltimateBalance?.[characterId]?.bigCooldownMs ?? baseAttackCooldownMs
     : baseAttackCooldownMs;
   return baseCooldown / attackSpeedMultiplier(stock);
+}
+
+function attackProfileCooldown(stock, profile = "big", characterId = null) {
+  return attackCooldown(stock, profile, characterId) * (profile === "small" ? smallAttackCooldownScale : 1);
+}
+
+function resetAttackCooldownTracker() {
+  return { small: -Infinity, big: -Infinity };
+}
+
+function normalizedAttackProfile(profile = "big") {
+  return profile === "small" ? "small" : "big";
+}
+
+function attackCooldownTrackerFor(owner) {
+  return owner === "player" ? lastPlayerAttackMs : lastComputerAttackMs;
+}
+
+function lastAttackMsFor(owner, profile = "big") {
+  const tracker = attackCooldownTrackerFor(owner);
+  if (typeof tracker === "number") return tracker;
+  const key = normalizedAttackProfile(profile);
+  return Number.isFinite(tracker?.[key]) ? tracker[key] : -Infinity;
+}
+
+function setLastAttackMsFor(owner, profile = "big", value = performance.now()) {
+  const key = normalizedAttackProfile(profile);
+  if (owner === "player") {
+    if (!lastPlayerAttackMs || typeof lastPlayerAttackMs !== "object") lastPlayerAttackMs = resetAttackCooldownTracker();
+    lastPlayerAttackMs[key] = value;
+    return;
+  }
+  if (!lastComputerAttackMs || typeof lastComputerAttackMs !== "object") lastComputerAttackMs = resetAttackCooldownTracker();
+  lastComputerAttackMs[key] = value;
+}
+
+function attackCooldownRemainingMs(owner, profile = "big", now = performance.now()) {
+  const stock = owner === "player" ? playerStock : computerStock;
+  const character = characterFor(owner);
+  const cooldownMs = attackProfileCooldown(stock, profile, character?.id);
+  return Math.max(0, cooldownMs - (now - lastAttackMsFor(owner, profile)));
 }
 
 function blastRadius(stock) {

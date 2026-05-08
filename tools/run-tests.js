@@ -505,6 +505,28 @@ test("selected characters use custom big attack cooldowns", () => {
   });
 });
 
+test("small and big attack cooldowns are tracked separately", () => {
+  function readyState(seed) {
+    return createMatchState({
+      balance,
+      playerCharacter: characterById.get("dragon"),
+      computerCharacter: characterById.get("moray"),
+      seed,
+      initialBombs: balance.resources.maxAmmo,
+      initialStock: Object.fromEntries(FOOD_TYPES.map(type => [type, 4])),
+      playerModel: { aiDifficulty: "high", aimPrecision: 1, pathPrecision: 1 }
+    });
+  }
+
+  const smallThenBig = readyState("separate-cooldown-small-big");
+  assert.equal(launchAttack(smallThenBig, smallThenBig.fighters.player, smallThenBig.fighters.computer, "small", 1000, balance), true);
+  assert.equal(launchAttack(smallThenBig, smallThenBig.fighters.player, smallThenBig.fighters.computer, "big", 1000, balance), true);
+
+  const bigThenSmall = readyState("separate-cooldown-big-small");
+  assert.equal(launchAttack(bigThenSmall, bigThenSmall.fighters.player, bigThenSmall.fighters.computer, "big", 1000, balance), true);
+  assert.equal(launchAttack(bigThenSmall, bigThenSmall.fighters.player, bigThenSmall.fighters.computer, "small", 1000, balance), true);
+});
+
 test("simulated AI does not attack before its first movement tick", () => {
   const match = simulateMatch({
     balance,
@@ -1006,12 +1028,12 @@ test("moray big attack chooses the longest opponent body line instead of forcing
   longLine.forEach(segment => assert.equal(lineKeys.has(key(segment)), true));
 });
 
-test("moray big attack schedules seven half-delay line strikes", () => {
+test("moray big attack schedules one 0.4x line strike", () => {
   const state = createMatchState({
     balance,
     playerCharacter: characterById.get("dragon"),
     computerCharacter: characterById.get("moray"),
-    seed: "moray-seven-strikes",
+    seed: "moray-single-strike",
     initialBombs: balance.attack.bigAttackBombCost,
     initialStock: Object.fromEntries(FOOD_TYPES.map(type => [type, 2])),
     computerModel: { aiDifficulty: "high", aimPrecision: 1, pathPrecision: 1 }
@@ -1029,9 +1051,9 @@ test("moray big attack schedules seven half-delay line strikes", () => {
   const lines = state.projectiles
     .filter(projectile => projectile.kind === "line")
     .sort((left, right) => left.impactAt - right.impactAt);
-  assert.equal(lines.length, 7);
+  assert.equal(lines.length, 1);
   lines.forEach((line, index) => {
-    assert.ok(Math.abs(line.damage - bigStats.damage * 0.5) < 1e-9);
+    assert.ok(Math.abs(line.damage - bigStats.damage * 0.4) < 1e-9);
     assert.ok(Math.abs(line.impactAt - (state.now + smallStats.delay + index * smallStats.delay * 0.5)) < 1e-9);
   });
 });

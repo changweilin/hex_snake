@@ -313,6 +313,125 @@
       bottom: calc(max(10px, env(safe-area-inset-bottom)) + 40px);
     }
 
+    .cooldown-indicator {
+      position: absolute;
+      left: max(10px, env(safe-area-inset-left));
+      z-index: 18;
+      width: 38px;
+      height: 38px;
+      min-width: 0;
+      min-height: 0;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, 0.34);
+      background:
+        radial-gradient(circle at 38% 30%, rgba(255, 255, 255, 0.22), transparent 30%),
+        rgba(15, 23, 42, 0.86);
+      color: #fde68a;
+      display: grid;
+      place-items: center;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.38), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+      backdrop-filter: blur(8px);
+      pointer-events: none;
+    }
+
+    #cooldownSmallIndicator {
+      bottom: max(10px, env(safe-area-inset-bottom));
+    }
+
+    #cooldownBigIndicator {
+      bottom: calc(max(10px, env(safe-area-inset-bottom)) + 40px);
+    }
+
+    .cooldown-indicator::after {
+      content: attr(data-profile-label);
+      position: absolute;
+      left: -2px;
+      bottom: -2px;
+      width: 15px;
+      height: 15px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: #f59e0b;
+      color: #171006;
+      border: 1px solid rgba(255, 255, 255, 0.64);
+      font-size: 0.56rem;
+      font-weight: 950;
+      line-height: 1;
+    }
+
+    .cooldown-clock {
+      position: absolute;
+      width: 25px;
+      height: 25px;
+      border-radius: 50%;
+      border: 2px solid currentColor;
+      opacity: 0.42;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+    }
+
+    .cooldown-clock::before,
+    .cooldown-clock::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 2px;
+      border-radius: 999px;
+      background: currentColor;
+      transform-origin: 50% 100%;
+    }
+
+    .cooldown-clock::before {
+      height: 7px;
+      transform: translate(-50%, -100%) rotate(0deg);
+    }
+
+    .cooldown-clock::after {
+      height: 9px;
+      transform: translate(-50%, -100%) rotate(118deg);
+    }
+
+    .cooldown-value {
+      position: relative;
+      z-index: 1;
+      max-width: 30px;
+      overflow: hidden;
+      color: currentColor;
+      font-size: 0.66rem;
+      font-weight: 950;
+      line-height: 1;
+      text-align: center;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.78);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .cooldown-indicator.is-cooling {
+      border-color: rgba(253, 230, 138, 0.78);
+      box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.16), 0 12px 30px rgba(0, 0, 0, 0.42);
+    }
+
+    .cooldown-indicator.is-cooling .cooldown-clock::after {
+      animation: cooldown-hand-spin 1.15s linear infinite;
+    }
+
+    .cooldown-indicator.is-ready {
+      color: #86efac;
+      border-color: rgba(134, 239, 172, 0.62);
+    }
+
+    .cooldown-indicator.is-blocked {
+      color: #cbd5e1;
+      border-color: rgba(203, 213, 225, 0.38);
+      opacity: 0.78;
+    }
+
+    @keyframes cooldown-hand-spin {
+      to {
+        transform: translate(-50%, -100%) rotate(478deg);
+      }
+    }
+
     .target-mode-indicator::after {
       content: attr(data-profile-label);
       position: absolute;

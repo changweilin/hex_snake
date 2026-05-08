@@ -602,8 +602,8 @@
       computerFoodTargetAt = 0;
       lastPlayerFoodAt = 0;
       lastComputerFoodAt = 0;
-      lastPlayerAttackMs = -Infinity;
-      lastComputerAttackMs = -Infinity;
+      lastPlayerAttackMs = resetAttackCooldownTracker();
+      lastComputerAttackMs = resetAttackCooldownTracker();
       HexSnakeReplay.resetSurrendered();
       gameOver = false;
       paused = false;
@@ -820,6 +820,37 @@
       bar.closest(".player-metric")?.classList.toggle("is-low-health", ratio <= 0.3);
     }
 
+    function cooldownTimerText(remainingMs) {
+      if (remainingMs <= 0) return "0";
+      const seconds = remainingMs / 1000;
+      return seconds >= 10 ? String(Math.ceil(seconds)) : seconds.toFixed(1);
+    }
+
+    function updateCooldownIndicator(profile = "small", indicator = null, valueEl = null, now = performance.now()) {
+      if (!indicator || !valueEl) return;
+      const remainingMs = attackCooldownRemainingMs("player", profile, now);
+      const cooling = remainingMs > 0;
+      const available = canAttack("player", profile);
+      const label = profile === "big" ? "大招" : "小招";
+      const text = cooldownTimerText(remainingMs);
+      valueEl.textContent = text;
+      indicator.classList.toggle("is-cooling", cooling);
+      indicator.classList.toggle("is-ready", !cooling && available);
+      indicator.classList.toggle("is-blocked", !cooling && !available);
+      const title = cooling
+        ? `${label}冷卻 ${text} 秒`
+        : available
+          ? `${label}冷卻完成`
+          : `${label}冷卻完成，資源不足`;
+      indicator.title = title;
+      indicator.setAttribute("aria-label", title);
+    }
+
+    function updateCooldownHud(now = performance.now()) {
+      updateCooldownIndicator("small", cooldownSmallIndicator, cooldownSmallValue, now);
+      updateCooldownIndicator("big", cooldownBigIndicator, cooldownBigValue, now);
+    }
+
     function updateHud() {
       lastHudFrameAt = performance.now();
       const playerMaxHp = maxHpForSnake(snake);
@@ -842,6 +873,7 @@
       keyEls.forEach(el => el.classList.toggle("active", Number(el.dataset.dir) === nextDir));
       updateStockHud("player", playerStock, playerAmmo, playerAmmoCharge);
       updateStockHud("computer", computerStock, computerAmmo, computerAmmoCharge);
+      updateCooldownHud(now);
     }
 
     function updateHudThrottled(now = performance.now()) {
@@ -1392,9 +1424,9 @@
         const lineCells = boardLineThrough(lineOrigin, direction);
         const lineShape = bandShapeFromTotalWidth(small.radius);
         const excludedCells = (owner === "player" ? snake : computerSnake).map(segment => ({ q: segment.q, r: segment.r }));
-        const strikeCount = Math.max(1, Math.round(ultimateSetting(character.id, "strikeCount", 7)));
+        const strikeCount = Math.max(1, Math.round(ultimateSetting(character.id, "strikeCount", 1)));
         const strikeIntervalMs = small.delay * Math.max(0, ultimateSetting(character.id, "strikeIntervalMultiplier", 0.5));
-        const damage = bigDamage * ultimateSetting(character.id, "damageMultiplier", 0.5);
+        const damage = bigDamage * ultimateSetting(character.id, "damageMultiplier", 0.4);
         for (let index = 0; index < strikeCount; index += 1) {
           const strikeDelay = index * strikeIntervalMs;
           projectiles.push({
@@ -1415,7 +1447,7 @@
             delay: small.delay,
             damage,
             stunChance,
-            stackStun: true
+            stackStun: strikeCount > 1
           });
         }
         return small.delay + (strikeCount - 1) * strikeIntervalMs;
@@ -1542,20 +1574,20 @@
 
     function launchAttack(owner, target, now, profile = "big", options = {}) {
       const stock = owner === "player" ? playerStock : computerStock;
-      const lastAttack = owner === "player" ? lastPlayerAttackMs : lastComputerAttackMs;
+      const lastAttack = lastAttackMsFor(owner, profile);
       const source = owner === "player" ? snake[0] : computerSnake[0];
       const character = characterFor(owner);
       const isSmall = profile === "small";
       if (!canAttack(owner, profile)) return false;
-      if (now - lastAttack < attackCooldown(stock, profile, character.id) * (isSmall ? smallAttackCooldownScale : 1)) return false;
+      if (now - lastAttack < attackProfileCooldown(stock, profile, character.id)) return false;
       const stats = attackStats(stock, profile);
       const stunChance = attackStunChance(stock);
       consumeAttackCost(owner, stock, profile);
       if (owner === "player") {
-        lastPlayerAttackMs = now;
+        setLastAttackMsFor(owner, profile, now);
         playerBombFlashUntil = now + 1200;
       } else {
-        lastComputerAttackMs = now;
+        setLastAttackMsFor(owner, profile, now);
         computerBombFlashUntil = now + 1200;
       }
       HexSnakeAudio.playCharacter(owner, isSmall ? "small" : "big");
@@ -2775,8 +2807,7 @@
       const bombCost = attackBombCost(profile);
       if (ammoFor("player") < bombCost) return `${moveName} 施放失敗：炸彈不足，需要 ${bombCost} 枚，目前 ${ammoFor("player")} 枚。`;
 
-      const cooldownMs = attackCooldown(stock, profile, characterFor("player").id) * (profile === "small" ? smallAttackCooldownScale : 1);
-      const remainingMs = cooldownMs - (now - lastPlayerAttackMs);
+      const remainingMs = attackCooldownRemainingMs("player", profile, now);
       if (remainingMs > 0) return `${moveName} 施放失敗：冷卻中，還需 ${(remainingMs / 1000).toFixed(1)} 秒。`;
 
       return `${moveName} 施放失敗：目前條件不允許施放。`;

@@ -697,7 +697,7 @@ function makeFighter(owner, character, start, direction, settings, balance, poli
     ammoCharge: settings.initialEnergy,
     initialSpeed: settings.initialSpeed,
     lastStep: 0,
-    lastAttack: -Infinity,
+    lastAttack: { small: -Infinity, big: -Infinity },
     stunUntil: 0,
     slowUntil: 0,
     collisionParalysisMs: 0,
@@ -1434,8 +1434,8 @@ function morayLinePlanDamage(state, attacker, defender, balance, plan) {
   if (!targetSnake.length || !plan?.target) return 0;
   const lineShape = { ...bandShapeFromTotalWidth(attackStats(attacker.stock, "small", balance).radius), headDamageMultiplier: 2 };
   const stats = morayLineCandidateStats(targetSnake, boardLineThrough(state, plan.target, plan.direction), lineShape);
-  const strikeCount = Math.max(1, Math.round(ultimateSetting(balance, "moray", "strikeCount", 7)));
-  const damageMultiplier = ultimateSetting(balance, "moray", "damageMultiplier", 0.5);
+  const strikeCount = Math.max(1, Math.round(ultimateSetting(balance, "moray", "strikeCount", 1)));
+  const damageMultiplier = ultimateSetting(balance, "moray", "damageMultiplier", 0.4);
   return stats.damageScore * attackDamage(attacker.stock, "big", balance) * damageMultiplier * strikeCount;
 }
 
@@ -1729,9 +1729,9 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
     const lineCells = boardLineThrough(state, target, direction);
     const lineShape = bandShapeFromTotalWidth(small.radius);
     const excludedCells = attacker.snake.map(segment => ({ ...segment }));
-    const strikeCount = Math.max(1, Math.round(ultimateSetting(balance, characterId, "strikeCount", 7)));
+    const strikeCount = Math.max(1, Math.round(ultimateSetting(balance, characterId, "strikeCount", 1)));
     const strikeIntervalMs = small.delay * Math.max(0, ultimateSetting(balance, characterId, "strikeIntervalMultiplier", 0.5));
-    const damage = bigDamage * ultimateSetting(balance, characterId, "damageMultiplier", 0.5);
+    const damage = bigDamage * ultimateSetting(balance, characterId, "damageMultiplier", 0.4);
     for (let index = 0; index < strikeCount; index += 1) {
       state.projectiles.push({
         kind: "line",
@@ -1746,7 +1746,7 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
         impactAt: now + small.delay + index * strikeIntervalMs,
         damage,
         stunChance,
-        stackStun: true
+        stackStun: strikeCount > 1
       });
     }
     return;
@@ -1848,12 +1848,19 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
 function launchAttack(state, attacker, defender, profile, now, balance) {
   if (!canAttack(attacker, profile, balance)) return false;
   const cooldownScale = profile === "small" ? SMALL_ATTACK_COOLDOWN_SCALE : 1;
-  if (now - attacker.lastAttack < attackCooldown(attacker.stock, balance, profile, attacker.character.id) * cooldownScale) return false;
+  const attackProfile = profile === "small" ? "small" : "big";
+  const lastAttack = typeof attacker.lastAttack === "number"
+    ? attacker.lastAttack
+    : Number.isFinite(attacker.lastAttack?.[attackProfile])
+      ? attacker.lastAttack[attackProfile]
+      : -Infinity;
+  if (now - lastAttack < attackCooldown(attacker.stock, balance, profile, attacker.character.id) * cooldownScale) return false;
   const target = chooseAttackTarget(state, attacker, defender, balance, profile);
   const stats = attackStats(attacker.stock, profile, balance);
   const stunChance = attackStunChance(attacker.stock, balance);
   consumeAttackCost(attacker, profile, balance);
-  attacker.lastAttack = now;
+  if (!attacker.lastAttack || typeof attacker.lastAttack !== "object") attacker.lastAttack = { small: -Infinity, big: -Infinity };
+  attacker.lastAttack[attackProfile] = now;
   if (profile === "small") {
     pushCircleAttack(state, { owner: attacker.owner, profile, target, impactAt: now + stats.delay, radius: stats.radius, damage: stats.damage, stunChance });
     attacker.stats.smallCasts += 1;
