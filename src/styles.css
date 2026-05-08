@@ -519,6 +519,13 @@
       outline: none;
     }
 
+    .overlay.tutorial-open .tutorial-card,
+    .overlay.tutorial-open .tutorial-card * {
+      touch-action: pan-y;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
     .tutorial-card > .tutorial-progress {
       grid-row: 1;
     }
@@ -1318,7 +1325,9 @@
       justify-self: center;
       padding: 16px 18px;
       max-height: 100%;
-      overflow: auto;
+      overflow-x: hidden;
+      overflow-y: auto;
+      overscroll-behavior: contain;
       border-radius: 8px;
       border: 1px solid rgba(255, 255, 255, 0.12);
       background: rgba(32, 38, 51, 0.88);

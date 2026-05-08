@@ -3566,7 +3566,15 @@
       tutorialSwipePointerId = event.pointerId;
       tutorialSwipeDidMove = false;
       overlay.setPointerCapture?.(event.pointerId);
-    });
+    }, true);
+
+    overlay.addEventListener("pointermove", event => {
+      if (!isTutorialOpen() || tutorialSwipeStartX === null) return;
+      if (tutorialSwipePointerId !== null && event.pointerId !== tutorialSwipePointerId) return;
+      const deltaX = event.clientX - tutorialSwipeStartX;
+      const deltaY = event.clientY - tutorialSwipeStartY;
+      if (Math.abs(deltaX) > 10 && Math.abs(deltaX) > Math.abs(deltaY)) event.preventDefault();
+    }, true);
 
     overlay.addEventListener("pointerup", event => {
       if (!isTutorialOpen() || tutorialSwipeStartX === null) return;
@@ -3586,7 +3594,7 @@
       setTimeout(() => {
         tutorialSwipeDidMove = false;
       }, 160);
-    });
+    }, true);
 
     overlay.addEventListener("pointercancel", event => {
       if (tutorialSwipePointerId === null || event.pointerId !== tutorialSwipePointerId) return;
@@ -3595,7 +3603,7 @@
       tutorialSwipeStartY = null;
       tutorialSwipePointerId = null;
       if (overlay.hasPointerCapture?.(pointerId)) overlay.releasePointerCapture(pointerId);
-    });
+    }, true);
 
     startButton.addEventListener("click", () => {
       if (HexSnakeReplay.isPlaybackMode()) return;
