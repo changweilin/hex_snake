@@ -1442,9 +1442,9 @@
         const lineCells = boardLineThrough(lineOrigin, direction);
         const lineShape = bandShapeFromTotalWidth(small.radius);
         const excludedCells = (owner === "player" ? snake : computerSnake).map(segment => ({ q: segment.q, r: segment.r }));
-        const strikeCount = Math.max(1, Math.round(ultimateSetting(character.id, "strikeCount", 8)));
+        const strikeCount = Math.max(1, Math.round(ultimateSetting(character.id, "strikeCount", 7)));
         const strikeIntervalMs = small.delay * Math.max(0, ultimateSetting(character.id, "strikeIntervalMultiplier", 0.5));
-        const damage = bigDamage * ultimateSetting(character.id, "damageMultiplier", 0.5);
+        const damage = bigDamage * ultimateSetting(character.id, "damageMultiplier", 0.4);
         for (let index = 0; index < strikeCount; index += 1) {
           const strikeDelay = index * strikeIntervalMs;
           projectiles.push({
@@ -1523,7 +1523,7 @@
           impactAt: now + delay,
           delay,
           radius: Math.max(0.5, small.radius * 0.5),
-          damage: bigDamage * ultimateSetting(character.id, "damageMultiplier", 6),
+          damage: bigDamage * ultimateSetting(character.id, "damageMultiplier", 8),
           stunChance,
           headStunChance: options.hitStunChances?.head ?? stunChance,
           hidden: true,
@@ -1536,8 +1536,8 @@
 
       if (character.id === "dragon") {
         const spiritRadius = small.radius * ultimateSetting(character.id, "radiusMultiplier", 2);
-        const impactDamage = bigDamage * ultimateSetting(character.id, "impactDamageMultiplier", 0.5);
-        const radiationTotalDamage = bigDamage * ultimateSetting(character.id, "radiationDamageMultiplier", 1.5);
+        const impactDamage = bigDamage * ultimateSetting(character.id, "impactDamageMultiplier", 1);
+        const radiationTotalDamage = bigDamage * ultimateSetting(character.id, "radiationDamageMultiplier", 2);
         const radiationDurationMs = ultimateSetting(character.id, "radiationDurationMs", 4000);
         const radiationTickMs = ultimateSetting(character.id, "radiationTickMs", 500);
         const firstImpactDelay = small.delay * ultimateSetting(character.id, "firstImpactDelayMultiplier", 2);

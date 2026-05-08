@@ -1514,8 +1514,8 @@ function morayLinePlanDamage(state, attacker, defender, balance, plan) {
   if (!targetSnake.length || !plan?.target) return 0;
   const lineShape = bandShapeFromTotalWidth(attackStats(attacker.stock, "small", balance).radius);
   const stats = morayLineCandidateStats(targetSnake, boardLineThrough(state, plan.target, plan.direction), lineShape);
-  const strikeCount = Math.max(1, Math.round(ultimateSetting(balance, "moray", "strikeCount", 8)));
-  const damageMultiplier = ultimateSetting(balance, "moray", "damageMultiplier", 0.5);
+  const strikeCount = Math.max(1, Math.round(ultimateSetting(balance, "moray", "strikeCount", 7)));
+  const damageMultiplier = ultimateSetting(balance, "moray", "damageMultiplier", 0.4);
   return stats.damageScore * attackDamage(attacker.stock, "big", balance) * damageMultiplier * strikeCount;
 }
 
@@ -1818,9 +1818,9 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
     const lineCells = boardLineThrough(state, target, direction);
     const lineShape = bandShapeFromTotalWidth(small.radius);
     const excludedCells = attacker.snake.map(segment => ({ ...segment }));
-    const strikeCount = Math.max(1, Math.round(ultimateSetting(balance, characterId, "strikeCount", 8)));
+    const strikeCount = Math.max(1, Math.round(ultimateSetting(balance, characterId, "strikeCount", 7)));
     const strikeIntervalMs = small.delay * Math.max(0, ultimateSetting(balance, characterId, "strikeIntervalMultiplier", 0.5));
-    const damage = bigDamage * ultimateSetting(balance, characterId, "damageMultiplier", 0.5);
+    const damage = bigDamage * ultimateSetting(balance, characterId, "damageMultiplier", 0.4);
     for (let index = 0; index < strikeCount; index += 1) {
       state.projectiles.push({
         kind: "line",
@@ -1880,7 +1880,7 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
       target,
       impactAt: now + delay,
       radius: Math.max(0.5, small.radius * 0.5),
-      damage: bigDamage * ultimateSetting(balance, characterId, "damageMultiplier", 6),
+      damage: bigDamage * ultimateSetting(balance, characterId, "damageMultiplier", 8),
       stunChance,
       headStunChance: hitStunChances?.head ?? stunChance,
       sandwormHidden: true,
@@ -1891,8 +1891,8 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
   }
   if (characterId === "dragon") {
     const spiritRadius = small.radius * ultimateSetting(balance, characterId, "radiusMultiplier", 2);
-    const impactDamage = bigDamage * ultimateSetting(balance, characterId, "impactDamageMultiplier", 0.5);
-    const radiationTotalDamage = bigDamage * ultimateSetting(balance, characterId, "radiationDamageMultiplier", 1.5);
+    const impactDamage = bigDamage * ultimateSetting(balance, characterId, "impactDamageMultiplier", 1);
+    const radiationTotalDamage = bigDamage * ultimateSetting(balance, characterId, "radiationDamageMultiplier", 2);
     const radiationDurationMs = ultimateSetting(balance, characterId, "radiationDurationMs", 4000);
     const radiationTickMs = ultimateSetting(balance, characterId, "radiationTickMs", 500);
     const firstImpactDelay = small.delay * ultimateSetting(balance, characterId, "firstImpactDelayMultiplier", 2);

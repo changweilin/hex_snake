@@ -76,8 +76,8 @@
       "dragon": {
         "bigCooldownMs": 4800,
         "radiusMultiplier": 2,
-        "impactDamageMultiplier": 0.5,
-        "radiationDamageMultiplier": 1.5,
+        "impactDamageMultiplier": 1,
+        "radiationDamageMultiplier": 2,
         "radiationDurationMs": 4000,
         "radiationTickMs": 500,
         "firstImpactDelayMultiplier": 2
@@ -93,7 +93,7 @@
       },
       "sandworm": {
         "bigCooldownMs": 6000,
-        "damageMultiplier": 6,
+        "damageMultiplier": 8,
         "superArmorDelayMultiplier": 1,
         "superArmorDurationMs": 3000,
         "invisibleDelayMultiplier": 2,
@@ -107,8 +107,8 @@
       },
       "moray": {
         "bigCooldownMs": 2400,
-        "damageMultiplier": 0.5,
-        "strikeCount": 8,
+        "damageMultiplier": 0.4,
+        "strikeCount": 7,
         "strikeIntervalMultiplier": 0.5
       },
       "gu_king": {
