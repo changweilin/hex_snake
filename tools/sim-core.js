@@ -224,6 +224,12 @@ function addStock(stock, typeId, amount, balance) {
   stock[typeId] = clamp((stock[typeId] || 0) + amount, 0, balance.resources.maxFoodStock);
 }
 
+function addRandomStock(stock, candidates, amount, balance, rng) {
+  const available = candidates.filter(type => FOOD_TYPES.includes(type));
+  if (!available.length) return;
+  addStock(stock, rng.item(available), amount, balance);
+}
+
 function foodBonus(stock, typeId, perPoint, maxBonus) {
   return Math.min(maxBonus, (stock[typeId] || 0) * perPoint);
 }
@@ -543,14 +549,50 @@ function randomFoodTypeIdsForCharacter(character, balance, rng) {
   return [first, second];
 }
 
+function applyCharacterFoodStockBonus(fighter, food, balance, rng) {
+  const types = food?.types || [];
+  const character = fighter?.character;
+  if (!character) return;
+  const preferredFood = character?.foodPreference || "balanced";
+  const hasBlackFood = types.includes("black");
+  const stockTypes = types.filter(type => FOOD_TYPES.includes(type));
+  const isBlackSpecialist = character?.specialFood === "black" || preferredFood === "black";
+  if (isBlackSpecialist) {
+    if (!hasBlackFood) return;
+    const roll = rng.next();
+    const doubleChance = balance.resources.blackFoodDoubleBonusChance ?? (1 / 15);
+    const singleChance = balance.resources.blackFoodBonusChance ?? (1 / 3);
+    if (roll < doubleChance) {
+      addRandomStock(fighter.stock, FOOD_TYPES, 2, balance, rng);
+    } else if (roll < doubleChance + singleChance) {
+      addRandomStock(fighter.stock, FOOD_TYPES, 1, balance, rng);
+    }
+    return;
+  }
+  if (preferredFood === "balanced") {
+    const candidates = hasBlackFood ? FOOD_TYPES : stockTypes;
+    const chance = balance.resources.balancedFoodBonusChance ?? 0.2;
+    if (candidates.length && rng.next() < chance) {
+      addRandomStock(fighter.stock, candidates, 1, balance, rng);
+    }
+    return;
+  }
+  const chance = balance.resources.favoriteFoodBonusChance ?? 0.5;
+  if (stockTypes.length === 1 && stockTypes[0] === preferredFood && rng.next() < chance) {
+    addStock(fighter.stock, stockTypes[0], 1, balance);
+  }
+}
+
 function collectFood(fighter, food, balance, rng) {
   if (food.types.includes("black")) {
     addStock(fighter.stock, rng.item(FOOD_TYPES), 1, balance);
     addAmmoCharge(fighter, balance.resources.blackFoodEnergy, balance);
+    applyCharacterFoodStockBonus(fighter, food, balance, rng);
     return;
   }
   const gain = food.types.length > 1 ? balance.resources.dualColorStockGain : balance.resources.singleColorStockGain;
   food.types.forEach(type => addStock(fighter.stock, type, gain, balance));
+  applyCharacterFoodStockBonus(fighter, food, balance, rng);
   addAmmoCharge(fighter, balance.resources.foodEnergy, balance);
 }
 

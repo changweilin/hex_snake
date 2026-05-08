@@ -98,6 +98,33 @@ function test(name, fn) {
   tests.push({ name, fn });
 }
 
+function createFixedRng(values) {
+  let index = 0;
+  return {
+    next() {
+      const value = values[index] ?? 0;
+      index += 1;
+      return value;
+    },
+    int(max) {
+      return Math.floor(this.next() * max);
+    },
+    item(items) {
+      return items[this.int(items.length)];
+    }
+  };
+}
+
+function balanceWithResourceOverrides(overrides) {
+  return {
+    ...balance,
+    resources: {
+      ...balance.resources,
+      ...overrides
+    }
+  };
+}
+
 test("hex distance and wrapped movement are deterministic", () => {
   const board = createBoard(6);
   assert.equal(hexDistance({ q: 0, r: 0 }, { q: 2, r: -1 }), 2);
@@ -112,6 +139,35 @@ test("food collection applies stock and energy rules", () => {
   collectFood(fighter, { types: ["fat", "carb"] }, balance, createRng("dual"));
   assert.equal(fighter.stock.fat, balance.resources.dualColorStockGain);
   assert.equal(fighter.stock.carb, balance.resources.dualColorStockGain);
+});
+
+test("preferred single-color foods can grant character stock bonus", () => {
+  const tunedBalance = balanceWithResourceOverrides({ favoriteFoodBonusChance: 1 });
+  const fighter = { stock: emptyStock(), ammo: 0, ammoCharge: 0, character: characterById.get("sandworm") };
+  collectFood(fighter, { types: ["fat"] }, tunedBalance, createRng("preferred-fat"));
+  assert.equal(fighter.stock.fat, tunedBalance.resources.singleColorStockGain + 1);
+  collectFood(fighter, { types: ["fat", "carb"] }, tunedBalance, createRng("preferred-dual"));
+  assert.equal(fighter.stock.fat, tunedBalance.resources.singleColorStockGain + 1 + tunedBalance.resources.dualColorStockGain);
+  assert.equal(fighter.stock.carb, tunedBalance.resources.dualColorStockGain);
+});
+
+test("white dragon food bonus applies to any food and randomizes dual colors", () => {
+  const tunedBalance = balanceWithResourceOverrides({ balancedFoodBonusChance: 1 });
+  const fighter = { stock: emptyStock(), ammo: 0, ammoCharge: 0, character: characterById.get("dragon") };
+  collectFood(fighter, { types: ["protein", "carb"] }, tunedBalance, createFixedRng([0, 0]));
+  assert.equal(fighter.stock.protein, tunedBalance.resources.dualColorStockGain + 1);
+  assert.equal(fighter.stock.carb, tunedBalance.resources.dualColorStockGain);
+});
+
+test("gu king mushroom stock bonus is mutually exclusive", () => {
+  const guKing = characterById.get("gu_king");
+  const doubleBonus = { stock: emptyStock(), ammo: 0, ammoCharge: 0, character: guKing };
+  collectFood(doubleBonus, { types: ["black"] }, balance, createFixedRng([0, 0, 0]));
+  assert.equal(doubleBonus.stock.protein, 3);
+
+  const singleBonus = { stock: emptyStock(), ammo: 0, ammoCharge: 0, character: guKing };
+  collectFood(singleBonus, { types: ["black"] }, balance, createFixedRng([0, 0.1, 0]));
+  assert.equal(singleBonus.stock.protein, 2);
 });
 
 test("gu king food generation only creates black or single-color foods", () => {

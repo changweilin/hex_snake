@@ -35,6 +35,10 @@ let preferredFoodWeight = 0.4;
 let otherFoodWeight = 0.2;
 let balancedDualChance = 0.5;
 let blackSpecialChance = 1 / 3;
+let favoriteFoodBonusChance = 0.5;
+let balancedFoodBonusChance = 0.2;
+let blackFoodBonusChance = 1 / 3;
+let blackFoodDoubleBonusChance = 1 / 15;
 let collisionStunMs = 2000;
 let collisionSlowMs = 1000;
 let attackStunMs = 500;
@@ -107,6 +111,10 @@ function applyBalanceConfig(config) {
   blackFoodEnergy = config.resources?.blackFoodEnergy ?? blackFoodEnergy;
   singleColorStockGain = config.resources?.singleColorStockGain ?? singleColorStockGain;
   dualColorStockGain = config.resources?.dualColorStockGain ?? dualColorStockGain;
+  favoriteFoodBonusChance = config.resources?.favoriteFoodBonusChance ?? favoriteFoodBonusChance;
+  balancedFoodBonusChance = config.resources?.balancedFoodBonusChance ?? balancedFoodBonusChance;
+  blackFoodBonusChance = config.resources?.blackFoodBonusChance ?? blackFoodBonusChance;
+  blackFoodDoubleBonusChance = config.resources?.blackFoodDoubleBonusChance ?? blackFoodDoubleBonusChance;
   baseStepMs = config.movement?.baseStepMs ?? baseStepMs;
   moveBonusPerPoint = config.movement?.moveBonusPerPoint ?? moveBonusPerPoint;
   maxMoveBonus = config.movement?.maxMoveBonus ?? maxMoveBonus;
@@ -206,6 +214,7 @@ const foodTypes = [
 const blackFoodType = { id: "black", label: "迷幻菇", name: "迷幻菇", colorName: "黑色", foodName: "迷幻菇", effect: "特殊食物；吃下後蛋白、脂肪、纖維、碳水隨機一種庫存 +1，並獲得 3 點能量", color: "#050505", line: "#e5e7eb" };
 const dualFoodName = "蟠桃(雙色)";
 const foodTypeById = new Map([...foodTypes, blackFoodType].map(type => [type.id, type]));
+const stockFoodTypeIds = foodTypes.map(type => type.id);
 const foodLabels = {
   balanced: "均衡",
   protein: "蛋白",
@@ -1849,6 +1858,43 @@ function foodTypeIds(food) {
   return food.type ? [food.type] : [];
 }
 
+function randomStockFoodTypeId(candidates = stockFoodTypeIds) {
+  const available = candidates.filter(typeId => stockFoodTypeIds.includes(typeId));
+  if (!available.length) return null;
+  return available[Math.floor(Math.random() * available.length)];
+}
+
+function addRandomStock(stock, candidates = stockFoodTypeIds, amount = 1) {
+  const typeId = randomStockFoodTypeId(candidates);
+  if (typeId) addStock(stock, typeId, amount);
+}
+
+function applyCharacterFoodStockBonus(owner, stock, types) {
+  const character = characterFor(owner);
+  const hasBlackFood = types.includes("black");
+  const stockTypes = types.filter(typeId => stockFoodTypeIds.includes(typeId));
+  if (character?.specialFood === "black") {
+    if (!hasBlackFood) return;
+    const roll = Math.random();
+    if (roll < blackFoodDoubleBonusChance) {
+      addRandomStock(stock, stockFoodTypeIds, 2);
+    } else if (roll < blackFoodDoubleBonusChance + blackFoodBonusChance) {
+      addRandomStock(stock, stockFoodTypeIds, 1);
+    }
+    return;
+  }
+  if (character?.food === "balanced") {
+    const candidates = hasBlackFood ? stockFoodTypeIds : stockTypes;
+    if (candidates.length && Math.random() < balancedFoodBonusChance) {
+      addRandomStock(stock, candidates, 1);
+    }
+    return;
+  }
+  if (stockTypes.length === 1 && stockTypes[0] === character?.food && Math.random() < favoriteFoodBonusChance) {
+    addStock(stock, stockTypes[0], 1);
+  }
+}
+
 function collectFood(owner, food) {
   const stock = owner === "player" ? playerStock : computerStock;
   const types = foodTypeIds(food);
@@ -1856,10 +1902,12 @@ function collectFood(owner, food) {
     const randomType = foodTypes[Math.floor(Math.random() * foodTypes.length)];
     addStock(stock, randomType.id, 1);
     addAmmoCharge(owner, blackFoodEnergy);
+    applyCharacterFoodStockBonus(owner, stock, types);
     return;
   }
   const stockGain = types.length > 1 ? dualColorStockGain : singleColorStockGain;
   types.forEach(typeId => addStock(stock, typeId, stockGain));
+  applyCharacterFoodStockBonus(owner, stock, types);
   addAmmoCharge(owner, foodEnergy);
 }
 

@@ -30,7 +30,11 @@
     "foodEnergy": 2,
     "blackFoodEnergy": 3,
     "singleColorStockGain": 2,
-    "dualColorStockGain": 1
+    "dualColorStockGain": 1,
+    "favoriteFoodBonusChance": 0.5,
+    "balancedFoodBonusChance": 0.2,
+    "blackFoodBonusChance": 0.3333333333333333,
+    "blackFoodDoubleBonusChance": 0.06666666666666667
   },
   "health": {
     "hpPerSnakeUnit": 2
