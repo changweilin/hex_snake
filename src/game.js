@@ -1527,7 +1527,9 @@
           stunChance,
           headStunChance: options.hitStunChances?.head ?? stunChance,
           hidden: true,
-          sandwormHidden: true
+          sandwormHidden: true,
+          sandwormParalyzeOnBody: true,
+          sandwormKillOnHead: true
         });
         return delay;
       }
@@ -1694,6 +1696,14 @@
       return stunChanceForHeadHit(lineProjectileHitsHead(parts, projectile), projectile);
     }
 
+    function snakeBodyHitAtCenter(parts, target) {
+      return parts.slice(1).some(segment => keyOf(segment) === keyOf(target));
+    }
+
+    function snakeHeadHitAtCenter(parts, target) {
+      return Boolean(parts[0] && keyOf(parts[0]) === keyOf(target));
+    }
+
     function isOwnerVulnerable(owner) {
       return owner === "player" ? playerVulnerable : computerVulnerable;
     }
@@ -1759,19 +1769,20 @@
         clearOwnerAbnormalStatus(owner, now);
         return false;
       }
+      const interrupted = interruptCasting(owner);
       const stunUntil = now + collisionStunMs * severity;
       const slowUntil = stunUntil + collisionSlowMs * severity;
       if (owner === "player") {
         playerStunUntil = Math.max(playerStunUntil, stunUntil);
         playerSlowUntil = Math.max(playerSlowUntil, slowUntil);
         playerCollisionParalysisMs += collisionStunMs * severity;
-        showStatusCallout(owner, severity > 1 ? "重度麻痺！" : "麻痺！");
+        if (interrupted) showStatusCallout(owner, severity > 1 ? "重度麻痺！招式中斷" : "麻痺！招式中斷", { interrupted });
         return playerCollisionParalysisMs > maxCollisionParalysisMs;
       } else {
         computerStunUntil = Math.max(computerStunUntil, stunUntil);
         computerSlowUntil = Math.max(computerSlowUntil, slowUntil);
         computerCollisionParalysisMs += collisionStunMs * severity;
-        showStatusCallout(owner, severity > 1 ? "重度麻痺！" : "麻痺！");
+        if (interrupted) showStatusCallout(owner, severity > 1 ? "重度麻痺！招式中斷" : "麻痺！招式中斷", { interrupted });
         return computerCollisionParalysisMs > maxCollisionParalysisMs;
       }
     }
@@ -1779,8 +1790,9 @@
     function applyCollisionParalysis(owner, now = performance.now()) {
       if (isOwnerSandwormArmored(owner, now)) {
         clearOwnerAbnormalStatus(owner, now);
-        return;
+        return false;
       }
+      const interrupted = interruptCasting(owner);
       const stunUntil = now + collisionStunMs;
       const slowUntil = stunUntil + collisionSlowMs;
       if (owner === "player") {
@@ -1790,7 +1802,8 @@
         computerStunUntil = Math.max(computerStunUntil, stunUntil);
         computerSlowUntil = Math.max(computerSlowUntil, slowUntil);
       }
-      showStatusCallout(owner, "麻痺！");
+      if (interrupted) showStatusCallout(owner, "麻痺！招式中斷", { interrupted });
+      return true;
     }
 
     function collisionSeverity(selfHit, opponentHit) {
@@ -1895,6 +1908,16 @@
               tickMs: projectile.radiationTickMs,
               endAt: now + projectile.radiationDurationMs
             });
+          }
+          if (projectile.sandwormParalyzeOnBody || projectile.sandwormKillOnHead) {
+            if (projectile.owner !== "player") {
+              if (projectile.sandwormKillOnHead && snakeHeadHitAtCenter(snake, explosionTarget)) playerDamage = Math.max(playerDamage, playerHp);
+              else if (projectile.sandwormParalyzeOnBody && snakeBodyHitAtCenter(snake, explosionTarget)) applyCollisionParalysis("player", now);
+            }
+            if (projectile.owner !== "computer") {
+              if (projectile.sandwormKillOnHead && snakeHeadHitAtCenter(computerSnake, explosionTarget)) computerDamage = Math.max(computerDamage, computerHp);
+              else if (projectile.sandwormParalyzeOnBody && snakeBodyHitAtCenter(computerSnake, explosionTarget)) applyCollisionParalysis("computer", now);
+            }
           }
         }
         if (projectile.owner === "player") playerDamage = 0;

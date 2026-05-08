@@ -658,6 +658,14 @@ function lineProjectileStunChance(parts, projectile) {
   return stunChanceForHeadHit(lineProjectileHitsHead(parts, projectile), projectile);
 }
 
+function snakeBodyHitAtCenter(parts, target) {
+  return parts.slice(1).some(segment => keyOf(segment) === keyOf(target));
+}
+
+function snakeHeadHitAtCenter(parts, target) {
+  return Boolean(parts[0] && keyOf(parts[0]) === keyOf(target));
+}
+
 function buildCharacterMap(characters) {
   return new Map(characters.map(character => [character.id, character]));
 }
@@ -1875,7 +1883,9 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
       damage: bigDamage * ultimateSetting(balance, characterId, "damageMultiplier", 6),
       stunChance,
       headStunChance: hitStunChances?.head ?? stunChance,
-      sandwormHidden: true
+      sandwormHidden: true,
+      sandwormParalyzeOnBody: true,
+      sandwormKillOnHead: true
     });
     return;
   }
@@ -1997,6 +2007,7 @@ function applyAttackStun(state, target, chance, now, balance, options = {}) {
     clearAbnormalStatus(target, now);
     return false;
   }
+  if (options.interrupt !== false) interruptCasting(state, target.owner);
   const stunBase = options.stack ? Math.max(now, target.stunUntil) : now;
   target.stunUntil = Math.max(target.stunUntil, stunBase + balance.attack.attackStunMs);
   target.slowUntil = Math.max(target.slowUntil, target.stunUntil + balance.attack.attackSlowMs);
@@ -2013,13 +2024,21 @@ function applyVulnerability(state, target, chance, now) {
   return true;
 }
 
-function applyCollisionParalysis(target, now, balance) {
+function interruptCasting(state, owner) {
+  const beforeCount = state.projectiles.length;
+  state.projectiles = state.projectiles.filter(projectile => projectile.owner !== owner);
+  return state.projectiles.length !== beforeCount;
+}
+
+function applyCollisionParalysis(state, target, now, balance, options = {}) {
   if (isStatusImmune(target, now)) {
     clearAbnormalStatus(target, now);
-    return;
+    return false;
   }
+  if (options.interrupt !== false) interruptCasting(state, target.owner);
   target.stunUntil = Math.max(target.stunUntil, now + balance.collision.collisionStunMs);
   target.slowUntil = Math.max(target.slowUntil, target.stunUntil + balance.collision.collisionSlowMs);
+  return true;
 }
 
 function resolveProjectiles(state, now, balance) {
@@ -2081,6 +2100,16 @@ function resolveProjectiles(state, now, balance) {
           tickMs: projectile.radiationTickMs,
           endAt: now + projectile.radiationDurationMs
         });
+      }
+      if (projectile.sandwormParalyzeOnBody || projectile.sandwormKillOnHead) {
+        if (projectile.owner !== "player") {
+          if (projectile.sandwormKillOnHead && snakeHeadHitAtCenter(player.snake, explosionTarget)) playerDamage = Math.max(playerDamage, player.hp);
+          else if (projectile.sandwormParalyzeOnBody && snakeBodyHitAtCenter(player.snake, explosionTarget) && applyCollisionParalysis(state, player, now, balance)) attacker.stats.stunApplied += 1;
+        }
+        if (projectile.owner !== "computer") {
+          if (projectile.sandwormKillOnHead && snakeHeadHitAtCenter(computer.snake, explosionTarget)) computerDamage = Math.max(computerDamage, computer.hp);
+          else if (projectile.sandwormParalyzeOnBody && snakeBodyHitAtCenter(computer.snake, explosionTarget) && applyCollisionParalysis(state, computer, now, balance)) attacker.stats.stunApplied += 1;
+        }
       }
     }
     if (projectile.owner === "player") playerDamage = 0;
@@ -2149,11 +2178,12 @@ function collisionSeverity(selfHit, opponentHit) {
   return 0;
 }
 
-function applyCollisionPenalty(fighter, severity, now, balance) {
+function applyCollisionPenalty(state, fighter, severity, now, balance) {
   if (isStatusImmune(fighter, now)) {
     clearAbnormalStatus(fighter, now);
     return false;
   }
+  interruptCasting(state, fighter.owner);
   fighter.stunUntil = Math.max(fighter.stunUntil, now + balance.collision.collisionStunMs * severity);
   fighter.slowUntil = Math.max(fighter.slowUntil, fighter.stunUntil + balance.collision.collisionSlowMs * severity);
   fighter.collisionParalysisMs += balance.collision.collisionStunMs * severity;
@@ -2230,7 +2260,7 @@ function moveFighters(state, movers, now, balance) {
     const plan = plans[owner];
     if (plan.collision) {
       collisionOwners.push(owner);
-      if (applyCollisionPenalty(fighter, plan.collision, now, balance)) defeatByCollisionParalysis(state, fighter, now);
+      if (applyCollisionPenalty(state, fighter, plan.collision, now, balance)) defeatByCollisionParalysis(state, fighter, now);
       return;
     }
     movedOwners.push(owner);

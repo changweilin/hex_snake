@@ -617,6 +617,8 @@ test("sandworm big attack phases, turns invisible, then impacts at 3T", () => {
   const small = attackStats(player.stock, "small", balance);
   const projectile = state.projectiles.find(item => item.owner === "player" && item.profile === "big");
   assert.ok(projectile.sandwormHidden);
+  assert.equal(projectile.sandwormParalyzeOnBody, true);
+  assert.equal(projectile.sandwormKillOnHead, true);
   assert.equal(projectile.damage, attackStats(player.stock, "big", balance).damage * balance.attack.ultimates.sandworm.damageMultiplier);
   assert.equal(player.statusImmuneFrom, state.now + small.delay);
   assert.equal(player.statusImmuneUntil, player.statusImmuneFrom + 3000);
@@ -690,7 +692,7 @@ test("sandworm invisible window prevents damage", () => {
   assert.equal(player.stunUntil, 0);
 });
 
-test("sandworm center hits use normal damage and split stun chances", () => {
+test("sandworm exact center body hit paralyzes and exact center head hit kills", () => {
   const state = createMatchState({
     balance,
     playerCharacter: characterById.get("moray"),
@@ -701,7 +703,7 @@ test("sandworm center hits use normal damage and split stun chances", () => {
   const player = state.fighters.player;
   const computer = state.fighters.computer;
   player.snake = [{ q: 0, r: 0 }, { q: -1, r: 0 }, { q: -2, r: 0 }];
-  player.hp = 100;
+  player.hp = 3;
   state.now = 2000;
   state.projectiles.push({
     kind: "circle",
@@ -710,13 +712,17 @@ test("sandworm center hits use normal damage and split stun chances", () => {
     target: { q: -1, r: 0 },
     impactAt: state.now,
     radius: 0.5,
-    damage: 7,
-    stunChance: 1,
-    headStunChance: 0
+    damage: 0,
+    stunChance: 0,
+    headStunChance: 0,
+    sandwormParalyzeOnBody: true,
+    sandwormKillOnHead: true
   });
   resolveProjectiles(state, state.now, balance);
-  assert.equal(player.hp, 93);
-  assert.equal(player.stunUntil, state.now + balance.attack.attackStunMs);
+  assert.equal(player.hp, 3);
+  assert.equal(player.stunUntil, state.now + balance.collision.collisionStunMs);
+  assert.equal(player.slowUntil, state.now + balance.collision.collisionStunMs + balance.collision.collisionSlowMs);
+  assert.equal(computer.stats.stunApplied, 1);
 
   player.stunUntil = 0;
   player.slowUntil = 0;
@@ -727,14 +733,91 @@ test("sandworm center hits use normal damage and split stun chances", () => {
     target: { q: 0, r: 0 },
     impactAt: state.now,
     radius: 0.5,
-    damage: 7,
+    damage: 0,
     stunChance: 0,
-    headStunChance: 1
+    headStunChance: 0,
+    sandwormParalyzeOnBody: true,
+    sandwormKillOnHead: true
   });
   resolveProjectiles(state, state.now, balance);
-  assert.equal(player.hp, 86);
+  assert.equal(player.hp, 0);
+  assert.equal(state.fatalEvents.at(-1).owner, "player");
+  assert.equal(state.fatalEvents.at(-1).cause, "big");
+  assert.equal(computer.stats.damageDealt, 3);
+});
+
+test("sandworm grazing hits still use split stun chances", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("moray"),
+    computerCharacter: characterById.get("sandworm"),
+    seed: "sandworm-graze-hit",
+    initialStock: Object.fromEntries(FOOD_TYPES.map(type => [type, 6]))
+  });
+  const player = state.fighters.player;
+  player.snake = [{ q: 0, r: 0 }, { q: 2, r: 0 }];
+  player.hp = 100;
+  state.now = 2000;
+  state.projectiles.push({
+    kind: "circle",
+    owner: "computer",
+    profile: "big",
+    target: { q: 1, r: 0 },
+    impactAt: state.now,
+    radius: 2,
+    damage: 10,
+    stunChance: 0,
+    headStunChance: 1,
+    sandwormParalyzeOnBody: true,
+    sandwormKillOnHead: true
+  });
+  resolveProjectiles(state, state.now, balance);
+  assert.equal(player.hp, 90);
   assert.equal(player.stunUntil, state.now + balance.attack.attackStunMs);
-  assert.equal(computer.stats.damageDealt, 14);
+});
+
+test("paralysis interrupts active skills without resetting cooldown", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("moray"),
+    computerCharacter: characterById.get("sandworm"),
+    seed: "paralysis-interrupt-cooldown",
+    initialBombs: balance.attack.bigAttackBombCost,
+    initialStock: Object.fromEntries(FOOD_TYPES.map(type => [type, 6])),
+    playerModel: { aiDifficulty: "high", skillStrategy: "preferBig", aimPrecision: 1, pathPrecision: 1 }
+  });
+  const player = state.fighters.player;
+  const computer = state.fighters.computer;
+  player.snake = [{ q: 0, r: 0 }, { q: -1, r: 0 }, { q: -2, r: 0 }];
+  state.now = 1000;
+  assert.equal(launchAttack(state, player, computer, "big", state.now, balance), true);
+  const castAt = player.lastAttack.big;
+  assert.equal(castAt, state.now);
+  assert.ok(state.projectiles.some(projectile => projectile.owner === "player"));
+
+  const interruptAt = state.now + 100;
+  state.projectiles.push({
+    kind: "circle",
+    owner: "computer",
+    profile: "big",
+    target: { q: -1, r: 0 },
+    impactAt: interruptAt,
+    radius: 0.5,
+    damage: 0,
+    stunChance: 0,
+    headStunChance: 0,
+    sandwormParalyzeOnBody: true,
+    sandwormKillOnHead: true
+  });
+  resolveProjectiles(state, interruptAt, balance);
+  assert.equal(state.projectiles.some(projectile => projectile.owner === "player"), false);
+  assert.equal(player.lastAttack.big, castAt);
+
+  player.ammo = balance.attack.bigAttackBombCost;
+  FOOD_TYPES.forEach(type => {
+    player.stock[type] = 6;
+  });
+  assert.equal(launchAttack(state, player, computer, "big", interruptAt + 1, balance), false);
 });
 
 test("high difficulty movement ignores character story roles", () => {
