@@ -1547,7 +1547,7 @@
       const character = characterFor(owner);
       const isSmall = profile === "small";
       if (!canAttack(owner, profile)) return false;
-      if (now - lastAttack < attackCooldown(stock) * (isSmall ? smallAttackCooldownScale : 1)) return false;
+      if (now - lastAttack < attackCooldown(stock, profile, character.id) * (isSmall ? smallAttackCooldownScale : 1)) return false;
       const stats = attackStats(stock, profile);
       const stunChance = attackStunChance(stock);
       consumeAttackCost(owner, stock, profile);
@@ -2775,7 +2775,7 @@
       const bombCost = attackBombCost(profile);
       if (ammoFor("player") < bombCost) return `${moveName} 施放失敗：炸彈不足，需要 ${bombCost} 枚，目前 ${ammoFor("player")} 枚。`;
 
-      const cooldownMs = attackCooldown(stock) * (profile === "small" ? 0.58 : 1);
+      const cooldownMs = attackCooldown(stock, profile, characterFor("player").id) * (profile === "small" ? smallAttackCooldownScale : 1);
       const remainingMs = cooldownMs - (now - lastPlayerAttackMs);
       if (remainingMs > 0) return `${moveName} 施放失敗：冷卻中，還需 ${(remainingMs / 1000).toFixed(1)} 秒。`;
 

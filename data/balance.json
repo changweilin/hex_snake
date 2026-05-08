@@ -64,6 +64,7 @@
     "rangeDamageFalloffEnabled": false,
     "ultimates": {
       "dragon": {
+        "bigCooldownMs": 4800,
         "radiusMultiplier": 2,
         "impactDamageMultiplier": 0.5,
         "radiationDamageMultiplier": 1.5,
@@ -80,6 +81,7 @@
         "volleyCount": 2
       },
       "sandworm": {
+        "bigCooldownMs": 6000,
         "damageMultiplier": 6,
         "superArmorDelayMultiplier": 1,
         "superArmorDurationMs": 3000,
@@ -88,9 +90,11 @@
         "impactDelayMultiplier": 3
       },
       "quetzal": {
+        "bigCooldownMs": 3600,
         "damageMultiplier": 1.25
       },
       "moray": {
+        "bigCooldownMs": 2400,
         "damageMultiplier": 0.5,
         "strikeCount": 7,
         "strikeIntervalMultiplier": 0.5

@@ -399,8 +399,11 @@ function attackDelay(stock, balance) {
   return balance.attack.baseAttackDelayMs / attackSpeedMultiplier(stock, balance);
 }
 
-function attackCooldown(stock, balance) {
-  return balance.attack.baseAttackCooldownMs / attackSpeedMultiplier(stock, balance);
+function attackCooldown(stock, balance, profile = "big", characterId = null) {
+  const baseCooldown = profile === "big" && characterId
+    ? ultimateSetting(balance, characterId, "bigCooldownMs", balance.attack.baseAttackCooldownMs)
+    : balance.attack.baseAttackCooldownMs;
+  return baseCooldown / attackSpeedMultiplier(stock, balance);
 }
 
 function blastRadius(stock, balance) {
@@ -1845,7 +1848,7 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
 function launchAttack(state, attacker, defender, profile, now, balance) {
   if (!canAttack(attacker, profile, balance)) return false;
   const cooldownScale = profile === "small" ? SMALL_ATTACK_COOLDOWN_SCALE : 1;
-  if (now - attacker.lastAttack < attackCooldown(attacker.stock, balance) * cooldownScale) return false;
+  if (now - attacker.lastAttack < attackCooldown(attacker.stock, balance, profile, attacker.character.id) * cooldownScale) return false;
   const target = chooseAttackTarget(state, attacker, defender, balance, profile);
   const stats = attackStats(attacker.stock, profile, balance);
   const stunChance = attackStunChance(attacker.stock, balance);

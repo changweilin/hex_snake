@@ -1677,8 +1677,11 @@ function attackDelay(stock) {
   return baseAttackDelayMs / attackSpeedMultiplier(stock);
 }
 
-function attackCooldown(stock) {
-  return baseAttackCooldownMs / attackSpeedMultiplier(stock);
+function attackCooldown(stock, profile = "big", characterId = null) {
+  const baseCooldown = profile === "big" && characterId
+    ? attackUltimateBalance?.[characterId]?.bigCooldownMs ?? baseAttackCooldownMs
+    : baseAttackCooldownMs;
+  return baseCooldown / attackSpeedMultiplier(stock);
 }
 
 function blastRadius(stock) {

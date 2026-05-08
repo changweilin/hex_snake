@@ -475,6 +475,36 @@ test("small attack delay is doubled in speed while big attack delay is unchanged
   assert.equal(attackStats(stock, "big", balance).delay, balance.attack.baseAttackDelayMs);
 });
 
+test("selected characters use custom big attack cooldowns", () => {
+  [
+    ["dragon", 4800],
+    ["moray", 2400],
+    ["quetzal", 3600],
+    ["sandworm", 6000]
+  ].forEach(([characterId, cooldownMs]) => {
+    const state = createMatchState({
+      balance,
+      playerCharacter: characterById.get(characterId),
+      computerCharacter: characterById.get("gu_king"),
+      seed: `big-cooldown-${characterId}`,
+      initialBombs: balance.attack.bigAttackBombCost,
+      initialStock: Object.fromEntries(FOOD_TYPES.map(type => [type, 6])),
+      playerModel: { aiDifficulty: "high", aimPrecision: 1, pathPrecision: 1 }
+    });
+    const player = state.fighters.player;
+    const computer = state.fighters.computer;
+    assert.equal(launchAttack(state, player, computer, "big", 1000, balance), true);
+    const effectiveCooldownMs = cooldownMs / (1 + Math.min(
+      balance.attack.maxAttackSpeedBonus,
+      player.stock.carb * balance.attack.attackSpeedBonusPerPoint
+    ));
+    player.ammo = balance.attack.bigAttackBombCost;
+    assert.equal(launchAttack(state, player, computer, "big", 1000 + effectiveCooldownMs - 1, balance), false);
+    player.ammo = balance.attack.bigAttackBombCost;
+    assert.equal(launchAttack(state, player, computer, "big", 1000 + effectiveCooldownMs, balance), true);
+  });
+});
+
 test("simulated AI does not attack before its first movement tick", () => {
   const match = simulateMatch({
     balance,
