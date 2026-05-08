@@ -3542,6 +3542,11 @@
     });
 
     winnerPortrait.addEventListener("click", event => {
+      if (tutorialSwipeDidMove) {
+        tutorialSwipeDidMove = false;
+        event.preventDefault();
+        return;
+      }
       const button = event.target.closest("[data-tutorial-action]");
       if (!button) return;
       const action = button.dataset.tutorialAction;
@@ -3554,21 +3559,42 @@
       }
     });
 
-    winnerPortrait.addEventListener("pointerdown", event => {
-      if (!isTutorialOpen()) return;
+    overlay.addEventListener("pointerdown", event => {
+      if (!isTutorialOpen() || event.button > 0) return;
       tutorialSwipeStartX = event.clientX;
       tutorialSwipeStartY = event.clientY;
+      tutorialSwipePointerId = event.pointerId;
+      tutorialSwipeDidMove = false;
+      overlay.setPointerCapture?.(event.pointerId);
     });
 
-    winnerPortrait.addEventListener("pointerup", event => {
+    overlay.addEventListener("pointerup", event => {
       if (!isTutorialOpen() || tutorialSwipeStartX === null) return;
+      if (tutorialSwipePointerId !== null && event.pointerId !== tutorialSwipePointerId) return;
       const deltaX = event.clientX - tutorialSwipeStartX;
       const deltaY = event.clientY - tutorialSwipeStartY;
+      const pointerId = tutorialSwipePointerId;
       tutorialSwipeStartX = null;
       tutorialSwipeStartY = null;
+      tutorialSwipePointerId = null;
+      if (pointerId !== null && overlay.hasPointerCapture?.(pointerId)) overlay.releasePointerCapture(pointerId);
       if (Math.max(Math.abs(deltaX), Math.abs(deltaY)) < 42) return;
-      if (Math.abs(deltaX) > Math.abs(deltaY)) moveTutorial(deltaX < 0 ? 1 : -1);
-      else moveTutorial(deltaY < 0 ? 1 : -1);
+      if (Math.abs(deltaX) <= Math.abs(deltaY)) return;
+      tutorialSwipeDidMove = true;
+      event.preventDefault();
+      moveTutorial(deltaX < 0 ? 1 : -1);
+      setTimeout(() => {
+        tutorialSwipeDidMove = false;
+      }, 160);
+    });
+
+    overlay.addEventListener("pointercancel", event => {
+      if (tutorialSwipePointerId === null || event.pointerId !== tutorialSwipePointerId) return;
+      const pointerId = tutorialSwipePointerId;
+      tutorialSwipeStartX = null;
+      tutorialSwipeStartY = null;
+      tutorialSwipePointerId = null;
+      if (overlay.hasPointerCapture?.(pointerId)) overlay.releasePointerCapture(pointerId);
     });
 
     startButton.addEventListener("click", () => {

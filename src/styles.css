@@ -482,6 +482,9 @@
       position: fixed;
       z-index: 150;
       padding: max(14px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+      touch-action: pan-y;
+      user-select: none;
+      -webkit-user-select: none;
       background:
         linear-gradient(180deg, rgba(7, 10, 16, 0.94), rgba(13, 17, 23, 0.98)),
         radial-gradient(circle at 50% 12%, rgba(251, 191, 36, 0.16), transparent 42%);
