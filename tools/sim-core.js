@@ -1573,8 +1573,8 @@ function morayLinePlanDamage(state, attacker, defender, balance, plan) {
   if (!targetSnake.length || !plan?.target) return 0;
   const lineShape = bandShapeFromTotalWidth(attackStats(attacker.stock, "small", balance).radius);
   const stats = morayLineCandidateStats(targetSnake, boardLineThrough(state, plan.target, plan.direction), lineShape);
-  const strikeCount = Math.max(1, Math.round(ultimateSetting(balance, "moray", "strikeCount", 7)));
-  const damageMultiplier = ultimateSetting(balance, "moray", "damageMultiplier", 0.3);
+  const strikeCount = Math.max(1, Math.round(ultimateSetting(balance, "moray", "strikeCount", 8)));
+  const damageMultiplier = ultimateSetting(balance, "moray", "damageMultiplier", 0.2);
   return stats.damageScore * attackDamage(attacker.stock, "big", balance) * damageMultiplier * strikeCount;
 }
 
@@ -1877,9 +1877,9 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
     const lineCells = boardLineThrough(state, target, direction);
     const lineShape = bandShapeFromTotalWidth(small.radius);
     const excludedCells = attacker.snake.map(segment => ({ ...segment }));
-    const strikeCount = Math.max(1, Math.round(ultimateSetting(balance, characterId, "strikeCount", 7)));
+    const strikeCount = Math.max(1, Math.round(ultimateSetting(balance, characterId, "strikeCount", 8)));
     const strikeIntervalMs = small.delay * Math.max(0, ultimateSetting(balance, characterId, "strikeIntervalMultiplier", 0.5));
-    const damage = bigDamage * ultimateSetting(balance, characterId, "damageMultiplier", 0.3);
+    const damage = bigDamage * ultimateSetting(balance, characterId, "damageMultiplier", 0.2);
     for (let index = 0; index < strikeCount; index += 1) {
       state.projectiles.push({
         kind: "line",

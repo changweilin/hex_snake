@@ -876,8 +876,8 @@
       if (!targetSnake.length || !plan?.target) return 0;
       const lineShape = bandShapeFromTotalWidth(attackStats(ownerStock(owner), "small").radius);
       const stats = morayLineCandidateStats(targetSnake, boardLineThrough(plan.target, plan.direction), lineShape);
-      const strikeCount = Math.max(1, Math.round(ultimateSetting("moray", "strikeCount", 7)));
-      const damageMultiplier = ultimateSetting("moray", "damageMultiplier", 0.3);
+      const strikeCount = Math.max(1, Math.round(ultimateSetting("moray", "strikeCount", 8)));
+      const damageMultiplier = ultimateSetting("moray", "damageMultiplier", 0.2);
       return stats.damageScore * attackDamage(ownerStock(owner), "big") * damageMultiplier * strikeCount;
     }
 

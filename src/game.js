@@ -1442,9 +1442,9 @@
         const lineCells = boardLineThrough(lineOrigin, direction);
         const lineShape = bandShapeFromTotalWidth(small.radius);
         const excludedCells = (owner === "player" ? snake : computerSnake).map(segment => ({ q: segment.q, r: segment.r }));
-        const strikeCount = Math.max(1, Math.round(ultimateSetting(character.id, "strikeCount", 7)));
+        const strikeCount = Math.max(1, Math.round(ultimateSetting(character.id, "strikeCount", 8)));
         const strikeIntervalMs = small.delay * Math.max(0, ultimateSetting(character.id, "strikeIntervalMultiplier", 0.5));
-        const damage = bigDamage * ultimateSetting(character.id, "damageMultiplier", 0.3);
+        const damage = bigDamage * ultimateSetting(character.id, "damageMultiplier", 0.2);
         for (let index = 0; index < strikeCount; index += 1) {
           const strikeDelay = index * strikeIntervalMs;
           projectiles.push({
