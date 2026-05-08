@@ -2850,7 +2850,7 @@
 
     function drawSmallProjectileHead(x, y, projectile, progress, character, angle = 0) {
       const element = elementColorsFor(character);
-      const projectileScale = projectile.kind === "dragonOrb" ? 1.45 : 1;
+      const projectileScale = projectile.kind === "lobsterPalm" ? 1.45 : 1;
       const size = cellSize * Math.max(0.48, Math.min(0.86, 0.42 + (projectile.radius || 1) * 0.08)) * projectileScale;
       const pulse = 0.9 + waveValue(progress, 0.2) * 0.16;
       ctx.save();
@@ -2875,35 +2875,6 @@
       }
 
       if (character.id === "dragon") {
-        if (projectile.kind === "dragonOrb") {
-          ctx.beginPath();
-          ctx.arc(0, 0, size * 0.48 * pulse, 0, Math.PI * 2);
-          ctx.fillStyle = hexToRgba("#ffffff", 0.94);
-          ctx.fill();
-          ctx.strokeStyle = hexToRgba(element.secondary, 0.96);
-          ctx.lineWidth = Math.max(2, cellSize * 0.07);
-          ctx.stroke();
-          for (let ring = 0; ring < 2; ring += 1) {
-            ctx.beginPath();
-            ctx.arc(0, 0, size * (0.72 + ring * 0.22 + progress * 0.12), 0, Math.PI * 2);
-            ctx.strokeStyle = hexToRgba(ring ? element.glow : element.secondary, 0.72 - ring * 0.2);
-            ctx.lineWidth = Math.max(1.6, cellSize * 0.045);
-            ctx.stroke();
-          }
-          for (let i = 0; i < 6; i += 1) {
-            const sparkAngle = i * Math.PI * 2 / 6 + progress * Math.PI * 2;
-            drawElementShard(
-              Math.cos(sparkAngle) * size * 0.7,
-              Math.sin(sparkAngle) * size * 0.48,
-              size * 0.18,
-              sparkAngle,
-              i % 2 ? element.secondary : "#ffffff",
-              0.82
-            );
-          }
-          ctx.restore();
-          return;
-        }
         ctx.beginPath();
         ctx.moveTo(size * 0.78, 0);
         ctx.lineTo(-size * 0.22, -size * 0.28);
@@ -3028,14 +2999,8 @@
       const element = elementColorsFor(character);
       ctx.save();
       drawElementAura(x, y, radiusPx * (isBig ? 1.05 : 0.72), progress, character, isBig ? 0.72 : 0.34);
-      if (type.startsWith("lobster-palm") && projectile.kind === "dragonOrb") {
+      if (type.startsWith("lobster-palm") && projectile.kind === "lobsterPalm") {
         drawElementAura(x, y, radiusPx * 0.86, progress, character, 0.42);
-        drawSmallProjectileHead(x, y, projectile, progress, character, travelAngle);
-        ctx.restore();
-        return;
-      }
-      if (type.startsWith("dragon") && projectile.kind === "dragonOrb") {
-        drawElementAura(x, y, radiusPx * 0.86, progress, character, 0.46);
         drawSmallProjectileHead(x, y, projectile, progress, character, travelAngle);
         ctx.restore();
         return;
@@ -3118,7 +3083,7 @@
           }
           return;
         }
-        if (projectile.kind === "dragonOrb") {
+        if (projectile.kind === "lobsterPalm") {
           const progress = Math.min(1, Math.max(0, (now - projectile.createdAt) / (projectile.delay || baseAttackDelayMs)));
           const point = pointAlongPath(projectile.source || projectile.target, projectile.pathCells || [projectile.target], progress);
           drawPathTextureTrail(projectile.source || projectile.target, projectile.pathCells || [projectile.target], progress, blastCharacter, {

@@ -12,15 +12,15 @@ const {
 
 const root = path.resolve(__dirname, "..");
 const reportsDir = path.join(root, "reports");
-const DRAGON_ID = "dragon";
+const LOBSTER_ID = "lobster";
 const TARGET_DRAW_RATE = 0.1;
 
 const tunables = [
-  { key: "orbCurveMultiplier", label: "small-orb-curve", stronger: "higher", phase50: 1.5, phase100: 2 },
-  { key: "orbStepMs", label: "small-orb-speed", stronger: "lower", phase50: 1 / 1.5, phase100: 0.5 },
-  { key: "burstDamageMultiplier", label: "big-orb-damage", stronger: "higher", phase50: 1.5, phase100: 2 },
-  { key: "orbRadiusMultiplier", label: "small-orb-radius", stronger: "higher", phase50: 1.5, phase100: 2 },
-  { key: "burstRadiusMultiplier", label: "big-orb-radius", stronger: "higher", phase50: 1.5, phase100: 2 }
+  { key: "fistStepMs", label: "palm-speed", stronger: "lower", phase50: 1 / 1.5, phase100: 0.5 },
+  { key: "contactDamageMultiplier", label: "palm-contact-damage", stronger: "higher", phase50: 1.5, phase100: 2 },
+  { key: "burstDamageMultiplier", label: "palm-burst-damage", stronger: "higher", phase50: 1.5, phase100: 2 },
+  { key: "burstRadiusMultiplier", label: "palm-burst-radius", stronger: "higher", phase50: 1.5, phase100: 2 },
+  { key: "contactRadius", label: "palm-contact-radius", stronger: "higher", phase50: 1.5, phase100: 2 }
 ];
 
 function parseArgs(argv) {
@@ -107,20 +107,20 @@ function baselineHighStrategy() {
   };
 }
 
-function dragonRowsFromStrategyFile(strategyFile) {
+function lobsterRowsFromStrategyFile(strategyFile) {
   if (!strategyFile) return [];
-  if (Array.isArray(strategyFile.dragon)) return strategyFile.dragon.slice(0, 5);
+  if (Array.isArray(strategyFile.lobster)) return strategyFile.lobster.slice(0, 5);
   const rows = Array.isArray(strategyFile) ? strategyFile : strategyFile.bestStrategies || strategyFile.strategies || [];
-  return rows.filter(row => row.characterId === DRAGON_ID).slice(0, 5);
+  return rows.filter(row => row.characterId === LOBSTER_ID).slice(0, 5);
 }
 
-function dragonSettings(balance) {
-  return clone(balance.attack.ultimates.dragon);
+function lobsterPalmSettings(balance) {
+  return clone(balance.attack.ultimates.lobster);
 }
 
-function withDragonSettings(balance, settings) {
+function withLobsterPalmSettings(balance, settings) {
   const next = clone(balance);
-  next.attack.ultimates.dragon = { ...next.attack.ultimates.dragon, ...settings };
+  next.attack.ultimates.lobster = { ...next.attack.ultimates.lobster, ...settings };
   return next;
 }
 
@@ -193,7 +193,7 @@ function fullCandidateSettings(original) {
 }
 
 function evaluateSettings({ balance, character, strategies, baseline, runs, seed, settings }) {
-  const tunedBalance = withDragonSettings(balance, settings);
+  const tunedBalance = withLobsterPalmSettings(balance, settings);
   const totals = {
     games: 0,
     wins: 0,
@@ -244,17 +244,17 @@ function compareRows(a, b) {
 function runSearch(options = {}) {
   const balance = options.balance || loadBalance(root);
   const characters = options.characters || loadCharacters(root);
-  const character = buildCharacterMap(characters).get(DRAGON_ID);
-  const seed = String(options.seed || `dragon-draw-${stamp()}`);
+  const character = buildCharacterMap(characters).get(LOBSTER_ID);
+  const seed = String(options.seed || `lobster-palm-draw-${stamp()}`);
   const runs = Math.max(1, Math.floor(Number(options.runs ?? 1000)));
   const targetDrawRate = Number(options.targetDrawRate ?? TARGET_DRAW_RATE);
   const durationHours = Number(options.durationHours ?? 8);
-  const outputDir = options.outputDir || path.join(reportsDir, `dragon-draw-${stamp()}-${seed.replace(/[^a-zA-Z0-9]+/g, "-").slice(0, 32)}`);
+  const outputDir = options.outputDir || path.join(reportsDir, `lobster-palm-draw-${stamp()}-${seed.replace(/[^a-zA-Z0-9]+/g, "-").slice(0, 32)}`);
   const strategyFile = options.strategyFile ? readJson(options.strategyFile) : null;
-  const strategies = dragonRowsFromStrategyFile(strategyFile);
+  const strategies = lobsterRowsFromStrategyFile(strategyFile);
   const baseline = baselineHighStrategy();
   const deadlineMs = Date.now() + durationHours * 60 * 60 * 1000;
-  const original = dragonSettings(balance);
+  const original = lobsterPalmSettings(balance);
   let current = { ...original };
   const history = [];
   let best = null;
@@ -312,7 +312,7 @@ function runSearch(options = {}) {
 function main() {
   const args = parseArgs(process.argv.slice(2));
   const result = runSearch({
-    seed: stringArg(args, "seed", `dragon-draw-${stamp()}`),
+    seed: stringArg(args, "seed", `lobster-palm-draw-${stamp()}`),
     runs: numberArg(args, "runs", 1000),
     targetDrawRate: numberArg(args, "target-draw-rate", TARGET_DRAW_RATE),
     durationHours: numberArg(args, "duration-hours", 8),

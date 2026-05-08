@@ -541,8 +541,8 @@
       computerSnake = createStartingSnake({ q: offset, r: -offset }, computerDir, startLength);
       score = 0;
       computerScore = 0;
-      playerHp = snake.length * 2;
-      computerHp = computerSnake.length * 2;
+      playerHp = maxHpForSnake(snake);
+      computerHp = maxHpForSnake(computerSnake);
       playerStock = startingStock();
       computerStock = startingStock();
       playerAmmo = startingBombs();
@@ -818,8 +818,8 @@
 
     function updateHud() {
       lastHudFrameAt = performance.now();
-      const playerMaxHp = snake.length * 2;
-      const computerMaxHp = computerSnake.length * 2;
+      const playerMaxHp = maxHpForSnake(snake);
+      const computerMaxHp = maxHpForSnake(computerSnake);
       scoreEl.textContent = `HP ${Math.max(0, Math.ceil(playerHp))}/${playerMaxHp}`;
       computerScoreEl.textContent = `HP ${Math.max(0, Math.ceil(computerHp))}/${computerMaxHp}`;
       updateHealthBar("player", playerHp, playerMaxHp);
@@ -1068,12 +1068,33 @@
       return {
         delay: attackDelay(stock) * (isSmall ? smallAttackDelayScale : 1),
         radius: Math.max(1, blastRadius(stock) + (isSmall ? -1 : 0)),
-        damage: damageMultiplier(stock)
+        damage: attackDamage(stock, profile)
       };
     }
 
     function bandDistanceFromTotalWidth(totalWidth) {
       return Math.max(0, Math.floor((totalWidth - 1) / 2));
+    }
+
+    function bandShapeFromTotalWidth(totalWidth) {
+      const fullDamageWidth = bandDistanceFromTotalWidth(totalWidth);
+      const fullTotalWidth = fullDamageWidth * 2 + 1;
+      const outerDamageMultiplier = Math.max(0, Math.min(1, (totalWidth - fullTotalWidth) / 2));
+      return {
+        width: fullDamageWidth + (outerDamageMultiplier > 0 ? 1 : 0),
+        fullDamageWidth,
+        outerDamageMultiplier
+      };
+    }
+
+    function lineBandDamageMultiplier(distance, band) {
+      if (distance > (band?.width ?? 0)) return 0;
+      if (distance <= (band?.fullDamageWidth ?? 0)) return 1;
+      return band?.outerDamageMultiplier ?? 1;
+    }
+
+    function lineHitSegmentMultiplier(segmentIndex, options = {}) {
+      return segmentIndex === 0 ? (options.headDamageMultiplier ?? 1) : 1;
     }
 
     function ownerDirection(owner) {
@@ -1119,28 +1140,6 @@
       return Math.min(clockwise, directions.length - clockwise);
     }
 
-    function dragonTrackingDirection(cursor, direction, targetSnake, visited) {
-      const target = targetSnake[0];
-      if (!target) return direction;
-      const idealDirection = directionFromSourceToTarget(cursor, target, direction);
-      const candidates = [
-        direction,
-        (direction + 1) % directions.length,
-        (direction + 5) % directions.length,
-        (direction + 2) % directions.length,
-        (direction + 4) % directions.length
-      ];
-      candidates.sort((a, b) => {
-        const nextA = nextWrappedCell(cursor, a);
-        const nextB = nextWrappedCell(cursor, b);
-        const distanceA = hexDistance(nextA, target) + (visited.has(keyOf(nextA)) ? 0.35 : 0);
-        const distanceB = hexDistance(nextB, target) + (visited.has(keyOf(nextB)) ? 0.35 : 0);
-        if (distanceA !== distanceB) return distanceA - distanceB;
-        return turnDistance(a, idealDirection) - turnDistance(b, idealDirection);
-      });
-      return candidates[0];
-    }
-
     function cellsForwardFrom(source, direction, includeSource = true) {
       const path = includeSource ? [{ q: source.q, r: source.r }] : [];
       let cursor = source;
@@ -1162,56 +1161,10 @@
       return cellsForwardFrom(start, direction, true);
     }
 
-    function dragonChargePath(source, direction, targetSnake) {
-      const targetCells = cellKeySet(targetSnake);
-      const path = [];
-      let cursor = source;
-      let carryAfterHit = false;
-      while (isInside(cursor)) {
-        path.push({ q: cursor.q, r: cursor.r });
-        if (carryAfterHit) break;
-        if (targetCells.has(keyOf(cursor))) carryAfterHit = true;
-        cursor = nextCell(cursor, direction);
-      }
-      return path;
-    }
-
-    function dragonOrbPath(source, direction) {
-      return cellsForwardFrom(source, direction, false);
-    }
-
-    function dragonWrappedOrbPath(source, direction) {
-      const path = [];
-      let cursor = { q: source.q, r: source.r };
-      const maxSteps = Math.max(1, cells.length);
-      for (let step = 0; step < maxSteps; step += 1) {
-        cursor = nextWrappedCell(cursor, direction);
-        if (keyOf(cursor) === keyOf(source)) break;
-        path.push({ q: cursor.q, r: cursor.r });
-      }
-      return path;
-    }
-
-    function dragonTrackingOrbPath(source, direction, targetSnake) {
-      const path = [];
-      const visited = new Set([keyOf(source)]);
-      let cursor = { q: source.q, r: source.r };
-      let currentDirection = direction;
-      const maxSteps = Math.max(1, Math.ceil((radius * 2 + 1) / 2));
-      for (let step = 0; step < maxSteps; step += 1) {
-        if (step > 0) {
-          currentDirection = dragonTrackingDirection(cursor, currentDirection, targetSnake, visited);
-        }
-        cursor = nextWrappedCell(cursor, currentDirection);
-        if (keyOf(cursor) === keyOf(source)) break;
-        path.push({ q: cursor.q, r: cursor.r });
-        visited.add(keyOf(cursor));
-      }
-      return path;
-    }
-
-    function lobsterFistDirection(cursor, direction, targetSnake) {
-      const target = targetSnake[0];
+    function lobsterFistDirection(cursor, direction, targetSnake, remainingSteps = 0) {
+      const head = targetSnake[0];
+      const bodyTarget = targetSnake.slice(1).sort((a, b) => hexDistance(cursor, a) - hexDistance(cursor, b))[0];
+      const target = head && hexDistance(cursor, head) <= remainingSteps ? head : (bodyTarget || head);
       if (!target) return direction;
       const candidates = [direction, (direction + 1) % directions.length, (direction + 5) % directions.length];
       candidates.sort((a, b) => {
@@ -1233,7 +1186,7 @@
       const turnStep = Math.ceil(maxSteps / 2);
       for (let step = 0; step < maxSteps; step += 1) {
         if (step === turnStep) {
-          currentDirection = lobsterFistDirection(cursor, currentDirection, targetSnake);
+          currentDirection = lobsterFistDirection(cursor, currentDirection, targetSnake, maxSteps - step);
         }
         cursor = nextWrappedCell(cursor, currentDirection);
         if (keyOf(cursor) === keyOf(source)) break;
@@ -1319,38 +1272,32 @@
 
     function scheduleCharacterBigAttack(owner, character, source, target, now, stock, stunChance, options = {}) {
       const small = attackStats(stock, "small");
+      const bigDamage = attackDamage(stock, "big");
       const direction = Number.isInteger(options.aimDirection)
         ? options.aimDirection
         : directionFromSourceToTarget(source, target, ownerDirection(owner));
-      const abilityId = bigAttackAbilityId(character.id);
 
-      if (abilityId === "dragon") {
+      if (character.id === "lobster") {
         const targetSnake = owner === "player" ? computerSnake : snake;
-        const useTracking = character.id === "lobster" || isPlayerAutoControlActive() || owner === "computer";
-        const isLobsterPalm = character.id === "lobster";
-        const path = isLobsterPalm
-          ? lobsterFistPath(source, direction, targetSnake)
-          : useTracking
-          ? dragonTrackingOrbPath(source, direction, targetSnake)
-          : dragonWrappedOrbPath(source, direction);
+        const path = lobsterFistPath(source, direction, targetSnake);
         const hits = pathHits(path, targetSnake);
-        const firstHit = isLobsterPalm ? hits[0] : null;
+        const firstHit = hits[0];
         const travelPath = firstHit ? path.slice(0, firstHit.index + 1) : path;
         const endCell = firstHit?.cell || path[path.length - 1] || source;
-        const orbStepMs = ultimateSetting(abilityId, "orbStepMs", dragonOrbStepMs);
-        const travelDelay = small.delay + travelPath.length * orbStepMs;
-        const volleys = isLobsterPalm ? 2 : 1;
-        const orbDamage = small.damage * (isLobsterPalm ? 0.3 : 1);
-        const orbRadius = isLobsterPalm ? 1 : small.radius * ultimateSetting(abilityId, "orbRadiusMultiplier", 1);
-        const burstRadius = small.radius * (isLobsterPalm ? 1.5 : 2);
-        const burstDamage = small.damage * (isLobsterPalm ? 0.9 : 1.5);
-        const visualType = character.id === "lobster" ? "lobster-palm-big" : attackVisualType(owner, "big", abilityId);
-        const volleyIntervalMs = isLobsterPalm ? attackDelay(stock) : 500;
+        const fistStepMs = ultimateSetting(character.id, "fistStepMs", lobsterPalmStepMs);
+        const travelDelay = small.delay + travelPath.length * fistStepMs;
+        const volleys = Math.max(1, Math.round(ultimateSetting(character.id, "volleyCount", 2)));
+        const contactDamage = bigDamage * ultimateSetting(character.id, "contactDamageMultiplier", 0.3);
+        const contactRadius = Math.max(0.25, ultimateSetting(character.id, "contactRadius", 1));
+        const burstRadius = small.radius * ultimateSetting(character.id, "burstRadiusMultiplier", 1.5);
+        const burstDamage = bigDamage * ultimateSetting(character.id, "burstDamageMultiplier", 0.9);
+        const visualType = "lobster-palm-big";
+        const volleyIntervalMs = attackDelay(stock);
         for (let volley = 0; volley < volleys; volley += 1) {
           const volleyDelay = volley * volleyIntervalMs;
           const hand = volley % 2 === 0 ? "right" : "left";
           projectiles.push({
-            kind: "dragonOrb",
+            kind: "lobsterPalm",
             owner,
             profile: "big",
             source: { q: source.q, r: source.r },
@@ -1361,18 +1308,16 @@
             createdAt: now + volleyDelay,
             impactAt: now + volleyDelay + travelDelay,
             delay: travelDelay,
-            radius: orbRadius,
-            damage: orbDamage,
+            radius: contactRadius,
+            damage: contactDamage,
             burstRadius,
             burstDamage,
             stunChance
           });
-          const burstHits = isLobsterPalm
-            ? (firstHit ? [firstHit] : [{ cell: endCell, index: Math.max(0, travelPath.length - 1) }])
-            : hits;
+          const burstHits = firstHit ? [firstHit] : [{ cell: endCell, index: Math.max(0, travelPath.length - 1) }];
           burstHits.forEach(hit => {
             projectiles.push({
-              kind: "dragonOrbBurst",
+              kind: "lobsterPalmBurst",
               owner,
               profile: "big",
               source: { q: source.q, r: source.r },
@@ -1381,10 +1326,10 @@
               hand,
               hidden: true,
               createdAt: now + volleyDelay,
-              impactAt: now + volleyDelay + small.delay + (hit.index + 1) * orbStepMs,
-              delay: small.delay + (hit.index + 1) * orbStepMs,
-              radius: orbRadius,
-              damage: orbDamage,
+              impactAt: now + volleyDelay + small.delay + (hit.index + 1) * fistStepMs,
+              delay: small.delay + (hit.index + 1) * fistStepMs,
+              radius: contactRadius,
+              damage: contactDamage,
               burstRadius,
               burstDamage,
               stunChance
@@ -1397,6 +1342,7 @@
       if (character.id === "moray") {
         const lineOrigin = options.aimOrigin || target;
         const lineCells = boardLineThrough(lineOrigin, direction);
+        const lineShape = bandShapeFromTotalWidth(small.radius);
         const excludedCells = (owner === "player" ? snake : computerSnake).map(segment => ({ q: segment.q, r: segment.r }));
         projectiles.push({
           kind: "line",
@@ -1406,12 +1352,15 @@
           target: { q: target.q, r: target.r },
           lineCells,
           excludedCells,
-          width: bandDistanceFromTotalWidth(small.radius),
+          width: lineShape.width,
+          fullDamageWidth: lineShape.fullDamageWidth,
+          outerDamageMultiplier: lineShape.outerDamageMultiplier,
+          headDamageMultiplier: 2,
           visualType: attackVisualType(owner, "big"),
           createdAt: now,
           impactAt: now + small.delay,
           delay: small.delay,
-          damage: small.damage * 0.8 * ultimateDamageMultiplier(character.id),
+          damage: bigDamage * 0.8 * ultimateDamageMultiplier(character.id),
           stunChance,
           stackStun: true
         });
@@ -1433,7 +1382,7 @@
           minDistance: 0,
           outerDamageMultiplier: extensionDamageMultiplier,
           visualType: attackVisualType(owner, "big"),
-          damage: small.damage * ultimateDamageMultiplier(character.id),
+          damage: bigDamage * ultimateDamageMultiplier(character.id),
           stunChance,
           startedAt: now + small.delay,
           nextTickAt: now + small.delay,
@@ -1463,7 +1412,7 @@
           impactAt: now + delay,
           delay,
           radius: Math.max(0.5, small.radius * 0.5),
-          damage: small.damage * 3.5 * ultimateDamageMultiplier(character.id),
+          damage: bigDamage * 4 * ultimateDamageMultiplier(character.id),
           stunChance,
           hidden: true,
           sandwormHidden: true,
@@ -1473,15 +1422,15 @@
         return delay;
       }
 
-      if (abilityId === "lobster") {
-        const lobsterUltimateRadius = character.id === "dragon"
-          ? small.radius * 2
-          : small.radius * ultimateSetting(abilityId, "radiusMultiplier", 2.5);
-        const volleys = character.id === "dragon" ? 1 : 2;
-        const impactDamage = character.id === "dragon" ? small.damage * 0.5 : small.damage;
-        const radiationTotalDamage = character.id === "dragon" ? small.damage * 1.5 : small.damage * 0.25;
-        const firstImpactDelay = character.id === "dragon" ? small.delay * 2 : small.delay;
-        const visualType = character.id === "dragon" ? "dragon-spirit-big" : attackVisualType(owner, "big", abilityId);
+      if (character.id === "dragon") {
+        const spiritRadius = small.radius * ultimateSetting(character.id, "radiusMultiplier", 2);
+        const impactDamage = bigDamage * ultimateSetting(character.id, "impactDamageMultiplier", 0.5);
+        const radiationTotalDamage = bigDamage * ultimateSetting(character.id, "radiationDamageMultiplier", 1.5);
+        const radiationDurationMs = ultimateSetting(character.id, "radiationDurationMs", 4000);
+        const radiationTickMs = ultimateSetting(character.id, "radiationTickMs", 500);
+        const firstImpactDelay = small.delay * ultimateSetting(character.id, "firstImpactDelayMultiplier", 2);
+        const visualType = "dragon-spirit-big";
+        const volleys = 1;
         for (let index = 0; index < volleys; index += 1) {
           const impactDelay = firstImpactDelay + index * 2000;
           projectiles.push({
@@ -1493,10 +1442,10 @@
             createdAt: now,
             impactAt: now + impactDelay,
             delay: impactDelay,
-            radius: lobsterUltimateRadius,
+            radius: spiritRadius,
             damage: impactDamage,
-            radiationDurationMs: 4000,
-            radiationTickMs: 500,
+            radiationDurationMs,
+            radiationTickMs,
             radiationTotalDamage,
             stunChance,
             flat: true,
@@ -1519,7 +1468,7 @@
             impactAt: now + impactDelay,
             delay: impactDelay,
             radius: small.radius,
-            damage: small.damage * ultimateDamageMultiplier(character.id),
+            damage: bigDamage * ultimateDamageMultiplier(character.id),
             stunChance
           });
         }
@@ -1599,16 +1548,16 @@
       ), 0);
     }
 
-    function damageSnakeCells(parts, effectCells, width, damageScale, excludedCells = [], minDistance = 0, outerDamageMultiplier = 1) {
+    function damageSnakeCells(parts, effectCells, width, damageScale, excludedCells = [], minDistance = 0, outerDamageMultiplier = 1, fullDamageWidth = 0, headDamageMultiplier = 1) {
       const excluded = cellKeySet(excludedCells);
-      return parts.reduce((total, segment) => {
+      return parts.reduce((total, segment, index) => {
         if (excluded.has(keyOf(segment))) return total;
         const bestMultiplier = effectCells.reduce((best, cell) => {
           const distance = hexDistance(segment, cell);
           if (distance < minDistance || distance > width) return best;
-          return Math.max(best, distance === 0 ? 1 : outerDamageMultiplier);
+          return Math.max(best, lineBandDamageMultiplier(distance, { width, fullDamageWidth, outerDamageMultiplier }));
         }, 0);
-        return bestMultiplier > 0 ? total + damageScale * bestMultiplier : total;
+        return bestMultiplier > 0 ? total + damageScale * bestMultiplier * lineHitSegmentMultiplier(index, { headDamageMultiplier }) : total;
       }, 0);
     }
 
@@ -1698,14 +1647,14 @@
       landed.forEach(projectile => {
         let playerDamage = 0;
         let computerDamage = 0;
-        if (projectile.kind === "dragonOrb") {
+        if (projectile.kind === "lobsterPalm") {
           return;
-        } else if (projectile.kind === "dragonOrbBurst") {
+        } else if (projectile.kind === "lobsterPalmBurst") {
           const defenderOwner = projectile.owner === "player" ? "computer" : "player";
           const defenderSnake = defenderOwner === "player" ? snake : computerSnake;
-          const orbDamage = damageSnake(defenderSnake, projectile.target, projectile.radius, projectile.damage);
-          if (defenderOwner === "player") playerDamage += orbDamage;
-          else computerDamage += orbDamage;
+          const contactDamage = damageSnake(defenderSnake, projectile.target, projectile.radius, projectile.damage);
+          if (defenderOwner === "player") playerDamage += contactDamage;
+          else computerDamage += contactDamage;
           playerDamage += damageSnake(snake, projectile.target, projectile.burstRadius, projectile.burstDamage);
           computerDamage += damageSnake(computerSnake, projectile.target, projectile.burstRadius, projectile.burstDamage);
           blasts.push({
@@ -1720,13 +1669,16 @@
           });
           triggerBoardShake(burstVisualType(projectile), now);
         } else if (projectile.kind === "line") {
-          playerDamage = damageSnakeCells(snake, projectile.lineCells, projectile.width, projectile.damage, projectile.excludedCells);
-          computerDamage = damageSnakeCells(computerSnake, projectile.lineCells, projectile.width, projectile.damage, projectile.excludedCells);
+          playerDamage = damageSnakeCells(snake, projectile.lineCells, projectile.width, projectile.damage, projectile.excludedCells, 0, projectile.outerDamageMultiplier ?? 1, projectile.fullDamageWidth ?? 0, projectile.headDamageMultiplier ?? 1);
+          computerDamage = damageSnakeCells(computerSnake, projectile.lineCells, projectile.width, projectile.damage, projectile.excludedCells, 0, projectile.outerDamageMultiplier ?? 1, projectile.fullDamageWidth ?? 0, projectile.headDamageMultiplier ?? 1);
           blasts.push({
             kind: "line",
             lineCells: projectile.lineCells,
             excludedCells: projectile.excludedCells,
             width: projectile.width,
+            fullDamageWidth: projectile.fullDamageWidth,
+            outerDamageMultiplier: projectile.outerDamageMultiplier,
+            headDamageMultiplier: projectile.headDamageMultiplier,
             target: projectile.target,
             owner: projectile.owner,
             visualType: projectile.visualType || attackVisualType(projectile.owner, projectile.profile),
@@ -1798,8 +1750,8 @@
     }
 
     function addProjectileImpactVisual(projectile, now) {
-      if (projectile.kind === "dragonOrb") return;
-      if (projectile.kind === "dragonOrbBurst") {
+      if (projectile.kind === "lobsterPalm") return;
+      if (projectile.kind === "lobsterPalmBurst") {
         blasts.push({
           kind: "circle",
           target: projectile.target,
@@ -1819,6 +1771,9 @@
           lineCells: projectile.lineCells,
           excludedCells: projectile.excludedCells,
           width: projectile.width,
+          fullDamageWidth: projectile.fullDamageWidth,
+          outerDamageMultiplier: projectile.outerDamageMultiplier,
+          headDamageMultiplier: projectile.headDamageMultiplier,
           target: projectile.target,
           owner: projectile.owner,
           visualType: projectile.visualType || attackVisualType(projectile.owner, projectile.profile),
@@ -2011,7 +1966,7 @@
         lastPlayerFoodAt = performance.now();
         playerFoodTargetKey = null;
         playerFoodTargetAt = 0;
-        playerHp = Math.min(snake.length * 2, playerHp + 1);
+        playerHp = Math.min(maxHpForSnake(snake), playerHp + foodHealAmount());
       } else if (!playerCollision) {
         snake.pop();
       }
@@ -2023,7 +1978,7 @@
         computerFoodTargetAt = 0;
         if (computerCanGrow()) {
           collectFood("computer", computerEatenFood);
-          computerHp = Math.min(computerSnake.length * 2, computerHp + 1);
+          computerHp = Math.min(maxHpForSnake(computerSnake), computerHp + foodHealAmount());
         } else {
           computerSnake.pop();
         }
@@ -2081,7 +2036,7 @@
         lastPlayerFoodAt = performance.now();
         playerFoodTargetKey = null;
         playerFoodTargetAt = 0;
-        playerHp = Math.min(snake.length * 2, playerHp + 1);
+        playerHp = Math.min(maxHpForSnake(snake), playerHp + foodHealAmount());
         foods = foods.filter(food => keyOf(food) !== nextKey);
         placeFoods(["player"]);
       } else {
@@ -2118,7 +2073,7 @@
         computerFoodTargetAt = 0;
         if (computerCanGrow()) {
           collectFood("computer", computerEatenFood);
-          computerHp = Math.min(computerSnake.length * 2, computerHp + 1);
+          computerHp = Math.min(maxHpForSnake(computerSnake), computerHp + foodHealAmount());
         } else {
           computerSnake.pop();
         }
@@ -2153,26 +2108,28 @@
         localStorage.setItem("hexSnakeBestTotalMs", String(Math.floor(bestTotalMs)));
       }
       updateHud();
-      let title = "P1 獲勝";
-      if (playerLost && !computerLost) title = "P2 獲勝";
-      if (playerLost && computerLost) {
-        if (score > computerScore) title = "P1 獲勝";
-        else if (computerScore > score) title = "P2 獲勝";
-        else title = "平手";
-      }
-      setStatus(`對戰結束：${title}`);
-      overlayTitle.textContent = title;
       const winnerOwner = (!playerLost && computerLost) || (playerLost && computerLost && score > computerScore)
         ? "player"
         : (playerLost && !computerLost) || (playerLost && computerLost && computerScore > score)
           ? "computer"
           : null;
-      const resultText = winnerOwner === "player" ? "P1獲勝" : winnerOwner === "computer" ? "P2獲勝" : "平手";
+      const plainResultText = winnerOwner === "player" ? "P1 勝利" : winnerOwner === "computer" ? "P2 勝利" : "平手";
       const resultTitleHtml = winnerOwner === "player"
-        ? `<span class="owner-name is-p1">P1</span>獲勝！ <span class="owner-name is-p1">P1</span>:<span class="owner-name is-p2">P2</span> = ${score}:${computerScore}`
+        ? `本局結果：<span class="owner-name is-p1">P1</span> 勝利`
         : winnerOwner === "computer"
-          ? `<span class="owner-name is-p2">P2</span>獲勝！ <span class="owner-name is-p1">P1</span>:<span class="owner-name is-p2">P2</span> = ${score}:${computerScore}`
-          : `平手！ <span class="owner-name is-p1">P1</span>:<span class="owner-name is-p2">P2</span> = ${score}:${computerScore}`;
+          ? `本局結果：<span class="owner-name is-p2">P2</span> 勝利`
+          : "本局結果：平手";
+      const scoreText = `比分：P1 ${score}：${computerScore} P2`;
+      const resultReason = playerLost && computerLost
+        ? score === computerScore
+          ? "雙方同時結束，分數相同。"
+          : "雙方同時結束，以分數較高者勝出。"
+        : winnerOwner === "player"
+          ? "P2 淘汰，P1 獲勝。"
+          : winnerOwner === "computer"
+            ? "P1 淘汰，P2 獲勝。"
+            : "雙方分數相同。";
+      setStatus(`對戰結束：${plainResultText}`);
       overlayTitle.innerHTML = resultTitleHtml;
       HexSnakeAudio.playCharacter("player", winnerOwner === "player" ? "victory" : "defeat", { gainScale: winnerOwner ? 1 : 0.82 });
       HexSnakeAudio.playCharacter("computer", winnerOwner === "computer" ? "victory" : "defeat", { delay: winnerOwner ? 0.08 : 0.12, gainScale: winnerOwner ? 1 : 0.82 });
@@ -2187,16 +2144,12 @@
         else relayDraws += 1;
         updateRelayControls();
       }
-      overlayText.textContent = shouldContinueRelay
-        ? `P1 ${score} 分，P2 ${computerScore} 分。接力賽：P1 ${relayPlayerWins} 勝，P2 ${relayComputerWins} 勝，平手 ${relayDraws}。`
-        : `P1 ${score} 分，P2 ${computerScore} 分。按開始再來一局。`;
       startButton.textContent = "重新開始";
       gameOverSettlementPending = true;
       gameOverRelayStartOptions = shouldContinueRelay ? nextRelayStartOptions : null;
-      const gameScoreText = `${resultText}！ P1:P2 = ${score}:${computerScore}`;
       overlayText.textContent = shouldContinueRelay
-        ? `${gameScoreText}。接力賽：P1 ${relayPlayerWins} 勝，P2 ${relayComputerWins} 勝，平手 ${relayDraws}。`
-        : gameScoreText;
+        ? `${scoreText}。${resultReason} 接力賽：P1 ${relayPlayerWins} 勝，P2 ${relayComputerWins} 勝，平手 ${relayDraws}。`
+        : `${scoreText}。${resultReason}`;
       overlayText.hidden = true;
       cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(loop);
@@ -2741,11 +2694,17 @@
 
       const stock = playerStock;
       const foodCost = attackFoodCost(profile);
-      const missingFood = foodTypes
-        .filter(type => stock[type.id] < foodCost)
-        .map(type => type.label)
-        .join("、");
-      if (missingFood) return `${moveName} 施放失敗：${missingFood}庫存不足，需要四種庫存各 ${foodCost}。`;
+      if (profile === "small") {
+        const highestType = highestStockFoodType(stock);
+        const highestCount = highestType ? stock[highestType.id] || 0 : 0;
+        if (highestCount < foodCost) return `${moveName} 施放失敗：最高庫存不足，需要任一食物庫存至少 ${foodCost}。`;
+      } else {
+        const missingFood = foodTypes
+          .filter(type => stock[type.id] < foodCost)
+          .map(type => type.label)
+          .join("、");
+        if (missingFood) return `${moveName} 施放失敗：${missingFood}庫存不足，需要四種庫存各 ${foodCost}。`;
+      }
 
       const bombCost = attackBombCost(profile);
       if (ammoFor("player") < bombCost) return `${moveName} 施放失敗：炸彈不足，需要 ${bombCost} 枚，目前 ${ammoFor("player")} 枚。`;
@@ -3537,6 +3496,11 @@
     });
 
     winnerPortrait.addEventListener("click", event => {
+      if (tutorialSwipeDidMove) {
+        tutorialSwipeDidMove = false;
+        event.preventDefault();
+        return;
+      }
       const button = event.target.closest("[data-tutorial-action]");
       if (!button) return;
       const action = button.dataset.tutorialAction;
@@ -3549,22 +3513,51 @@
       }
     });
 
-    winnerPortrait.addEventListener("pointerdown", event => {
-      if (!isTutorialOpen()) return;
+    overlay.addEventListener("pointerdown", event => {
+      if (!isTutorialOpen() || event.button > 0) return;
       tutorialSwipeStartX = event.clientX;
       tutorialSwipeStartY = event.clientY;
-    });
+      tutorialSwipePointerId = event.pointerId;
+      tutorialSwipeDidMove = false;
+      overlay.setPointerCapture?.(event.pointerId);
+    }, true);
 
-    winnerPortrait.addEventListener("pointerup", event => {
+    overlay.addEventListener("pointermove", event => {
       if (!isTutorialOpen() || tutorialSwipeStartX === null) return;
+      if (tutorialSwipePointerId !== null && event.pointerId !== tutorialSwipePointerId) return;
       const deltaX = event.clientX - tutorialSwipeStartX;
       const deltaY = event.clientY - tutorialSwipeStartY;
+      if (Math.abs(deltaX) > 10 && Math.abs(deltaX) > Math.abs(deltaY)) event.preventDefault();
+    }, true);
+
+    overlay.addEventListener("pointerup", event => {
+      if (!isTutorialOpen() || tutorialSwipeStartX === null) return;
+      if (tutorialSwipePointerId !== null && event.pointerId !== tutorialSwipePointerId) return;
+      const deltaX = event.clientX - tutorialSwipeStartX;
+      const deltaY = event.clientY - tutorialSwipeStartY;
+      const pointerId = tutorialSwipePointerId;
       tutorialSwipeStartX = null;
       tutorialSwipeStartY = null;
+      tutorialSwipePointerId = null;
+      if (pointerId !== null && overlay.hasPointerCapture?.(pointerId)) overlay.releasePointerCapture(pointerId);
       if (Math.max(Math.abs(deltaX), Math.abs(deltaY)) < 42) return;
-      if (Math.abs(deltaX) > Math.abs(deltaY)) moveTutorial(deltaX < 0 ? 1 : -1);
-      else moveTutorial(deltaY < 0 ? 1 : -1);
-    });
+      if (Math.abs(deltaX) <= Math.abs(deltaY)) return;
+      tutorialSwipeDidMove = true;
+      event.preventDefault();
+      moveTutorial(deltaX < 0 ? 1 : -1);
+      setTimeout(() => {
+        tutorialSwipeDidMove = false;
+      }, 160);
+    }, true);
+
+    overlay.addEventListener("pointercancel", event => {
+      if (tutorialSwipePointerId === null || event.pointerId !== tutorialSwipePointerId) return;
+      const pointerId = tutorialSwipePointerId;
+      tutorialSwipeStartX = null;
+      tutorialSwipeStartY = null;
+      tutorialSwipePointerId = null;
+      if (overlay.hasPointerCapture?.(pointerId)) overlay.releasePointerCapture(pointerId);
+    }, true);
 
     startButton.addEventListener("click", () => {
       if (HexSnakeReplay.isPlaybackMode()) return;
@@ -3589,7 +3582,7 @@
         return;
       }
       overlayTitle.textContent = "準備開局";
-      overlayText.textContent = `每吃 1 個食物獲得 2 點能量，集滿 ${attackNeedTotal} 點獲得 1 枚炸彈，最多 ${maxAmmo} 枚；能量與炸彈都滿時，施放消耗炸彈的招式會立刻把滿能量轉為 1 枚炸彈；小招消耗蛋白、脂肪、纖維、碳水各 1 點，大招消耗 ${bigAttackBombCost} 枚炸彈與四種庫存各 2 點。`;
+      overlayText.textContent = `每吃 1 個食物獲得 2 點能量，集滿 ${attackNeedTotal} 點獲得 1 枚炸彈，最多 ${maxAmmo} 枚；HP 上限為（蛇長 + 1）× ${hpPerSnakeUnit}；能量與炸彈都滿時，施放消耗炸彈的招式會立刻把滿能量轉為 1 枚炸彈；小招消耗目前最高的食物庫存 ${smallAttackFoodCost} 點與 ${smallAttackBombCost} 枚炸彈，大招消耗 ${bigAttackBombCost} 枚炸彈與四種庫存各 2 點。`;
       startButton.textContent = "開始";
       setOverlayChromeVisible(true);
       startGame();
@@ -3950,6 +3943,7 @@
 
     async function bootstrap() {
       await loadBalanceConfig();
+      await loadHighAiStrategyConfig();
       try {
         await loadCharacterDatabase();
       } catch (error) {

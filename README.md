@@ -64,7 +64,8 @@ npm start
 ## 操作方式
 
 - 移動：使用畫面上的六方向虛擬搖桿，或使用 `AWEFXZ` 鍵盤方向操作。
-- 技能：小招與大招會依照目前資源、能量和彈藥狀態判斷是否可用。
+- HP：上限依 `(蛇長 + 1) * 2` 計算。
+- 技能：小招消耗 1 枚炸彈與目前最高食物庫存 2 點；大招依照目前食物庫存與彈藥狀態判斷是否可用。
 - 設定：遊戲內可調整開局參數、角色、電腦難度、GM 模式與自動操作選項。
 - 自動對戰：可讓玩家或電腦進入自動操作，用於觀察 AI 表現與平衡狀態。
 
@@ -103,7 +104,7 @@ npm run simulate:jobs        # 檢視模擬任務列表
 npm run simulate:scheduled   # 啟動模擬排程器
 npm run simulate:ai-cross    # 執行 AI 交叉對戰
 npm run tune:balance         # 調整平衡參數
-npm run tune:dragon-draw     # 調整龍相關對局參數
+npm run tune:lobster-palm-draw # 調整智蝦追蹤拳對局參數
 npm run tune:ai-strategy     # 調整 AI 策略
 npm run optimize:strategy    # 執行策略最佳化
 npm run evaluate:basic-gate  # 評估基礎 AI 門檻
@@ -118,7 +119,7 @@ npm run data:check           # 檢查 data/ 與 dist/data/ 的 UTF-8 JSON
 
 主要資料都放在 `data/`：
 
-- `data/balance.json`：預設棋盤大小、食物數量、初始速度、初始長度、資源上限、移動速度、攻擊範圍、冷卻、暈眩、角色大招倍率等。
+- `data/balance.json`：預設棋盤大小、食物數量、初始速度、初始長度、資源上限、招式成本、移動速度、攻擊範圍、冷卻、暈眩、角色大招倍率等。
 - `data/characters.json`：角色 ID、代表色、頭像路徑、角色故事、招式文字、顏色設定與食物偏好。
 - `data/high-ai-strategies.json`：高階 AI 策略資料。
 

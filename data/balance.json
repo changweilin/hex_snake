@@ -32,6 +32,9 @@
     "singleColorStockGain": 2,
     "dualColorStockGain": 1
   },
+  "health": {
+    "hpPerSnakeUnit": 2
+  },
   "movement": {
     "baseStepMs": 460,
     "moveBonusPerPoint": 0.04,
@@ -39,6 +42,10 @@
     "targetMaxHex": 6
   },
   "attack": {
+    "smallAttackFoodCost": 2,
+    "smallAttackBombCost": 1,
+    "smallAttackDamageMultiplier": 0.5,
+    "bigAttackDamageMultiplier": 1,
     "bigAttackBombCost": 2,
     "baseAttackDelayMs": 2000,
     "baseAttackCooldownMs": 2400,
@@ -57,14 +64,20 @@
     "rangeDamageFalloffEnabled": false,
     "ultimates": {
       "dragon": {
-        "orbStepMs": 45,
-        "orbRadiusMultiplier": 1,
-        "orbCurveMultiplier": 1,
-        "burstRadiusMultiplier": 2,
-        "burstDamageMultiplier": 1.5
+        "radiusMultiplier": 2,
+        "impactDamageMultiplier": 0.5,
+        "radiationDamageMultiplier": 1.5,
+        "radiationDurationMs": 4000,
+        "radiationTickMs": 500,
+        "firstImpactDelayMultiplier": 2
       },
       "lobster": {
-        "radiusMultiplier": 2.5
+        "fistStepMs": 45,
+        "contactDamageMultiplier": 0.3,
+        "contactRadius": 1,
+        "burstRadiusMultiplier": 1.5,
+        "burstDamageMultiplier": 0.9,
+        "volleyCount": 2
       },
       "sandworm": {
         "damageMultiplier": 1

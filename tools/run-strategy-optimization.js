@@ -102,6 +102,24 @@ function writeJson(filePath, value) {
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, "utf8");
 }
 
+function writeJsonAtomic(filePath, value) {
+  ensureDir(path.dirname(filePath));
+  const tempPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
+  fs.writeFileSync(tempPath, `${JSON.stringify(value, null, 2)}\n`, "utf8");
+  try {
+    fs.renameSync(tempPath, filePath);
+  } catch (error) {
+    if (!["EPERM", "EEXIST"].includes(error.code)) throw error;
+    fs.copyFileSync(tempPath, filePath);
+    fs.unlinkSync(tempPath);
+  }
+}
+
+function readJsonIfPresent(filePath) {
+  if (!fs.existsSync(filePath)) return null;
+  return JSON.parse(fs.readFileSync(filePath, "utf8"));
+}
+
 function csvEscape(value) {
   const text = String(value ?? "");
   return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
@@ -122,6 +140,321 @@ function clamp(value, min = WEIGHT_MIN, max = WEIGHT_MAX) {
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
+}
+
+function formatNumber(value) {
+  return Number(value || 0).toLocaleString("en-US");
+}
+
+function formatDuration(ms) {
+  if (!Number.isFinite(ms) || ms < 0) return "unknown";
+  const totalSeconds = Math.round(ms / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  if (hours) return `${hours}h ${String(minutes).padStart(2, "0")}m`;
+  if (minutes) return `${minutes}m ${String(seconds).padStart(2, "0")}s`;
+  return `${seconds}s`;
+}
+
+function wilsonInterval(wins, games, z = 1.96) {
+  if (!games) return { low: 0, high: 1 };
+  const p = wins / games;
+  const z2 = z * z;
+  const denominator = 1 + z2 / games;
+  const center = p + z2 / (2 * games);
+  const margin = z * Math.sqrt((p * (1 - p) + z2 / (4 * games)) / games);
+  return {
+    low: Math.max(0, (center - margin) / denominator),
+    high: Math.min(1, (center + margin) / denominator)
+  };
+}
+
+function withWinRateEstimate(row) {
+  const interval = wilsonInterval(row.wins || 0, row.games || 0);
+  return {
+    games: row.games || 0,
+    wins: row.wins || 0,
+    losses: row.losses || 0,
+    draws: row.draws || 0,
+    winRate: row.winRate || 0,
+    drawRate: row.drawRate || 0,
+    decisiveWinRate: row.decisiveWinRate || 0,
+    outcomeWinRate: row.outcomeWinRate || 0,
+    reward: row.reward || 0,
+    averageHpDiff: row.averageHpDiff || 0,
+    averageScoreDiff: row.averageScoreDiff || 0,
+    ci95: {
+      low: round(interval.low),
+      high: round(interval.high)
+    }
+  };
+}
+
+function objectFromMap(map) {
+  return Object.fromEntries([...map.entries()]);
+}
+
+function mapFromObject(object = {}) {
+  return new Map(Object.entries(object || {}));
+}
+
+function configFingerprint(config) {
+  return JSON.stringify(config);
+}
+
+function buildTrainingTargetAnalysis(config, characters) {
+  const characterCount = characters.length;
+  const orderedPairs = characterCount * Math.max(0, characterCount - 1);
+  const gaCandidateEvaluations = config.gaRounds * characterCount * config.gaPopulation;
+  const rlCandidateEvaluations = config.rlRounds * characterCount * (config.rlSamples + 1);
+  const crossSeatSeriesPerReport = orderedPairs * 2;
+  const crossReports = 2;
+  const gaGames = gaCandidateEvaluations * config.gaRuns;
+  const rlGames = rlCandidateEvaluations * config.rlRuns;
+  const crossGames = crossReports * crossSeatSeriesPerReport * config.crossRuns;
+  const totalGames = gaGames + rlGames + crossGames;
+  return {
+    objective: "Find high-AI strategy weights that beat the basic mirror gate, stay novel from the baseline, then validate each target character against baseline opponents.",
+    gate: {
+      mirrorWinRate: "> 50%",
+      baselineDistance: config.baselineDistance,
+      diversityDistance: config.diversityDistance,
+      minQualified: config.minQualified,
+      minQualifiedPerCharacter: config.minQualifiedPerCharacter
+    },
+    plannedWork: {
+      characterCount,
+      characterIds: characters.map(character => character.id),
+      gaCandidateEvaluations,
+      gaGames,
+      rlCandidateEvaluations,
+      rlGames,
+      crossReports,
+      crossSeatSeriesPerReport,
+      crossGames,
+      totalGames
+    },
+    phases: [
+      {
+        id: "ga",
+        goal: "Explore broad strategy space and collect diverse candidates that clear the mirror basic gate.",
+        plannedGames: gaGames
+      },
+      {
+        id: "rl",
+        goal: "Refine each character around qualified GA seeds and select the best mirror-gate strategy.",
+        plannedGames: rlGames
+      },
+      {
+        id: "cross-play",
+        goal: "Measure marginal target-vs-baseline gain with side-balanced player/computer seats.",
+        plannedGames: crossGames
+      }
+    ],
+    successCriteria: [
+      `At least ${config.minQualified} diverse GA-qualified strategies overall.`,
+      config.minQualifiedPerCharacter
+        ? `At least ${config.minQualifiedPerCharacter} diverse GA-qualified strategies for every selected character.`
+        : "No per-character minimum is required for this run.",
+      "Optimized target-vs-field average should beat the baseline target-vs-field average.",
+      "Review per-character deltas before applying generated strategies."
+    ]
+  };
+}
+
+function trainingTargetMarkdown(analysis) {
+  const work = analysis.plannedWork;
+  return [
+    "# Strategy Training Targets",
+    "",
+    `Generated: ${new Date().toISOString()}`,
+    "",
+    "## Objective",
+    "",
+    analysis.objective,
+    "",
+    "## Gate",
+    "",
+    `- Mirror win rate: ${analysis.gate.mirrorWinRate}`,
+    `- Baseline novelty distance: ${analysis.gate.baselineDistance}`,
+    `- Diversity distance: ${analysis.gate.diversityDistance}`,
+    `- Minimum qualified strategies: ${analysis.gate.minQualified}`,
+    `- Minimum per character: ${analysis.gate.minQualifiedPerCharacter || "not required"}`,
+    "",
+    "## Planned Work",
+    "",
+    `- Characters: ${work.characterIds.join(", ")}`,
+    `- GA: ${formatNumber(work.gaCandidateEvaluations)} candidate evaluations / ${formatNumber(work.gaGames)} games`,
+    `- RL: ${formatNumber(work.rlCandidateEvaluations)} candidate evaluations / ${formatNumber(work.rlGames)} games`,
+    `- Cross-play: ${formatNumber(work.crossSeatSeriesPerReport * work.crossReports)} seat series / ${formatNumber(work.crossGames)} games`,
+    `- Total planned games: ${formatNumber(work.totalGames)}`,
+    "",
+    "## Success Criteria",
+    "",
+    ...analysis.successCriteria.map(item => `- ${item}`)
+  ].join("\n");
+}
+
+function loadCompatibleCheckpoint(outputDir, config, resume) {
+  if (!resume) return null;
+  const filePath = path.join(outputDir, "checkpoint.json");
+  const checkpoint = readJsonIfPresent(filePath);
+  if (!checkpoint) return null;
+  if (checkpoint.configFingerprint && checkpoint.configFingerprint !== configFingerprint(config)) {
+    console.log(`Checkpoint ignored because config changed: ${filePath}`);
+    return null;
+  }
+  if (checkpoint.config && configFingerprint(checkpoint.config) !== configFingerprint(config)) {
+    console.log(`Checkpoint ignored because config changed: ${filePath}`);
+    return null;
+  }
+  console.log(`Resuming from checkpoint: ${filePath}`);
+  return checkpoint;
+}
+
+function createProgressTracker({ outputDir, config, characters, checkpoint = null, logIntervalMs = 5000 }) {
+  const analysis = buildTrainingTargetAnalysis(config, characters);
+  const filePath = path.join(outputDir, "training-progress.json");
+  const startedAt = checkpoint?.progress?.startedAt || checkpoint?.startedAt || new Date().toISOString();
+  const startedAtMs = Date.parse(startedAt) || Date.now();
+  let completedGames = Number(checkpoint?.completedGames || checkpoint?.progress?.completedGames || 0);
+  let lastWriteAt = 0;
+  let lastLogAt = 0;
+  const state = {
+    startedAt,
+    updatedAt: startedAt,
+    status: "running",
+    phase: "starting",
+    config,
+    analysis,
+    progress: {
+      completedGames,
+      plannedGames: analysis.plannedWork.totalGames,
+      percent: 0,
+      elapsedMs: 0,
+      elapsed: "0s",
+      gamesPerSecond: 0,
+      etaMs: null,
+      eta: "unknown"
+    },
+    current: null,
+    outputs: {
+      directory: outputDir,
+      progress: filePath,
+      checkpoint: path.join(outputDir, "checkpoint.json"),
+      targetAnalysis: path.join(outputDir, "training-targets.md")
+    }
+  };
+
+  function refreshMetrics() {
+    const elapsedMs = Math.max(0, Date.now() - startedAtMs);
+    const plannedGames = analysis.plannedWork.totalGames;
+    const gamesPerSecond = elapsedMs > 0 ? completedGames / (elapsedMs / 1000) : 0;
+    const remainingGames = Math.max(0, plannedGames - completedGames);
+    const etaMs = gamesPerSecond > 0 ? (remainingGames / gamesPerSecond) * 1000 : null;
+    state.updatedAt = new Date().toISOString();
+    state.progress = {
+      completedGames,
+      plannedGames,
+      percent: plannedGames ? round(Math.min(1, completedGames / plannedGames), 6) : 0,
+      elapsedMs,
+      elapsed: formatDuration(elapsedMs),
+      gamesPerSecond: round(gamesPerSecond, 3),
+      etaMs,
+      eta: formatDuration(etaMs)
+    };
+  }
+
+  function line() {
+    const pct = state.progress.plannedGames
+      ? `${(state.progress.percent * 100).toFixed(1)}%`
+      : `${formatNumber(state.progress.completedGames)} games`;
+    const current = state.current || {};
+    const estimate = current.estimate
+      ? ` estWin ${(current.estimate.winRate * 100).toFixed(1)}% (${current.estimate.wins}/${current.estimate.games}, draw ${(current.estimate.drawRate * 100).toFixed(1)}%, 95% ${(current.estimate.ci95.low * 100).toFixed(1)}-${(current.estimate.ci95.high * 100).toFixed(1)}%)`
+      : "";
+    const label = current.label ? ` ${current.label}` : "";
+    return `[${pct}] ${state.phase}${label}${estimate}; ${formatNumber(state.progress.completedGames)}/${formatNumber(state.progress.plannedGames)} games; ETA ${state.progress.eta}`;
+  }
+
+  function flush({ force = false, log = false } = {}) {
+    refreshMetrics();
+    const now = Date.now();
+    if (force || now - lastWriteAt >= 1000) {
+      writeJsonAtomic(filePath, state);
+      lastWriteAt = now;
+    }
+    if (log && (force || now - lastLogAt >= logIntervalMs)) {
+      console.log(line());
+      lastLogAt = now;
+    }
+  }
+
+  return {
+    filePath,
+    analysis,
+    state,
+    completedGames: () => completedGames,
+    setStatus(status, current = null, force = true) {
+      state.status = status;
+      if (current) state.current = current;
+      flush({ force, log: force });
+    },
+    setPhase(phase, current = null, force = true) {
+      state.phase = phase;
+      if (current) state.current = current;
+      flush({ force, log: force });
+    },
+    recordGame(current = null) {
+      completedGames += 1;
+      if (current) state.current = current;
+      flush({ log: true });
+    },
+    updateCurrent(current = null, force = false) {
+      if (current) state.current = current;
+      flush({ force, log: force });
+    },
+    finish(status = "completed") {
+      state.status = status;
+      state.phase = status;
+      flush({ force: true, log: true });
+    }
+  };
+}
+
+function createCheckpointManager({ outputDir, config, checkpoint = null, progress = null }) {
+  const filePath = path.join(outputDir, "checkpoint.json");
+  const data = checkpoint || {};
+  if (!data.startedAt) data.startedAt = new Date().toISOString();
+  let lastWriteAt = 0;
+
+  function save(force = false) {
+    const now = Date.now();
+    data.version = 1;
+    data.updatedAt = new Date().toISOString();
+    data.config = config;
+    data.configFingerprint = configFingerprint(config);
+    data.completedGames = progress ? progress.completedGames() : Number(data.completedGames || 0);
+    data.progress = {
+      startedAt: progress?.state?.startedAt || data.startedAt,
+      completedGames: data.completedGames
+    };
+    if (force || now - lastWriteAt >= 2000) {
+      writeJsonAtomic(filePath, data);
+      lastWriteAt = now;
+    }
+  }
+
+  return {
+    filePath,
+    data,
+    save,
+    update(mutator, force = false) {
+      mutator(data);
+      save(force);
+    }
+  };
 }
 
 function defaultStrategyWeights() {
@@ -314,9 +647,10 @@ function finalizeTotals(totals, strategyWeights) {
   };
 }
 
-function evaluateAgainstBasic({ balance, character, candidate, runs, seed, phase }) {
-  const totals = emptyTotals(character.id, candidate.id);
-  for (let index = 0; index < runs; index += 1) {
+function evaluateAgainstBasic({ balance, character, candidate, runs, seed, phase, resume = null, onProgress = null }) {
+  const totals = resume?.totals ? { ...emptyTotals(character.id, candidate.id), ...clone(resume.totals) } : emptyTotals(character.id, candidate.id);
+  const startIndex = Math.max(0, Math.min(runs, Math.floor(Number(resume?.nextIndex || 0))));
+  for (let index = startIndex; index < runs; index += 1) {
     const candidateIsPlayer = index % 2 === 0;
     const match = simulateMatch({
       balance,
@@ -327,6 +661,14 @@ function evaluateAgainstBasic({ balance, character, candidate, runs, seed, phase
       seed: `${seed}:${character.id}:${phase}:${candidate.id}:match-${index}`
     });
     recordMatch(totals, match, candidateIsPlayer);
+    if (typeof onProgress === "function") {
+      onProgress({
+        nextIndex: index + 1,
+        runs,
+        totals: clone(totals),
+        estimate: withWinRateEstimate(finalizeTotals(totals, candidate.strategyWeights))
+      });
+    }
   }
   return finalizeTotals(totals, candidate.strategyWeights);
 }
@@ -402,15 +744,64 @@ function qualifiedRows(rows) {
   return rows.filter(row => row.passedGate && row.novelFromBaseline);
 }
 
-function runGaSearch({ balance, characters, seed, runs, rounds, populationSize, eliteCount, diversityDistance, baselineDistance, minQualified, minQualifiedPerCharacter, durationHours, outputDir }) {
+function runGaSearch({ balance, characters, seed, runs, rounds, populationSize, eliteCount, diversityDistance, baselineDistance, minQualified, minQualifiedPerCharacter, durationHours, outputDir, progress = null, checkpointManager = null }) {
   const rng = createRng(`${seed}:ga`);
-  const populations = new Map(characters.map(character => [character.id, seedPopulation(character, rng, populationSize)]));
-  const allRows = [];
-  const history = [];
-  const bestByCharacter = new Map();
+  const saved = checkpointManager?.data?.ga;
+  const populations = saved?.populations
+    ? mapFromObject(saved.populations)
+    : new Map(characters.map(character => [character.id, seedPopulation(character, rng, populationSize)]));
+  const allRows = saved?.allRows || [];
+  const history = saved?.history || [];
+  const bestByCharacter = saved?.bestByCharacter ? mapFromObject(saved.bestByCharacter) : new Map();
   const deadlineMs = durationHours ? Date.now() + durationHours * 60 * 60 * 1000 : null;
-  let roundIndex = 0;
-  let stopReason = "rounds";
+  let roundIndex = saved?.completed
+    ? saved?.roundIndex || 0
+    : saved?.current?.round
+      ? saved.current.round - 1
+      : saved?.roundIndex || 0;
+  let stopReason = saved?.stopReason || "rounds";
+
+  if (saved?.completed) {
+    const diverseQualified = selectDiverse(qualifiedRows(allRows), diversityDistance);
+    const perCharacterQualified = diverseQualifiedByCharacter(allRows, characters, diversityDistance);
+    writeJson(path.join(outputDir, "ga-history.json"), history);
+    writeJson(path.join(outputDir, "ga-qualified.json"), {
+      gate: "winRate = wins / (wins + losses + draws) > 0.5",
+      diversityDistance,
+      baselineDistance,
+      durationHours,
+      minQualified,
+      minQualifiedPerCharacter,
+      stopReason,
+      rounds: roundIndex,
+      qualifiedCount: diverseQualified.length,
+      perCharacterQualified: Object.fromEntries(Object.entries(perCharacterQualified).map(([characterId, rows]) => [characterId, rows.length])),
+      strategies: diverseQualified
+    });
+    writeCsv(path.join(outputDir, "ga-qualified.csv"), rowsToCsv(diverseQualified));
+    progress?.setPhase("ga", { label: "restored completed GA checkpoint" }, true);
+    return { allRows, diverseQualified, perCharacterQualified, bestByCharacter, history, stopReason, rounds: roundIndex };
+  }
+
+  function saveGaCheckpoint(extra = {}, force = false) {
+    checkpointManager?.update(data => {
+      data.status = "running";
+      data.phase = "ga";
+      data.ga = {
+        ...(data.ga || {}),
+        allRows,
+        history,
+        bestByCharacter: objectFromMap(bestByCharacter),
+        populations: objectFromMap(populations),
+        roundIndex,
+        stopReason,
+        completed: false,
+        ...extra
+      };
+    }, force);
+  }
+
+  saveGaCheckpoint({}, true);
 
   while (roundIndex < rounds || (deadlineMs && Date.now() < deadlineMs)) {
     if (deadlineMs && Date.now() >= deadlineMs) {
@@ -421,19 +812,77 @@ function runGaSearch({ balance, characters, seed, runs, rounds, populationSize, 
       stopReason = "per-character-qualified";
       break;
     }
+    const resumedCurrent = saved?.current && saved.current.round === roundIndex + 1 ? saved.current : null;
     roundIndex += 1;
-    characters.forEach(character => {
-      const ranked = populations.get(character.id)
-        .map(candidate => evaluateAgainstBasic({
+    const characterStart = resumedCurrent ? resumedCurrent.characterIndex || 0 : 0;
+    for (let characterIndex = characterStart; characterIndex < characters.length; characterIndex += 1) {
+      const character = characters[characterIndex];
+      const population = populations.get(character.id);
+      const continuingCharacter = resumedCurrent
+        && resumedCurrent.round === roundIndex
+        && resumedCurrent.characterId === character.id;
+      const rankedDraft = continuingCharacter ? (resumedCurrent.rankedDraft || []) : [];
+      for (let candidateIndex = rankedDraft.length; candidateIndex < population.length; candidateIndex += 1) {
+        const candidate = population[candidateIndex];
+        const continuingCandidate = continuingCharacter
+          && resumedCurrent.candidateIndex === candidateIndex
+          && resumedCurrent.candidateId === candidate.id;
+        progress?.setPhase("ga", {
+          label: `${character.id} round ${roundIndex}${deadlineMs ? "" : `/${rounds}`} candidate ${candidateIndex + 1}/${population.length}`
+        }, candidateIndex === 0);
+        saveGaCheckpoint({
+          current: {
+            round: roundIndex,
+            characterIndex,
+            characterId: character.id,
+            candidateIndex,
+            candidateId: candidate.id,
+            rankedDraft,
+            partial: continuingCandidate ? resumedCurrent.partial || null : null
+          }
+        }, true);
+        const rankedRow = evaluateAgainstBasic({
           balance,
           character,
           candidate,
           runs,
           seed,
-          phase: `ga-round-${roundIndex}`
-        }))
-        .map(row => annotateNovelty(row, baselineDistance))
-        .sort(compareRows);
+          phase: `ga-round-${roundIndex}`,
+          resume: continuingCandidate ? resumedCurrent.partial : null,
+          onProgress: partial => {
+            progress?.recordGame({
+              label: `${character.id} GA r${roundIndex} candidate ${candidateIndex + 1}/${population.length}`,
+              estimate: partial.estimate
+            });
+            saveGaCheckpoint({
+              current: {
+                round: roundIndex,
+                characterIndex,
+                characterId: character.id,
+                candidateIndex,
+                candidateId: candidate.id,
+                rankedDraft,
+                partial: {
+                  nextIndex: partial.nextIndex,
+                  totals: partial.totals
+                }
+              }
+            });
+          }
+        });
+        rankedDraft.push(annotateNovelty(rankedRow, baselineDistance));
+        saveGaCheckpoint({
+          current: {
+            round: roundIndex,
+            characterIndex,
+            characterId: character.id,
+            candidateIndex: candidateIndex + 1,
+            rankedDraft,
+            partial: null
+          }
+        }, true);
+      }
+      const ranked = rankedDraft.sort(compareRows);
       ranked.forEach(row => allRows.push({ ...row, phase: "ga", round: roundIndex }));
       writeJson(path.join(outputDir, "ga", `${character.id}-round-${roundIndex}.json`), ranked);
       const previousBest = bestByCharacter.get(character.id);
@@ -446,11 +895,30 @@ function runGaSearch({ balance, characters, seed, runs, rounds, populationSize, 
         qualified: qualifiedRows(ranked).length
       });
       populations.set(character.id, nextGaPopulation(character, ranked, rng, populationSize, eliteCount, roundIndex));
-    });
+      saveGaCheckpoint({
+        current: {
+          round: roundIndex,
+          characterIndex: characterIndex + 1,
+          characterId: character.id,
+          candidateIndex: population.length,
+          rankedDraft: [],
+          partial: null
+        }
+      }, true);
+    }
+    saveGaCheckpoint({ current: null }, true);
     const qualified = selectDiverse(qualifiedRows(allRows), diversityDistance);
     const perCharacter = diverseQualifiedByCharacter(allRows, characters, diversityDistance);
     const perCharacterText = characters.map(character => `${character.id}:${perCharacter[character.id].length}`).join(" ");
-    console.log(`GA round ${roundIndex}${deadlineMs ? "" : `/${rounds}`}: ${qualified.length} diverse qualified strategies (${perCharacterText})`);
+    const bestText = characters.map(character => {
+      const best = bestByCharacter.get(character.id);
+      return `${character.id}:${best ? percent(best.winRate) : "-"}`;
+    }).join(" ");
+    console.log(`GA round ${roundIndex}${deadlineMs ? "" : `/${rounds}`}: ${qualified.length} diverse qualified strategies (${perCharacterText}); best win ${bestText}`);
+    progress?.updateCurrent({
+      label: `GA round ${roundIndex} complete, qualified ${qualified.length}`,
+      estimate: qualified[0] ? withWinRateEstimate(qualified[0]) : null
+    }, true);
   }
 
   const diverseQualified = selectDiverse(qualifiedRows(allRows), diversityDistance);
@@ -470,6 +938,20 @@ function runGaSearch({ balance, characters, seed, runs, rounds, populationSize, 
     strategies: diverseQualified
   });
   writeCsv(path.join(outputDir, "ga-qualified.csv"), rowsToCsv(diverseQualified));
+  checkpointManager?.update(data => {
+    data.phase = "ga";
+    data.ga = {
+      ...(data.ga || {}),
+      allRows,
+      history,
+      bestByCharacter: objectFromMap(bestByCharacter),
+      populations: objectFromMap(populations),
+      roundIndex,
+      stopReason,
+      completed: true,
+      current: null
+    };
+  }, true);
   return { allRows, diverseQualified, perCharacterQualified, bestByCharacter, history, stopReason, rounds: roundIndex };
 }
 
@@ -514,12 +996,13 @@ function sampleAroundVector(prefix, center, rng, sigma, count) {
   });
 }
 
-function runBanditRl({ balance, characters, gaRows, bestByCharacter, seed, runs, rounds, samples, sigma, temperature, durationHours, outputDir }) {
+function runBanditRl({ balance, characters, gaRows, bestByCharacter, seed, runs, rounds, samples, sigma, temperature, durationHours, outputDir, progress = null, checkpointManager = null }) {
   const rng = createRng(`${seed}:rl`);
-  const history = [];
+  const saved = checkpointManager?.data?.rl;
+  const history = saved?.history || [];
   const deadlineMs = durationHours ? Date.now() + durationHours * 60 * 60 * 1000 : null;
-  let stopReason = "rounds";
-  const states = new Map(characters.map(character => {
+  let stopReason = saved?.stopReason || "rounds";
+  const initialStates = new Map(characters.map(character => {
     const characterSeeds = gaRows
       .filter(row => row.characterId === character.id)
       .sort(compareRows)
@@ -538,32 +1021,142 @@ function runBanditRl({ balance, characters, gaRows, bestByCharacter, seed, runs,
       rounds: 0
     }];
   }));
+  const states = saved?.states ? mapFromObject(saved.states) : initialStates;
 
-  let roundIndex = 0;
+  if (saved?.completed) {
+    const bestStrategies = saved.bestStrategies || characters.map(character => {
+      const state = states.get(character.id);
+      return {
+        ...(state.best || {}),
+        characterName: character.name,
+        phase: "rl-best"
+      };
+    });
+    writeJson(path.join(outputDir, "rl-history.json"), history);
+    writeJson(path.join(outputDir, "rl-best-strategies.json"), {
+      durationHours,
+      stopReason,
+      strategies: bestStrategies
+    });
+    writeCsv(path.join(outputDir, "rl-best-strategies.csv"), rowsToCsv(bestStrategies));
+    progress?.setPhase("rl", { label: "restored completed RL checkpoint" }, true);
+    return { bestStrategies, history, stopReason };
+  }
+
+  function saveRlCheckpoint(extra = {}, force = false) {
+    checkpointManager?.update(data => {
+      data.status = "running";
+      data.phase = "rl";
+      data.rl = {
+        ...(data.rl || {}),
+        history,
+        states: objectFromMap(states),
+        stopReason,
+        completed: false,
+        ...extra
+      };
+    }, force);
+  }
+
+  let roundIndex = saved?.completed
+    ? saved?.roundIndex || 0
+    : saved?.current?.round
+      ? saved.current.round - 1
+      : saved?.roundIndex || 0;
+  saveRlCheckpoint({ roundIndex }, true);
   while (roundIndex < rounds || (deadlineMs && Date.now() < deadlineMs)) {
     if (deadlineMs && Date.now() >= deadlineMs && roundIndex >= rounds) {
       stopReason = "duration";
       break;
     }
+    const resumedCurrent = saved?.current && saved.current.round === roundIndex + 1 ? saved.current : null;
     roundIndex += 1;
-    for (const character of characters) {
+    const characterStart = resumedCurrent ? resumedCurrent.characterIndex || 0 : 0;
+    for (let characterIndex = characterStart; characterIndex < characters.length; characterIndex += 1) {
+      const character = characters[characterIndex];
       if (deadlineMs && Date.now() >= deadlineMs && roundIndex > rounds) {
         stopReason = "duration";
         break;
       }
       const state = states.get(character.id);
-      const candidates = [
-        makeStrategy(`${character.id}-rl${roundIndex}-center`, vectorToWeights(state.center)),
-        ...sampleAroundVector(`${character.id}-rl${roundIndex}`, state.center, rng, state.sigma, samples)
-      ];
-      const ranked = candidates.map(candidate => evaluateAgainstBasic({
-        balance,
-        character,
-        candidate,
-        runs,
-        seed,
-        phase: `rl-round-${roundIndex}`
-      })).map(row => annotateNovelty(row, 0)).sort(compareRows);
+      const continuingCharacter = resumedCurrent
+        && resumedCurrent.round === roundIndex
+        && resumedCurrent.characterId === character.id;
+      const candidates = continuingCharacter && resumedCurrent.candidates
+        ? resumedCurrent.candidates
+        : [
+            makeStrategy(`${character.id}-rl${roundIndex}-center`, vectorToWeights(state.center)),
+            ...sampleAroundVector(`${character.id}-rl${roundIndex}`, state.center, rng, state.sigma, samples)
+          ];
+      const rankedDraft = continuingCharacter ? (resumedCurrent.rankedDraft || []) : [];
+      for (let candidateIndex = rankedDraft.length; candidateIndex < candidates.length; candidateIndex += 1) {
+        const candidate = candidates[candidateIndex];
+        const continuingCandidate = continuingCharacter
+          && resumedCurrent.candidateIndex === candidateIndex
+          && resumedCurrent.candidateId === candidate.id;
+        progress?.setPhase("rl", {
+          label: `${character.id} round ${roundIndex}${deadlineMs ? "" : `/${rounds}`} candidate ${candidateIndex + 1}/${candidates.length}`
+        }, candidateIndex === 0);
+        saveRlCheckpoint({
+          roundIndex,
+          current: {
+            round: roundIndex,
+            characterIndex,
+            characterId: character.id,
+            candidateIndex,
+            candidateId: candidate.id,
+            candidates,
+            rankedDraft,
+            partial: continuingCandidate ? resumedCurrent.partial || null : null
+          }
+        }, true);
+        const row = evaluateAgainstBasic({
+          balance,
+          character,
+          candidate,
+          runs,
+          seed,
+          phase: `rl-round-${roundIndex}`,
+          resume: continuingCandidate ? resumedCurrent.partial : null,
+          onProgress: partial => {
+            progress?.recordGame({
+              label: `${character.id} RL r${roundIndex} candidate ${candidateIndex + 1}/${candidates.length}`,
+              estimate: partial.estimate
+            });
+            saveRlCheckpoint({
+              roundIndex,
+              current: {
+                round: roundIndex,
+                characterIndex,
+                characterId: character.id,
+                candidateIndex,
+                candidateId: candidate.id,
+                candidates,
+                rankedDraft,
+                partial: {
+                  nextIndex: partial.nextIndex,
+                  totals: partial.totals
+                }
+              }
+            });
+          }
+        });
+        rankedDraft.push(annotateNovelty(row, 0));
+        saveRlCheckpoint({
+          roundIndex,
+          current: {
+            round: roundIndex,
+            characterIndex,
+            characterId: character.id,
+            candidateIndex: candidateIndex + 1,
+            candidateId: candidate.id,
+            candidates,
+            rankedDraft,
+            partial: null
+          }
+        }, true);
+      }
+      const ranked = rankedDraft.sort(compareRows);
       writeJson(path.join(outputDir, "rl", `${character.id}-round-${roundIndex}.json`), ranked);
       if (!state.best || compareRows(ranked[0], state.best) < 0) state.best = ranked[0];
       const updateRows = ranked.slice(0, Math.max(2, Math.ceil(ranked.length / 2)));
@@ -580,7 +1173,20 @@ function runBanditRl({ balance, characters, gaRows, bestByCharacter, seed, runs,
         sigma: round(state.sigma, 4)
       });
       console.log(`RL ${character.id} round ${roundIndex}${deadlineMs ? "" : `/${rounds}`}: winRate ${(ranked[0].winRate * 100).toFixed(1)}%`);
+      saveRlCheckpoint({
+        roundIndex,
+        current: {
+          round: roundIndex,
+          characterIndex: characterIndex + 1,
+          characterId: character.id,
+          candidateIndex: candidates.length,
+          candidates: [],
+          rankedDraft: [],
+          partial: null
+        }
+      }, true);
     }
+    saveRlCheckpoint({ roundIndex, current: null }, true);
   }
   if (deadlineMs && Date.now() >= deadlineMs && roundIndex >= rounds) stopReason = "duration";
 
@@ -607,6 +1213,19 @@ function runBanditRl({ balance, characters, gaRows, bestByCharacter, seed, runs,
     strategies: bestStrategies
   });
   writeCsv(path.join(outputDir, "rl-best-strategies.csv"), rowsToCsv(bestStrategies));
+  checkpointManager?.update(data => {
+    data.phase = "rl";
+    data.rl = {
+      ...(data.rl || {}),
+      history,
+      states: objectFromMap(states),
+      roundIndex,
+      stopReason,
+      bestStrategies,
+      completed: true,
+      current: null
+    };
+  }, true);
   return { bestStrategies, history, stopReason };
 }
 
@@ -660,8 +1279,8 @@ function buildMatrix(results, characters) {
   return { rows, averages };
 }
 
-function matrixToCsv(matrix, characters) {
-  const header = ["player\\opponent", ...characters.map(character => character.id), "average"];
+function matrixToCsv(matrix, characters, cornerLabel = "player\\opponent") {
+  const header = [cornerLabel, ...characters.map(character => character.id), "average"];
   const rows = matrix.rows.map(row => {
     const average = matrix.averages.find(item => item.characterId === row.characterId);
     return [
@@ -671,6 +1290,81 @@ function matrixToCsv(matrix, characters) {
     ];
   });
   return [header, ...rows];
+}
+
+function combineChallengeSeries({ balance, candidateCharacter, opponentCharacter, candidateAsPlayer, candidateAsComputer }) {
+  const runs = candidateAsPlayer.runs + candidateAsComputer.runs;
+  const wins = candidateAsPlayer.wins + candidateAsComputer.losses;
+  const losses = candidateAsPlayer.losses + candidateAsComputer.wins;
+  const draws = candidateAsPlayer.draws + candidateAsComputer.draws;
+  const decisiveGames = wins + losses;
+  const candidateAsComputerWinRate = candidateAsComputer.runs ? candidateAsComputer.losses / candidateAsComputer.runs : 0;
+  const averageFromCandidatePerspective = (playerValue, computerValue) => (
+    runs ? (candidateAsPlayer.runs * playerValue - candidateAsComputer.runs * computerValue) / runs : 0
+  );
+  return {
+    candidateCharacterId: candidateCharacter.id,
+    opponentCharacterId: opponentCharacter.id,
+    playerCharacterId: candidateCharacter.id,
+    computerCharacterId: opponentCharacter.id,
+    runs,
+    wins,
+    losses,
+    draws,
+    winRate: runs ? wins / runs : 0,
+    drawRate: runs ? draws / runs : 0,
+    decisiveGames,
+    decisiveWinRate: decisiveGames ? wins / decisiveGames : 0,
+    averageDurationMs: runs
+      ? (candidateAsPlayer.runs * candidateAsPlayer.averageDurationMs + candidateAsComputer.runs * candidateAsComputer.averageDurationMs) / runs
+      : 0,
+    averageHpDiff: averageFromCandidatePerspective(candidateAsPlayer.averageHpDiff, candidateAsComputer.averageHpDiff),
+    averageScoreDiff: averageFromCandidatePerspective(candidateAsPlayer.averageScoreDiff, candidateAsComputer.averageScoreDiff),
+    candidateAsPlayerWinRate: candidateAsPlayer.winRate,
+    candidateAsComputerWinRate,
+    warning: wins / Math.max(1, runs) < balance.simulation.balanceWinRateMin || wins / Math.max(1, runs) > balance.simulation.balanceWinRateMax
+  };
+}
+
+function challengeRowsToCsv(results) {
+  return [
+    [
+      "candidateCharacterId",
+      "opponentCharacterId",
+      "runs",
+      "wins",
+      "losses",
+      "draws",
+      "winRate",
+      "drawRate",
+      "decisiveGames",
+      "decisiveWinRate",
+      "averageDurationMs",
+      "averageHpDiff",
+      "averageScoreDiff",
+      "candidateAsPlayerWinRate",
+      "candidateAsComputerWinRate",
+      "warning"
+    ],
+    ...results.map(result => [
+      result.candidateCharacterId,
+      result.opponentCharacterId,
+      result.runs,
+      result.wins,
+      result.losses,
+      result.draws,
+      result.winRate,
+      result.drawRate,
+      result.decisiveGames,
+      result.decisiveWinRate,
+      Math.round(result.averageDurationMs),
+      result.averageHpDiff,
+      result.averageScoreDiff,
+      result.candidateAsPlayerWinRate,
+      result.candidateAsComputerWinRate,
+      result.warning
+    ])
+  ];
 }
 
 function runCrossPlayReport({ balance, characters, strategyFile, runs, seed, outputPrefix }) {
@@ -701,6 +1395,168 @@ function runCrossPlayReport({ balance, characters, strategyFile, runs, seed, out
   return { report, matrix };
 }
 
+function simpleEstimateFromTotals(totals) {
+  const games = totals.games || 0;
+  const decisiveGames = (totals.wins || 0) + (totals.losses || 0);
+  return withWinRateEstimate({
+    games,
+    wins: totals.wins || 0,
+    losses: totals.losses || 0,
+    draws: totals.draws || 0,
+    winRate: games ? (totals.wins || 0) / games : 0,
+    drawRate: games ? (totals.draws || 0) / games : 0,
+    decisiveWinRate: decisiveGames ? (totals.wins || 0) / decisiveGames : 0,
+    outcomeWinRate: games ? ((totals.wins || 0) + (totals.draws || 0) * 0.5) / games : 0,
+    reward: games ? (totals.wins || 0) / games : 0
+  });
+}
+
+function recordCrossSeatEstimate(totals, match, candidateSeat) {
+  totals.games += 1;
+  if (!match.winner) {
+    totals.draws += 1;
+    return;
+  }
+  const won = candidateSeat === "player" ? match.winner === "player" : match.winner === "computer";
+  if (won) totals.wins += 1;
+  else totals.losses += 1;
+}
+
+function runChallengeCrossPlayReport({ balance, characters, candidateStrategyFile, opponentStrategyFile, runs, seed, outputPrefix, progress = null, checkpointManager = null, checkpointKey = null }) {
+  const saved = checkpointKey ? checkpointManager?.data?.cross?.[checkpointKey] : null;
+  const results = saved?.results || [];
+  const seatResults = saved?.seatResults || [];
+  const completedPairs = new Set(saved?.completedPairs || results.map(result => `${result.candidateCharacterId}:${result.opponentCharacterId}`));
+
+  function saveCrossCheckpoint(extra = {}, force = false) {
+    if (!checkpointKey) return;
+    checkpointManager?.update(data => {
+      data.status = "running";
+      data.phase = "cross-play";
+      data.cross = {
+        ...(data.cross || {}),
+        [checkpointKey]: {
+          ...(data.cross?.[checkpointKey] || {}),
+          results,
+          seatResults,
+          completedPairs: [...completedPairs],
+          completed: false,
+          ...extra
+        }
+      };
+    }, force);
+  }
+
+  if (saved?.completed) {
+    const report = {
+      generatedAt: saved.generatedAt || new Date().toISOString(),
+      config: saved.config,
+      results,
+      seatResults
+    };
+    const matrix = buildMatrix(results, characters);
+    writeJson(`${outputPrefix}.json`, report);
+    writeCsv(`${outputPrefix}.csv`, challengeRowsToCsv(results));
+    writeCsv(`${outputPrefix}-matrix.csv`, matrixToCsv(matrix, characters, "candidate\\opponent"));
+    progress?.setPhase("cross-play", { label: `restored ${checkpointKey}` }, true);
+    return { report, matrix };
+  }
+
+  saveCrossCheckpoint({}, true);
+  characters.forEach(candidateCharacter => {
+    characters.forEach(opponentCharacter => {
+      if (candidateCharacter.id === opponentCharacter.id) return;
+      const pairKey = `${candidateCharacter.id}:${opponentCharacter.id}`;
+      if (completedPairs.has(pairKey)) return;
+      progress?.setPhase("cross-play", {
+        label: `${checkpointKey || "cross"} ${candidateCharacter.id} vs ${opponentCharacter.id}`
+      }, true);
+      const playerTotals = { games: 0, wins: 0, losses: 0, draws: 0 };
+      const candidateAsPlayer = runSeries({
+        balance,
+        playerCharacter: candidateCharacter,
+        computerCharacter: opponentCharacter,
+        seed: `${seed}:${candidateCharacter.id}:as-player:vs:${opponentCharacter.id}`,
+        runs,
+        playerModel: strategyModel(candidateStrategyFile, candidateCharacter.id),
+        computerModel: strategyModel(opponentStrategyFile, opponentCharacter.id),
+        onMatch: ({ match }) => {
+          recordCrossSeatEstimate(playerTotals, match, "player");
+          progress?.recordGame({
+            label: `${candidateCharacter.id} as player vs ${opponentCharacter.id}`,
+            estimate: simpleEstimateFromTotals(playerTotals)
+          });
+        }
+      });
+      const computerTotals = { games: 0, wins: 0, losses: 0, draws: 0 };
+      const candidateAsComputer = runSeries({
+        balance,
+        playerCharacter: opponentCharacter,
+        computerCharacter: candidateCharacter,
+        seed: `${seed}:${candidateCharacter.id}:as-computer:vs:${opponentCharacter.id}`,
+        runs,
+        playerModel: strategyModel(opponentStrategyFile, opponentCharacter.id),
+        computerModel: strategyModel(candidateStrategyFile, candidateCharacter.id),
+        onMatch: ({ match }) => {
+          recordCrossSeatEstimate(computerTotals, match, "computer");
+          progress?.recordGame({
+            label: `${candidateCharacter.id} as computer vs ${opponentCharacter.id}`,
+            estimate: simpleEstimateFromTotals(computerTotals)
+          });
+        }
+      });
+      seatResults.push({
+        candidateCharacterId: candidateCharacter.id,
+        opponentCharacterId: opponentCharacter.id,
+        candidateSeat: "player",
+        result: candidateAsPlayer
+      });
+      seatResults.push({
+        candidateCharacterId: candidateCharacter.id,
+        opponentCharacterId: opponentCharacter.id,
+        candidateSeat: "computer",
+        result: candidateAsComputer
+      });
+      results.push(combineChallengeSeries({
+        balance,
+        candidateCharacter,
+        opponentCharacter,
+        candidateAsPlayer,
+        candidateAsComputer
+      }));
+      completedPairs.add(pairKey);
+      saveCrossCheckpoint({
+        current: null
+      }, true);
+    });
+  });
+  const report = {
+    generatedAt: new Date().toISOString(),
+    config: {
+      seed,
+      runsPerSeat: runs,
+      candidateOpponentPairs: results.length,
+      orderedSeatSeries: seatResults.length,
+      protocol: "candidate strategy vs baseline opponents, side-balanced",
+      candidateStrategySource: candidateStrategyFile.source,
+      opponentStrategySource: opponentStrategyFile.source
+    },
+    results,
+    seatResults
+  };
+  const matrix = buildMatrix(results, characters);
+  writeJson(`${outputPrefix}.json`, report);
+  writeCsv(`${outputPrefix}.csv`, challengeRowsToCsv(results));
+  writeCsv(`${outputPrefix}-matrix.csv`, matrixToCsv(matrix, characters, "candidate\\opponent"));
+  saveCrossCheckpoint({
+    generatedAt: report.generatedAt,
+    config: report.config,
+    completed: true,
+    current: null
+  }, true);
+  return { report, matrix };
+}
+
 function percent(value) {
   return `${(value * 100).toFixed(1)}%`;
 }
@@ -720,18 +1576,19 @@ function comparisonMarkdown({ config, gaQualified, rlBest, baselineCross, bestCr
     `Seed: ${config.seed}`,
     `Gate: winRate = wins / (wins + losses + draws) > 50%`,
     `Diversity distance: ${config.diversityDistance}`,
+    `Cross-play protocol: target character uses the strategy under test; all opponents use baseline; both player and computer seats are evaluated.`,
     "",
     "## Summary",
     "",
     `- Diverse GA-qualified strategies: ${gaQualified.length}`,
     `- RL best strategies: ${rlBest.length}`,
-    `- Baseline average cross win rate: ${percent(baselineAverage)}`,
-    `- Best average cross win rate: ${percent(bestAverage)}`,
+    `- Baseline target-vs-field win rate: ${percent(baselineAverage)}`,
+    `- Optimized target-vs-field win rate: ${percent(bestAverage)}`,
     `- Delta: ${percent(bestAverage - baselineAverage)}`,
     "",
-    "## Per Character Average",
+    "## Per Character Marginal Cross-Play",
     "",
-    "| Character | Baseline | Best | Delta |",
+    "| Character | Baseline target | Optimized target | Delta |",
     "| --- | --- | --- | --- |",
     ...rows,
     "",
@@ -823,6 +1680,28 @@ function runOptimization(options = {}) {
   };
   ensureDir(outputDir);
   writeJson(path.join(outputDir, "config.json"), config);
+  const checkpoint = loadCompatibleCheckpoint(outputDir, config, options.resume !== false);
+  const progress = options.progress === false
+    ? null
+    : createProgressTracker({
+        outputDir,
+        config,
+        characters,
+        checkpoint,
+        logIntervalMs: Number(options.progressLogIntervalMs ?? 5000)
+      });
+  const checkpointManager = createCheckpointManager({ outputDir, config, checkpoint, progress });
+  const targetAnalysis = progress?.analysis || buildTrainingTargetAnalysis(config, characters);
+  writeJson(path.join(outputDir, "training-targets.json"), targetAnalysis);
+  fs.writeFileSync(path.join(outputDir, "training-targets.md"), `${trainingTargetMarkdown(targetAnalysis)}\n`, "utf8");
+  progress?.setPhase("target-analysis", {
+    label: `${formatNumber(targetAnalysis.plannedWork.totalGames)} planned games across ${characters.length} character(s)`
+  }, true);
+  checkpointManager.update(data => {
+    data.status = "running";
+    data.phase = data.phase || "starting";
+    data.targetAnalysis = targetAnalysis;
+  }, true);
 
   const ga = runGaSearch({
     balance,
@@ -837,7 +1716,9 @@ function runOptimization(options = {}) {
     minQualified: config.minQualified,
     minQualifiedPerCharacter: config.minQualifiedPerCharacter,
     durationHours: config.gaDurationHours,
-    outputDir
+    outputDir,
+    progress,
+    checkpointManager
   });
   const gaRowsForRl = qualifiedRows(ga.allRows);
   const rl = runBanditRl({
@@ -852,7 +1733,9 @@ function runOptimization(options = {}) {
     sigma: config.rlSigma,
     temperature: config.rlTemperature,
     durationHours: config.rlDurationHours,
-    outputDir
+    outputDir,
+    progress,
+    checkpointManager
   });
 
   const baselineStrategyFile = buildStrategyFile(characters.map(character => ({
@@ -863,22 +1746,35 @@ function runOptimization(options = {}) {
   const bestStrategyFile = buildStrategyFile(rl.bestStrategies, characters, path.join(outputDir, "rl-best-strategies.json"));
   writeJson(path.join(outputDir, "baseline-strategies.json"), baselineStrategyFile);
   writeJson(path.join(outputDir, "best-strategies-for-apply.json"), bestStrategyFile);
+  checkpointManager.update(data => {
+    data.phase = "cross-play";
+    data.baselineStrategyFile = baselineStrategyFile;
+    data.bestStrategyFile = bestStrategyFile;
+  }, true);
 
-  const baselineCross = runCrossPlayReport({
+  const baselineCross = runChallengeCrossPlayReport({
     balance,
     characters,
-    strategyFile: baselineStrategyFile,
+    candidateStrategyFile: baselineStrategyFile,
+    opponentStrategyFile: baselineStrategyFile,
     runs: config.crossRuns,
     seed: `${seed}:baseline-cross`,
-    outputPrefix: path.join(outputDir, "baseline-cross")
+    outputPrefix: path.join(outputDir, "baseline-cross"),
+    progress,
+    checkpointManager,
+    checkpointKey: "baselineCross"
   });
-  const bestCross = runCrossPlayReport({
+  const bestCross = runChallengeCrossPlayReport({
     balance,
     characters,
-    strategyFile: bestStrategyFile,
+    candidateStrategyFile: bestStrategyFile,
+    opponentStrategyFile: baselineStrategyFile,
     runs: config.crossRuns,
     seed: `${seed}:best-cross`,
-    outputPrefix: path.join(outputDir, "best-cross")
+    outputPrefix: path.join(outputDir, "best-cross"),
+    progress,
+    checkpointManager,
+    checkpointKey: "bestCross"
   });
   const markdown = comparisonMarkdown({
     config,
@@ -898,6 +1794,7 @@ function runOptimization(options = {}) {
     config,
     gaStopReason: ga.stopReason,
     rlStopReason: rl.stopReason,
+    crossProtocol: "target character uses the strategy under test; all opponents use baseline; both player and computer seats are evaluated",
     perCharacterQualified: Object.fromEntries(Object.entries(ga.perCharacterQualified).map(([characterId, rows]) => [characterId, rows.length])),
     outputs: {
       directory: outputDir,
@@ -906,10 +1803,19 @@ function runOptimization(options = {}) {
       baselineCrossMatrix: path.join(outputDir, "baseline-cross-matrix.csv"),
       bestCrossMatrix: path.join(outputDir, "best-cross-matrix.csv"),
       comparison: path.join(outputDir, "comparison.md"),
-      bestStrategiesForApply: path.join(outputDir, "best-strategies-for-apply.json")
+      bestStrategiesForApply: path.join(outputDir, "best-strategies-for-apply.json"),
+      trainingTargets: path.join(outputDir, "training-targets.md"),
+      progress: path.join(outputDir, "training-progress.json"),
+      checkpoint: path.join(outputDir, "checkpoint.json")
     }
   };
   writeJson(path.join(outputDir, "manifest.json"), manifest);
+  progress?.finish(manifest.status);
+  checkpointManager.update(data => {
+    data.status = manifest.status;
+    data.phase = "completed";
+    data.manifest = manifest;
+  }, true);
   return { manifest, ga, rl, baselineCross, bestCross };
 }
 
@@ -1021,7 +1927,10 @@ function main() {
     gaDurationHours: numberArg(args, "ga-duration-hours", DEFAULT_GA_DURATION_HOURS),
     rlDurationHours: numberArg(args, "rl-duration-hours", DEFAULT_RL_DURATION_HOURS),
     rlSigma: numberArg(args, "rl-sigma", DEFAULT_RL_SIGMA),
-    rlTemperature: numberArg(args, "rl-temperature", DEFAULT_RL_TEMPERATURE)
+    rlTemperature: numberArg(args, "rl-temperature", DEFAULT_RL_TEMPERATURE),
+    resume: !args.fresh,
+    progress: !args["no-progress"],
+    progressLogIntervalMs: numberArg(args, "progress-log-ms", 5000)
   };
   const result = runMultiCycleOptimization(options);
   console.log(`Manifest: ${result.manifest.outputs.directory}\\manifest.json`);
@@ -1048,11 +1957,13 @@ if (require.main === module) {
 
 module.exports = {
   DEFAULT_DIVERSITY_DISTANCE,
+  buildTrainingTargetAnalysis,
   compareRows,
   evaluateAgainstBasic,
   normalizedDistance,
   qualifiedRows,
   runBanditRl,
+  runChallengeCrossPlayReport,
   runGaSearch,
   runMultiCycleOptimization,
   runOptimization,
