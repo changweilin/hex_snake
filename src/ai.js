@@ -876,7 +876,9 @@
       if (!targetSnake.length || !plan?.target) return 0;
       const lineShape = { ...bandShapeFromTotalWidth(attackStats(ownerStock(owner), "small").radius), headDamageMultiplier: 2 };
       const stats = morayLineCandidateStats(targetSnake, boardLineThrough(plan.target, plan.direction), lineShape);
-      return stats.damageScore * attackDamage(ownerStock(owner), "big") * 0.8 * ultimateDamageMultiplier("moray");
+      const strikeCount = Math.max(1, Math.round(ultimateSetting("moray", "strikeCount", 7)));
+      const damageMultiplier = ultimateSetting("moray", "damageMultiplier", 0.5);
+      return stats.damageScore * attackDamage(ownerStock(owner), "big") * damageMultiplier * strikeCount;
     }
 
     function chooseAiAttackDirection(owner, target, now) {
@@ -976,6 +978,7 @@
     }
 
     function expectedDamageAtUncached(owner, cell, now) {
+      if (isOwnerDamageImmune(owner, now)) return 0;
       const opponent = opponentOf(owner);
       let damage = 0;
       projectiles.forEach(projectile => {

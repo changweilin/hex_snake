@@ -73,23 +73,30 @@
       },
       "lobster": {
         "fistStepMs": 45,
-        "contactDamageMultiplier": 0.3,
+        "contactDamageMultiplier": 0.6,
         "contactRadius": 1,
         "burstRadiusMultiplier": 1.5,
-        "burstDamageMultiplier": 0.9,
+        "burstDamageMultiplier": 1.6,
         "volleyCount": 2
       },
       "sandworm": {
-        "damageMultiplier": 1
+        "damageMultiplier": 6,
+        "superArmorDelayMultiplier": 1,
+        "superArmorDurationMs": 3000,
+        "invisibleDelayMultiplier": 2,
+        "invisibleDurationMs": 1500,
+        "impactDelayMultiplier": 3
       },
       "quetzal": {
         "damageMultiplier": 1.25
       },
       "moray": {
-        "damageMultiplier": 1
+        "damageMultiplier": 0.5,
+        "strikeCount": 7,
+        "strikeIntervalMultiplier": 0.5
       },
       "gu_king": {
-        "damageMultiplier": 1
+        "damageMultiplier": 1.5
       }
     }
   },

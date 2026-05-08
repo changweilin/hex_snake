@@ -588,6 +588,10 @@
       playerUndergroundUntil = 0;
       computerUndergroundFrom = 0;
       computerUndergroundUntil = 0;
+      playerSandwormArmorFrom = 0;
+      playerSandwormArmorUntil = 0;
+      computerSandwormArmorFrom = 0;
+      computerSandwormArmorUntil = 0;
       lastVisiblePlayerSnake = snake.map(segment => ({ ...segment }));
       lastVisibleComputerSnake = computerSnake.map(segment => ({ ...segment }));
       lastVisiblePlayerDir = dir;
@@ -994,13 +998,57 @@
 
     function sandwormUndergroundAlpha(owner, now) {
       if (characterFor(owner).id !== "sandworm") return 1;
+      const armorFrom = owner === "player" ? playerSandwormArmorFrom : computerSandwormArmorFrom;
+      const armorUntil = owner === "player" ? playerSandwormArmorUntil : computerSandwormArmorUntil;
       const from = owner === "player" ? playerUndergroundFrom : computerUndergroundFrom;
       const until = owner === "player" ? playerUndergroundUntil : computerUndergroundUntil;
+      if (from && now >= from && now <= until) return 0;
+      if (armorFrom && now >= armorFrom && now <= armorUntil) {
+        const fadeTargetAt = from && from > armorFrom ? from : armorFrom + 500;
+        if (now < fadeTargetAt) {
+          const fadeProgress = Math.max(0, Math.min(1, (now - armorFrom) / Math.max(1, fadeTargetAt - armorFrom)));
+          return 1 - fadeProgress * 0.55;
+        }
+        if (until && now > until) {
+          const fadeProgress = Math.max(0, Math.min(1, (now - until) / Math.max(1, armorUntil - until)));
+          return 0.45 + fadeProgress * 0.55;
+        }
+        return 0.45;
+      }
       if (!from || now < from || now > until) return 1;
       const fadeMs = 120;
       const fadeIn = Math.min(1, Math.max(0, (now - from) / fadeMs));
       const fadeOut = Math.min(1, Math.max(0, (until - now) / fadeMs));
       return 1 - Math.min(fadeIn, fadeOut);
+    }
+
+    function isOwnerSandwormArmored(owner, now) {
+      if (characterFor(owner).id !== "sandworm") return false;
+      const from = owner === "player" ? playerSandwormArmorFrom : computerSandwormArmorFrom;
+      const until = owner === "player" ? playerSandwormArmorUntil : computerSandwormArmorUntil;
+      return Boolean(from && now >= from && now <= until);
+    }
+
+    function isOwnerDamageImmune(owner, now) {
+      return isOwnerUnderground(owner, now);
+    }
+
+    function clearOwnerAbnormalStatus(owner, now) {
+      if (owner === "player") {
+        playerStunUntil = Math.min(playerStunUntil, now);
+        playerSlowUntil = Math.min(playerSlowUntil, now);
+        playerCollisionParalysisMs = 0;
+      } else {
+        computerStunUntil = Math.min(computerStunUntil, now);
+        computerSlowUntil = Math.min(computerSlowUntil, now);
+        computerCollisionParalysisMs = 0;
+      }
+    }
+
+    function refreshSandwormProtections(now) {
+      ["player", "computer"].forEach(owner => {
+        if (isOwnerSandwormArmored(owner, now)) clearOwnerAbnormalStatus(owner, now);
+      });
     }
 
     function canTurn(newDir) {
@@ -1287,10 +1335,10 @@
         const fistStepMs = ultimateSetting(character.id, "fistStepMs", lobsterPalmStepMs);
         const travelDelay = small.delay + travelPath.length * fistStepMs;
         const volleys = Math.max(1, Math.round(ultimateSetting(character.id, "volleyCount", 2)));
-        const contactDamage = bigDamage * ultimateSetting(character.id, "contactDamageMultiplier", 0.3);
+        const contactDamage = bigDamage * ultimateSetting(character.id, "contactDamageMultiplier", 0.6);
         const contactRadius = Math.max(0.25, ultimateSetting(character.id, "contactRadius", 1));
         const burstRadius = small.radius * ultimateSetting(character.id, "burstRadiusMultiplier", 1.5);
-        const burstDamage = bigDamage * ultimateSetting(character.id, "burstDamageMultiplier", 0.9);
+        const burstDamage = bigDamage * ultimateSetting(character.id, "burstDamageMultiplier", 1.6);
         const visualType = "lobster-palm-big";
         const volleyIntervalMs = attackDelay(stock);
         for (let volley = 0; volley < volleys; volley += 1) {
@@ -1344,27 +1392,33 @@
         const lineCells = boardLineThrough(lineOrigin, direction);
         const lineShape = bandShapeFromTotalWidth(small.radius);
         const excludedCells = (owner === "player" ? snake : computerSnake).map(segment => ({ q: segment.q, r: segment.r }));
-        projectiles.push({
-          kind: "line",
-          owner,
-          profile: "big",
-          source: { q: source.q, r: source.r },
-          target: { q: target.q, r: target.r },
-          lineCells,
-          excludedCells,
-          width: lineShape.width,
-          fullDamageWidth: lineShape.fullDamageWidth,
-          outerDamageMultiplier: lineShape.outerDamageMultiplier,
-          headDamageMultiplier: 2,
-          visualType: attackVisualType(owner, "big"),
-          createdAt: now,
-          impactAt: now + small.delay,
-          delay: small.delay,
-          damage: bigDamage * 0.8 * ultimateDamageMultiplier(character.id),
-          stunChance,
-          stackStun: true
-        });
-        return small.delay;
+        const strikeCount = Math.max(1, Math.round(ultimateSetting(character.id, "strikeCount", 7)));
+        const strikeIntervalMs = small.delay * Math.max(0, ultimateSetting(character.id, "strikeIntervalMultiplier", 0.5));
+        const damage = bigDamage * ultimateSetting(character.id, "damageMultiplier", 0.5);
+        for (let index = 0; index < strikeCount; index += 1) {
+          const strikeDelay = index * strikeIntervalMs;
+          projectiles.push({
+            kind: "line",
+            owner,
+            profile: "big",
+            source: { q: source.q, r: source.r },
+            target: { q: target.q, r: target.r },
+            lineCells,
+            excludedCells,
+            width: lineShape.width,
+            fullDamageWidth: lineShape.fullDamageWidth,
+            outerDamageMultiplier: lineShape.outerDamageMultiplier,
+            headDamageMultiplier: 2,
+            visualType: attackVisualType(owner, "big"),
+            createdAt: now + strikeDelay,
+            impactAt: now + strikeDelay + small.delay,
+            delay: small.delay,
+            damage,
+            stunChance,
+            stackStun: true
+          });
+        }
+        return small.delay + (strikeCount - 1) * strikeIntervalMs;
       }
 
       if (character.id === "quetzal") {
@@ -1393,13 +1447,19 @@
       }
 
       if (character.id === "sandworm") {
-        const delay = small.delay * 3;
-        const undergroundFrom = now + Math.max(0, delay - sandwormUndergroundWindowMs);
-        const undergroundUntil = now + delay + sandwormUndergroundWindowMs;
+        const armorFrom = now + small.delay * ultimateSetting(character.id, "superArmorDelayMultiplier", 1);
+        const armorUntil = armorFrom + ultimateSetting(character.id, "superArmorDurationMs", 3000);
+        const undergroundFrom = now + small.delay * ultimateSetting(character.id, "invisibleDelayMultiplier", 2);
+        const undergroundUntil = undergroundFrom + ultimateSetting(character.id, "invisibleDurationMs", 1500);
+        const delay = small.delay * ultimateSetting(character.id, "impactDelayMultiplier", 3);
         if (owner === "player") {
+          playerSandwormArmorFrom = armorFrom;
+          playerSandwormArmorUntil = Math.max(playerSandwormArmorUntil, armorUntil);
           playerUndergroundFrom = undergroundFrom;
           playerUndergroundUntil = Math.max(playerUndergroundUntil, undergroundUntil);
         } else {
+          computerSandwormArmorFrom = armorFrom;
+          computerSandwormArmorUntil = Math.max(computerSandwormArmorUntil, armorUntil);
           computerUndergroundFrom = undergroundFrom;
           computerUndergroundUntil = Math.max(computerUndergroundUntil, undergroundUntil);
         }
@@ -1412,7 +1472,7 @@
           impactAt: now + delay,
           delay,
           radius: Math.max(0.5, small.radius * 0.5),
-          damage: bigDamage * 4 * ultimateDamageMultiplier(character.id),
+          damage: bigDamage * ultimateSetting(character.id, "damageMultiplier", 6),
           stunChance,
           hidden: true,
           sandwormHidden: true,
@@ -1468,7 +1528,7 @@
             impactAt: now + impactDelay,
             delay: impactDelay,
             radius: small.radius,
-            damage: bigDamage * ultimateDamageMultiplier(character.id),
+            damage: bigDamage * ultimateSetting(character.id, "damageMultiplier", 1.5),
             stunChance
           });
         }
@@ -1557,8 +1617,9 @@
       return Boolean(parts[0] && keyOf(parts[0]) === keyOf(target));
     }
 
-    function applyBlastDamage(owner, damage) {
+    function applyBlastDamage(owner, damage, now = performance.now()) {
       if (damage <= 0) return;
+      if (isOwnerDamageImmune(owner, now)) return;
       if (owner === "player") {
         playerHp = Math.max(0, playerHp - damage);
       } else {
@@ -1574,6 +1635,10 @@
 
     function applyAttackStun(owner, chance = baseAttackStunChance, now = performance.now(), options = {}) {
       if (Math.random() >= chance) return false;
+      if (isOwnerSandwormArmored(owner, now)) {
+        clearOwnerAbnormalStatus(owner, now);
+        return false;
+      }
       const interrupted = options.interrupt !== false && interruptCasting(owner);
       const currentStunUntil = owner === "player" ? playerStunUntil : computerStunUntil;
       const stunBase = options.stack ? Math.max(now, currentStunUntil) : now;
@@ -1591,6 +1656,10 @@
     }
 
     function applyCollisionPenalty(owner, severity = 1, now = performance.now()) {
+      if (isOwnerSandwormArmored(owner, now)) {
+        clearOwnerAbnormalStatus(owner, now);
+        return false;
+      }
       const stunUntil = now + collisionStunMs * severity;
       const slowUntil = stunUntil + collisionSlowMs * severity;
       if (owner === "player") {
@@ -1609,6 +1678,10 @@
     }
 
     function applyCollisionParalysis(owner, now = performance.now()) {
+      if (isOwnerSandwormArmored(owner, now)) {
+        clearOwnerAbnormalStatus(owner, now);
+        return;
+      }
       const stunUntil = now + collisionStunMs;
       const slowUntil = stunUntil + collisionSlowMs;
       if (owner === "player") {
@@ -1726,9 +1799,11 @@
         }
         if (projectile.owner === "player") playerDamage = 0;
         if (projectile.owner === "computer") computerDamage = 0;
+        if (isOwnerDamageImmune("player", now)) playerDamage = 0;
+        if (isOwnerDamageImmune("computer", now)) computerDamage = 0;
         triggerSmallHitShake(projectile, playerDamage, computerDamage, now);
-        applyBlastDamage("player", playerDamage);
-        applyBlastDamage("computer", computerDamage);
+        applyBlastDamage("player", playerDamage, now);
+        applyBlastDamage("computer", computerDamage, now);
         if (projectile.owner !== "player" && playerDamage > 0) applyAttackStun("player", projectile.stunChance, now, { stack: projectile.stackStun });
         if (projectile.owner !== "computer" && computerDamage > 0) applyAttackStun("computer", projectile.stunChance, now, { stack: projectile.stackStun });
       });
@@ -1872,8 +1947,10 @@
           : damageSnakeCells(computerSnake, hazard.cells, hazard.width, hazard.damage, hazard.owner === "computer" ? damageExcludedCells : [], hazard.minDistance || 0, hazard.outerDamageMultiplier ?? 1);
         if (hazard.owner === "player") playerDamage = 0;
         if (hazard.owner === "computer") computerDamage = 0;
-        applyBlastDamage("player", playerDamage);
-        applyBlastDamage("computer", computerDamage);
+        if (isOwnerDamageImmune("player", now)) playerDamage = 0;
+        if (isOwnerDamageImmune("computer", now)) computerDamage = 0;
+        applyBlastDamage("player", playerDamage, now);
+        applyBlastDamage("computer", computerDamage, now);
         if (hazard.owner !== "player" && playerDamage > 0) applyAttackStun("player", hazard.stunChance, now, { interrupt: false });
         if (hazard.owner !== "computer" && computerDamage > 0) applyAttackStun("computer", hazard.stunChance, now, { interrupt: false });
       });
@@ -2168,8 +2245,10 @@
         lastTimerFrame = now;
       }
       if (!paused) {
+        refreshSandwormProtections(now);
         resolveProjectiles(now);
         resolveHazards(now);
+        refreshSandwormProtections(now);
         updateAiVisibilityMemory(now);
       }
       if (running && !paused) {

@@ -700,6 +700,8 @@ function makeFighter(owner, character, start, direction, settings, balance, poli
     collisionParalysisMs: 0,
     undergroundFrom: 0,
     undergroundUntil: 0,
+    statusImmuneFrom: 0,
+    statusImmuneUntil: 0,
     lastVisibleSnake: snake.map(segment => ({ ...segment })),
     lastVisibleDir: direction,
     foodTargetKey: null,
@@ -738,6 +740,26 @@ function aiProfileFor(fighter) {
 
 function isUnderground(fighter, now) {
   return fighter.character.id === "sandworm" && fighter.undergroundFrom && now >= fighter.undergroundFrom && now <= fighter.undergroundUntil;
+}
+
+function isStatusImmune(fighter, now) {
+  return fighter.character.id === "sandworm" && fighter.statusImmuneFrom && now >= fighter.statusImmuneFrom && now <= fighter.statusImmuneUntil;
+}
+
+function isDamageImmune(fighter, now) {
+  return isUnderground(fighter, now);
+}
+
+function clearAbnormalStatus(fighter, now) {
+  fighter.stunUntil = Math.min(fighter.stunUntil, now);
+  fighter.slowUntil = Math.min(fighter.slowUntil, now);
+  fighter.collisionParalysisMs = 0;
+}
+
+function refreshStatusImmunity(state, now) {
+  Object.values(state.fighters || {}).forEach(fighter => {
+    if (isStatusImmune(fighter, now)) clearAbnormalStatus(fighter, now);
+  });
 }
 
 function updateVisibleMemory(state) {
@@ -1230,6 +1252,7 @@ function reachableSpace(state, start, occupied, maxCells = 10) {
 }
 
 function expectedDamageAtUncached(state, fighter, cell) {
+  if (isDamageImmune(fighter, state.now)) return 0;
   const opponentOwner = fighter.owner === "player" ? "computer" : "player";
   let damage = 0;
   state.projectiles.forEach(projectile => {
@@ -1408,7 +1431,9 @@ function morayLinePlanDamage(state, attacker, defender, balance, plan) {
   if (!targetSnake.length || !plan?.target) return 0;
   const lineShape = { ...bandShapeFromTotalWidth(attackStats(attacker.stock, "small", balance).radius), headDamageMultiplier: 2 };
   const stats = morayLineCandidateStats(targetSnake, boardLineThrough(state, plan.target, plan.direction), lineShape);
-  return stats.damageScore * attackDamage(attacker.stock, "big", balance) * 0.8 * ultimateDamageMultiplier(balance, "moray");
+  const strikeCount = Math.max(1, Math.round(ultimateSetting(balance, "moray", "strikeCount", 7)));
+  const damageMultiplier = ultimateSetting(balance, "moray", "damageMultiplier", 0.5);
+  return stats.damageScore * attackDamage(attacker.stock, "big", balance) * damageMultiplier * strikeCount;
 }
 
 function chooseAttackDirection(state, attacker, defender, target, fallbackDirection = attacker.dir) {
@@ -1660,9 +1685,9 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
     const fistStepMs = ultimateSetting(balance, characterId, "fistStepMs", LOBSTER_PALM_STEP_MS);
     const contactRadius = Math.max(0.25, ultimateSetting(balance, characterId, "contactRadius", 1));
     const burstRadius = small.radius * ultimateSetting(balance, characterId, "burstRadiusMultiplier", 1.5);
-    const burstDamage = bigDamage * ultimateSetting(balance, characterId, "burstDamageMultiplier", 0.9);
+    const burstDamage = bigDamage * ultimateSetting(balance, characterId, "burstDamageMultiplier", 1.6);
     const volleys = Math.max(1, Math.round(ultimateSetting(balance, characterId, "volleyCount", 2)));
-    const contactDamage = bigDamage * ultimateSetting(balance, characterId, "contactDamageMultiplier", 0.3);
+    const contactDamage = bigDamage * ultimateSetting(balance, characterId, "contactDamageMultiplier", 0.6);
     const volleyIntervalMs = attackDelay(attacker.stock, balance);
     for (let volley = 0; volley < volleys; volley += 1) {
       const volleyDelay = volley * volleyIntervalMs;
@@ -1701,21 +1726,26 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
     const lineCells = boardLineThrough(state, target, direction);
     const lineShape = bandShapeFromTotalWidth(small.radius);
     const excludedCells = attacker.snake.map(segment => ({ ...segment }));
-    state.projectiles.push({
-      kind: "line",
-      owner: attacker.owner,
-      profile: "big",
-      target,
-      lineCells,
-      excludedCells,
-      width: lineShape.width,
-      fullDamageWidth: lineShape.fullDamageWidth,
-      outerDamageMultiplier: lineShape.outerDamageMultiplier,
-      impactAt: now + small.delay,
-      damage: bigDamage * 0.8 * ultimateDamageMultiplier(balance, characterId),
-      stunChance,
-      stackStun: true
-    });
+    const strikeCount = Math.max(1, Math.round(ultimateSetting(balance, characterId, "strikeCount", 7)));
+    const strikeIntervalMs = small.delay * Math.max(0, ultimateSetting(balance, characterId, "strikeIntervalMultiplier", 0.5));
+    const damage = bigDamage * ultimateSetting(balance, characterId, "damageMultiplier", 0.5);
+    for (let index = 0; index < strikeCount; index += 1) {
+      state.projectiles.push({
+        kind: "line",
+        owner: attacker.owner,
+        profile: "big",
+        target,
+        lineCells,
+        excludedCells,
+        width: lineShape.width,
+        fullDamageWidth: lineShape.fullDamageWidth,
+        outerDamageMultiplier: lineShape.outerDamageMultiplier,
+        impactAt: now + small.delay + index * strikeIntervalMs,
+        damage,
+        stunChance,
+        stackStun: true
+      });
+    }
     return;
   }
   if (characterId === "quetzal") {
@@ -1741,16 +1771,22 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
     return;
   }
   if (characterId === "sandworm") {
-    const delay = small.delay * 3;
-    attacker.undergroundFrom = now + Math.max(0, delay - SANDWORM_UNDERGROUND_WINDOW_MS);
-    attacker.undergroundUntil = now + delay + SANDWORM_UNDERGROUND_WINDOW_MS;
+    const armorFrom = now + small.delay * ultimateSetting(balance, characterId, "superArmorDelayMultiplier", 1);
+    const armorUntil = armorFrom + ultimateSetting(balance, characterId, "superArmorDurationMs", 3000);
+    const undergroundFrom = now + small.delay * ultimateSetting(balance, characterId, "invisibleDelayMultiplier", 2);
+    const undergroundUntil = undergroundFrom + ultimateSetting(balance, characterId, "invisibleDurationMs", 1500);
+    const delay = small.delay * ultimateSetting(balance, characterId, "impactDelayMultiplier", 3);
+    attacker.statusImmuneFrom = armorFrom;
+    attacker.statusImmuneUntil = Math.max(attacker.statusImmuneUntil, armorUntil);
+    attacker.undergroundFrom = undergroundFrom;
+    attacker.undergroundUntil = Math.max(attacker.undergroundUntil, undergroundUntil);
     pushCircleAttack(state, {
       owner: attacker.owner,
       profile: "big",
       target,
       impactAt: now + delay,
       radius: Math.max(0.5, small.radius * 0.5),
-      damage: bigDamage * 4 * ultimateDamageMultiplier(balance, characterId),
+      damage: bigDamage * ultimateSetting(balance, characterId, "damageMultiplier", 6),
       stunChance,
       sandwormHidden: true,
       sandwormParalyzeOnBody: true,
@@ -1796,7 +1832,7 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
         target,
         impactAt: now + impactDelay,
         radius: small.radius,
-        damage: bigDamage * ultimateDamageMultiplier(balance, characterId),
+        damage: bigDamage * ultimateSetting(balance, characterId, "damageMultiplier", 1.5),
         stunChance
       });
     }
@@ -1846,6 +1882,7 @@ function recordFatalEvent(state, target, cause, now) {
 
 function applyDamage(state, target, damage, cause, now) {
   if (damage <= 0) return;
+  if (isDamageImmune(target, now)) return;
   const beforeHp = target.hp;
   if (cause === "small" || cause === "big") target.stats.damageTakenByCause[cause] += damage;
   target.hp = Math.max(0, target.hp - damage);
@@ -1855,6 +1892,10 @@ function applyDamage(state, target, damage, cause, now) {
 
 function applyAttackStun(state, target, chance, now, balance, options = {}) {
   if (state.rng.next() >= chance) return false;
+  if (isStatusImmune(target, now)) {
+    clearAbnormalStatus(target, now);
+    return false;
+  }
   const stunBase = options.stack ? Math.max(now, target.stunUntil) : now;
   target.stunUntil = Math.max(target.stunUntil, stunBase + balance.attack.attackStunMs);
   target.slowUntil = Math.max(target.slowUntil, target.stunUntil + balance.attack.attackSlowMs);
@@ -1862,11 +1903,16 @@ function applyAttackStun(state, target, chance, now, balance, options = {}) {
 }
 
 function applyCollisionParalysis(target, now, balance) {
+  if (isStatusImmune(target, now)) {
+    clearAbnormalStatus(target, now);
+    return;
+  }
   target.stunUntil = Math.max(target.stunUntil, now + balance.collision.collisionStunMs);
   target.slowUntil = Math.max(target.slowUntil, target.stunUntil + balance.collision.collisionSlowMs);
 }
 
 function resolveProjectiles(state, now, balance) {
+  refreshStatusImmunity(state, now);
   const landed = state.projectiles.filter(projectile => now >= projectile.impactAt);
   if (!landed.length) return;
   state.projectiles = state.projectiles.filter(projectile => now < projectile.impactAt);
@@ -1932,6 +1978,8 @@ function resolveProjectiles(state, now, balance) {
     }
     if (projectile.owner === "player") playerDamage = 0;
     if (projectile.owner === "computer") computerDamage = 0;
+    if (isDamageImmune(player, now)) playerDamage = 0;
+    if (isDamageImmune(computer, now)) computerDamage = 0;
     applyDamage(state, player, playerDamage, projectile.profile || "big", now);
     applyDamage(state, computer, computerDamage, projectile.profile || "big", now);
     attacker.stats.damageDealt += projectile.owner === "player" ? computerDamage : playerDamage;
@@ -1942,6 +1990,7 @@ function resolveProjectiles(state, now, balance) {
 }
 
 function resolveHazards(state, now, balance) {
+  refreshStatusImmunity(state, now);
   state.hazards = state.hazards.filter(hazard => now <= hazard.endAt);
   for (const hazard of state.hazards) {
     if (now < hazard.startedAt || now < hazard.nextTickAt) continue;
@@ -1956,6 +2005,8 @@ function resolveHazards(state, now, balance) {
       : damageSnakeCells(state.fighters.computer.snake, hazard.cells, hazard.width, hazard.damage, hazard.owner === "computer" ? damageExcludedCells : [], hazard.minDistance || 0, hazard.outerDamageMultiplier ?? 1);
     if (hazard.owner === "player") playerDamage = 0;
     if (hazard.owner === "computer") computerDamage = 0;
+    if (isDamageImmune(state.fighters.player, now)) playerDamage = 0;
+    if (isDamageImmune(state.fighters.computer, now)) computerDamage = 0;
     applyDamage(state, state.fighters.player, playerDamage, hazard.profile || "big", now);
     applyDamage(state, state.fighters.computer, computerDamage, hazard.profile || "big", now);
     attacker.stats.damageDealt += hazard.owner === "player" ? computerDamage : playerDamage;
@@ -1990,6 +2041,10 @@ function collisionSeverity(selfHit, opponentHit) {
 }
 
 function applyCollisionPenalty(fighter, severity, now, balance) {
+  if (isStatusImmune(fighter, now)) {
+    clearAbnormalStatus(fighter, now);
+    return false;
+  }
   fighter.stunUntil = Math.max(fighter.stunUntil, now + balance.collision.collisionStunMs * severity);
   fighter.slowUntil = Math.max(fighter.slowUntil, fighter.stunUntil + balance.collision.collisionSlowMs * severity);
   fighter.collisionParalysisMs += balance.collision.collisionStunMs * severity;
@@ -2165,6 +2220,13 @@ function nextHazardTick(state, tickMs) {
   }, Number.POSITIVE_INFINITY);
 }
 
+function nextStatusImmunityTick(state, tickMs) {
+  return Object.values(state.fighters).reduce((soonest, fighter) => {
+    if (!fighter.statusImmuneFrom || state.now >= fighter.statusImmuneUntil) return soonest;
+    return Math.min(soonest, ceilToTick(fighter.statusImmuneFrom, tickMs));
+  }, Number.POSITIVE_INFINITY);
+}
+
 function nextMoveTick(state, fighter, balance, tickMs) {
   const nextSequentialTick = state.now + tickMs;
   const candidates = [
@@ -2185,7 +2247,8 @@ function nextMeaningfulTick(state, balance, tickMs, maxMatchMs) {
   const nextSequentialTick = Math.min(maxMatchMs, state.now + tickMs);
   const eventTicks = [
     nextProjectileTick(state, tickMs),
-    nextHazardTick(state, tickMs)
+    nextHazardTick(state, tickMs),
+    nextStatusImmunityTick(state, tickMs)
   ];
   Object.values(state.fighters).forEach(fighter => {
     eventTicks.push(nextMoveTick(state, fighter, balance, tickMs));
@@ -2209,8 +2272,10 @@ function simulateMatch(options) {
     const skippedTicks = Math.max(0, Math.round((nextNow - previousNow) / tickMs) - 1);
     sampleStockTicks(state, skippedTicks);
     state.now = nextNow;
+    refreshStatusImmunity(state, state.now);
     resolveProjectiles(state, state.now, balance);
     resolveHazards(state, state.now, balance);
+    refreshStatusImmunity(state, state.now);
     updateVisibleMemory(state);
     const movers = Object.values(state.fighters)
       .filter(fighter => state.now >= fighter.stunUntil && state.now - fighter.lastStep >= moveInterval(fighter, balance, state.now))

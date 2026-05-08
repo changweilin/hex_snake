@@ -491,7 +491,7 @@ test("simulated AI does not attack before its first movement tick", () => {
   assert.equal(match.computer.smallCasts + match.computer.bigCasts, 0);
 });
 
-test("sandworm big attack stays hidden until 0.2s before impact and burrows for 0.5s around impact", () => {
+test("sandworm big attack phases, turns invisible, then impacts at 3T", () => {
   const state = createMatchState({
     balance,
     playerCharacter: characterById.get("sandworm"),
@@ -505,13 +505,80 @@ test("sandworm big attack stays hidden until 0.2s before impact and burrows for 
   const computer = state.fighters.computer;
   state.now = 1000;
   assert.equal(launchAttack(state, player, computer, "big", state.now, balance), true);
+  const small = attackStats(player.stock, "small", balance);
   const projectile = state.projectiles.find(item => item.owner === "player" && item.profile === "big");
   assert.ok(projectile.sandwormHidden);
-  assert.equal(projectile.damage, attackStats(player.stock, "big", balance).damage * 4 * balance.attack.ultimates.sandworm.damageMultiplier);
-  assert.equal(projectile.impactAt - player.undergroundFrom, 500);
-  assert.equal(player.undergroundUntil - projectile.impactAt, 500);
+  assert.equal(projectile.damage, attackStats(player.stock, "big", balance).damage * balance.attack.ultimates.sandworm.damageMultiplier);
+  assert.equal(player.statusImmuneFrom, state.now + small.delay);
+  assert.equal(player.statusImmuneUntil, player.statusImmuneFrom + 3000);
+  assert.equal(player.undergroundFrom, state.now + small.delay * 2);
+  assert.equal(player.undergroundUntil, player.undergroundFrom + 1500);
+  assert.equal(projectile.impactAt, state.now + small.delay * 3);
   assert.equal(isProjectileVisibleTo(computer, projectile, projectile.impactAt - 201), false);
   assert.equal(isProjectileVisibleTo(computer, projectile, projectile.impactAt - 200), true);
+});
+
+test("sandworm super armor clears debuffs and blocks new abnormal statuses", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("sandworm"),
+    computerCharacter: characterById.get("moray"),
+    seed: "sandworm-super-armor",
+    initialBombs: balance.attack.bigAttackBombCost,
+    initialStock: Object.fromEntries(FOOD_TYPES.map(type => [type, 6])),
+    playerModel: { aiDifficulty: "high", skillStrategy: "preferBig", aimPrecision: 1, pathPrecision: 1 }
+  });
+  const player = state.fighters.player;
+  const computer = state.fighters.computer;
+  state.now = 1000;
+  assert.equal(launchAttack(state, player, computer, "big", state.now, balance), true);
+  const armorAt = player.statusImmuneFrom;
+  player.stunUntil = armorAt + 5000;
+  player.slowUntil = armorAt + 6000;
+  player.collisionParalysisMs = 4000;
+  state.projectiles.push({
+    kind: "circle",
+    owner: "computer",
+    profile: "big",
+    target: { ...player.snake[0] },
+    impactAt: armorAt,
+    radius: 2,
+    damage: 1,
+    stunChance: 1
+  });
+  resolveProjectiles(state, armorAt, balance);
+  assert.equal(player.stunUntil, armorAt);
+  assert.equal(player.slowUntil, armorAt);
+  assert.equal(player.collisionParalysisMs, 0);
+});
+
+test("sandworm invisible window prevents damage", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("sandworm"),
+    computerCharacter: characterById.get("moray"),
+    seed: "sandworm-invincible",
+    initialBombs: balance.attack.bigAttackBombCost,
+    initialStock: Object.fromEntries(FOOD_TYPES.map(type => [type, 6])),
+    playerModel: { aiDifficulty: "high", skillStrategy: "preferBig", aimPrecision: 1, pathPrecision: 1 }
+  });
+  const player = state.fighters.player;
+  const computer = state.fighters.computer;
+  assert.equal(launchAttack(state, player, computer, "big", 1000, balance), true);
+  const beforeHp = player.hp;
+  state.projectiles.push({
+    kind: "circle",
+    owner: "computer",
+    profile: "big",
+    target: { ...player.snake[0] },
+    impactAt: player.undergroundFrom,
+    radius: 2,
+    damage: 99,
+    stunChance: 1
+  });
+  resolveProjectiles(state, player.undergroundFrom, balance);
+  assert.equal(player.hp, beforeHp);
+  assert.equal(player.stunUntil, 0);
 });
 
 test("sandworm big attack center body hit always paralyzes and center head hit kills", () => {
@@ -909,6 +976,36 @@ test("moray big attack chooses the longest opponent body line instead of forcing
   longLine.forEach(segment => assert.equal(lineKeys.has(key(segment)), true));
 });
 
+test("moray big attack schedules seven half-delay line strikes", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("dragon"),
+    computerCharacter: characterById.get("moray"),
+    seed: "moray-seven-strikes",
+    initialBombs: balance.attack.bigAttackBombCost,
+    initialStock: Object.fromEntries(FOOD_TYPES.map(type => [type, 2])),
+    computerModel: { aiDifficulty: "high", aimPrecision: 1, pathPrecision: 1 }
+  });
+  const attacker = state.fighters.computer;
+  const defender = state.fighters.player;
+  attacker.snake = [{ q: 5, r: -5 }];
+  defender.snake = [{ q: 0, r: 0 }, { q: 1, r: 0 }];
+  defender.hp = 100;
+  state.foods = [];
+
+  assert.equal(launchAttack(state, attacker, defender, "big", state.now, balance), true);
+  const bigStats = attackStats(attacker.stock, "big", balance);
+  const smallStats = attackStats(attacker.stock, "small", balance);
+  const lines = state.projectiles
+    .filter(projectile => projectile.kind === "line")
+    .sort((left, right) => left.impactAt - right.impactAt);
+  assert.equal(lines.length, 7);
+  lines.forEach((line, index) => {
+    assert.ok(Math.abs(line.damage - bigStats.damage * 0.5) < 1e-9);
+    assert.ok(Math.abs(line.impactAt - (state.now + smallStats.delay + index * smallStats.delay * 0.5)) < 1e-9);
+  });
+});
+
 test("moray fractional line range spills into the outer band with proportional damage", () => {
   const state = createMatchState({
     balance,
@@ -1184,6 +1281,7 @@ test("lobster palm big attack stops the fist at the first collision", () => {
   state.foods = [];
 
   assert.equal(launchAttack(state, player, computer, "big", state.now, balance), true);
+  const bigDamage = attackStats(player.stock, "big", balance).damage;
   const firstFist = state.projectiles
     .filter(projectile => projectile.kind === "lobsterPalm")
     .sort((left, right) => left.impactAt - right.impactAt)[0];
@@ -1194,6 +1292,27 @@ test("lobster palm big attack stops the fist at the first collision", () => {
   assert.deepEqual(firstFist.target, computer.snake[0]);
   assert.deepEqual(firstFist.pathCells.at(-1), computer.snake[0]);
   assert.equal(firstFist.impactAt, firstBurst.impactAt);
+  assert.equal(firstFist.damage, bigDamage * 0.6);
+  assert.equal(firstBurst.burstDamage, bigDamage * 1.6);
+});
+
+test("gu king big attack uses 1.5x damage on each poison blast", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("gu_king"),
+    computerCharacter: characterById.get("dragon"),
+    seed: "gu-king-1-5x",
+    initialBombs: balance.attack.bigAttackBombCost,
+    initialStock: Object.fromEntries(FOOD_TYPES.map(type => [type, 2]))
+  });
+  const player = state.fighters.player;
+  const computer = state.fighters.computer;
+
+  assert.equal(launchAttack(state, player, computer, "big", state.now, balance), true);
+  const bigDamage = attackStats(player.stock, "big", balance).damage;
+  const blasts = state.projectiles.filter(projectile => projectile.kind === "circle" && projectile.profile === "big");
+  assert.equal(blasts.length, 3);
+  blasts.forEach(projectile => assert.equal(projectile.damage, bigDamage * 1.5));
 });
 
 test("protein fractional radius uses linear falloff only inside the circle", () => {
