@@ -858,6 +858,41 @@ test("moray big attack chooses the longest opponent body line instead of forcing
   longLine.forEach(segment => assert.equal(lineKeys.has(key(segment)), true));
 });
 
+test("moray fractional line range spills into the outer band with proportional damage", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("dragon"),
+    computerCharacter: characterById.get("moray"),
+    seed: "moray-fractional-line-band",
+    initialBombs: balance.attack.bigAttackBombCost,
+    initialStock: Object.fromEntries(FOOD_TYPES.map(type => [type, 2])),
+    computerModel: { aiDifficulty: "high", aimPrecision: 1, pathPrecision: 1 }
+  });
+  const attacker = state.fighters.computer;
+  const defender = state.fighters.player;
+  const centerLine = [
+    { q: -1, r: 0 },
+    { q: 0, r: 0 },
+    { q: 1, r: 0 }
+  ];
+  const outerBandSegment = { q: 0, r: 1 };
+  attacker.snake = [{ q: 5, r: -5 }];
+  attacker.stock = { protein: 7, fat: 2, fiber: 2, carb: 2 };
+  defender.snake = [...centerLine, outerBandSegment];
+  defender.hp = 100;
+  state.foods = [];
+
+  assert.equal(launchAttack(state, attacker, defender, "big", state.now, balance), true);
+  const line = state.projectiles.find(projectile => projectile.kind === "line");
+  assert.equal(line.width, 1);
+  assert.equal(line.fullDamageWidth, 0);
+  assert.equal(line.outerDamageMultiplier, 0.25);
+
+  const expectedDamage = line.damage * (centerLine.length + line.outerDamageMultiplier);
+  resolveProjectiles(state, line.impactAt, balance);
+  assert.ok(Math.abs(defender.hp - (100 - expectedDamage)) < 1e-9);
+});
+
 test("wrapped distance and stale food target switching affect food choices", () => {
   const state = createMatchState({
     balance,

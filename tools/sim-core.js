@@ -462,6 +462,23 @@ function bandDistanceFromTotalWidth(totalWidth) {
   return Math.max(0, Math.floor((totalWidth - 1) / 2));
 }
 
+function bandShapeFromTotalWidth(totalWidth) {
+  const fullDamageWidth = bandDistanceFromTotalWidth(totalWidth);
+  const fullTotalWidth = fullDamageWidth * 2 + 1;
+  const outerDamageMultiplier = Math.max(0, Math.min(1, (totalWidth - fullTotalWidth) / 2));
+  return {
+    width: fullDamageWidth + (outerDamageMultiplier > 0 ? 1 : 0),
+    fullDamageWidth,
+    outerDamageMultiplier
+  };
+}
+
+function lineBandDamageMultiplier(distance, band) {
+  if (distance > (band?.width ?? 0)) return 0;
+  if (distance <= (band?.fullDamageWidth ?? 0)) return 1;
+  return band?.outerDamageMultiplier ?? 1;
+}
+
 function convertFullEnergyToAmmo(fighter, balance) {
   if (fighter.ammoCharge < balance.resources.attackNeedTotal || fighter.ammo >= balance.resources.maxAmmo) return false;
   fighter.ammo = Math.min(balance.resources.maxAmmo, fighter.ammo + 1);
@@ -552,14 +569,14 @@ function damageSnakeFlat(parts, target, radius, damageScale) {
   return parts.reduce((total, segment) => hexDistance(segment, target) <= radius ? total + damageScale : total, 0);
 }
 
-function damageSnakeCells(parts, effectCells, width, damageScale, excludedCells = [], minDistance = 0, outerDamageMultiplier = 1) {
+function damageSnakeCells(parts, effectCells, width, damageScale, excludedCells = [], minDistance = 0, outerDamageMultiplier = 1, fullDamageWidth = 0) {
   const excluded = cellKeySet(excludedCells);
   return parts.reduce((total, segment) => {
     if (excluded.has(keyOf(segment))) return total;
     const bestMultiplier = effectCells.reduce((best, cell) => {
       const distance = hexDistance(segment, cell);
       if (distance < minDistance || distance > width) return best;
-      return Math.max(best, distance === 0 ? 1 : outerDamageMultiplier);
+      return Math.max(best, lineBandDamageMultiplier(distance, { width, fullDamageWidth, outerDamageMultiplier }));
     }, 0);
     return bestMultiplier > 0 ? total + damageScale * bestMultiplier : total;
   }, 0);
@@ -1225,7 +1242,10 @@ function expectedDamageAtUncached(state, fighter, cell) {
     if (projectile.owner !== opponentOwner) return;
     if (!isProjectileVisibleTo(fighter, projectile, state.now)) return;
     if (projectile.kind === "line") {
-      if (projectile.lineCells?.some(lineCell => hexDistance(lineCell, cell) <= projectile.width)) damage += projectile.damage || 0;
+      const multiplier = projectile.lineCells?.reduce((best, lineCell) => (
+        Math.max(best, lineBandDamageMultiplier(hexDistance(lineCell, cell), projectile))
+      ), 0) || 0;
+      damage += (projectile.damage || 0) * multiplier;
       return;
     }
     const target = projectile.explosionTarget || projectile.target;
@@ -1334,20 +1354,23 @@ function directionForLongestBodyAxis(targetSnake, fallbackDirection = 0) {
   return positive ? 4 : 1;
 }
 
-function morayLineCandidateStats(targetSnake, lineCells, width) {
+function morayLineCandidateStats(targetSnake, lineCells, lineShape) {
   return targetSnake.reduce((stats, segment, index) => {
     const distance = lineCells.reduce((best, lineCell) => Math.min(best, hexDistance(segment, lineCell)), Infinity);
+    const damageMultiplier = lineBandDamageMultiplier(distance, lineShape);
     if (index === 0) stats.headDistance = distance;
-    if (distance <= width) {
+    if (damageMultiplier > 0) {
       stats.hits += 1;
+      stats.damageScore += damageMultiplier;
       if (distance === 0) stats.exactHits += 1;
     }
     return stats;
-  }, { hits: 0, exactHits: 0, headDistance: Infinity });
+  }, { hits: 0, exactHits: 0, damageScore: 0, headDistance: Infinity });
 }
 
 function isBetterMorayLineCandidate(candidate, best) {
   if (!best) return true;
+  if (candidate.damageScore !== best.damageScore) return candidate.damageScore > best.damageScore;
   if (candidate.hits !== best.hits) return candidate.hits > best.hits;
   if (candidate.exactHits !== best.exactHits) return candidate.exactHits > best.exactHits;
   if (candidate.directionTurn !== best.directionTurn) return candidate.directionTurn < best.directionTurn;
@@ -1362,12 +1385,12 @@ function chooseMorayLineAttackPlan(state, attacker, defender, balance) {
   const fallbackDirection = attacker.dir;
   if (!targetSnake.length || !fallbackTarget) return { target: fallbackTarget, direction: fallbackDirection };
 
-  const width = bandDistanceFromTotalWidth(attackStats(attacker.stock, "small", balance).radius);
+  const lineShape = bandShapeFromTotalWidth(attackStats(attacker.stock, "small", balance).radius);
   const idealDirection = directionForLongestBodyAxis(targetSnake, fallbackDirection);
   let best = null;
   targetSnake.forEach((origin, originIndex) => {
     DIRECTIONS.forEach((_, direction) => {
-      const stats = morayLineCandidateStats(targetSnake, boardLineThrough(state, origin, direction), width);
+      const stats = morayLineCandidateStats(targetSnake, boardLineThrough(state, origin, direction), lineShape);
       const candidate = {
         target: { q: origin.q, r: origin.r },
         direction,
@@ -1673,6 +1696,7 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
   }
   if (characterId === "moray") {
     const lineCells = boardLineThrough(state, target, direction);
+    const lineShape = bandShapeFromTotalWidth(small.radius);
     const excludedCells = attacker.snake.map(segment => ({ ...segment }));
     state.projectiles.push({
       kind: "line",
@@ -1681,7 +1705,9 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
       target,
       lineCells,
       excludedCells,
-      width: bandDistanceFromTotalWidth(small.radius),
+      width: lineShape.width,
+      fullDamageWidth: lineShape.fullDamageWidth,
+      outerDamageMultiplier: lineShape.outerDamageMultiplier,
       impactAt: now + small.delay,
       damage: bigDamage * 0.8 * ultimateDamageMultiplier(balance, characterId),
       stunChance,
@@ -1858,8 +1884,8 @@ function resolveProjectiles(state, now, balance) {
       playerDamage += damageSnake(player.snake, projectile.target, projectile.burstRadius, projectile.burstDamage, balance);
       computerDamage += damageSnake(computer.snake, projectile.target, projectile.burstRadius, projectile.burstDamage, balance);
     } else if (projectile.kind === "line") {
-      playerDamage = damageSnakeCells(player.snake, projectile.lineCells, projectile.width, projectile.damage, projectile.excludedCells);
-      computerDamage = damageSnakeCells(computer.snake, projectile.lineCells, projectile.width, projectile.damage, projectile.excludedCells);
+      playerDamage = damageSnakeCells(player.snake, projectile.lineCells, projectile.width, projectile.damage, projectile.excludedCells, 0, projectile.outerDamageMultiplier ?? 1, projectile.fullDamageWidth ?? 0);
+      computerDamage = damageSnakeCells(computer.snake, projectile.lineCells, projectile.width, projectile.damage, projectile.excludedCells, 0, projectile.outerDamageMultiplier ?? 1, projectile.fullDamageWidth ?? 0);
     } else {
       if (projectile.kind === "headCircle" && projectile.followHead) {
         projectile.explosionTarget = { ...attacker.snake[0] };

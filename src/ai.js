@@ -800,20 +800,23 @@
       return positive ? 4 : 1;
     }
 
-    function morayLineCandidateStats(targetSnake, lineCells, width) {
+    function morayLineCandidateStats(targetSnake, lineCells, lineShape) {
       return targetSnake.reduce((stats, segment, index) => {
         const distance = lineCells.reduce((best, lineCell) => Math.min(best, hexDistance(segment, lineCell)), Infinity);
+        const damageMultiplier = lineBandDamageMultiplier(distance, lineShape);
         if (index === 0) stats.headDistance = distance;
-        if (distance <= width) {
+        if (damageMultiplier > 0) {
           stats.hits += 1;
+          stats.damageScore += damageMultiplier;
           if (distance === 0) stats.exactHits += 1;
         }
         return stats;
-      }, { hits: 0, exactHits: 0, headDistance: Infinity });
+      }, { hits: 0, exactHits: 0, damageScore: 0, headDistance: Infinity });
     }
 
     function isBetterMorayLineCandidate(candidate, best) {
       if (!best) return true;
+      if (candidate.damageScore !== best.damageScore) return candidate.damageScore > best.damageScore;
       if (candidate.hits !== best.hits) return candidate.hits > best.hits;
       if (candidate.exactHits !== best.exactHits) return candidate.exactHits > best.exactHits;
       if (candidate.directionTurn !== best.directionTurn) return candidate.directionTurn < best.directionTurn;
@@ -829,12 +832,12 @@
       const fallbackDirection = ownerDirection(owner);
       if (!targetSnake.length || !fallbackTarget) return { target: fallbackTarget, direction: fallbackDirection };
 
-      const width = bandDistanceFromTotalWidth(attackStats(ownerStock(owner), "small").radius);
+      const lineShape = bandShapeFromTotalWidth(attackStats(ownerStock(owner), "small").radius);
       const idealDirection = directionForLongestBodyAxis(targetSnake, fallbackDirection);
       let best = null;
       targetSnake.forEach((origin, originIndex) => {
         directions.forEach((_, direction) => {
-          const stats = morayLineCandidateStats(targetSnake, boardLineThrough(origin, direction), width);
+          const stats = morayLineCandidateStats(targetSnake, boardLineThrough(origin, direction), lineShape);
           const candidate = {
             target: { q: origin.q, r: origin.r },
             direction,
@@ -955,7 +958,10 @@
         if (projectile.owner !== opponent) return;
         if (!isProjectileVisibleTo(owner, projectile, now)) return;
         if (projectile.kind === "line") {
-          if (projectile.lineCells?.some(lineCell => hexDistance(lineCell, cell) <= projectile.width)) damage += projectile.damage || 0;
+          const multiplier = projectile.lineCells?.reduce((best, lineCell) => (
+            Math.max(best, lineBandDamageMultiplier(hexDistance(lineCell, cell), projectile))
+          ), 0) || 0;
+          damage += (projectile.damage || 0) * multiplier;
           return;
         }
         const target = projectile.explosionTarget || projectile.target;
