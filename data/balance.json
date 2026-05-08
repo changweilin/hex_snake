@@ -32,6 +32,9 @@
     "singleColorStockGain": 2,
     "dualColorStockGain": 1
   },
+  "health": {
+    "hpPerSnakeUnit": 2
+  },
   "movement": {
     "baseStepMs": 460,
     "moveBonusPerPoint": 0.04,
@@ -41,6 +44,8 @@
   "attack": {
     "smallAttackFoodCost": 2,
     "smallAttackBombCost": 1,
+    "smallAttackDamageMultiplier": 0.5,
+    "bigAttackDamageMultiplier": 1,
     "bigAttackBombCost": 2,
     "baseAttackDelayMs": 2000,
     "baseAttackCooldownMs": 2400,

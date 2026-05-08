@@ -12,6 +12,8 @@ const autoBattleSpeeds = [4, 2, 1.5, 1, 0.75, 0.5, 0.25];
 let smallAttackFoodCost = 2;
 let smallAttackBombCost = 1;
 let bigAttackBombCost = 2;
+let smallAttackDamageMultiplier = 1;
+let bigAttackDamageMultiplier = 1;
 let baseAttackDelayMs = 2000;
 let baseAttackCooldownMs = 2400;
 let baseStepMs = 460;
@@ -45,6 +47,7 @@ let maxCollisionParalysisMs = 8000;
 let rangeDamageFalloffEnabled = false;
 let targetMaxHex = 6;
 let maxMatchMs = 240000;
+let hpPerSnakeUnit = 4;
 let gameOverRestartDelayMs = 700;
 const gameOverContinuousVisualMaxWaitMs = 1000;
 const smallAttackDelayScale = 0.31;
@@ -111,6 +114,8 @@ function applyBalanceConfig(config) {
   smallAttackFoodCost = config.attack?.smallAttackFoodCost ?? smallAttackFoodCost;
   smallAttackBombCost = config.attack?.smallAttackBombCost ?? smallAttackBombCost;
   bigAttackBombCost = config.attack?.bigAttackBombCost ?? bigAttackBombCost;
+  smallAttackDamageMultiplier = config.attack?.smallAttackDamageMultiplier ?? smallAttackDamageMultiplier;
+  bigAttackDamageMultiplier = config.attack?.bigAttackDamageMultiplier ?? bigAttackDamageMultiplier;
   baseAttackDelayMs = config.attack?.baseAttackDelayMs ?? baseAttackDelayMs;
   baseAttackCooldownMs = config.attack?.baseAttackCooldownMs ?? baseAttackCooldownMs;
   baseBlastHexRadius = config.attack?.baseBlastHexRadius ?? baseBlastHexRadius;
@@ -130,6 +135,7 @@ function applyBalanceConfig(config) {
   collisionStunMs = config.collision?.collisionStunMs ?? collisionStunMs;
   collisionSlowMs = config.collision?.collisionSlowMs ?? collisionSlowMs;
   maxCollisionParalysisMs = config.collision?.maxCollisionParalysisMs ?? maxCollisionParalysisMs;
+  hpPerSnakeUnit = config.health?.hpPerSnakeUnit ?? hpPerSnakeUnit;
   preferredFoodWeight = config.foodWeights?.preferred ?? preferredFoodWeight;
   otherFoodWeight = config.foodWeights?.other ?? otherFoodWeight;
   balancedDualChance = config.foodWeights?.balancedDualChance ?? balancedDualChance;
@@ -635,7 +641,7 @@ const tutorialSlides = [
       },
       {
         title: "進食策略",
-        text: `食物以簡稱搭配棋盤顏色標示；先看資源圖表判斷缺哪種庫存、能量或炸彈。HP 上限為（蛇長 + 1）× 4；吃到食物會增加 1 段蛇身並回復 ${foodHealAmount()} 點 HP；${dualFoodName}會補棋盤上顯示的兩種庫存。食物庫存與炸彈決定能不能放招式；兩邊都要顧。`
+        text: `食物以簡稱搭配棋盤顏色標示；先看資源圖表判斷缺哪種庫存、能量或炸彈。HP 上限為（蛇長 + 1）× ${hpPerSnakeUnit}；吃到食物會增加 1 段蛇身並回復 ${foodHealAmount()} 點 HP；${dualFoodName}會補棋盤上顯示的兩種庫存。食物庫存與炸彈決定能不能放招式；兩邊都要顧。`
       },
       {
         title: "控制效果",
@@ -1626,6 +1632,14 @@ function damageMultiplier(stock) {
   return 2 + foodBonus(stock, "fat", damageBonusPerPoint, maxDamageBonus);
 }
 
+function attackDamageMultiplier(profile = "big") {
+  return profile === "small" ? smallAttackDamageMultiplier : bigAttackDamageMultiplier;
+}
+
+function attackDamage(stock, profile = "big") {
+  return damageMultiplier(stock) * attackDamageMultiplier(profile);
+}
+
 function areaMultiplier(stock) {
   return 1 + foodBonus(stock, "protein", proteinRangeBonusPerPoint, 1);
 }
@@ -1666,11 +1680,11 @@ function blastRadius(stock) {
 }
 
 function maxHpForSnake(snakeParts = []) {
-  return ((snakeParts?.length || 0) + 1) * 4;
+  return ((snakeParts?.length || 0) + 1) * hpPerSnakeUnit;
 }
 
 function foodHealAmount() {
-  return 4;
+  return hpPerSnakeUnit;
 }
 
 function attackFoodCost(profile = "big") {

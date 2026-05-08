@@ -11,6 +11,8 @@ const SMALL_ATTACK_DELAY_SCALE = 0.31;
 const SMALL_ATTACK_COOLDOWN_SCALE = 0.29;
 const SANDWORM_REVEAL_BEFORE_IMPACT_MS = 200;
 const SANDWORM_UNDERGROUND_WINDOW_MS = 500;
+const DEFAULT_HP_PER_SNAKE_UNIT = 4;
+const DEFAULT_ATTACK_DAMAGE_MULTIPLIER = 1;
 const FOOD_TARGET_SWITCH_MS = 20000;
 const DEAD_END_MIN_SPACE = 5;
 const AI_LOOKAHEAD_DEPTH = 3;
@@ -238,6 +240,17 @@ function damageMultiplier(stock, balance) {
   return 2 + foodBonus(stock, "fat", balance.attack.damageBonusPerPoint, balance.attack.maxDamageBonus);
 }
 
+function attackDamageMultiplier(profile, balance) {
+  const value = profile === "small"
+    ? balance.attack?.smallAttackDamageMultiplier
+    : balance.attack?.bigAttackDamageMultiplier;
+  return Number.isFinite(value) ? value : DEFAULT_ATTACK_DAMAGE_MULTIPLIER;
+}
+
+function attackDamage(stock, profile, balance) {
+  return damageMultiplier(stock, balance) * attackDamageMultiplier(profile, balance);
+}
+
 function areaMultiplier(stock, balance) {
   const perPoint = balance.attack.proteinRangeBonusPerPoint ?? (1 / balance.resources.maxFoodStock);
   return 1 + foodBonus(stock, "protein", perPoint, balance.attack.maxProteinRangeBonus ?? 1);
@@ -398,12 +411,17 @@ function blastRadius(stock, balance) {
   return balance.attack.baseBlastHexRadius * areaMultiplier(stock, balance);
 }
 
-function maxHpForSnake(snake = []) {
-  return ((snake?.length || 0) + 1) * 4;
+function hpPerSnakeUnit(balance) {
+  const value = balance?.health?.hpPerSnakeUnit;
+  return Number.isFinite(value) ? value : DEFAULT_HP_PER_SNAKE_UNIT;
 }
 
-function foodHealAmount() {
-  return 4;
+function maxHpForSnake(snake = [], balance = null) {
+  return ((snake?.length || 0) + 1) * hpPerSnakeUnit(balance);
+}
+
+function foodHealAmount(balance = null) {
+  return hpPerSnakeUnit(balance);
 }
 
 function attackFoodCost(profile = "big", balance = null) {
@@ -440,7 +458,7 @@ function attackStats(stock, profile, balance) {
   return {
     delay: attackDelay(stock, balance) * (isSmall ? SMALL_ATTACK_DELAY_SCALE : 1),
     radius: Math.max(1, blastRadius(stock, balance) + (isSmall ? -1 : 0)),
-    damage: damageMultiplier(stock, balance)
+    damage: attackDamage(stock, profile, balance)
   };
 }
 
@@ -659,7 +677,7 @@ function makeFighter(owner, character, start, direction, settings, balance, poli
   }
   const stock = { ...emptyStock(), ...(settings.initialStock || {}) };
   const snake = createStartingSnake(start, direction, settings.initialLength, settings.radius);
-  const maxHp = maxHpForSnake(snake);
+  const maxHp = maxHpForSnake(snake, balance);
   return {
     owner,
     character,
@@ -771,6 +789,65 @@ function attackResourceCost(profile, balance) {
   return attackFoodCost(profile, balance) * foodMultiplier + attackBombCost(profile, balance) * FOOD_TYPES.length;
 }
 
+function lateGameSkillPhase(state, fighter, opponent, balance) {
+  const bigFoodCost = attackFoodCost("big", balance);
+  const averageStockRatio = FOOD_TYPES.reduce((sum, type) => sum + (fighter.stock[type] || 0), 0)
+    / Math.max(1, FOOD_TYPES.length * balance.resources.maxFoodStock);
+  const surplusRatio = FOOD_TYPES.reduce((sum, type) => sum + Math.max(0, (fighter.stock[type] || 0) - bigFoodCost), 0)
+    / Math.max(1, FOOD_TYPES.length * (balance.resources.maxFoodStock - bigFoodCost));
+  const bombReserveRatio = Math.max(0, fighter.ammo - attackBombCost("big", balance))
+    / Math.max(1, balance.resources.maxAmmo - attackBombCost("big", balance));
+  const cappedEnergyRatio = fighter.ammo >= balance.resources.maxAmmo
+    ? fighter.ammoCharge / Math.max(1, balance.resources.attackNeedTotal)
+    : 0;
+  const timeRatio = clamp((state.now - 30000) / 90000, 0, 1);
+  const opponentSnake = perceivedSnakeFor(state, fighter, opponent);
+  const opponentMaxHp = Math.max(1, maxHpForSnake(opponentSnake, balance));
+  const opponentMissingHpRatio = clamp(1 - opponent.hp / opponentMaxHp, 0, 1);
+  return clamp(
+    averageStockRatio * 0.35
+      + surplusRatio * 0.45
+      + bombReserveRatio * 0.18
+      + cappedEnergyRatio * 0.12
+      + timeRatio * 0.25
+      + opponentMissingHpRatio * 0.25
+      + (hasResourcePressure(fighter, balance) ? 0.18 : 0),
+    0,
+    1
+  );
+}
+
+function bigAttackReadiness(fighter, balance) {
+  const bigFoodCost = attackFoodCost("big", balance);
+  const stockReadiness = FOOD_TYPES.reduce((sum, type) => {
+    return sum + clamp((fighter.stock[type] || 0) / Math.max(1, bigFoodCost), 0, 1);
+  }, 0) / Math.max(1, FOOD_TYPES.length);
+  const weakestStockReadiness = FOOD_TYPES.reduce((best, type) => {
+    return Math.min(best, clamp((fighter.stock[type] || 0) / Math.max(1, bigFoodCost), 0, 1));
+  }, 1);
+  const ammoReadiness = clamp((fighter.ammo + fighter.ammoCharge / Math.max(1, balance.resources.attackNeedTotal)) / Math.max(1, attackBombCost("big", balance)), 0, 1);
+  return Math.min(ammoReadiness, weakestStockReadiness * 0.7 + stockReadiness * 0.3);
+}
+
+function shouldSaveSmallForBig(state, fighter, opponent, balance) {
+  if (!canAttack(fighter, "small", balance) || canAttack(fighter, "big", balance)) return false;
+  if (isLethalAttack(state, fighter, opponent, balance, "small")) return false;
+  const bigFoodCost = attackFoodCost("big", balance);
+  const readiness = bigAttackReadiness(fighter, balance);
+  const preparationTime = clamp((state.now - 15000) / 45000, 0, 1);
+  const stockReadyForBig = FOOD_TYPES.every(type => (fighter.stock[type] || 0) >= bigFoodCost);
+  if (stockReadyForBig && fighter.ammo >= attackBombCost("small", balance) && preparationTime >= 0.2) return true;
+  return readiness >= 0.72 && (preparationTime >= 0.25 || lateGameSkillPhase(state, fighter, opponent, balance) >= 0.22);
+}
+
+function skillPhaseBias(state, attacker, defender, balance, profile) {
+  const phase = lateGameSkillPhase(state, attacker, defender, balance);
+  if (profile === "small") {
+    return (1 - phase) * 1.8 - (canAttack(attacker, "big", balance) ? phase * 2.8 : 0);
+  }
+  return phase * 5.2 - (1 - phase) * 1.8 + (hasResourcePressure(attacker, balance) ? 1 : 0);
+}
+
 function opponentAlmostReady(opponent, balance) {
   if (canAttack(opponent, "small", balance) || canAttack(opponent, "big", balance)) return true;
   const highestType = highestStockFoodType(opponent.stock);
@@ -799,11 +876,11 @@ function shouldUseBigAttack(state, fighter, opponent, balance) {
   const difficulty = fighter.policy.aiDifficulty;
   if (difficulty === "low") {
     const distance = hexDistance(fighter.snake[0], perceivedSnakeFor(state, fighter, opponent)[0]);
-    return !canAttack(fighter, "small", balance) || hasResourcePressure(fighter, balance) || distance <= 2 && state.rng.next() < 0.35 || state.rng.next() < 0.18;
+    return !canAttack(fighter, "small", balance) || hasResourcePressure(fighter, balance) || lateGameSkillPhase(state, fighter, opponent, balance) >= 0.86 || distance <= 2 && state.rng.next() < 0.35 || state.rng.next() < 0.18;
   }
   if (difficulty === "medium" || difficulty === "high") {
     const lethal = strongestVisibleDamage(state, fighter, opponent, balance, "big") >= opponent.hp;
-    return isDebuffed(opponent, state.now) || lethal || hasResourcePressure(fighter, balance);
+    return isDebuffed(opponent, state.now) || lethal || hasResourcePressure(fighter, balance) || lateGameSkillPhase(state, fighter, opponent, balance) >= 0.78;
   }
   return false;
 }
@@ -1317,6 +1394,7 @@ function attackExpectedValue(state, attacker, defender, balance, profile, target
     + targetWeight * 0.6
     + castTimingScore(state, attacker, defender, balance, profile)
     + allocationScore
+    + skillPhaseBias(state, attacker, defender, balance, profile)
     + controlValue
     + (damage > 0 ? 0.6 : -2.5)
     - resourcePenalty
@@ -1359,19 +1437,23 @@ function attackProfileThreshold(profile) {
 
 function chooseAiAttackProfile(state, fighter, opponent, balance) {
   if (fighter.policy.aiDifficulty === "novice") return null;
-  const lethal = ["small", "big"]
-    .filter(profile => isLethalAttack(state, fighter, opponent, balance, profile))
-    .sort((a, b) => attackResourceCost(a, balance) - attackResourceCost(b, balance))[0];
+  const lethalProfiles = ["small", "big"].filter(profile => isLethalAttack(state, fighter, opponent, balance, profile));
+  const lethal = lethalProfiles.includes("big") && lateGameSkillPhase(state, fighter, opponent, balance) >= 0.55
+    ? "big"
+    : lethalProfiles.sort((a, b) => attackResourceCost(a, balance) - attackResourceCost(b, balance))[0];
   if (lethal) return lethal;
   if (fighter.policy.aiDifficulty === "low" && shouldUseBigAttack(state, fighter, opponent, balance)) return "big";
   if (fighter.policy.aiDifficulty !== "high") {
     if (shouldUseBigAttack(state, fighter, opponent, balance)) return "big";
+    if (shouldSaveSmallForBig(state, fighter, opponent, balance)) return null;
     if (canAttack(fighter, "small", balance)) return "small";
     if (fighter.policy.aiDifficulty === "low" && canAttack(fighter, "big", balance)) return "big";
     return null;
   }
 
-  const available = ["small", "big"].filter(profile => canAttack(fighter, profile, balance));
+  const available = ["small", "big"]
+    .filter(profile => canAttack(fighter, profile, balance))
+    .filter(profile => profile !== "small" || !shouldSaveSmallForBig(state, fighter, opponent, balance));
   if (!available.length) return null;
   const scored = available.map(profile => {
     const bestTarget = highAttackTargetRows(state, fighter, opponent, balance, profile)[0];
@@ -1565,6 +1647,7 @@ function pushCircleAttack(state, attack) {
 
 function scheduleBigAttack(state, attacker, defender, target, now, balance, stunChance, aimDirection = null) {
   const small = attackStats(attacker.stock, "small", balance);
+  const bigDamage = attackDamage(attacker.stock, "big", balance);
   const source = attacker.snake[0];
   const direction = Number.isInteger(aimDirection) ? aimDirection : directionFromSourceToTarget(source, target, attacker.dir);
   const characterId = attacker.character.id;
@@ -1582,9 +1665,9 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
     const orbStepMs = ultimateSetting(balance, abilityId, "orbStepMs", DRAGON_ORB_STEP_MS);
     const orbRadius = isLobsterPalm ? 1 : small.radius * ultimateSetting(balance, abilityId, "orbRadiusMultiplier", DRAGON_ORB_RADIUS_MULTIPLIER);
     const burstRadius = small.radius * (isLobsterPalm ? 1.5 : ultimateSetting(balance, abilityId, "burstRadiusMultiplier", DRAGON_BURST_RADIUS_MULTIPLIER));
-    const burstDamage = small.damage * (isLobsterPalm ? 0.9 : ultimateSetting(balance, abilityId, "burstDamageMultiplier", DRAGON_BURST_DAMAGE_MULTIPLIER));
+    const burstDamage = bigDamage * (isLobsterPalm ? 0.9 : ultimateSetting(balance, abilityId, "burstDamageMultiplier", DRAGON_BURST_DAMAGE_MULTIPLIER));
     const volleys = isLobsterPalm ? 2 : 1;
-    const orbDamage = small.damage * (isLobsterPalm ? 0.3 : 1);
+    const orbDamage = bigDamage * (isLobsterPalm ? 0.3 : 1);
     const volleyIntervalMs = isLobsterPalm ? attackDelay(attacker.stock, balance) : 500;
     for (let volley = 0; volley < volleys; volley += 1) {
       const volleyDelay = volley * volleyIntervalMs;
@@ -1633,7 +1716,7 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
       excludedCells,
       width: bandDistanceFromTotalWidth(small.radius),
       impactAt: now + small.delay,
-      damage: small.damage * 0.8 * ultimateDamageMultiplier(balance, characterId),
+      damage: bigDamage * 0.8 * ultimateDamageMultiplier(balance, characterId),
       stunChance,
       stackStun: true
     });
@@ -1651,7 +1734,7 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
       width: outwardWidth,
       minDistance: 0,
       outerDamageMultiplier: extensionDamageMultiplier,
-      damage: small.damage * ultimateDamageMultiplier(balance, characterId),
+      damage: bigDamage * ultimateDamageMultiplier(balance, characterId),
       profile: "big",
       stunChance,
       startedAt: now + small.delay,
@@ -1671,7 +1754,7 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
       target,
       impactAt: now + delay,
       radius: Math.max(0.5, small.radius * 0.5),
-      damage: small.damage * 3.5 * ultimateDamageMultiplier(balance, characterId),
+      damage: bigDamage * 3.5 * ultimateDamageMultiplier(balance, characterId),
       stunChance,
       sandwormHidden: true,
       sandwormParalyzeOnBody: true,
@@ -1684,8 +1767,8 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
       ? small.radius * 2
       : small.radius * ultimateSetting(balance, abilityId, "radiusMultiplier", 2.5);
     const volleys = characterId === "dragon" ? 1 : 2;
-    const impactDamage = characterId === "dragon" ? small.damage * 0.5 : small.damage;
-    const radiationTotalDamage = characterId === "dragon" ? small.damage * 1.5 : small.damage * 0.25;
+    const impactDamage = characterId === "dragon" ? bigDamage * 0.5 : bigDamage;
+    const radiationTotalDamage = characterId === "dragon" ? bigDamage * 1.5 : bigDamage * 0.25;
     const firstImpactDelay = characterId === "dragon" ? small.delay * 2 : small.delay;
     for (let index = 0; index < volleys; index += 1) {
       const impactDelay = firstImpactDelay + index * 2000;
@@ -1717,7 +1800,7 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
         target,
         impactAt: now + impactDelay,
         radius: small.radius,
-        damage: small.damage * ultimateDamageMultiplier(balance, characterId),
+        damage: bigDamage * ultimateDamageMultiplier(balance, characterId),
         stunChance
       });
     }
@@ -1996,7 +2079,7 @@ function moveFighters(state, movers, now, balance) {
       fighter.foodTargetKey = null;
       fighter.foodTargetAt = 0;
       collectFood(fighter, plan.eatenFood, balance, state.rng);
-      fighter.hp = Math.min(maxHpForSnake(fighter.snake), fighter.hp + foodHealAmount());
+      fighter.hp = Math.min(maxHpForSnake(fighter.snake, state.balance), fighter.hp + foodHealAmount(state.balance));
     } else {
       fighter.snake.pop();
     }

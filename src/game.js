@@ -1068,7 +1068,7 @@
       return {
         delay: attackDelay(stock) * (isSmall ? smallAttackDelayScale : 1),
         radius: Math.max(1, blastRadius(stock) + (isSmall ? -1 : 0)),
-        damage: damageMultiplier(stock)
+        damage: attackDamage(stock, profile)
       };
     }
 
@@ -1319,6 +1319,7 @@
 
     function scheduleCharacterBigAttack(owner, character, source, target, now, stock, stunChance, options = {}) {
       const small = attackStats(stock, "small");
+      const bigDamage = attackDamage(stock, "big");
       const direction = Number.isInteger(options.aimDirection)
         ? options.aimDirection
         : directionFromSourceToTarget(source, target, ownerDirection(owner));
@@ -1340,10 +1341,10 @@
         const orbStepMs = ultimateSetting(abilityId, "orbStepMs", dragonOrbStepMs);
         const travelDelay = small.delay + travelPath.length * orbStepMs;
         const volleys = isLobsterPalm ? 2 : 1;
-        const orbDamage = small.damage * (isLobsterPalm ? 0.3 : 1);
+        const orbDamage = bigDamage * (isLobsterPalm ? 0.3 : 1);
         const orbRadius = isLobsterPalm ? 1 : small.radius * ultimateSetting(abilityId, "orbRadiusMultiplier", 1);
         const burstRadius = small.radius * (isLobsterPalm ? 1.5 : 2);
-        const burstDamage = small.damage * (isLobsterPalm ? 0.9 : 1.5);
+        const burstDamage = bigDamage * (isLobsterPalm ? 0.9 : 1.5);
         const visualType = character.id === "lobster" ? "lobster-palm-big" : attackVisualType(owner, "big", abilityId);
         const volleyIntervalMs = isLobsterPalm ? attackDelay(stock) : 500;
         for (let volley = 0; volley < volleys; volley += 1) {
@@ -1411,7 +1412,7 @@
           createdAt: now,
           impactAt: now + small.delay,
           delay: small.delay,
-          damage: small.damage * 0.8 * ultimateDamageMultiplier(character.id),
+          damage: bigDamage * 0.8 * ultimateDamageMultiplier(character.id),
           stunChance,
           stackStun: true
         });
@@ -1433,7 +1434,7 @@
           minDistance: 0,
           outerDamageMultiplier: extensionDamageMultiplier,
           visualType: attackVisualType(owner, "big"),
-          damage: small.damage * ultimateDamageMultiplier(character.id),
+          damage: bigDamage * ultimateDamageMultiplier(character.id),
           stunChance,
           startedAt: now + small.delay,
           nextTickAt: now + small.delay,
@@ -1463,7 +1464,7 @@
           impactAt: now + delay,
           delay,
           radius: Math.max(0.5, small.radius * 0.5),
-          damage: small.damage * 3.5 * ultimateDamageMultiplier(character.id),
+          damage: bigDamage * 3.5 * ultimateDamageMultiplier(character.id),
           stunChance,
           hidden: true,
           sandwormHidden: true,
@@ -1478,8 +1479,8 @@
           ? small.radius * 2
           : small.radius * ultimateSetting(abilityId, "radiusMultiplier", 2.5);
         const volleys = character.id === "dragon" ? 1 : 2;
-        const impactDamage = character.id === "dragon" ? small.damage * 0.5 : small.damage;
-        const radiationTotalDamage = character.id === "dragon" ? small.damage * 1.5 : small.damage * 0.25;
+        const impactDamage = character.id === "dragon" ? bigDamage * 0.5 : bigDamage;
+        const radiationTotalDamage = character.id === "dragon" ? bigDamage * 1.5 : bigDamage * 0.25;
         const firstImpactDelay = character.id === "dragon" ? small.delay * 2 : small.delay;
         const visualType = character.id === "dragon" ? "dragon-spirit-big" : attackVisualType(owner, "big", abilityId);
         for (let index = 0; index < volleys; index += 1) {
@@ -1519,7 +1520,7 @@
             impactAt: now + impactDelay,
             delay: impactDelay,
             radius: small.radius,
-            damage: small.damage * ultimateDamageMultiplier(character.id),
+            damage: bigDamage * ultimateDamageMultiplier(character.id),
             stunChance
           });
         }
@@ -3593,7 +3594,7 @@
         return;
       }
       overlayTitle.textContent = "準備開局";
-      overlayText.textContent = `每吃 1 個食物獲得 2 點能量，集滿 ${attackNeedTotal} 點獲得 1 枚炸彈，最多 ${maxAmmo} 枚；HP 上限為（蛇長 + 1）× 4；能量與炸彈都滿時，施放消耗炸彈的招式會立刻把滿能量轉為 1 枚炸彈；小招消耗目前最高的食物庫存 ${smallAttackFoodCost} 點與 ${smallAttackBombCost} 枚炸彈，大招消耗 ${bigAttackBombCost} 枚炸彈與四種庫存各 2 點。`;
+      overlayText.textContent = `每吃 1 個食物獲得 2 點能量，集滿 ${attackNeedTotal} 點獲得 1 枚炸彈，最多 ${maxAmmo} 枚；HP 上限為（蛇長 + 1）× ${hpPerSnakeUnit}；能量與炸彈都滿時，施放消耗炸彈的招式會立刻把滿能量轉為 1 枚炸彈；小招消耗目前最高的食物庫存 ${smallAttackFoodCost} 點與 ${smallAttackBombCost} 枚炸彈，大招消耗 ${bigAttackBombCost} 枚炸彈與四種庫存各 2 點。`;
       startButton.textContent = "開始";
       setOverlayChromeVisible(true);
       startGame();

@@ -132,6 +132,8 @@ test("attack costs and damage calculations match core rules", () => {
   assert.equal(canAttack({ stock: { protein: 0, fat: 2, fiber: 0, carb: 1 }, ammo: balance.attack.smallAttackBombCost }, "small", balance), true);
   assert.equal(canAttack({ stock: { protein: 2, fat: 0, fiber: 0, carb: 0 }, ammo: 0 }, "small", balance), false);
   const stats = attackStats(fighter.stock, "small", balance);
+  const bigStats = attackStats(fighter.stock, "big", balance);
+  assert.ok(Math.abs(stats.damage - bigStats.damage * balance.attack.smallAttackDamageMultiplier / balance.attack.bigAttackDamageMultiplier) < 1e-9);
   const damage = damageSnake([{ q: 0, r: 0 }, { q: 1, r: 0 }], { q: 0, r: 0 }, stats.radius, stats.damage, balance);
   assert.ok(damage > 0);
 });
@@ -171,15 +173,15 @@ test("bomb spending converts full energy when bombs were capped", () => {
   assert.equal(player.ammoCharge, 0);
 });
 
-test("fighter hp uses snake length plus one times four", () => {
+test("fighter hp uses configured snake unit hp", () => {
   const state = createMatchState({
     balance,
     playerCharacter: characterById.get("dragon"),
     computerCharacter: characterById.get("moray"),
     initialLength: 3
   });
-  assert.equal(state.fighters.player.hp, 16);
-  assert.equal(state.fighters.computer.hp, 16);
+  assert.equal(state.fighters.player.hp, 8);
+  assert.equal(state.fighters.computer.hp, 8);
 });
 
 test("player-owned attacks and hazards do not damage or stun the player", () => {
@@ -317,6 +319,44 @@ test("high attack profile does not spend a low-value big attack", () => {
   player.hp = 100;
   player.snake = [{ q: 4, r: -4 }];
   assert.notEqual(chooseAttackProfile(state, computer, player, balance), "big");
+});
+
+test("high attack profile shifts from early small attacks to late big attacks", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("dragon"),
+    computerCharacter: characterById.get("moray"),
+    seed: "phase-big-shift",
+    initialBombs: balance.attack.bigAttackBombCost,
+    initialStock: Object.fromEntries(FOOD_TYPES.map(type => [type, 6])),
+    computerModel: { aiDifficulty: "high", pathPrecision: 1, aimPrecision: 1 }
+  });
+  const computer = state.fighters.computer;
+  const player = state.fighters.player;
+  player.hp = 100;
+  state.now = 100;
+  assert.equal(chooseAttackProfile(state, computer, player, balance), "small");
+  state.now = 120000;
+  assert.equal(chooseAttackProfile(state, computer, player, balance), "big");
+});
+
+test("high attack profile saves the first bomb for late big setup", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("dragon"),
+    computerCharacter: characterById.get("moray"),
+    seed: "save-first-bomb-for-big",
+    initialBombs: balance.attack.smallAttackBombCost,
+    initialStock: Object.fromEntries(FOOD_TYPES.map(type => [type, 2])),
+    computerModel: { aiDifficulty: "high", pathPrecision: 1, aimPrecision: 1 }
+  });
+  const computer = state.fighters.computer;
+  const player = state.fighters.player;
+  player.hp = 100;
+  state.now = 100;
+  assert.equal(chooseAttackProfile(state, computer, player, balance), "small");
+  state.now = 30000;
+  assert.equal(chooseAttackProfile(state, computer, player, balance), null);
 });
 
 test("high attack target EV prefers a dense body cluster over a low-damage head target", () => {

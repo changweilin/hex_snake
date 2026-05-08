@@ -567,11 +567,11 @@
       if (!canAttack(owner, "big")) return false;
       if (computerDifficulty === "low") {
         const distance = hexDistance(ownerHead(owner), perceivedSnakeFor(owner, opponentOf(owner), now)[0]);
-        return !canAttack(owner, "small") || hasResourcePressure(owner) || (distance <= 2 && Math.random() < 0.35) || Math.random() < 0.18;
+        return !canAttack(owner, "small") || hasResourcePressure(owner) || lateGameSkillPhase(owner, now) >= 0.86 || (distance <= 2 && Math.random() < 0.35) || Math.random() < 0.18;
       }
       if (computerDifficulty === "medium" || computerDifficulty === "high") {
         const lethal = strongestVisibleDamage(owner, "big", now) >= ownerHp(opponentOf(owner));
-        return hasOpponentDebuff(owner, now) || lethal || hasResourcePressure(owner);
+        return hasOpponentDebuff(owner, now) || lethal || hasResourcePressure(owner) || lateGameSkillPhase(owner, now) >= 0.78;
       }
       return false;
     }
@@ -583,6 +583,71 @@
     function attackResourceCost(profile = "big") {
       const foodMultiplier = profile === "small" ? 1 : foodTypes.length;
       return attackFoodCost(profile) * foodMultiplier + attackBombCost(profile) * foodTypes.length;
+    }
+
+    function clampAiRatio(value) {
+      return Math.min(1, Math.max(0, value));
+    }
+
+    function lateGameSkillPhase(owner, now) {
+      const stock = ownerStock(owner);
+      const bigFoodCost = attackFoodCost("big");
+      const averageStockRatio = foodTypes.reduce((sum, type) => sum + (stock[type.id] || 0), 0)
+        / Math.max(1, foodTypes.length * maxFoodStock);
+      const surplusRatio = foodTypes.reduce((sum, type) => sum + Math.max(0, (stock[type.id] || 0) - bigFoodCost), 0)
+        / Math.max(1, foodTypes.length * (maxFoodStock - bigFoodCost));
+      const bombReserveRatio = Math.max(0, ammoFor(owner) - attackBombCost("big"))
+        / Math.max(1, maxAmmo - attackBombCost("big"));
+      const cappedEnergyRatio = ammoFor(owner) >= maxAmmo
+        ? ammoChargeFor(owner) / Math.max(1, attackNeedTotal)
+        : 0;
+      const timeRatio = clampAiRatio((now - 30000) / 90000);
+      const opponent = opponentOf(owner);
+      const opponentSnake = perceivedSnakeFor(owner, opponent, now);
+      const opponentMaxHp = Math.max(1, maxHpForSnake(opponentSnake));
+      const opponentMissingHpRatio = clampAiRatio(1 - ownerHp(opponent) / opponentMaxHp);
+      return clampAiRatio(
+        averageStockRatio * 0.35
+        + surplusRatio * 0.45
+        + bombReserveRatio * 0.18
+        + cappedEnergyRatio * 0.12
+        + timeRatio * 0.25
+        + opponentMissingHpRatio * 0.25
+        + (hasResourcePressure(owner) ? 0.18 : 0)
+      );
+    }
+
+    function bigAttackReadiness(owner) {
+      const stock = ownerStock(owner);
+      const bigFoodCost = attackFoodCost("big");
+      const stockReadiness = foodTypes.reduce((sum, type) => {
+        return sum + clampAiRatio((stock[type.id] || 0) / Math.max(1, bigFoodCost));
+      }, 0) / Math.max(1, foodTypes.length);
+      const weakestStockReadiness = foodTypes.reduce((best, type) => {
+        return Math.min(best, clampAiRatio((stock[type.id] || 0) / Math.max(1, bigFoodCost)));
+      }, 1);
+      const ammoReadiness = clampAiRatio((ammoFor(owner) + ammoChargeFor(owner) / Math.max(1, attackNeedTotal)) / Math.max(1, attackBombCost("big")));
+      return Math.min(ammoReadiness, weakestStockReadiness * 0.7 + stockReadiness * 0.3);
+    }
+
+    function shouldSaveSmallForBig(owner, now) {
+      if (!canAttack(owner, "small") || canAttack(owner, "big")) return false;
+      if (isLethalAttack(owner, "small", now)) return false;
+      const stock = ownerStock(owner);
+      const bigFoodCost = attackFoodCost("big");
+      const readiness = bigAttackReadiness(owner);
+      const preparationTime = clampAiRatio((now - 15000) / 45000);
+      const stockReadyForBig = foodTypes.every(type => (stock[type.id] || 0) >= bigFoodCost);
+      if (stockReadyForBig && ammoFor(owner) >= attackBombCost("small") && preparationTime >= 0.2) return true;
+      return readiness >= 0.72 && (preparationTime >= 0.25 || lateGameSkillPhase(owner, now) >= 0.22);
+    }
+
+    function skillPhaseBias(owner, profile, now) {
+      const phase = lateGameSkillPhase(owner, now);
+      if (profile === "small") {
+        return (1 - phase) * 1.8 - (canAttack(owner, "big") ? phase * 2.8 : 0);
+      }
+      return phase * 5.2 - (1 - phase) * 1.8 + (hasResourcePressure(owner) ? 1 : 0);
     }
 
     function opponentAlmostReady(owner) {
@@ -624,6 +689,7 @@
         + targetWeight * 0.6
         + castTimingScore(owner, profile, now)
         + allocationScore
+        + skillPhaseBias(owner, profile, now)
         + controlValue
         + (damage > 0 ? 0.6 : -2.5)
         - resourcePenalty
@@ -671,14 +737,17 @@
 
     function chooseAiAttackProfile(owner, now) {
       if (isNoviceComputer()) return null;
-      const lethal = ["small", "big"]
-        .filter(profile => isLethalAttack(owner, profile, now))
-        .sort((a, b) => attackResourceCost(a) - attackResourceCost(b))[0];
+      const lethalProfiles = ["small", "big"].filter(profile => isLethalAttack(owner, profile, now));
+      const lethal = lethalProfiles.includes("big") && lateGameSkillPhase(owner, now) >= 0.55
+        ? "big"
+        : lethalProfiles.sort((a, b) => attackResourceCost(a) - attackResourceCost(b))[0];
       if (lethal) return lethal;
       if (computerDifficulty === "low" && shouldUseBigAttack(owner, now)) return "big";
 
       if (computerDifficulty === "high") {
-        const available = ["small", "big"].filter(profile => canAttack(owner, profile));
+        const available = ["small", "big"]
+          .filter(profile => canAttack(owner, profile))
+          .filter(profile => profile !== "small" || !shouldSaveSmallForBig(owner, now));
         if (!available.length) return null;
         const scored = available.map(profile => {
           const bestTarget = highAttackTargetRows(owner, profile, now)[0];
@@ -690,6 +759,7 @@
       }
 
       if (shouldUseBigAttack(owner, now)) return "big";
+      if (shouldSaveSmallForBig(owner, now)) return null;
       if (canAttack(owner, "small")) return "small";
       if (computerDifficulty === "low" && canAttack(owner, "big")) return "big";
       return null;
