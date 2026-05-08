@@ -1166,7 +1166,7 @@ test("moray big attack chooses the longest opponent body line instead of forcing
   longLine.forEach(segment => assert.equal(lineKeys.has(key(segment)), true));
 });
 
-test("moray big attack schedules one 0.3x line strike", () => {
+test("moray big attack schedules seven 0.3x line strikes", () => {
   const state = createMatchState({
     balance,
     playerCharacter: characterById.get("dragon"),
@@ -1189,12 +1189,12 @@ test("moray big attack schedules one 0.3x line strike", () => {
   const lines = state.projectiles
     .filter(projectile => projectile.kind === "line")
     .sort((left, right) => left.impactAt - right.impactAt);
-  assert.equal(lines.length, 1);
+  assert.equal(lines.length, 7);
   lines.forEach((line, index) => {
     assert.ok(Math.abs(line.damage - bigStats.damage * balance.attack.ultimates.moray.damageMultiplier) < 1e-9);
     assert.ok(Math.abs(line.impactAt - (state.now + smallStats.delay + index * smallStats.delay * balance.attack.ultimates.moray.strikeIntervalMultiplier)) < 1e-9);
     assert.equal(line.headDamageMultiplier, undefined);
-    assert.equal(line.stackStun, false);
+    assert.equal(line.stackStun, true);
     assert.ok(Math.abs(line.stunChance - 0.17) < 1e-9);
     assert.ok(Math.abs(line.headStunChance - 0.34) < 1e-9);
   });
@@ -1471,6 +1471,55 @@ test("high food race compares arrival time using each fighter speed", () => {
   assert.equal(wrappedDistance(state, fighter.snake[0], state.foods[0]), 2);
   assert.equal(wrappedDistance(state, opponent.snake[0], state.foods[0]), 3);
   assert.deepEqual(chooseFoodTarget(state, fighter, opponent), state.foods[1]);
+});
+
+test("tied food races yield to the fighter that prefers that food", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("quetzal"),
+    computerCharacter: characterById.get("moray"),
+    seed: "food-race-preference-yield",
+    playerModel: { aiDifficulty: "high", pathPrecision: 1, aimPrecision: 1 },
+    computerModel: { aiDifficulty: "high", pathPrecision: 1, aimPrecision: 1 }
+  });
+  const player = state.fighters.player;
+  const computer = state.fighters.computer;
+  player.snake[0] = { q: 1, r: 0 };
+  computer.snake[0] = { q: -1, r: 0 };
+  state.foods = [
+    { q: 0, r: 0, types: ["fiber"] },
+    { q: -2, r: 0, types: ["carb"] }
+  ];
+  player.policy.strategyWeights.food = { fastestArrival: 3, ownDeficit: 0, opponentDeficit: 0, ownPreferred: 0, opponentPreferred: 0 };
+  computer.policy.strategyWeights.food = { fastestArrival: 3, ownDeficit: 0, opponentDeficit: 0, ownPreferred: 0, opponentPreferred: 0 };
+
+  assert.deepEqual(chooseFoodTarget(state, player, computer), state.foods[0]);
+  assert.deepEqual(chooseFoodTarget(state, computer, player), state.foods[1]);
+});
+
+test("tied food races yield to the fighter with the farther next food", () => {
+  const state = createMatchState({
+    balance,
+    playerCharacter: characterById.get("quetzal"),
+    computerCharacter: characterById.get("quetzal"),
+    seed: "food-race-alternative-yield",
+    playerModel: { aiDifficulty: "high", pathPrecision: 1, aimPrecision: 1 },
+    computerModel: { aiDifficulty: "high", pathPrecision: 1, aimPrecision: 1 }
+  });
+  const player = state.fighters.player;
+  const computer = state.fighters.computer;
+  player.snake[0] = { q: 1, r: 0 };
+  computer.snake[0] = { q: -1, r: 0 };
+  state.foods = [
+    { q: 0, r: 0, types: ["fiber"] },
+    { q: -2, r: 0, types: ["fiber"] },
+    { q: 3, r: 0, types: ["fiber"] }
+  ];
+  player.policy.strategyWeights.food = { fastestArrival: 3, ownDeficit: 0, opponentDeficit: 0, ownPreferred: 0, opponentPreferred: 0 };
+  computer.policy.strategyWeights.food = { fastestArrival: 3, ownDeficit: 0, opponentDeficit: 0, ownPreferred: 0, opponentPreferred: 0 };
+
+  assert.deepEqual(chooseFoodTarget(state, player, computer), state.foods[0]);
+  assert.deepEqual(chooseFoodTarget(state, computer, player), state.foods[1]);
 });
 
 test("high food target abandons locked food when resource value collapses", () => {

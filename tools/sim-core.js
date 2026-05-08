@@ -10,6 +10,7 @@ const SANDWORM_UNDERGROUND_WINDOW_MS = 500;
 const DEFAULT_HP_PER_SNAKE_UNIT = 4;
 const DEFAULT_ATTACK_DAMAGE_MULTIPLIER = 1;
 const FOOD_TARGET_SWITCH_MS = 20000;
+const FOOD_RACE_TIE_WINDOW = 0.05;
 const DEAD_END_MIN_SPACE = 5;
 const AI_LOOKAHEAD_DEPTH = 3;
 const AI_LOOKAHEAD_BEAM_WIDTH = 3;
@@ -998,21 +999,12 @@ function foodValueFor(fighter, opponent, food, policy, state = null) {
   const highDifficulty = policy.aiDifficulty === "high" && state;
   const ownArrivalTime = highDifficulty ? arrivalTimeForDistance(fighter, state.balance, ownDistance, state.now) : ownDistance;
   const opponentArrivalTime = highDifficulty ? arrivalTimeForDistance(opponent, state.balance, opponentDistance, state.now) : opponentDistance;
-  const types = food.types || [];
-  const aiProfile = aiProfileFor(fighter);
-  const opponentProfile = aiProfileFor(opponent);
-  const preferredFood = aiProfile.preferredFood || fighter.character.foodPreference;
-  const opponentPreferredFood = opponentProfile.preferredFood || opponent.character.foodPreference;
   const weights = policy.strategyWeights.food;
   const normalizedTypes = foodTypeIdsForValue(food);
   const ownDeficit = normalizedTypes.reduce((sum, type) => sum + (fighter.balanceStockCap ?? 20) - (fighter.stock[type] || 0), 0) / Math.max(1, normalizedTypes.length);
   const opponentDeficit = normalizedTypes.reduce((sum, type) => sum + (fighter.balanceStockCap ?? 20) - (opponent.stock[type] || 0), 0) / Math.max(1, normalizedTypes.length);
-  const ownPrefers = preferredFood === "balanced"
-    ? normalizedTypes.length > 0
-    : preferredFood === "black" ? types.includes("black") : types.includes(preferredFood);
-  const opponentPrefers = opponentPreferredFood === "balanced"
-    ? normalizedTypes.length > 0
-    : opponentPreferredFood === "black" ? types.includes("black") : types.includes(opponentPreferredFood);
+  const ownPrefers = fighterPrefersFood(fighter, food);
+  const opponentPrefers = fighterPrefersFood(opponent, food);
   if (!highDifficulty) {
     return (
       weights.fastestArrival * (1 / (1 + ownDistance)) * 10 +
@@ -1039,6 +1031,19 @@ function foodValueFor(fighter, opponent, food, policy, state = null) {
   );
 }
 
+function foodMatchesPreference(preferredFood, food) {
+  const types = food?.types || [];
+  const normalizedTypes = foodTypeIdsForValue(food);
+  if (preferredFood === "balanced") return normalizedTypes.length > 0;
+  if (preferredFood === "black") return types.includes("black");
+  return types.includes(preferredFood);
+}
+
+function fighterPrefersFood(fighter, food) {
+  const profile = aiProfileFor(fighter);
+  return foodMatchesPreference(profile.preferredFood || fighter.character.foodPreference, food);
+}
+
 function foodRaceAdvantage(state, fighter, opponent, food) {
   if (fighter.policy.aiDifficulty === "high") {
     const opponentHead = perceivedSnakeFor(state, fighter, opponent)[0] || opponent.snake[0];
@@ -1046,6 +1051,55 @@ function foodRaceAdvantage(state, fighter, opponent, food) {
       - arrivalTimeForDistance(opponent, state.balance, wrappedDistance(state, opponentHead, food), state.now);
   }
   return wrappedDistance(state, fighter.snake[0], food) - wrappedDistance(state, opponent.snake[0], food);
+}
+
+function foodArrivalFrom(state, fighter, head, food) {
+  if (!head || !food) return Number.POSITIVE_INFINITY;
+  return arrivalTimeForDistance(fighter, state.balance, wrappedDistance(state, head, food), state.now);
+}
+
+function alternativeFoodArrivals(state, fighter, head, contestedFood) {
+  const contestedKey = keyOf(contestedFood);
+  return state.foods
+    .filter(food => keyOf(food) !== contestedKey)
+    .map(food => ({
+      key: keyOf(food),
+      arrival: foodArrivalFrom(state, fighter, head, food)
+    }))
+    .sort((a, b) => a.arrival - b.arrival || a.key.localeCompare(b.key));
+}
+
+function stableFoodRaceTieOwner(food) {
+  return hashSeed(`${keyOf(food)}:food-race-tie`) % 2 === 0 ? "player" : "computer";
+}
+
+function contestedFoodTieWinner(state, fighter, opponent, food) {
+  if (fighter.policy.aiDifficulty !== "high") return null;
+  const opponentHead = perceivedSnakeFor(state, fighter, opponent)[0] || opponent.snake[0];
+  const ownArrival = foodArrivalFrom(state, fighter, fighter.snake[0], food);
+  const opponentArrival = foodArrivalFrom(state, opponent, opponentHead, food);
+  if (!Number.isFinite(ownArrival) || !Number.isFinite(opponentArrival)) return null;
+  if (Math.abs(ownArrival - opponentArrival) > FOOD_RACE_TIE_WINDOW) return null;
+
+  const ownPreferred = fighterPrefersFood(fighter, food);
+  const opponentPreferred = fighterPrefersFood(opponent, food);
+  if (ownPreferred !== opponentPreferred) return ownPreferred ? fighter.owner : opponent.owner;
+
+  const ownAlternatives = alternativeFoodArrivals(state, fighter, fighter.snake[0], food);
+  const opponentAlternatives = alternativeFoodArrivals(state, opponent, opponentHead, food);
+  const count = Math.max(ownAlternatives.length, opponentAlternatives.length);
+  for (let index = 0; index < count; index += 1) {
+    const ownAlternativeArrival = ownAlternatives[index]?.arrival ?? Number.POSITIVE_INFINITY;
+    const opponentAlternativeArrival = opponentAlternatives[index]?.arrival ?? Number.POSITIVE_INFINITY;
+    if (ownAlternativeArrival + FOOD_RACE_TIE_WINDOW < opponentAlternativeArrival) return opponent.owner;
+    if (opponentAlternativeArrival + FOOD_RACE_TIE_WINDOW < ownAlternativeArrival) return fighter.owner;
+  }
+
+  return stableFoodRaceTieOwner(food);
+}
+
+function filterContestedFoodTargets(state, fighter, opponent, foods) {
+  return foods.filter(food => contestedFoodTieWinner(state, fighter, opponent, food) !== opponent.owner);
 }
 
 function shouldAbandonFoodTarget(state, fighter, opponent, food, lockedScore, bestScore, targetAge) {
@@ -1069,7 +1123,12 @@ function chooseFoodTarget(state, fighter, opponent) {
   const staleTarget = fighter.foodTargetKey && Number.isFinite(fighter.foodTargetAt) && state.now - fighter.foodTargetAt >= FOOD_TARGET_SWITCH_MS ? fighter.foodTargetKey : null;
   const choices = state.foods.filter(food => keyOf(food) !== staleTarget);
   const filteredChoices = filterUnsafeFoodTargets(state, fighter, opponent, choices.length ? choices : state.foods);
-  const targetPool = filteredChoices.length ? filteredChoices : choices.length ? choices : state.foods;
+  const targetPool = filterContestedFoodTargets(state, fighter, opponent, filteredChoices.length ? filteredChoices : choices.length ? choices : state.foods);
+  if (!targetPool.length) {
+    fighter.foodTargetKey = null;
+    fighter.foodTargetAt = 0;
+    return perceivedOpponent[0];
+  }
   const lockedTarget = !staleTarget && fighter.foodTargetKey ? targetPool.find(food => keyOf(food) === fighter.foodTargetKey) : null;
   const sortedTargets = [...targetPool]
     .map(food => ({ food, score: foodValueFor(fighter, opponent, food, fighter.policy, state) }))
@@ -1514,7 +1573,7 @@ function morayLinePlanDamage(state, attacker, defender, balance, plan) {
   if (!targetSnake.length || !plan?.target) return 0;
   const lineShape = bandShapeFromTotalWidth(attackStats(attacker.stock, "small", balance).radius);
   const stats = morayLineCandidateStats(targetSnake, boardLineThrough(state, plan.target, plan.direction), lineShape);
-  const strikeCount = Math.max(1, Math.round(ultimateSetting(balance, "moray", "strikeCount", 1)));
+  const strikeCount = Math.max(1, Math.round(ultimateSetting(balance, "moray", "strikeCount", 7)));
   const damageMultiplier = ultimateSetting(balance, "moray", "damageMultiplier", 0.3);
   return stats.damageScore * attackDamage(attacker.stock, "big", balance) * damageMultiplier * strikeCount;
 }
@@ -1818,7 +1877,7 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
     const lineCells = boardLineThrough(state, target, direction);
     const lineShape = bandShapeFromTotalWidth(small.radius);
     const excludedCells = attacker.snake.map(segment => ({ ...segment }));
-    const strikeCount = Math.max(1, Math.round(ultimateSetting(balance, characterId, "strikeCount", 1)));
+    const strikeCount = Math.max(1, Math.round(ultimateSetting(balance, characterId, "strikeCount", 7)));
     const strikeIntervalMs = small.delay * Math.max(0, ultimateSetting(balance, characterId, "strikeIntervalMultiplier", 0.5));
     const damage = bigDamage * ultimateSetting(balance, characterId, "damageMultiplier", 0.3);
     for (let index = 0; index < strikeCount; index += 1) {

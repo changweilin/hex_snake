@@ -193,6 +193,7 @@
     const aiLookaheadDepth = 3;
     const aiLookaheadBeamWidth = 3;
     const aiLookaheadFutureDiscount = 0.65;
+    const foodRaceTieWindow = 0.05;
 
     const baselineHighAiStrategyWeightsByCharacter = {
       dragon: {
@@ -875,7 +876,7 @@
       if (!targetSnake.length || !plan?.target) return 0;
       const lineShape = bandShapeFromTotalWidth(attackStats(ownerStock(owner), "small").radius);
       const stats = morayLineCandidateStats(targetSnake, boardLineThrough(plan.target, plan.direction), lineShape);
-      const strikeCount = Math.max(1, Math.round(ultimateSetting("moray", "strikeCount", 1)));
+      const strikeCount = Math.max(1, Math.round(ultimateSetting("moray", "strikeCount", 7)));
       const damageMultiplier = ultimateSetting("moray", "damageMultiplier", 0.3);
       return stats.damageScore * attackDamage(ownerStock(owner), "big") * damageMultiplier * strikeCount;
     }
@@ -1039,19 +1040,14 @@
       const opponentArrivalTime = arrivalTimeForDistance(opponent, opponentDistance, now);
       const profile = aiProfileFor(owner);
       const opponentProfile = aiProfileFor(opponent);
-      const types = food.types || [];
       const weights = aiStrategyWeightsFor(owner).food;
       const normalizedTypes = foodTypeIdsForValue(food);
       const ownStock = ownerStock(owner);
       const opponentStock = ownerStock(opponent);
       const ownDeficit = normalizedTypes.reduce((sum, type) => sum + maxFoodStock - (ownStock[type] || 0), 0) / Math.max(1, normalizedTypes.length);
       const opponentDeficit = normalizedTypes.reduce((sum, type) => sum + maxFoodStock - (opponentStock[type] || 0), 0) / Math.max(1, normalizedTypes.length);
-      const preferred = profile.preferredFood === "balanced"
-        ? normalizedTypes.length > 0
-        : profile.preferredFood === "black" ? types.includes("black") : types.includes(profile.preferredFood);
-      const opponentPreferred = opponentProfile.preferredFood === "balanced"
-        ? normalizedTypes.length > 0
-        : opponentProfile.preferredFood === "black" ? types.includes("black") : types.includes(opponentProfile.preferredFood);
+      const preferred = foodMatchesPreference(profile.preferredFood, food);
+      const opponentPreferred = foodMatchesPreference(opponentProfile.preferredFood, food);
       if (computerDifficulty === "high") {
         const ownResourceValue = foodResourceValueFor(owner, food);
         const opponentResourceValue = foodResourceValueFor(opponent, food);
@@ -1081,6 +1077,86 @@
       return wrappedDistance(ownerHead(owner), food) - wrappedDistance(ownerHead(opponent), food);
     }
 
+    function foodMatchesPreference(preferredFood, food) {
+      const types = food?.types || [];
+      const normalizedTypes = foodTypeIdsForValue(food);
+      if (preferredFood === "balanced") return normalizedTypes.length > 0;
+      if (preferredFood === "black") return types.includes("black");
+      return types.includes(preferredFood);
+    }
+
+    function ownerPrefersFood(owner, food) {
+      const profile = aiProfileFor(owner);
+      return foodMatchesPreference(profile.preferredFood, food);
+    }
+
+    function foodArrivalFrom(owner, head, food, now) {
+      if (!head || !food) return Number.POSITIVE_INFINITY;
+      return arrivalTimeForDistance(owner, wrappedDistance(head, food), now);
+    }
+
+    function alternativeFoodArrivals(owner, head, contestedFood, now) {
+      const contestedKey = keyOf(contestedFood);
+      return foods
+        .filter(food => keyOf(food) !== contestedKey)
+        .map(food => ({
+          key: keyOf(food),
+          arrival: foodArrivalFrom(owner, head, food, now)
+        }))
+        .sort((a, b) => a.arrival - b.arrival || a.key.localeCompare(b.key));
+    }
+
+    function stableFoodRaceTieOwner(food) {
+      return stableVariantIndex(food, 41, 2) === 0 ? "player" : "computer";
+    }
+
+    function isAutoFoodRaceTieBreakActive(owner, opponent) {
+      if (owner === opponent) return false;
+      if (typeof isPlayerAutoControlActive !== "function") return true;
+      return isPlayerAutoControlActive();
+    }
+
+    function contestedFoodTieWinner(owner, opponent, food, now) {
+      if (computerDifficulty !== "high") return null;
+      if (!isAutoFoodRaceTieBreakActive(owner, opponent)) return null;
+      const ownHead = ownerHead(owner);
+      const opponentHead = perceivedSnakeFor(owner, opponent, now)[0] || ownerHead(opponent);
+      const ownArrival = foodArrivalFrom(owner, ownHead, food, now);
+      const opponentArrival = foodArrivalFrom(opponent, opponentHead, food, now);
+      if (!Number.isFinite(ownArrival) || !Number.isFinite(opponentArrival)) return null;
+      if (Math.abs(ownArrival - opponentArrival) > foodRaceTieWindow) return null;
+
+      const ownPreferred = ownerPrefersFood(owner, food);
+      const opponentPreferred = ownerPrefersFood(opponent, food);
+      if (ownPreferred !== opponentPreferred) return ownPreferred ? owner : opponent;
+
+      const ownAlternatives = alternativeFoodArrivals(owner, ownHead, food, now);
+      const opponentAlternatives = alternativeFoodArrivals(opponent, opponentHead, food, now);
+      const count = Math.max(ownAlternatives.length, opponentAlternatives.length);
+      for (let index = 0; index < count; index += 1) {
+        const ownAlternativeArrival = ownAlternatives[index]?.arrival ?? Number.POSITIVE_INFINITY;
+        const opponentAlternativeArrival = opponentAlternatives[index]?.arrival ?? Number.POSITIVE_INFINITY;
+        if (ownAlternativeArrival + foodRaceTieWindow < opponentAlternativeArrival) return opponent;
+        if (opponentAlternativeArrival + foodRaceTieWindow < ownAlternativeArrival) return owner;
+      }
+
+      return stableFoodRaceTieOwner(food);
+    }
+
+    function filterContestedFoodTargets(owner, opponent, candidateFoods, now) {
+      return candidateFoods.filter(food => contestedFoodTieWinner(owner, opponent, food, now) !== opponent);
+    }
+
+    function setAiFoodTarget(owner, nextTargetKey, now) {
+      if (owner === "player") {
+        if (nextTargetKey !== playerFoodTargetKey) playerFoodTargetAt = nextTargetKey ? now : 0;
+        playerFoodTargetKey = nextTargetKey;
+      } else {
+        if (nextTargetKey !== computerFoodTargetKey) computerFoodTargetAt = nextTargetKey ? now : 0;
+        computerFoodTargetKey = nextTargetKey;
+      }
+    }
+
     function shouldAbandonFoodTarget(owner, opponent, food, now, lockedScore, bestScore, targetAge) {
       if (computerDifficulty !== "high") return false;
       const occupied = movementOccupiedSet(owner, opponent, now);
@@ -1101,7 +1177,11 @@
       const staleTarget = targetKey && Number.isFinite(targetAt) && now - targetAt >= 20000 ? targetKey : null;
       const choices = foods.filter(food => keyOf(food) !== staleTarget);
       const filteredChoices = filterUnsafeFoodTargets(owner, opponent, choices.length ? choices : foods, now);
-      const targetPool = filteredChoices.length ? filteredChoices : choices.length ? choices : foods;
+      const targetPool = filterContestedFoodTargets(owner, opponent, filteredChoices.length ? filteredChoices : choices.length ? choices : foods, now);
+      if (!targetPool.length) {
+        setAiFoodTarget(owner, null, now);
+        return perceivedOpponent[0];
+      }
       const lockedTarget = !staleTarget && targetKey ? targetPool.find(food => keyOf(food) === targetKey) : null;
       const sortedTargets = [...targetPool]
         .map(food => ({ food, score: foodValueFor(owner, opponent, food, now) }))
@@ -1113,13 +1193,7 @@
         ? lockedTarget
         : bestTarget?.food;
       const nextTargetKey = target ? keyOf(target) : null;
-      if (owner === "player") {
-        if (nextTargetKey !== playerFoodTargetKey) playerFoodTargetAt = nextTargetKey ? now : 0;
-        playerFoodTargetKey = nextTargetKey;
-      } else {
-        if (nextTargetKey !== computerFoodTargetKey) computerFoodTargetAt = nextTargetKey ? now : 0;
-        computerFoodTargetKey = nextTargetKey;
-      }
+      setAiFoodTarget(owner, nextTargetKey, now);
       return target;
     }
 
