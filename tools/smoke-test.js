@@ -11,6 +11,7 @@ const defaultPort = Number(process.env.HEX_SNAKE_SMOKE_PORT || process.env.PORT 
 const externalUrl = process.env.HEX_SNAKE_URL || "";
 const startupTimeoutMs = Number(process.env.HEX_SNAKE_SMOKE_STARTUP_MS || 15000);
 const actionTimeoutMs = Number(process.env.HEX_SNAKE_SMOKE_ACTION_MS || 10000);
+const replayFixtureId = "smoke-replay-1";
 
 function loadPlaywright() {
   try {
@@ -20,6 +21,91 @@ function loadPlaywright() {
       "Playwright is required for browser smoke tests. Run `npm install` first, then retry `npm.cmd run test:smoke`."
     );
   }
+}
+
+function createReplaySnapshot(t, playerOffset = 0) {
+  return {
+    t,
+    final: t >= 5000,
+    radius: 6,
+    gridSize: 7,
+    playerCharacterId: "dragon",
+    computerCharacterId: "sandworm",
+    dir: 0,
+    nextDir: 0,
+    computerDir: 3,
+    snake: [
+      { q: -2 + playerOffset, r: 2 },
+      { q: -3 + playerOffset, r: 2 },
+      { q: -4 + playerOffset, r: 2 }
+    ],
+    computerSnake: [
+      { q: 2, r: -2 },
+      { q: 3, r: -2 },
+      { q: 4, r: -2 }
+    ],
+    foods: [{ q: 0, r: 0, types: ["protein"] }],
+    projectiles: [],
+    blasts: [],
+    hazards: [],
+    targetCell: null,
+    targetActive: false,
+    score: t >= 2500 ? 1 : 0,
+    computerScore: 0,
+    playerHp: 40,
+    computerHp: 40,
+    playerStock: {},
+    computerStock: {},
+    playerAmmo: 0,
+    computerAmmo: 0,
+    playerAmmoCharge: 0,
+    computerAmmoCharge: 0,
+    totalElapsedMs: t,
+    lastFeedElapsedMs: 0,
+    playerStunRemaining: 0,
+    playerSlowRemaining: 0,
+    computerStunRemaining: 0,
+    computerSlowRemaining: 0,
+    playerCollisionParalysisMs: 0,
+    computerCollisionParalysisMs: 0,
+    playerUndergroundRemaining: 0,
+    computerUndergroundRemaining: 0
+  };
+}
+
+function createReplayFixture() {
+  return {
+    id: replayFixtureId,
+    createdAt: "2026-05-09T00:00:00.000Z",
+    playerCharacterId: "dragon",
+    computerCharacterId: "sandworm",
+    computerBattleMode: false,
+    relayMode: false,
+    durationMs: 5000,
+    score: 1,
+    computerScore: 0,
+    winnerOwner: "player",
+    playerLost: false,
+    computerLost: true,
+    surrendered: false,
+    title: "Smoke replay fixture",
+    settings: {
+      gridSize: 7,
+      foodCount: 1,
+      computerDifficulty: "medium",
+      initialSpeed: 1,
+      gmMode: false,
+      initialLength: 3,
+      initialEnergy: 0,
+      initialBombs: 0,
+      initialStock: {}
+    },
+    snapshots: [
+      createReplaySnapshot(0, 0),
+      createReplaySnapshot(2500, 1),
+      createReplaySnapshot(5000, 2)
+    ]
+  };
 }
 
 function requestOk(url) {
@@ -101,6 +187,83 @@ async function expectHidden(page, selector, label) {
   console.log(`ok - ${label}`);
 }
 
+async function expectText(page, selector, expected, label) {
+  await page.waitForFunction(
+    ({ selector, expected }) => document.querySelector(selector)?.textContent?.trim() === expected,
+    { selector, expected },
+    { timeout: actionTimeoutMs }
+  );
+  console.log(`ok - ${label}`);
+}
+
+async function expectControlValue(page, selector, expected, label) {
+  await page.waitForFunction(
+    ({ selector, expected }) => document.querySelector(selector)?.value === expected,
+    { selector, expected },
+    { timeout: actionTimeoutMs }
+  );
+  console.log(`ok - ${label}`);
+}
+
+async function expectControlAttribute(page, selector, attribute, expected, label) {
+  await page.waitForFunction(
+    ({ selector, attribute, expected }) => document.querySelector(selector)?.getAttribute(attribute) === expected,
+    { selector, attribute, expected },
+    { timeout: actionTimeoutMs }
+  );
+  console.log(`ok - ${label}`);
+}
+
+async function setRangeValue(page, selector, value) {
+  await page.locator(selector).evaluate((input, nextValue) => {
+    input.value = nextValue;
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  }, value);
+}
+
+async function exerciseReplayRegression(page) {
+  await page.locator("#settingsReplayButton").click({ timeout: actionTimeoutMs });
+  await expectVisible(page, "#replayModal", "replay modal opens");
+  await expectText(page, "#recentReplayCount", "1 / 5", "replay fixture is listed");
+  await expectText(page, "#favoriteReplayCount", "0 / 5", "replay favorites start empty");
+  await expectVisible(page, `[data-replay-play="${replayFixtureId}"]`, "replay play action is available");
+
+  await page.locator(`[data-replay-favorite="${replayFixtureId}"]`).first().click({ timeout: actionTimeoutMs });
+  await expectText(page, "#favoriteReplayCount", "1 / 5", "replay favorite toggle refreshes list");
+
+  await page.locator(`[data-replay-play="${replayFixtureId}"]`).first().click({ timeout: actionTimeoutMs });
+  await expectHidden(page, "#replayModal", "replay modal closes for playback");
+  await expectVisible(page, "#replayControls", "replay controls show");
+  await expectControlValue(page, "#replaySpeedSelect", "1", "replay speed defaults to x1");
+  await expectControlAttribute(page, "#replayTimeline", "max", "5000", "replay timeline duration is loaded");
+
+  const playTextBeforePause = await page.locator("#replayPlayButton").textContent();
+  await page.locator("#replayPlayButton").click({ timeout: actionTimeoutMs });
+  await page.waitForFunction(
+    before => document.querySelector("#replayPlayButton")?.textContent !== before,
+    playTextBeforePause,
+    { timeout: actionTimeoutMs }
+  );
+  console.log("ok - replay pause toggles playback button");
+
+  await page.locator("#replayReverseButton").click({ timeout: actionTimeoutMs });
+  await page.waitForFunction(
+    () => document.querySelector("#replayReverseButton")?.classList.contains("is-selected"),
+    null,
+    { timeout: actionTimeoutMs }
+  );
+  console.log("ok - replay reverse toggles direction");
+
+  await page.locator("#replaySpeedSelect").selectOption("2");
+  await expectControlValue(page, "#replaySpeedSelect", "2", "replay speed can change");
+
+  await setRangeValue(page, "#replayTimeline", "2500");
+  await expectControlValue(page, "#replayTimeline", "2500", "replay seek updates timeline");
+
+  await page.locator("#replayExitButton").click({ timeout: actionTimeoutMs });
+  await expectHidden(page, "#replayControls", "replay controls hide after exit");
+}
+
 async function runViewportSmoke(browser, url, profile) {
   const context = await browser.newContext({
     viewport: profile.viewport,
@@ -109,10 +272,12 @@ async function runViewportSmoke(browser, url, profile) {
     hasTouch: Boolean(profile.hasTouch)
   });
 
-  await context.addInitScript(() => {
+  await context.addInitScript(replayFixture => {
     localStorage.setItem("hexSnakeSfxMuted", "1");
     localStorage.setItem("hexSnakeTutorialSeen", "1");
-  });
+    localStorage.setItem("hexSnakeReplayRecent", JSON.stringify([replayFixture]));
+    localStorage.setItem("hexSnakeReplayFavorites", "[]");
+  }, createReplayFixture());
 
   const page = await context.newPage();
   const consoleErrors = [];
@@ -154,10 +319,7 @@ async function runViewportSmoke(browser, url, profile) {
   await page.locator("#settingsCloseButton").click({ timeout: actionTimeoutMs });
   await expectHidden(page, "#settingsContent", "settings panel closes");
 
-  await page.locator("#settingsReplayButton").click({ timeout: actionTimeoutMs });
-  await expectVisible(page, "#replayModal", "replay modal opens");
-  await page.locator("#replayModalClose").click({ timeout: actionTimeoutMs });
-  await expectHidden(page, "#replayModal", "replay modal closes");
+  await exerciseReplayRegression(page);
 
   await page.locator("#startButton").click({ timeout: actionTimeoutMs });
   await page.waitForFunction(() => !document.querySelector("#overlay")?.classList.contains("show"), null, {

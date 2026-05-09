@@ -75,8 +75,8 @@
   - 範圍：建立可重複的 replay 記錄、播放、暫停、倒放、seek 測試。
   - 目標：避免 replay facade 或後續狀態整理造成回放壞掉。
   - 驗收：replay modal 和播放控制可以自動化驗證。
-  - 狀態：未開始。
-  - 下一步：等 browser smoke test 建好後，將 replay modal flow 擴成可重複測試。
+  - 狀態：基礎回歸測試已整合到 `tools/smoke-test.js`；固定 replay fixture 會驗證 modal 列表、加入最愛、播放、暫停、倒放、速度切換、seek、離開播放，桌機與手機 smoke 已通過。
+  - 下一步：後續若要擴充 Product Extensions，再補匯出/匯入 replay payload 與真實對局產生 replay 的端到端測試。
 
 ## P2 - Architecture
 
