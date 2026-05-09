@@ -4104,6 +4104,117 @@
       setReplaySpeedMenuOpen(false);
     });
 
+    let replayBoardGesture = null;
+    let lastReplayBoardTap = { at: 0, x: 0, y: 0 };
+    const replayBoardLongPressMs = 360;
+    const replayBoardTapMs = 320;
+    const replayBoardTapPx = 26;
+    const replayBoardSwipePx = 48;
+
+    function clearReplayBoardLongPressTimer() {
+      if (!replayBoardGesture?.longPressTimer) return;
+      clearTimeout(replayBoardGesture.longPressTimer);
+      replayBoardGesture.longPressTimer = null;
+    }
+
+    function beginReplayBoardGesture(event) {
+      if (!HexSnakeReplay.isPlaybackMode() || !HexSnakeReplay.playback) return false;
+      if (event.button > 0 || event.target.closest(".overlay")) return false;
+      event.preventDefault();
+      event.stopPropagation();
+      setReplaySpeedMenuOpen(false);
+      replayBoardGesture = {
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        startTime: performance.now(),
+        startReplayTime: HexSnakeReplay.playback.time,
+        startSpeedIndex: replayPlaybackSpeedIndex(),
+        activated: false,
+        moved: false,
+        mode: null,
+        longPressTimer: setTimeout(() => {
+          if (!replayBoardGesture || replayBoardGesture.pointerId !== event.pointerId || !HexSnakeReplay.playback) return;
+          replayBoardGesture.activated = true;
+          replayBoardGesture.startReplayTime = HexSnakeReplay.playback.time;
+          replayBoardGesture.startSpeedIndex = replayPlaybackSpeedIndex();
+        }, replayBoardLongPressMs)
+      };
+      playArea.setPointerCapture?.(event.pointerId);
+      return true;
+    }
+
+    function moveReplayBoardGesture(event) {
+      if (!replayBoardGesture || event.pointerId !== replayBoardGesture.pointerId) return false;
+      if (!HexSnakeReplay.playback) {
+        clearReplayBoardLongPressTimer();
+        replayBoardGesture = null;
+        return false;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      const dx = event.clientX - replayBoardGesture.startX;
+      const dy = event.clientY - replayBoardGesture.startY;
+      if (Math.hypot(dx, dy) > 8) replayBoardGesture.moved = true;
+      if (!replayBoardGesture.activated && Math.hypot(dx, dy) > 14) {
+        clearReplayBoardLongPressTimer();
+      }
+      if (!replayBoardGesture.activated) return true;
+
+      if (!replayBoardGesture.mode && Math.max(Math.abs(dx), Math.abs(dy)) > 12) {
+        replayBoardGesture.mode = Math.abs(dx) >= Math.abs(dy) ? "seek" : "speed";
+      }
+      if (replayBoardGesture.mode === "seek") {
+        const width = Math.max(1, playArea.getBoundingClientRect().width);
+        const nextTime = replayBoardGesture.startReplayTime + HexSnakeReplay.playback.duration * (dx / width);
+        HexSnakeReplay.seekPlayback(nextTime);
+      } else if (replayBoardGesture.mode === "speed") {
+        const stepDelta = Math.round(dy / 28);
+        applyReplayPlaybackSpeedIndex(replayBoardGesture.startSpeedIndex + stepDelta);
+      }
+      return true;
+    }
+
+    function endReplayBoardGesture(event) {
+      if (!replayBoardGesture || event.pointerId !== replayBoardGesture.pointerId) return false;
+      event.preventDefault();
+      event.stopPropagation();
+      const gesture = replayBoardGesture;
+      const dx = event.clientX - gesture.startX;
+      const dy = event.clientY - gesture.startY;
+      clearReplayBoardLongPressTimer();
+      if (playArea.hasPointerCapture?.(event.pointerId)) playArea.releasePointerCapture(event.pointerId);
+      replayBoardGesture = null;
+
+      if (gesture.activated) return true;
+      if (Math.abs(dx) >= replayBoardSwipePx && Math.abs(dx) > Math.abs(dy) * 1.25) {
+        lastReplayBoardTap = { at: 0, x: 0, y: 0 };
+        HexSnakeReplay.switchPlayback(dx < 0 ? 1 : -1);
+        return true;
+      }
+      if (Math.hypot(dx, dy) <= 12) {
+        const now = performance.now();
+        const tapDistance = Math.hypot(event.clientX - lastReplayBoardTap.x, event.clientY - lastReplayBoardTap.y);
+        if (now - lastReplayBoardTap.at <= replayBoardTapMs && tapDistance <= replayBoardTapPx) {
+          lastReplayBoardTap = { at: 0, x: 0, y: 0 };
+          HexSnakeReplay.togglePlaybackPaused();
+        } else {
+          lastReplayBoardTap = { at: now, x: event.clientX, y: event.clientY };
+        }
+      }
+      return true;
+    }
+
+    function cancelReplayBoardGesture(event) {
+      if (!replayBoardGesture || event.pointerId !== replayBoardGesture.pointerId) return false;
+      event.preventDefault();
+      event.stopPropagation();
+      clearReplayBoardLongPressTimer();
+      if (playArea.hasPointerCapture?.(event.pointerId)) playArea.releasePointerCapture(event.pointerId);
+      replayBoardGesture = null;
+      return true;
+    }
+
     document.addEventListener("pointerdown", event => {
       if (!autoSpeedMenu.hidden && !autoBattlePanel.contains(event.target)) {
         setAutoSpeedMenuOpen(false);
@@ -4199,14 +4310,33 @@
 
     playArea.addEventListener("pointerdown", event => {
       if (event.target.closest(".overlay")) return;
+      if (beginReplayBoardGesture(event)) return;
       beginBoardAttackPointer(event);
     });
-    playArea.addEventListener("pointermove", moveBoardAttackPointer);
-    playArea.addEventListener("pointerup", finishBoardAttackPointer);
-    playArea.addEventListener("pointercancel", cancelBoardAttackPointer);
-    window.addEventListener("pointermove", moveBoardAttackPointer);
-    window.addEventListener("pointerup", finishBoardAttackPointer);
-    window.addEventListener("pointercancel", cancelBoardAttackPointer);
+    playArea.addEventListener("pointermove", event => {
+      if (moveReplayBoardGesture(event)) return;
+      moveBoardAttackPointer(event);
+    });
+    playArea.addEventListener("pointerup", event => {
+      if (endReplayBoardGesture(event)) return;
+      finishBoardAttackPointer(event);
+    });
+    playArea.addEventListener("pointercancel", event => {
+      if (cancelReplayBoardGesture(event)) return;
+      cancelBoardAttackPointer(event);
+    });
+    window.addEventListener("pointermove", event => {
+      if (moveReplayBoardGesture(event)) return;
+      moveBoardAttackPointer(event);
+    });
+    window.addEventListener("pointerup", event => {
+      if (endReplayBoardGesture(event)) return;
+      finishBoardAttackPointer(event);
+    });
+    window.addEventListener("pointercancel", event => {
+      if (cancelReplayBoardGesture(event)) return;
+      cancelBoardAttackPointer(event);
+    });
 
     window.addEventListener("keydown", event => {
       if (pendingDirectionKeybind !== null) {

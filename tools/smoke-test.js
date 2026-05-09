@@ -227,6 +227,29 @@ async function setRangeValue(page, selector, value) {
   }, value);
 }
 
+async function playAreaPoint(page, xRatio = 0.5, yRatio = 0.5) {
+  const box = await page.locator("#playArea").boundingBox();
+  if (!box) throw new Error("playArea bounding box unavailable");
+  return {
+    x: box.x + box.width * xRatio,
+    y: box.y + box.height * yRatio
+  };
+}
+
+async function dragOnPlayArea(page, { xRatio = 0.5, yRatio = 0.5, dx = 0, dy = 0, holdMs = 0 }) {
+  const start = await playAreaPoint(page, xRatio, yRatio);
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  if (holdMs) await page.waitForTimeout(holdMs);
+  await page.mouse.move(start.x + dx, start.y + dy, { steps: 8 });
+  await page.mouse.up();
+}
+
+async function doubleClickPlayArea(page) {
+  const point = await playAreaPoint(page);
+  await page.mouse.dblclick(point.x, point.y);
+}
+
 async function exerciseRulesModal(page) {
   await page.locator("#rulesButton").click({ timeout: actionTimeoutMs });
   await expectVisible(page, "#rulesModal", "rules modal opens");
@@ -342,13 +365,38 @@ async function exerciseReplayRegression(page) {
   await expectText(page, "#replaySpeedSelect", "x2", "replay previous keeps remembered speed");
   await expectText(page, "#replayPlayButton", "⏸", "replay previous starts playback immediately");
 
+  await doubleClickPlayArea(page);
+  await expectText(page, "#replayPlayButton", "▶", "replay board double click pauses");
+  await doubleClickPlayArea(page);
+  await expectText(page, "#replayPlayButton", "⏸", "replay board double click resumes");
+
+  await dragOnPlayArea(page, { dx: -140 });
+  await expectControlAttribute(page, "#replayTimeline", "max", "7000", "replay board swipe left switches next");
+  await expectText(page, "#replayPlayButton", "⏸", "replay board swipe left starts playback immediately");
+
+  await dragOnPlayArea(page, { dx: 140 });
+  await expectControlAttribute(page, "#replayTimeline", "max", "5000", "replay board swipe right switches previous");
+  await expectText(page, "#replayPlayButton", "⏸", "replay board swipe right starts playback immediately");
+
+  await dragOnPlayArea(page, { dx: 120, holdMs: 420 });
+  await page.waitForFunction(
+    () => Number(document.querySelector("#replayTimeline")?.value || 0) > 500,
+    null,
+    { timeout: actionTimeoutMs }
+  );
+  await expectText(page, "#replayPlayButton", "▶", "replay board long-press horizontal drag scrubs and pauses");
+
+  await dragOnPlayArea(page, { dy: -60, holdMs: 420 });
+  await expectText(page, "#replaySpeedSelect", "x4", "replay board long-press vertical drag changes speed");
+  await expectControlAttribute(page, "#replaySpeedSelect", "aria-valuenow", "4", "replay board speed gesture updates slider");
+
   await page.locator("#replayExitButton").click({ timeout: actionTimeoutMs });
   await expectHidden(page, "#replayControls", "replay controls hide after exit");
 
   await page.locator("#settingsReplayButton").click({ timeout: actionTimeoutMs });
   await expectVisible(page, "#replayModal", "replay modal opens after playback exit");
   await page.locator(`[data-replay-play="${replayFixtureId}"]`).first().click({ timeout: actionTimeoutMs });
-  await expectText(page, "#replaySpeedSelect", "x2", "replay speed persists across playback sessions");
+  await expectText(page, "#replaySpeedSelect", "x4", "replay speed persists across playback sessions");
   await expectText(page, "#replayPlayButton", "⏸", "replay restarts playback immediately");
   await page.locator("#replayExitButton").click({ timeout: actionTimeoutMs });
   await expectHidden(page, "#replayControls", "replay controls hide after persisted-speed check");
