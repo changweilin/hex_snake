@@ -3779,6 +3779,12 @@
     replayReverseButton.addEventListener("click", () => {
       HexSnakeReplay.reversePlayback();
     });
+    replayPrevButton.addEventListener("click", () => {
+      HexSnakeReplay.switchPlayback(-1);
+    });
+    replayNextButton.addEventListener("click", () => {
+      HexSnakeReplay.switchPlayback(1);
+    });
     replaySpeedSelect.addEventListener("change", () => {
       HexSnakeReplay.setPlaybackSpeed(replaySpeedSelect.value);
     });
@@ -4215,6 +4221,14 @@
         if (event.key === " " && HexSnakeReplay.playback) {
           event.preventDefault();
           HexSnakeReplay.togglePlaybackPaused();
+        }
+        if (event.key === "ArrowLeft" && HexSnakeReplay.playback) {
+          event.preventDefault();
+          HexSnakeReplay.switchPlayback(-1);
+        }
+        if (event.key === "ArrowRight" && HexSnakeReplay.playback) {
+          event.preventDefault();
+          HexSnakeReplay.switchPlayback(1);
         }
         return;
       }

@@ -12,6 +12,7 @@ const externalUrl = process.env.HEX_SNAKE_URL || "";
 const startupTimeoutMs = Number(process.env.HEX_SNAKE_SMOKE_STARTUP_MS || 15000);
 const actionTimeoutMs = Number(process.env.HEX_SNAKE_SMOKE_ACTION_MS || 10000);
 const replayFixtureId = "smoke-replay-1";
+const replayFixtureNextId = "smoke-replay-2";
 
 function loadPlaywright() {
   try {
@@ -73,22 +74,23 @@ function createReplaySnapshot(t, playerOffset = 0) {
   };
 }
 
-function createReplayFixture() {
+function createReplayFixture(options = {}) {
+  const durationMs = options.durationMs || 5000;
   return {
-    id: replayFixtureId,
-    createdAt: "2026-05-09T00:00:00.000Z",
+    id: options.id || replayFixtureId,
+    createdAt: options.createdAt || "2026-05-09T00:00:00.000Z",
     playerCharacterId: "dragon",
-    computerCharacterId: "sandworm",
+    computerCharacterId: options.computerCharacterId || "sandworm",
     computerBattleMode: false,
     relayMode: false,
-    durationMs: 5000,
+    durationMs,
     score: 1,
     computerScore: 0,
     winnerOwner: "player",
     playerLost: false,
     computerLost: true,
     surrendered: false,
-    title: "Smoke replay fixture",
+    title: options.title || "Smoke replay fixture",
     settings: {
       gridSize: 7,
       foodCount: 1,
@@ -102,8 +104,8 @@ function createReplayFixture() {
     },
     snapshots: [
       createReplaySnapshot(0, 0),
-      createReplaySnapshot(2500, 1),
-      createReplaySnapshot(5000, 2)
+      createReplaySnapshot(Math.round(durationMs / 2), 1),
+      createReplaySnapshot(durationMs, 2)
     ]
   };
 }
@@ -278,7 +280,7 @@ async function exercisePortraitLightbox(page) {
 async function exerciseReplayRegression(page) {
   await page.locator("#settingsReplayButton").click({ timeout: actionTimeoutMs });
   await expectVisible(page, "#replayModal", "replay modal opens");
-  await expectText(page, "#recentReplayCount", "1 / 5", "replay fixture is listed");
+  await expectText(page, "#recentReplayCount", "2 / 5", "replay fixtures are listed");
   await expectText(page, "#favoriteReplayCount", "0 / 5", "replay favorites start empty");
   await expectVisible(page, `[data-replay-play="${replayFixtureId}"]`, "replay play action is available");
 
@@ -330,12 +332,31 @@ async function exerciseReplayRegression(page) {
   await setRangeValue(page, "#replayTimeline", "2500");
   await expectControlValue(page, "#replayTimeline", "2500", "replay seek updates timeline");
 
+  await page.locator("#replayNextButton").click({ timeout: actionTimeoutMs });
+  await expectControlAttribute(page, "#replayTimeline", "max", "7000", "replay next switches to the next record");
+  await expectText(page, "#replaySpeedSelect", "x2", "replay next keeps remembered speed");
+  await expectText(page, "#replayPlayButton", "⏸", "replay next starts playback immediately");
+
+  await page.locator("#replayPrevButton").click({ timeout: actionTimeoutMs });
+  await expectControlAttribute(page, "#replayTimeline", "max", "5000", "replay previous switches back");
+  await expectText(page, "#replaySpeedSelect", "x2", "replay previous keeps remembered speed");
+  await expectText(page, "#replayPlayButton", "⏸", "replay previous starts playback immediately");
+
   await page.locator("#replayExitButton").click({ timeout: actionTimeoutMs });
   await expectHidden(page, "#replayControls", "replay controls hide after exit");
 
   await page.locator("#settingsReplayButton").click({ timeout: actionTimeoutMs });
   await expectVisible(page, "#replayModal", "replay modal opens after playback exit");
+  await page.locator(`[data-replay-play="${replayFixtureId}"]`).first().click({ timeout: actionTimeoutMs });
+  await expectText(page, "#replaySpeedSelect", "x2", "replay speed persists across playback sessions");
+  await expectText(page, "#replayPlayButton", "⏸", "replay restarts playback immediately");
+  await page.locator("#replayExitButton").click({ timeout: actionTimeoutMs });
+  await expectHidden(page, "#replayControls", "replay controls hide after persisted-speed check");
+
+  await page.locator("#settingsReplayButton").click({ timeout: actionTimeoutMs });
+  await expectVisible(page, "#replayModal", "replay modal opens for deletion");
   await page.locator(`[data-replay-delete="${replayFixtureId}"]`).first().click({ timeout: actionTimeoutMs });
+  await page.locator(`[data-replay-delete="${replayFixtureNextId}"]`).first().click({ timeout: actionTimeoutMs });
   await expectText(page, "#recentReplayCount", "0 / 5", "replay record can be deleted");
   await expectVisible(page, "#recentReplayList .replay-empty", "replay recent empty state is visible");
   await expectVisible(page, "#favoriteReplayList .replay-empty", "replay favorite empty state is visible");
@@ -380,9 +401,19 @@ async function runViewportSmoke(browser, url, profile) {
   await context.addInitScript(replayFixture => {
     localStorage.setItem("hexSnakeSfxMuted", "1");
     localStorage.setItem("hexSnakeTutorialSeen", "1");
-    localStorage.setItem("hexSnakeReplayRecent", JSON.stringify([replayFixture]));
+    localStorage.removeItem("hexSnakeReplaySpeed");
+    localStorage.setItem("hexSnakeReplayRecent", JSON.stringify(replayFixture));
     localStorage.setItem("hexSnakeReplayFavorites", "[]");
-  }, createReplayFixture());
+  }, [
+    createReplayFixture(),
+    createReplayFixture({
+      id: replayFixtureNextId,
+      createdAt: "2026-05-09T00:01:00.000Z",
+      computerCharacterId: "moray",
+      durationMs: 7000,
+      title: "Smoke replay fixture next"
+    })
+  ]);
 
   const page = await context.newPage();
   const consoleErrors = [];

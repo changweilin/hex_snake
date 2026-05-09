@@ -1591,9 +1591,17 @@
     }
 
     .replay-controls {
+      position: fixed;
+      left: 50%;
+      right: auto;
+      bottom: max(10px, env(safe-area-inset-bottom));
+      z-index: 320;
       display: grid;
       gap: 7px;
       align-items: center;
+      justify-self: center;
+      width: min(360px, calc(100vw - 20px));
+      transform: translateX(-50%);
     }
 
     .auto-battle-panel[hidden],
@@ -1820,6 +1828,8 @@
     }
 
     .auto-battle-panel button[data-auto-pause],
+    .replay-controls #replayPrevButton,
+    .replay-controls #replayNextButton,
     .replay-controls #replayPlayButton,
     .replay-controls #replayReverseButton,
     .replay-controls #replayExitButton {
@@ -1827,6 +1837,12 @@
       min-width: 34px;
       padding: 6px 0;
       font-size: 0.9rem;
+    }
+
+    .replay-controls #replayPrevButton:disabled,
+    .replay-controls #replayNextButton:disabled {
+      opacity: 0.45;
+      cursor: default;
     }
 
     .replay-controls #replayReverseButton.is-selected {
@@ -2037,7 +2053,9 @@
       }
 
       .replay-controls {
-        right: max(10px, env(safe-area-inset-right));
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%);
         max-width: min(320px, calc(100vw - 20px));
       }
 
