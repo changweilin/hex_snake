@@ -57,8 +57,11 @@ const {
 
 const {
   buildTrainingTargetAnalysis,
+  buildFinalShortlist,
+  characterQualifiedComplete,
   confidencePruneDecision,
   confidencePruneRule,
+  eliteRacingPruneDecision,
   evaluateAgainstBasic,
   evaluateAgainstBasicParallel,
   runOptimization
@@ -2220,10 +2223,16 @@ test("strategy optimizer writes live progress, target analysis, and checkpoint",
     gaPopulation: 2,
     gaRounds: 1,
     gaRuns: 1,
+    cemRounds: 1,
+    cemSamples: 1,
+    cemElites: 1,
+    cemRuns: 1,
     rlRounds: 1,
     rlSamples: 1,
     rlRuns: 1,
     crossRuns: 1,
+    finalCandidatesPerCharacter: 2,
+    finalCandidateRuns: 1,
     minQualified: 1,
     jobs: 2,
     parallelChunkGames: 2,
@@ -2242,9 +2251,15 @@ test("strategy optimizer writes live progress, target analysis, and checkpoint",
   assert.equal(progress.progress.plannedGames, expectedAnalysis.plannedWork.totalGames);
   assert.equal(progress.progress.completedGames, expectedAnalysis.plannedWork.totalGames);
   assert.equal(checkpoint.ga.completed, true);
+  assert.equal(checkpoint.cem.completed, true);
   assert.equal(checkpoint.rl.completed, true);
+  assert.equal(checkpoint.cross.finalShortlist.completed, true);
   assert.equal(checkpoint.cross.baselineCross.completed, true);
   assert.equal(checkpoint.cross.bestCross.completed, true);
+  assert.equal(result.cem.rounds, 1);
+  assert.ok(fs.existsSync(result.manifest.outputs.cemQualified));
+  assert.ok(fs.existsSync(result.manifest.outputs.finalShortlist));
+  assert.ok(fs.existsSync(result.manifest.outputs.finalShortlistValidation));
   assert.equal(result.manifest.outputs.progress, progressPath);
   assert.equal(result.manifest.outputs.checkpoint, checkpointPath);
 });
@@ -2289,7 +2304,124 @@ test("parallel strategy evaluation matches serial totals", async () => {
     jobs: 3,
     parallelChunkGames: 5
   });
-  assert.deepEqual(parallel, serial);
+  ["games", "wins", "losses", "draws", "totalDurationMs", "totalScoreDiff"].forEach(key => {
+    assert.equal(parallel[key], serial[key]);
+  });
+  assert.ok(Math.abs(parallel.totalHpDiff - serial.totalHpDiff) < 1e-9);
+  ["winRate", "drawRate", "decisiveWinRate", "outcomeWinRate", "averageDurationMs", "averageHpDiff", "averageScoreDiff", "reward"].forEach(key => {
+    assert.equal(parallel[key], serial[key]);
+  });
+});
+
+test("elite racing prunes candidates that cannot reach the cutoff lower bound", () => {
+  const leader = {
+    strategyId: "leader",
+    games: 100,
+    wins: 82
+  };
+  const trailing = {
+    strategyId: "trailing",
+    games: 100,
+    wins: 50
+  };
+  const decision = eliteRacingPruneDecision(trailing, leader, 1, 1.96, 100);
+  assert.equal(decision.pruned, true);
+  assert.equal(decision.pruneMethod, "elite-racing-wilson");
+  assert.equal(decision.pruneStage, "top-1");
+  assert.ok(decision.pruneCiHigh < decision.pruneTargetWinRate);
+  assert.equal(eliteRacingPruneDecision({ strategyId: "early", games: 99, wins: 0 }, leader, 1, 1.96, 100), null);
+});
+
+test("per-character GA completion checks diverse qualified strategies", () => {
+  const character = characters[0];
+  const baseWeights = basicStrategyWeights();
+  const rows = [
+    {
+      characterId: character.id,
+      strategyId: "qualified-a",
+      passedGate: true,
+      novelFromBaseline: true,
+      strategyWeights: baseWeights
+    },
+    {
+      characterId: character.id,
+      strategyId: "qualified-b-close",
+      passedGate: true,
+      novelFromBaseline: true,
+      strategyWeights: baseWeights
+    },
+    {
+      characterId: characters[1].id,
+      strategyId: "other-character",
+      passedGate: true,
+      novelFromBaseline: true,
+      strategyWeights: baseWeights
+    }
+  ];
+  assert.equal(characterQualifiedComplete(rows, character, 0.18, 1), true);
+  assert.equal(characterQualifiedComplete(rows, character, 0.18, 2), false);
+  assert.equal(characterQualifiedComplete(rows, character, 0, 2), true);
+});
+
+test("final shortlist merges GA, CEM, and RL candidates by character", () => {
+  const character = characters[0];
+  const makeWeights = value => {
+    const weights = basicStrategyWeights();
+    weights.movement.safePath = value;
+    weights.movement.fastestArrival = 3 - value;
+    return weights;
+  };
+  const gaRow = {
+    characterId: character.id,
+    strategyId: "ga-candidate",
+    passedGate: true,
+    novelFromBaseline: true,
+    games: 10,
+    wins: 7,
+    losses: 3,
+    draws: 0,
+    winRate: 0.7,
+    outcomeWinRate: 0.7,
+    reward: 0.65,
+    strategyWeights: makeWeights(1.2)
+  };
+  const cemRow = {
+    characterId: character.id,
+    strategyId: "cem-candidate",
+    passedGate: true,
+    novelFromBaseline: true,
+    games: 10,
+    wins: 6,
+    losses: 4,
+    draws: 0,
+    winRate: 0.6,
+    outcomeWinRate: 0.6,
+    reward: 0.55,
+    strategyWeights: makeWeights(1.6)
+  };
+  const rlRow = {
+    characterId: character.id,
+    strategyId: "rl-candidate",
+    games: 10,
+    wins: 5,
+    losses: 5,
+    draws: 0,
+    winRate: 0.5,
+    outcomeWinRate: 0.5,
+    reward: 0.5,
+    strategyWeights: makeWeights(2)
+  };
+  const shortlist = buildFinalShortlist({
+    characters: [character],
+    gaRows: [gaRow],
+    cemRows: [cemRow],
+    rlBest: [rlRow],
+    limit: 2,
+    minDistance: 0
+  });
+  assert.equal(shortlist.rows.length, 2);
+  assert.deepEqual(shortlist.rows.map(row => row.finalSource), ["ga", "cem"]);
+  assert.deepEqual(shortlist.rows.map(row => row.finalRank), [1, 2]);
 });
 
 test("basic strategy weights are fixed and not role-adjusted", () => {
