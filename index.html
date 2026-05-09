@@ -59,23 +59,6 @@
             <button id="introCloseButton" class="secondary intro-close-button" type="button" hidden>關閉</button>
           </div>
         </div>
-        <div class="replay-controls" id="replayControls" hidden aria-label="重播控制">
-          <label for="replaySpeedSelect">重播</label>
-          <button id="replayReverseButton" class="secondary" type="button">倒放</button>
-          <button id="replayPlayButton" type="button">暫停</button>
-          <input id="replayTimeline" type="range" min="0" max="0" step="1" value="0" aria-label="重播時間軸">
-          <select id="replaySpeedSelect" aria-label="重播速度">
-            <option value="0.25">x0.25</option>
-            <option value="0.5">x0.5</option>
-            <option value="0.75">x0.75</option>
-            <option value="1" selected>x1</option>
-            <option value="1.5">x1.5</option>
-            <option value="2">x2</option>
-            <option value="4">x4</option>
-          </select>
-          <button id="replayExitButton" class="secondary" type="button">離開</button>
-          <span class="replay-time" id="replayTime">0:00 / 0:00</span>
-        </div>
       </div>
     </section>
 
@@ -291,6 +274,20 @@
             <button id="autoBattleSpeedSelect" class="speed-scrubber" type="button" role="slider" aria-orientation="vertical" aria-valuemin="0.25" aria-valuemax="4" aria-valuenow="1" aria-haspopup="menu" aria-controls="autoSpeedMenu" aria-expanded="false" aria-label="按住上下滑動調整自動對弈速度，單擊開啟選項">x1</button>
             <div class="auto-speed-menu" id="autoSpeedMenu" hidden aria-label="選擇自動對弈速度"></div>
             <button type="button" data-auto-pause aria-label="暫停">⏸</button>
+          </div>
+          <div class="replay-controls" id="replayControls" hidden aria-label="重播控制">
+            <div class="replay-primary-controls">
+              <label for="replaySpeedSelect">重播</label>
+              <button id="replaySpeedSelect" class="speed-scrubber" type="button" role="slider" aria-orientation="vertical" aria-valuemin="0.25" aria-valuemax="4" aria-valuenow="1" aria-haspopup="menu" aria-controls="replaySpeedMenu" aria-expanded="false" aria-label="按住上下滑動調整重播速度，單擊開啟選項">x1</button>
+              <div class="auto-speed-menu replay-speed-menu" id="replaySpeedMenu" hidden aria-label="選擇重播速度"></div>
+              <button id="replayPlayButton" type="button" aria-label="暫停">⏸</button>
+              <button id="replayReverseButton" class="secondary" type="button" aria-label="倒放">↩</button>
+              <button id="replayExitButton" class="secondary" type="button" aria-label="離開重播">×</button>
+            </div>
+            <div class="replay-timeline-row">
+              <input id="replayTimeline" type="range" min="0" max="0" step="1" value="0" aria-label="重播時間軸">
+              <span class="replay-time" id="replayTime">0:00 / 0:00</span>
+            </div>
           </div>
           <div class="relay-panel" id="relayPanel" hidden aria-label="自動接力賽">
             <label>

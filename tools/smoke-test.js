@@ -300,7 +300,8 @@ async function exerciseReplayRegression(page) {
   await page.locator(`[data-replay-play="${replayFixtureId}"]`).first().click({ timeout: actionTimeoutMs });
   await expectHidden(page, "#replayModal", "replay modal closes for playback");
   await expectVisible(page, "#replayControls", "replay controls show");
-  await expectControlValue(page, "#replaySpeedSelect", "1", "replay speed defaults to x1");
+  await expectText(page, "#replaySpeedSelect", "x1", "replay speed defaults to x1");
+  await expectControlAttribute(page, "#replaySpeedSelect", "aria-valuenow", "1", "replay speed slider defaults to x1");
   await expectControlAttribute(page, "#replayTimeline", "max", "5000", "replay timeline duration is loaded");
 
   const playTextBeforePause = await page.locator("#replayPlayButton").textContent();
@@ -320,8 +321,11 @@ async function exerciseReplayRegression(page) {
   );
   console.log("ok - replay reverse toggles direction");
 
-  await page.locator("#replaySpeedSelect").selectOption("2");
-  await expectControlValue(page, "#replaySpeedSelect", "2", "replay speed can change");
+  await page.locator("#replaySpeedSelect").click({ timeout: actionTimeoutMs });
+  await expectVisible(page, "#replaySpeedMenu", "replay speed menu opens");
+  await page.locator('#replaySpeedMenu [data-replay-speed="2"]').click({ timeout: actionTimeoutMs });
+  await expectText(page, "#replaySpeedSelect", "x2", "replay speed can change");
+  await expectControlAttribute(page, "#replaySpeedSelect", "aria-valuenow", "2", "replay speed slider updates");
 
   await setRangeValue(page, "#replayTimeline", "2500");
   await expectControlValue(page, "#replayTimeline", "2500", "replay seek updates timeline");
@@ -337,6 +341,32 @@ async function exerciseReplayRegression(page) {
   await expectVisible(page, "#favoriteReplayList .replay-empty", "replay favorite empty state is visible");
   await page.locator("#replayModalClose").click({ timeout: actionTimeoutMs });
   await expectHidden(page, "#replayModal", "replay modal closes after deletion");
+}
+
+async function exerciseAutoBattleControls(page) {
+  await page.locator("#computerBattleButton").click({ timeout: actionTimeoutMs });
+  await page.waitForFunction(() => !document.querySelector("#overlay")?.classList.contains("show"), null, {
+    timeout: actionTimeoutMs
+  });
+  await expectVisible(page, "#autoBattlePanel", "auto battle controls show");
+  await expectVisible(page, "#relayPanel", "auto battle relay panel stays available");
+  await expectText(page, "#autoBattleSpeedSelect", "x1", "auto battle speed defaults to x1");
+  await expectControlAttribute(page, "#autoBattleSpeedSelect", "aria-valuenow", "1", "auto battle speed slider defaults to x1");
+
+  await page.locator("#autoBattleSpeedSelect").click({ timeout: actionTimeoutMs });
+  await expectVisible(page, "#autoSpeedMenu", "auto battle speed menu opens");
+  await page.locator('#autoSpeedMenu [data-auto-speed="2"]').click({ timeout: actionTimeoutMs });
+  await expectText(page, "#autoBattleSpeedSelect", "x2", "auto battle speed can change");
+  await expectControlAttribute(page, "#autoBattleSpeedSelect", "aria-valuenow", "2", "auto battle speed slider updates");
+
+  const pauseTextBefore = await page.locator("[data-auto-pause]").textContent();
+  await page.locator("[data-auto-pause]").click({ timeout: actionTimeoutMs });
+  await page.waitForFunction(
+    before => document.querySelector("[data-auto-pause]")?.textContent !== before,
+    pauseTextBefore,
+    { timeout: actionTimeoutMs }
+  );
+  console.log("ok - auto battle pause toggles");
 }
 
 async function runViewportSmoke(browser, url, profile) {
@@ -384,11 +414,7 @@ async function runViewportSmoke(browser, url, profile) {
 
   await exerciseReplayRegression(page);
 
-  await page.locator("#startButton").click({ timeout: actionTimeoutMs });
-  await page.waitForFunction(() => !document.querySelector("#overlay")?.classList.contains("show"), null, {
-    timeout: actionTimeoutMs
-  });
-  await expectVisible(page, "#surrenderButton", "game starts and battle controls unlock");
+  await exerciseAutoBattleControls(page);
 
   if (consoleErrors.length || pageErrors.length) {
     throw new Error([

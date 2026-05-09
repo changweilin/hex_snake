@@ -914,6 +914,28 @@
       if (open) renderAutoSpeedMenu();
     }
 
+    function replaySpeedOptions() {
+      return [...HexSnakeReplay.playbackSpeeds].sort((a, b) => b - a);
+    }
+
+    function replaySpeedLabel(value) {
+      return `x${Number(value).toString()}`;
+    }
+
+    function renderReplaySpeedMenu() {
+      const playback = HexSnakeReplay.playback;
+      const selectedSpeed = playback?.speed ?? 1;
+      replaySpeedMenu.innerHTML = replaySpeedOptions().map(speed => `
+        <button class="${speed === selectedSpeed ? "is-selected" : ""}" type="button" data-replay-speed="${speed}">${replaySpeedLabel(speed)}</button>
+      `).join("");
+    }
+
+    function setReplaySpeedMenuOpen(open) {
+      replaySpeedMenu.hidden = !open;
+      replaySpeedSelect.setAttribute("aria-expanded", open ? "true" : "false");
+      if (open) renderReplaySpeedMenu();
+    }
+
     function setComputerBattleSpeed(value, persist = true) {
       computerBattleSpeed = normalizeAutoBattleSpeed(value);
       autoBattleSpeedSelect.textContent = autoBattleSpeedLabel(computerBattleSpeed);
@@ -3990,9 +4012,99 @@
       setAutoSpeedMenuOpen(false);
     });
 
+    let replaySpeedDrag = null;
+
+    function replayPlaybackSpeedIndex() {
+      const options = replaySpeedOptions();
+      const currentIndex = options.indexOf(HexSnakeReplay.playback?.speed ?? 1);
+      return currentIndex >= 0 ? currentIndex : options.indexOf(1);
+    }
+
+    function applyReplayPlaybackSpeedIndex(index) {
+      if (!HexSnakeReplay.playback) return;
+      const options = replaySpeedOptions();
+      const nextIndex = Math.max(0, Math.min(options.length - 1, index));
+      if (options[nextIndex] === HexSnakeReplay.playback.speed) return;
+      HexSnakeReplay.setPlaybackSpeed(options[nextIndex]);
+      renderReplaySpeedMenu();
+    }
+
+    replaySpeedSelect.addEventListener("pointerdown", event => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (!HexSnakeReplay.playback) return;
+      replaySpeedDrag = {
+        pointerId: event.pointerId,
+        startY: event.clientY,
+        startIndex: replayPlaybackSpeedIndex(),
+        moved: false
+      };
+      replaySpeedSelect.classList.add("is-dragging");
+      replaySpeedSelect.setPointerCapture(event.pointerId);
+    });
+
+    replaySpeedSelect.addEventListener("pointermove", event => {
+      if (!replaySpeedDrag || event.pointerId !== replaySpeedDrag.pointerId) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const dragDistance = event.clientY - replaySpeedDrag.startY;
+      if (Math.abs(dragDistance) > 6) {
+        replaySpeedDrag.moved = true;
+        setReplaySpeedMenuOpen(false);
+      }
+      const stepDelta = Math.round((event.clientY - replaySpeedDrag.startY) / 28);
+      applyReplayPlaybackSpeedIndex(replaySpeedDrag.startIndex + stepDelta);
+    });
+
+    function endReplaySpeedDrag(event) {
+      if (!replaySpeedDrag || event.pointerId !== replaySpeedDrag.pointerId) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const shouldToggleMenu = !replaySpeedDrag.moved && HexSnakeReplay.playback;
+      replaySpeedSelect.classList.remove("is-dragging");
+      if (replaySpeedSelect.hasPointerCapture(event.pointerId)) {
+        replaySpeedSelect.releasePointerCapture(event.pointerId);
+      }
+      replaySpeedDrag = null;
+      if (shouldToggleMenu) setReplaySpeedMenuOpen(replaySpeedMenu.hidden);
+    }
+
+    replaySpeedSelect.addEventListener("pointerup", endReplaySpeedDrag);
+    replaySpeedSelect.addEventListener("pointercancel", endReplaySpeedDrag);
+
+    replaySpeedSelect.addEventListener("wheel", event => {
+      if (!HexSnakeReplay.playback) return;
+      event.preventDefault();
+      event.stopPropagation();
+      applyReplayPlaybackSpeedIndex(replayPlaybackSpeedIndex() + (event.deltaY > 0 ? 1 : -1));
+    }, { passive: false });
+
+    replaySpeedSelect.addEventListener("keydown", event => {
+      if (!HexSnakeReplay.playback || !["ArrowUp", "ArrowDown", "Enter", " "].includes(event.key)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (event.key === "Enter" || event.key === " ") {
+        setReplaySpeedMenuOpen(replaySpeedMenu.hidden);
+        return;
+      }
+      applyReplayPlaybackSpeedIndex(replayPlaybackSpeedIndex() + (event.key === "ArrowDown" ? 1 : -1));
+    });
+
+    replaySpeedMenu.addEventListener("click", event => {
+      event.stopPropagation();
+      const button = event.target.closest("[data-replay-speed]");
+      if (!button || !HexSnakeReplay.playback) return;
+      HexSnakeReplay.setPlaybackSpeed(button.dataset.replaySpeed);
+      setReplaySpeedMenuOpen(false);
+    });
+
     document.addEventListener("pointerdown", event => {
-      if (autoSpeedMenu.hidden || autoBattlePanel.contains(event.target)) return;
-      setAutoSpeedMenuOpen(false);
+      if (!autoSpeedMenu.hidden && !autoBattlePanel.contains(event.target)) {
+        setAutoSpeedMenuOpen(false);
+      }
+      if (!replaySpeedMenu.hidden && !replayControls.contains(event.target)) {
+        setReplaySpeedMenuOpen(false);
+      }
     });
 
     relayModeInput.addEventListener("change", event => {

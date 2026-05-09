@@ -21,6 +21,7 @@
     const replayPlayButton = document.querySelector("#replayPlayButton");
     const replayTimeline = document.querySelector("#replayTimeline");
     const replaySpeedSelect = document.querySelector("#replaySpeedSelect");
+    const replaySpeedMenu = document.querySelector("#replaySpeedMenu");
     const replayExitButton = document.querySelector("#replayExitButton");
     const replayTime = document.querySelector("#replayTime");
     const replayModal = document.querySelector("#replayModal");

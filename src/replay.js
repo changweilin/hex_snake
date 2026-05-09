@@ -350,15 +350,35 @@
       draw();
     }
 
+    function replayPlaybackSpeedLabel(value) {
+      return `x${Number(value).toString()}`;
+    }
+
     function updateReplayControls() {
       if (!replayPlayback) return;
       const duration = replayPlayback.duration;
+      const speedLabel = replayPlaybackSpeedLabel(replayPlayback.speed);
+      const playLabel = replayPlayback.paused ? "播放" : "暫停";
+      const reverseLabel = replayPlayback.direction < 0 ? "正放" : "倒放";
       replayTimeline.max = String(Math.max(0, Math.round(duration)));
       replayTimeline.value = String(Math.max(0, Math.min(duration, Math.round(replayPlayback.time))));
-      replayPlayButton.textContent = replayPlayback.paused ? "播放" : "暫停";
+      replaySpeedSelect.textContent = speedLabel;
+      replaySpeedSelect.dataset.value = String(replayPlayback.speed);
+      replaySpeedSelect.setAttribute("aria-valuenow", String(replayPlayback.speed));
+      replaySpeedSelect.setAttribute("aria-valuetext", speedLabel);
+      replayPlayButton.textContent = replayPlayback.paused ? "▶" : "⏸";
+      replayPlayButton.setAttribute("aria-label", playLabel);
+      replayPlayButton.title = playLabel;
       replayReverseButton.classList.toggle("is-selected", replayPlayback.direction < 0);
-      replayReverseButton.textContent = replayPlayback.direction < 0 ? "正放" : "倒放";
+      replayReverseButton.textContent = replayPlayback.direction < 0 ? "↪" : "↩";
+      replayReverseButton.setAttribute("aria-label", reverseLabel);
+      replayReverseButton.title = reverseLabel;
       replayTime.textContent = `${formatTime(replayPlayback.time)} / ${formatTime(duration)}`;
+      if (!replaySpeedMenu.hidden) {
+        replaySpeedMenu.querySelectorAll("[data-replay-speed]").forEach(button => {
+          button.classList.toggle("is-selected", Number(button.dataset.replaySpeed) === replayPlayback.speed);
+        });
+      }
     }
 
     function captureReplayReturnState() {
@@ -471,11 +491,13 @@
       computerBattleMode = false;
       playerAutoMode = false;
       computerBattleManualOverride = false;
+      updateAutoBattleControls();
       setSettingsLocked(true);
       setOverlayChromeVisible(false);
       overlay.classList.remove("show");
       replayControls.hidden = false;
-      replaySpeedSelect.value = "1";
+      replaySpeedMenu.hidden = true;
+      replaySpeedSelect.setAttribute("aria-expanded", "false");
       replayPlayback = {
         record,
         time: 0,
@@ -498,6 +520,8 @@
       replayPlayback = null;
       HexSnakeState.replay.mode = replayMode;
       replayControls.hidden = true;
+      replaySpeedMenu.hidden = true;
+      replaySpeedSelect.setAttribute("aria-expanded", "false");
       setSettingsLocked(false);
       restoreReplayReturnState(replayReturnState);
       replayReturnState = null;
@@ -552,11 +576,13 @@
         const speed = Number(value);
         replayPlayback.speed = replayPlaybackSpeeds.includes(speed) ? speed : 1;
         replayPlayback.lastFrameAt = performance.now();
+        updateReplayControls();
         return true;
       },
       seekPlayback(value) {
         if (!replayPlayback) return false;
-        replayPlayback.time = Number(value) || 0;
+        const nextTime = Number(value) || 0;
+        replayPlayback.time = Math.max(0, Math.min(replayPlayback.duration, nextTime));
         replayPlayback.paused = true;
         replayPlayback.lastFrameAt = performance.now();
         applyReplaySnapshot(snapshotForReplayTime(replayPlayback.record, replayPlayback.time), replayPlayback.record);
