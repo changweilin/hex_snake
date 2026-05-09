@@ -6,7 +6,7 @@ const outDir = path.join(root, "dist");
 const characterDataPath = path.join(root, "data", "characters.json");
 const audioManifestPath = path.join(root, "assets", "audio", "characters", "manifest.json");
 const portraitVariants = ["human", "beast", "chibi"];
-const portraitSizes = ["sm", "md", "full"];
+const deployedPortraitSizes = ["sm", "md"];
 
 function toPosixPath(filePath) {
   return filePath.split(path.sep).join("/");
@@ -64,30 +64,41 @@ function collectAssetStrings(value, assets = new Set()) {
   return assets;
 }
 
+function isFullSizePortraitAsset(relativePath) {
+  return /^assets\/portraits\/[^/]+\.png$/.test(relativePath)
+    || /^assets\/portraits\/human\/[^/]+\.png$/.test(relativePath)
+    || /^assets\/portraits\/avatars\/[^/]+\/full\/[^/]+\.png$/.test(relativePath);
+}
+
+function addRuntimeAsset(assets, relativePath) {
+  if (!relativePath || isFullSizePortraitAsset(relativePath)) return;
+  assets.add(relativePath);
+}
+
 function loadJson(filePath, fallback) {
   if (!fs.existsSync(filePath)) return fallback;
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
 }
 
 function collectRuntimeAssets() {
-  const assets = new Set();
+  const discoveredAssets = collectAssetStrings(loadJson(characterDataPath, []));
+  const assets = new Set([...discoveredAssets].filter(relativePath => !isFullSizePortraitAsset(relativePath)));
   const characters = loadJson(characterDataPath, []);
-  collectAssetStrings(characters, assets);
 
   characters.forEach(character => {
     const slug = character.slug || character.id;
     portraitVariants.forEach(variant => {
-      portraitSizes.forEach(size => {
-        assets.add(`assets/portraits/avatars/${variant}/${size}/${slug}_duel.png`);
+      deployedPortraitSizes.forEach(size => {
+        addRuntimeAsset(assets, `assets/portraits/avatars/${variant}/${size}/${slug}_duel.png`);
       });
     });
   });
 
   const audioManifest = loadJson(audioManifestPath, null);
   if (audioManifest) {
-    assets.add("assets/audio/characters/manifest.json");
+    addRuntimeAsset(assets, "assets/audio/characters/manifest.json");
     (audioManifest.files || []).forEach(file => {
-      if (file.path) assets.add(file.path);
+      addRuntimeAsset(assets, file.path);
     });
   }
 

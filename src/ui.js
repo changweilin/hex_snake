@@ -1418,8 +1418,8 @@ function applySelectedPortraitCharacter(delta) {
 
 function renderPortraitLightbox() {
   const character = characterFor(portraitLightboxOwner);
-  portraitLightboxImage.src = portraitUrl(character, "intro", "full");
-  portraitLightboxImage.srcset = portraitSrcset(character, "intro", true);
+  portraitLightboxImage.src = portraitUrl(character, "intro", "md");
+  portraitLightboxImage.srcset = portraitSrcset(character, "intro");
   portraitLightboxImage.sizes = portraitSizesAttribute("full");
   portraitLightboxImage.alt = character.name;
   portraitLightboxImage.dataset.characterId = character.id;

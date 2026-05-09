@@ -129,6 +129,25 @@ async function runViewportSmoke(browser, url, profile) {
   await expectVisible(page, "#game", "board canvas rendered");
   await expectVisible(page, "#startButton", "start button visible");
 
+  const introEntrypoints = page.locator("[data-open-intro]");
+  if (await introEntrypoints.count()) {
+    await introEntrypoints.first().click({ timeout: actionTimeoutMs });
+  }
+  const portraitEntrypoints = page.locator("[data-full-portrait]");
+  if (await portraitEntrypoints.count()) {
+    await portraitEntrypoints.first().click({ timeout: actionTimeoutMs });
+    await expectVisible(page, "#portraitLightbox", "portrait lightbox opens");
+    const lightboxSrc = await page.locator("#portraitLightboxImage").evaluate(image => image.currentSrc || image.src);
+    if (!/\/(md|sm)\//.test(lightboxSrc.replaceAll("\\", "/"))) {
+      throw new Error(`Portrait lightbox should use deployed md/sm assets, saw: ${lightboxSrc}`);
+    }
+    await page.locator("#portraitLightboxClose").click({ timeout: actionTimeoutMs });
+    await expectHidden(page, "#portraitLightbox", "portrait lightbox closes");
+  }
+  if (await page.locator("#introCloseButton:visible").count()) {
+    await page.locator("#introCloseButton").click({ timeout: actionTimeoutMs });
+  }
+
   await page.locator("#settingsToggle").click({ timeout: actionTimeoutMs });
   await expectVisible(page, "#settingsContent", "settings panel opens");
   await page.locator("#settingsCloseButton").click({ timeout: actionTimeoutMs });

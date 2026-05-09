@@ -30,8 +30,8 @@
   - 範圍：調整 `build.js`，只複製 runtime 需要的 assets/data/src；排除 `_source_chroma`、backup、q_versions、debug 圖與其他非部署資產；評估大型 PNG 轉 WebP/AVIF。
   - 目標：降低 GitHub Pages artifact、部署時間、下載量與儲存壓力。
   - 驗收：build 後 `dist/` 不包含來源/備份資產；產出 artifact size 報告；首頁、角色選擇、角色 lightbox、戰鬥與 replay 仍能載入需要的圖像。
-  - 狀態：等待 CI 驗證；`build.js` 已改為 runtime asset manifest 複製，`dist/` 從約 734 MB 降到約 513 MB，且不再包含 `_source_chroma`、`q_versions`、backup 目錄。
-  - 下一步：二階段評估大型 PNG 轉 WebP/AVIF，或調整 lightbox 不載入 full-size PNG。
+  - 狀態：等待 CI 驗證；`build.js` 已改為 runtime asset manifest 複製並排除 full-size portrait/runtime 未用資產，`dist/` 從約 734 MB 降到約 146 MB，且不再包含 `_source_chroma`、`q_versions`、backup、root full portrait 或 avatar full 目錄。
+  - 下一步：若還需要再瘦身，評估大型 PNG 轉 WebP/AVIF 與設定 `dist` size budget。
 
 - 收尾策略最佳化與 AI 報表流程
   - 範圍：完成 target-vs-baseline quick profile 產物、補 README/SOP 導覽、整理可讀報表。
