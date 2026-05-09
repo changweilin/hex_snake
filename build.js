@@ -7,6 +7,17 @@ const characterDataPath = path.join(root, "data", "characters.json");
 const audioManifestPath = path.join(root, "assets", "audio", "characters", "manifest.json");
 const portraitVariants = ["human", "beast", "chibi"];
 const deployedPortraitSizes = ["sm", "md"];
+const defaultDistBudgetMb = 200;
+const distBudgetEnv = process.env.HEX_SNAKE_DIST_BUDGET_MB;
+const distBudgetMb = distBudgetEnv === undefined || distBudgetEnv === ""
+  ? defaultDistBudgetMb
+  : Number(distBudgetEnv);
+
+if (!Number.isFinite(distBudgetMb) || distBudgetMb <= 0) {
+  throw new Error("HEX_SNAKE_DIST_BUDGET_MB must be a positive number.");
+}
+
+const distBudgetBytes = Math.round(distBudgetMb * 1024 * 1024);
 
 function toPosixPath(filePath) {
   return filePath.split(path.sep).join("/");
@@ -131,6 +142,15 @@ function formatMb(bytes) {
   return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
 }
 
+function refreshSummaries(manifest) {
+  manifest.summaries = {
+    dist: directorySummary("."),
+    assets: directorySummary("assets"),
+    data: directorySummary("data"),
+    src: directorySummary("src")
+  };
+}
+
 const manifest = {
   generatedAt: new Date().toISOString(),
   strategy: "copy runtime files plus referenced assets",
@@ -148,18 +168,27 @@ copyDirectory("data", manifest);
 copyDirectory("src", manifest);
 collectRuntimeAssets().forEach(relativePath => copyFile(relativePath, manifest));
 
-manifest.summaries = {
-  dist: directorySummary("."),
-  assets: directorySummary("assets"),
-  data: directorySummary("data"),
-  src: directorySummary("src")
-};
-
 const manifestPath = path.join(outDir, "build-asset-manifest.json");
+refreshSummaries(manifest);
+fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+refreshSummaries(manifest);
+manifest.budget = {
+  distMaxMb: distBudgetMb,
+  distMaxBytes: distBudgetBytes,
+  distBytes: manifest.summaries.dist.bytes,
+  passed: manifest.summaries.dist.bytes <= distBudgetBytes
+};
 fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
 
 if (manifest.missing.length) {
   throw new Error(`Build is missing ${manifest.missing.length} runtime asset(s):\n${manifest.missing.join("\n")}`);
+}
+
+if (!manifest.budget.passed) {
+  throw new Error(
+    `dist size ${formatMb(manifest.budget.distBytes)} exceeds budget ${formatMb(manifest.budget.distMaxBytes)}. ` +
+    "Raise HEX_SNAKE_DIST_BUDGET_MB only after confirming the artifact growth is intentional."
+  );
 }
 
 const indexBytes = fs.statSync(path.join(outDir, "index.html")).size;
@@ -168,4 +197,5 @@ console.log(`Runtime files: ${manifest.files.length}`);
 console.log(`Runtime assets: ${manifest.files.filter(file => file.path.startsWith("assets/")).length}`);
 console.log(`dist size: ${formatMb(manifest.summaries.dist.bytes)}`);
 console.log(`asset size: ${formatMb(manifest.summaries.assets.bytes)}`);
+console.log(`dist budget: ${formatMb(manifest.budget.distMaxBytes)}`);
 console.log(`Manifest: ${relativeFromRoot(manifestPath)}`);

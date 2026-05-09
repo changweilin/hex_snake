@@ -2,6 +2,7 @@
 
 const http = require("http");
 const net = require("net");
+const os = require("os");
 const path = require("path");
 const { spawn } = require("child_process");
 
@@ -178,7 +179,14 @@ async function runViewportSmoke(browser, url, profile) {
 async function main() {
   const { chromium } = loadPlaywright();
   const server = await startServer();
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({
+    headless: true,
+    args: ["--disable-gpu"],
+    env: {
+      ...process.env,
+      CHROME_LOG_FILE: path.join(os.tmpdir(), "hex-snake-chrome-debug.log")
+    }
+  });
 
   try {
     const profiles = [

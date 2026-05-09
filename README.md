@@ -49,6 +49,12 @@ $env:PORT=3000; npm run dev
 npm run build
 ```
 
+建置預設會檢查 `dist/` 是否小於等於 200 MB；若確認 artifact 成長是刻意的，可用環境變數調整：
+
+```powershell
+$env:HEX_SNAKE_DIST_BUDGET_MB=250; npm run build
+```
+
 從 `dist/` 啟動靜態伺服器：
 
 ```bash
