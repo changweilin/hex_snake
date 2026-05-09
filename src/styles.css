@@ -1590,6 +1590,7 @@
       display: none;
     }
 
+    /* Replay controls and archive modal */
     .replay-controls {
       position: fixed;
       right: max(10px, env(safe-area-inset-right));
@@ -2065,6 +2066,7 @@
       min-width: 120px;
     }
 
+    /* Portrait lightbox */
     .portrait-lightbox {
       position: fixed;
       inset: 0;
@@ -2381,6 +2383,7 @@
       border: 0;
     }
 
+    /* Settings modal and game-master controls */
     .settings-content {
       position: fixed;
       inset: 0;
@@ -4000,6 +4003,7 @@
       border: 1px solid rgba(254, 202, 202, 0.24);
     }
 
+    /* Rules modal */
     .rules-modal {
       position: fixed;
       inset: 0;

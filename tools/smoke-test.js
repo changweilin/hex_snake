@@ -214,11 +214,65 @@ async function expectControlAttribute(page, selector, attribute, expected, label
   console.log(`ok - ${label}`);
 }
 
+async function clickModalBackdrop(page, selector) {
+  await page.locator(selector).click({ position: { x: 6, y: 6 }, timeout: actionTimeoutMs });
+}
+
 async function setRangeValue(page, selector, value) {
   await page.locator(selector).evaluate((input, nextValue) => {
     input.value = nextValue;
     input.dispatchEvent(new Event("input", { bubbles: true }));
   }, value);
+}
+
+async function exerciseRulesModal(page) {
+  await page.locator("#rulesButton").click({ timeout: actionTimeoutMs });
+  await expectVisible(page, "#rulesModal", "rules modal opens");
+  await expectControlAttribute(page, "#rulesButton", "aria-expanded", "true", "rules toggle marks expanded");
+  await page.keyboard.press("Escape");
+  await expectHidden(page, "#rulesModal", "rules modal closes with Escape");
+  await expectControlAttribute(page, "#rulesButton", "aria-expanded", "false", "rules toggle clears expanded");
+
+  await page.locator("#rulesButton").click({ timeout: actionTimeoutMs });
+  await expectVisible(page, "#rulesModal", "rules modal reopens");
+  await clickModalBackdrop(page, "#rulesModal");
+  await expectHidden(page, "#rulesModal", "rules modal closes from backdrop");
+}
+
+async function exerciseSettingsModal(page) {
+  await page.locator("#settingsToggle").click({ timeout: actionTimeoutMs });
+  await expectVisible(page, "#settingsContent", "settings panel opens");
+  await expectControlAttribute(page, "#settingsToggle", "aria-expanded", "true", "settings toggle marks expanded");
+  await page.keyboard.press("Escape");
+  await expectHidden(page, "#settingsContent", "settings panel closes with Escape");
+  await expectControlAttribute(page, "#settingsToggle", "aria-expanded", "false", "settings toggle clears expanded");
+
+  await page.locator("#settingsToggle").click({ timeout: actionTimeoutMs });
+  await expectVisible(page, "#settingsContent", "settings panel reopens");
+  await clickModalBackdrop(page, "#settingsContent");
+  await expectHidden(page, "#settingsContent", "settings panel closes from backdrop");
+}
+
+async function openFirstPortraitLightbox(page) {
+  const portraitEntrypoints = page.locator("[data-full-portrait]");
+  if (!(await portraitEntrypoints.count())) return false;
+  await portraitEntrypoints.first().click({ timeout: actionTimeoutMs });
+  await expectVisible(page, "#portraitLightbox", "portrait lightbox opens");
+  const lightboxSrc = await page.locator("#portraitLightboxImage").evaluate(image => image.currentSrc || image.src);
+  if (!/\/(md|sm)\//.test(lightboxSrc.replaceAll("\\", "/"))) {
+    throw new Error(`Portrait lightbox should use deployed md/sm assets, saw: ${lightboxSrc}`);
+  }
+  return true;
+}
+
+async function exercisePortraitLightbox(page) {
+  if (!(await openFirstPortraitLightbox(page))) return;
+  await page.keyboard.press("Escape");
+  await expectHidden(page, "#portraitLightbox", "portrait lightbox closes with Escape");
+
+  await openFirstPortraitLightbox(page);
+  await clickModalBackdrop(page, "#portraitLightbox");
+  await expectHidden(page, "#portraitLightbox", "portrait lightbox closes from backdrop");
 }
 
 async function exerciseReplayRegression(page) {
@@ -228,8 +282,20 @@ async function exerciseReplayRegression(page) {
   await expectText(page, "#favoriteReplayCount", "0 / 5", "replay favorites start empty");
   await expectVisible(page, `[data-replay-play="${replayFixtureId}"]`, "replay play action is available");
 
+  await page.keyboard.press("Escape");
+  await expectHidden(page, "#replayModal", "replay modal closes with Escape");
+
+  await page.locator("#settingsReplayButton").click({ timeout: actionTimeoutMs });
+  await expectVisible(page, "#replayModal", "replay modal reopens");
+  await clickModalBackdrop(page, "#replayModal");
+  await expectHidden(page, "#replayModal", "replay modal closes from backdrop");
+
+  await page.locator("#settingsReplayButton").click({ timeout: actionTimeoutMs });
+  await expectVisible(page, "#replayModal", "replay modal reopens for actions");
   await page.locator(`[data-replay-favorite="${replayFixtureId}"]`).first().click({ timeout: actionTimeoutMs });
   await expectText(page, "#favoriteReplayCount", "1 / 5", "replay favorite toggle refreshes list");
+  await page.locator(`[data-replay-favorite="${replayFixtureId}"]`).first().click({ timeout: actionTimeoutMs });
+  await expectText(page, "#favoriteReplayCount", "0 / 5", "replay favorite can be canceled");
 
   await page.locator(`[data-replay-play="${replayFixtureId}"]`).first().click({ timeout: actionTimeoutMs });
   await expectHidden(page, "#replayModal", "replay modal closes for playback");
@@ -262,6 +328,15 @@ async function exerciseReplayRegression(page) {
 
   await page.locator("#replayExitButton").click({ timeout: actionTimeoutMs });
   await expectHidden(page, "#replayControls", "replay controls hide after exit");
+
+  await page.locator("#settingsReplayButton").click({ timeout: actionTimeoutMs });
+  await expectVisible(page, "#replayModal", "replay modal opens after playback exit");
+  await page.locator(`[data-replay-delete="${replayFixtureId}"]`).first().click({ timeout: actionTimeoutMs });
+  await expectText(page, "#recentReplayCount", "0 / 5", "replay record can be deleted");
+  await expectVisible(page, "#recentReplayList .replay-empty", "replay recent empty state is visible");
+  await expectVisible(page, "#favoriteReplayList .replay-empty", "replay favorite empty state is visible");
+  await page.locator("#replayModalClose").click({ timeout: actionTimeoutMs });
+  await expectHidden(page, "#replayModal", "replay modal closes after deletion");
 }
 
 async function runViewportSmoke(browser, url, profile) {
@@ -299,25 +374,13 @@ async function runViewportSmoke(browser, url, profile) {
   if (await introEntrypoints.count()) {
     await introEntrypoints.first().click({ timeout: actionTimeoutMs });
   }
-  const portraitEntrypoints = page.locator("[data-full-portrait]");
-  if (await portraitEntrypoints.count()) {
-    await portraitEntrypoints.first().click({ timeout: actionTimeoutMs });
-    await expectVisible(page, "#portraitLightbox", "portrait lightbox opens");
-    const lightboxSrc = await page.locator("#portraitLightboxImage").evaluate(image => image.currentSrc || image.src);
-    if (!/\/(md|sm)\//.test(lightboxSrc.replaceAll("\\", "/"))) {
-      throw new Error(`Portrait lightbox should use deployed md/sm assets, saw: ${lightboxSrc}`);
-    }
-    await page.locator("#portraitLightboxClose").click({ timeout: actionTimeoutMs });
-    await expectHidden(page, "#portraitLightbox", "portrait lightbox closes");
-  }
+  await exercisePortraitLightbox(page);
   if (await page.locator("#introCloseButton:visible").count()) {
     await page.locator("#introCloseButton").click({ timeout: actionTimeoutMs });
   }
 
-  await page.locator("#settingsToggle").click({ timeout: actionTimeoutMs });
-  await expectVisible(page, "#settingsContent", "settings panel opens");
-  await page.locator("#settingsCloseButton").click({ timeout: actionTimeoutMs });
-  await expectHidden(page, "#settingsContent", "settings panel closes");
+  await exerciseRulesModal(page);
+  await exerciseSettingsModal(page);
 
   await exerciseReplayRegression(page);
 

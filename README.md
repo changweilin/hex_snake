@@ -105,6 +105,7 @@ npm start                    # 從 dist/ 啟動伺服器
 npm test                     # 執行完整測試
 npm run test:quick           # 執行快速測試
 npm run test:smoke           # 執行瀏覽器 smoke test
+npm run audit:globals        # 產生 legacy global 依賴盤點
 npm run simulate             # 執行平衡模擬
 npm run simulate:run         # 執行排程模擬任務
 npm run simulate:jobs        # 檢視模擬任務列表
@@ -163,6 +164,7 @@ npm run simulate
 ## 相關文件
 
 - `doc/follow-up-execution-list.md`：後續開發與驗證事項
+- `doc/legacy-global-dependencies.md`：legacy eval 載入順序與跨檔 global 依賴盤點
 - `doc/strategy-optimization-sop.md`：AI 策略最佳化、target-vs-baseline 驗證與套用流程
 - `doc/character-move-details.md`：角色招式與技能細節
 - `doc/character-voice-design.md`：角色語音與音效設計

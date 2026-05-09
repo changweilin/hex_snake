@@ -30,7 +30,7 @@
   - 範圍：調整 `build.js`，只複製 runtime 需要的 assets/data/src；排除 `_source_chroma`、backup、q_versions、debug 圖與其他非部署資產；評估大型 PNG 轉 WebP/AVIF。
   - 目標：降低 GitHub Pages artifact、部署時間、下載量與儲存壓力。
   - 驗收：build 後 `dist/` 不包含來源/備份資產；產出 artifact size 報告；首頁、角色選擇、角色 lightbox、戰鬥與 replay 仍能載入需要的圖像。
-  - 狀態：本機 build/smoke/data check 通過，等待 CI 驗證；`build.js` 已改為 runtime asset manifest 複製並排除 full-size portrait/runtime 未用資產，`dist/` 從約 734 MB 降到約 146 MB，且不再包含 `_source_chroma`、`q_versions`、backup、root full portrait 或 avatar full 目錄；已設定預設 `dist` size budget 為 200 MB，超標會讓 build 失敗。
+  - 狀態：本機 build/smoke/data check 通過，等待 CI 驗證；`build.js` 已改為 runtime asset manifest 複製並排除 full-size portrait/runtime 未用資產，`dist/` 從約 734 MB 降到約 146 MB，且不再包含 `_source_chroma`、`q_versions`、backup、root full portrait 或 avatar full 目錄；已設定預設 `dist` size budget 為 200 MB，並加入 forbidden deployment assets 檢查，來源圖/備份圖/q_versions/debug/full-size portrait 混入時會讓 build 失敗。
   - 下一步：若還需要再瘦身，評估大型 PNG 轉 WebP/AVIF；若 artifact 成長是刻意的，需同步調整 `HEX_SNAKE_DIST_BUDGET_MB` 並記錄原因。
 
 - 收尾策略最佳化與 AI 報表流程
@@ -75,7 +75,7 @@
   - 範圍：建立可重複的 replay 記錄、播放、暫停、倒放、seek 測試。
   - 目標：避免 replay facade 或後續狀態整理造成回放壞掉。
   - 驗收：replay modal 和播放控制可以自動化驗證。
-  - 狀態：基礎回歸測試已整合到 `tools/smoke-test.js`；固定 replay fixture 會驗證 modal 列表、加入最愛、播放、暫停、倒放、速度切換、seek、離開播放，桌機與手機 smoke 已通過。
+  - 狀態：基礎回歸測試已整合到 `tools/smoke-test.js`；固定 replay fixture 會驗證 modal 列表、加入/取消最愛、播放、暫停、倒放、速度切換、seek、離開播放、刪除、空清單、ESC 關閉與背景關閉，桌機與手機 smoke 已通過。
   - 下一步：後續若要擴充 Product Extensions，再補匯出/匯入 replay payload 與真實對局產生 replay 的端到端測試。
 
 ## P2 - Architecture
@@ -84,8 +84,8 @@
   - 範圍：逐步移除 `src/main.js` 的 `eval` loader，改成 `import/export`。
   - 目標：讓模組邊界由語言層級保護，而不是只靠載入順序。
   - 驗收：`<script type="module" src="src/main.js">` 直接 import 各模組，無 global scope 隱性依賴。
-  - 狀態：未開始。
-  - 下一步：列出目前隱性 global 依賴，先從 `characters.js`、`audio.js`、`replay.js` 這類邊界較清楚的檔案開始。
+  - 狀態：已建立 `npm run audit:globals` 與 `doc/legacy-global-dependencies.md`，可盤點目前 legacy eval 載入順序下的跨檔 global 讀取。
+  - 下一步：先從 `characters.js`、`audio.js`、`replay.js` 這類邊界較清楚的檔案開始，把盤點結果轉成 import/export 切分清單。
 
 - 拆分 `render.js`
   - 範圍：把大型特效函式再拆成 `effects.js`、`projectiles-render.js`、`board-render.js`、`snake-render.js`。
@@ -98,8 +98,8 @@
   - 範圍：將大型 `styles.css` 依功能拆成 layout、settings、portrait/replay、battle HUD、modal/effects 等區塊；同步整理 UI 狀態命名。
   - 目標：降低 UI 調整時的選擇器衝突與 mobile layout regression。
   - 驗收：桌機與手機尺寸 smoke screenshot 正常；settings、portrait lightbox、replay、auto battle 控制不重疊。
-  - 狀態：未開始。
-  - 下一步：先加瀏覽器 smoke，再做純搬移式拆分。
+  - 狀態：已先加 CSS 區段註記；`tools/smoke-test.js` 已覆蓋 settings、portrait lightbox、rules modal、replay modal 的桌機/手機開關流程。
+  - 下一步：再做純搬移式拆分時，保持 selectors 與樣式值不變，逐段搬 layout/settings/portrait/replay/HUD。
 
 ## P3 - Product Extensions
 
@@ -150,6 +150,12 @@ npm.cmd run simulate
 
 ```bash
 npm.cmd run test:smoke
+```
+
+涉及 ES modules 或 legacy global 盤點時，追加：
+
+```bash
+npm.cmd run audit:globals
 ```
 
 建議推進順序：

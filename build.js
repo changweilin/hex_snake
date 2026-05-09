@@ -8,6 +8,15 @@ const audioManifestPath = path.join(root, "assets", "audio", "characters", "mani
 const portraitVariants = ["human", "beast", "chibi"];
 const deployedPortraitSizes = ["sm", "md"];
 const defaultDistBudgetMb = 200;
+const forbiddenDistEntries = [
+  { label: "_source_chroma source assets", pattern: /(^|\/)_source_chroma(\/|$)/ },
+  { label: "q_versions source assets", pattern: /(^|\/)q_versions(\/|$)/ },
+  { label: "backup assets", pattern: /(^|\/)backups?(\/|$)/i },
+  { label: "debug assets", pattern: /(^|\/)debug(\/|[._-]|$)/i },
+  { label: "root full-size portraits", pattern: /^assets\/portraits\/[^/]+\.png$/ },
+  { label: "human full-size portraits", pattern: /^assets\/portraits\/human\/[^/]+\.png$/ },
+  { label: "duel avatar full-size portraits", pattern: /^assets\/portraits\/avatars\/[^/]+\/full\// }
+];
 const distBudgetEnv = process.env.HEX_SNAKE_DIST_BUDGET_MB;
 const distBudgetMb = distBudgetEnv === undefined || distBudgetEnv === ""
   ? defaultDistBudgetMb
@@ -151,6 +160,14 @@ function refreshSummaries(manifest) {
   };
 }
 
+function findForbiddenDistEntries(manifest) {
+  return manifest.files.flatMap(file => (
+    forbiddenDistEntries
+      .filter(rule => rule.pattern.test(file.path))
+      .map(rule => ({ path: file.path, reason: rule.label }))
+  ));
+}
+
 const manifest = {
   generatedAt: new Date().toISOString(),
   strategy: "copy runtime files plus referenced assets",
@@ -178,10 +195,18 @@ manifest.budget = {
   distBytes: manifest.summaries.dist.bytes,
   passed: manifest.summaries.dist.bytes <= distBudgetBytes
 };
+manifest.forbidden = findForbiddenDistEntries(manifest);
 fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
 
 if (manifest.missing.length) {
   throw new Error(`Build is missing ${manifest.missing.length} runtime asset(s):\n${manifest.missing.join("\n")}`);
+}
+
+if (manifest.forbidden.length) {
+  throw new Error(
+    `Build copied ${manifest.forbidden.length} forbidden deployment asset(s):\n` +
+    manifest.forbidden.map(item => `${item.path} (${item.reason})`).join("\n")
+  );
 }
 
 if (!manifest.budget.passed) {
@@ -198,4 +223,5 @@ console.log(`Runtime assets: ${manifest.files.filter(file => file.path.startsWit
 console.log(`dist size: ${formatMb(manifest.summaries.dist.bytes)}`);
 console.log(`asset size: ${formatMb(manifest.summaries.assets.bytes)}`);
 console.log(`dist budget: ${formatMb(manifest.budget.distMaxBytes)}`);
+console.log(`forbidden deployment assets: ${manifest.forbidden.length}`);
 console.log(`Manifest: ${relativeFromRoot(manifestPath)}`);
