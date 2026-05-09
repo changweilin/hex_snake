@@ -98,6 +98,7 @@ npm run build                # 建置 dist/
 npm start                    # 從 dist/ 啟動伺服器
 npm test                     # 執行完整測試
 npm run test:quick           # 執行快速測試
+npm run test:smoke           # 執行瀏覽器 smoke test
 npm run simulate             # 執行平衡模擬
 npm run simulate:run         # 執行排程模擬任務
 npm run simulate:jobs        # 檢視模擬任務列表
@@ -110,6 +111,8 @@ npm run optimize:strategy    # 執行策略最佳化
 npm run evaluate:basic-gate  # 評估基礎 AI 門檻
 npm run reset:high-ai-basic  # 重設高階 AI 基礎策略
 npm run apply:ai-strategy    # 套用 AI 策略
+npm run reports:dashboard    # 產生策略與模擬報表 dashboard
+npm run reports:dashboard:serve # 啟動報表 dashboard server
 npm run generate:sfx         # 產生角色音效
 npm run characters:show      # 在 Windows PowerShell 正確讀取角色 JSON
 npm run data:check           # 檢查 data/ 與 dist/data/ 的 UTF-8 JSON
@@ -154,6 +157,7 @@ npm run simulate
 ## 相關文件
 
 - `doc/follow-up-execution-list.md`：後續開發與驗證事項
+- `doc/strategy-optimization-sop.md`：AI 策略最佳化、target-vs-baseline 驗證與套用流程
 - `doc/character-move-details.md`：角色招式與技能細節
 - `doc/character-voice-design.md`：角色語音與音效設計
 - `doc/chibi-portrait-effect-prompts.md`：Q 版頭像效果提示詞

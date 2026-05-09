@@ -1,37 +1,160 @@
 const fs = require("fs");
 const path = require("path");
 
-const source = path.resolve(__dirname, "index.html");
-const outDir = path.resolve(__dirname, "dist");
-const target = path.join(outDir, "index.html");
+const root = __dirname;
+const outDir = path.join(root, "dist");
+const characterDataPath = path.join(root, "data", "characters.json");
+const audioManifestPath = path.join(root, "assets", "audio", "characters", "manifest.json");
+const portraitVariants = ["human", "beast", "chibi"];
+const portraitSizes = ["sm", "md", "full"];
 
-if (!fs.existsSync(source)) {
-  throw new Error("index.html was not found.");
+function toPosixPath(filePath) {
+  return filePath.split(path.sep).join("/");
 }
 
+function relativeFromRoot(filePath) {
+  return toPosixPath(path.relative(root, filePath));
+}
+
+function copyFile(relativePath, manifest, { required = true } = {}) {
+  const source = path.join(root, relativePath);
+  const target = path.join(outDir, relativePath);
+  if (!fs.existsSync(source)) {
+    if (required) manifest.missing.push(relativePath);
+    return false;
+  }
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.copyFileSync(source, target);
+  const bytes = fs.statSync(source).size;
+  manifest.files.push({ path: relativePath, bytes });
+  manifest.totalBytes += bytes;
+  return true;
+}
+
+function copyDirectory(relativePath, manifest) {
+  const source = path.join(root, relativePath);
+  if (!fs.existsSync(source)) return;
+  const stack = [source];
+  while (stack.length) {
+    const current = stack.pop();
+    fs.readdirSync(current, { withFileTypes: true }).forEach(entry => {
+      const fullPath = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        stack.push(fullPath);
+        return;
+      }
+      if (!entry.isFile()) return;
+      copyFile(relativeFromRoot(fullPath), manifest);
+    });
+  }
+}
+
+function collectAssetStrings(value, assets = new Set()) {
+  if (typeof value === "string") {
+    if (value.startsWith("assets/")) assets.add(value);
+    return assets;
+  }
+  if (Array.isArray(value)) {
+    value.forEach(item => collectAssetStrings(item, assets));
+    return assets;
+  }
+  if (value && typeof value === "object") {
+    Object.values(value).forEach(item => collectAssetStrings(item, assets));
+  }
+  return assets;
+}
+
+function loadJson(filePath, fallback) {
+  if (!fs.existsSync(filePath)) return fallback;
+  return JSON.parse(fs.readFileSync(filePath, "utf8"));
+}
+
+function collectRuntimeAssets() {
+  const assets = new Set();
+  const characters = loadJson(characterDataPath, []);
+  collectAssetStrings(characters, assets);
+
+  characters.forEach(character => {
+    const slug = character.slug || character.id;
+    portraitVariants.forEach(variant => {
+      portraitSizes.forEach(size => {
+        assets.add(`assets/portraits/avatars/${variant}/${size}/${slug}_duel.png`);
+      });
+    });
+  });
+
+  const audioManifest = loadJson(audioManifestPath, null);
+  if (audioManifest) {
+    assets.add("assets/audio/characters/manifest.json");
+    (audioManifest.files || []).forEach(file => {
+      if (file.path) assets.add(file.path);
+    });
+  }
+
+  return [...assets].sort();
+}
+
+function directorySummary(relativePath) {
+  const source = path.join(outDir, relativePath);
+  let files = 0;
+  let bytes = 0;
+  if (!fs.existsSync(source)) return { files, bytes };
+  const stack = [source];
+  while (stack.length) {
+    const current = stack.pop();
+    fs.readdirSync(current, { withFileTypes: true }).forEach(entry => {
+      const fullPath = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        stack.push(fullPath);
+        return;
+      }
+      if (!entry.isFile()) return;
+      files += 1;
+      bytes += fs.statSync(fullPath).size;
+    });
+  }
+  return { files, bytes };
+}
+
+function formatMb(bytes) {
+  return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+}
+
+const manifest = {
+  generatedAt: new Date().toISOString(),
+  strategy: "copy runtime files plus referenced assets",
+  files: [],
+  missing: [],
+  totalBytes: 0,
+  summaries: {}
+};
+
+fs.rmSync(outDir, { recursive: true, force: true });
 fs.mkdirSync(outDir, { recursive: true });
-fs.copyFileSync(source, target);
 
-const assetsSource = path.resolve(__dirname, "assets");
-const assetsTarget = path.join(outDir, "assets");
+copyFile("index.html", manifest);
+copyDirectory("data", manifest);
+copyDirectory("src", manifest);
+collectRuntimeAssets().forEach(relativePath => copyFile(relativePath, manifest));
 
-if (fs.existsSync(assetsSource)) {
-  fs.cpSync(assetsSource, assetsTarget, { recursive: true });
+manifest.summaries = {
+  dist: directorySummary("."),
+  assets: directorySummary("assets"),
+  data: directorySummary("data"),
+  src: directorySummary("src")
+};
+
+const manifestPath = path.join(outDir, "build-asset-manifest.json");
+fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+
+if (manifest.missing.length) {
+  throw new Error(`Build is missing ${manifest.missing.length} runtime asset(s):\n${manifest.missing.join("\n")}`);
 }
 
-const dataSource = path.resolve(__dirname, "data");
-const dataTarget = path.join(outDir, "data");
-
-if (fs.existsSync(dataSource)) {
-  fs.cpSync(dataSource, dataTarget, { recursive: true });
-}
-
-const srcSource = path.resolve(__dirname, "src");
-const srcTarget = path.join(outDir, "src");
-
-if (fs.existsSync(srcSource)) {
-  fs.cpSync(srcSource, srcTarget, { recursive: true });
-}
-
-const bytes = fs.statSync(target).size;
-console.log(`Built dist/index.html (${bytes} bytes)`);
+const indexBytes = fs.statSync(path.join(outDir, "index.html")).size;
+console.log(`Built dist/index.html (${indexBytes} bytes)`);
+console.log(`Runtime files: ${manifest.files.length}`);
+console.log(`Runtime assets: ${manifest.files.filter(file => file.path.startsWith("assets/")).length}`);
+console.log(`dist size: ${formatMb(manifest.summaries.dist.bytes)}`);
+console.log(`asset size: ${formatMb(manifest.summaries.assets.bytes)}`);
+console.log(`Manifest: ${relativeFromRoot(manifestPath)}`);
