@@ -8,8 +8,14 @@ const audioManifestPath = path.join(root, "assets", "audio", "characters", "mani
 const portraitVariants = ["human", "beast", "chibi"];
 const deployedPortraitSizes = ["sm", "md"];
 const staticUiAssets = [
+  "assets/logos/favicon.ico",
   "assets/logos/white-dragon-logo.png",
-  "assets/logos/white-dragon-favicon.png"
+  "assets/logos/white-dragon-favicon-16.png",
+  "assets/logos/white-dragon-favicon-32.png",
+  "assets/logos/white-dragon-favicon-48.png",
+  "assets/logos/white-dragon-favicon-64.png",
+  "assets/logos/white-dragon-favicon-128.png",
+  "assets/logos/white-dragon-apple-touch.png"
 ];
 const defaultDistBudgetMb = 200;
 const forbiddenDistEntries = [
