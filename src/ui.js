@@ -1067,6 +1067,7 @@ function renderTutorialSlide() {
 
 function setTutorialChrome() {
   overlay.classList.remove("intro-details");
+  overlay.classList.remove("is-session-modal");
   overlay.classList.add("tutorial-open");
   overlayTitle.hidden = true;
   overlayText.hidden = true;
@@ -1218,7 +1219,7 @@ function closeRulesModal() {
 }
 
 function setOverlayChromeVisible(visible) {
-  overlay.classList.remove("intro-details", "tutorial-open");
+  overlay.classList.remove("intro-details", "tutorial-open", "is-session-modal");
   overlayTitle.hidden = !visible;
   overlayText.hidden = !visible;
   startButton.hidden = !visible;
@@ -1229,6 +1230,7 @@ function setOverlayChromeVisible(visible) {
 
 function setIntroLobbyChrome() {
   overlay.classList.remove("intro-details", "tutorial-open");
+  overlay.classList.add("is-session-modal");
   overlayTitle.hidden = true;
   overlayText.hidden = true;
   startButton.hidden = false;
@@ -1240,7 +1242,7 @@ function setIntroLobbyChrome() {
 
 function setIntroDetailsChrome() {
   overlay.classList.add("intro-details");
-  overlay.classList.remove("tutorial-open");
+  overlay.classList.remove("tutorial-open", "is-session-modal");
   overlayTitle.hidden = true;
   overlayText.hidden = true;
   startButton.hidden = true;
@@ -1280,10 +1282,12 @@ function renderWinnerPortrait(owner, playerLost = false, computerLost = false) {
   const computerCharacter = characterFor("computer");
   const playerResult = owner ? (owner === "player" ? "P1 勝利" : "P1 敗北") : "P1 平手";
   const computerResult = owner ? (owner === "computer" ? "P2 勝利" : "P2 敗北") : "P2 平手";
+  overlay.classList.add("is-session-modal");
   winnerPortrait.hidden = false;
   characterStage.hidden = true;
   characterStage.innerHTML = "";
   winnerPortrait.innerHTML = `
+        <img class="intro-brand-logo" src="${brandLogoPath}" alt="" decoding="async">
         <div class="portrait-pair">
           <div class="fighter-portrait result-portrait ${owner === "player" ? "is-winner" : ""} ${playerPose === "defeat" ? "is-defeated" : ""}" data-owner="player" data-result-owner="player" data-owner-mark="${ownerMeta("player").mark}" title="選擇 P1 角色" style="${characterStyle(playerCharacter, "player")}">
             <span class="result-badge">${playerResult}</span>

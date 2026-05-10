@@ -583,6 +583,12 @@
       padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
     }
 
+    .overlay.is-session-modal {
+      position: fixed;
+      z-index: 1100;
+      padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+    }
+
     .dialog {
       position: relative;
       isolation: isolate;
