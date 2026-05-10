@@ -1975,77 +1975,23 @@
             || (projectile.burstDamage > 0 && circleAttackHitsHead(computerSnake, projectile.target, projectile.burstRadius));
           playerStunChance = stunChanceForHeadHit(playerHeadHit, projectile);
           computerStunChance = stunChanceForHeadHit(computerHeadHit, projectile);
-          blasts.push({
-            kind: "circle",
-            target: projectile.target,
-            owner: projectile.owner,
-            radius: projectile.burstRadius,
-            visualType: burstVisualType(projectile),
-            hand: projectile.hand,
-            startedAt: now,
-            endAt: now + blastDurationMs * 1.25
-          });
-          triggerBoardShake(burstVisualType(projectile), now);
+          addProjectileBlastVisual(projectile, now);
         } else if (projectile.kind === "line") {
           playerDamage = damageSnakeCells(snake, projectile.lineCells, projectile.width, projectile.damage, projectile.excludedCells, 0, projectile.outerDamageMultiplier ?? 1, projectile.fullDamageWidth ?? 0);
           computerDamage = damageSnakeCells(computerSnake, projectile.lineCells, projectile.width, projectile.damage, projectile.excludedCells, 0, projectile.outerDamageMultiplier ?? 1, projectile.fullDamageWidth ?? 0);
           playerStunChance = lineProjectileStunChance(snake, projectile);
           computerStunChance = lineProjectileStunChance(computerSnake, projectile);
-          blasts.push({
-            kind: "line",
-            lineCells: projectile.lineCells,
-            excludedCells: projectile.excludedCells,
-            width: projectile.width,
-            fullDamageWidth: projectile.fullDamageWidth,
-            outerDamageMultiplier: projectile.outerDamageMultiplier,
-            target: projectile.target,
-            owner: projectile.owner,
-            visualType: projectile.visualType || attackVisualType(projectile.owner, projectile.profile),
-            startedAt: now,
-            endAt: now + blastDurationMs
-          });
-          triggerBoardShake(projectile.visualType || attackVisualType(projectile.owner, projectile.profile), now);
+          addProjectileBlastVisual(projectile, now);
         } else {
-          if (projectile.kind === "headCircle" && projectile.followHead) {
-            const head = ownerHead(projectile.owner);
-            projectile.explosionTarget = { q: head.q, r: head.r };
-            projectile.target = { q: projectile.explosionTarget.q, r: projectile.explosionTarget.r };
-          }
-          const explosionTarget = projectile.explosionTarget || projectile.target;
-          const radius = projectile.radius || baseBlastHexRadius;
+          const radiationDamage = projectile.kind === "headCircle" && projectile.radiationDurationMs
+            ? projectile.radiationTotalDamage / Math.max(1, Math.ceil(projectile.radiationDurationMs / projectile.radiationTickMs))
+            : 0;
+          const { explosionTarget, radius } = addProjectileBlastVisual(projectile, now, { radiationDamage });
           const damage = projectile.damage || 1;
           playerDamage = damageSnake(snake, explosionTarget, radius, damage);
           computerDamage = damageSnake(computerSnake, explosionTarget, radius, damage);
           playerStunChance = stunChanceForHeadHit(circleAttackHitsHead(snake, explosionTarget, radius), projectile);
           computerStunChance = stunChanceForHeadHit(circleAttackHitsHead(computerSnake, explosionTarget, radius), projectile);
-          blasts.push({
-            kind: "circle",
-            target: explosionTarget,
-            owner: projectile.owner,
-            radius,
-            visualType: projectile.visualType || attackVisualType(projectile.owner, projectile.profile),
-            hand: projectile.hand,
-            startedAt: now,
-            endAt: now + blastDurationMs
-          });
-          triggerBoardShake(projectile.visualType || attackVisualType(projectile.owner, projectile.profile), now);
-          if (projectile.kind === "headCircle" && projectile.radiationDurationMs) {
-            const ticks = Math.max(1, Math.ceil(projectile.radiationDurationMs / projectile.radiationTickMs));
-            hazards.push({
-              kind: "radiation",
-              owner: projectile.owner,
-              target: { q: explosionTarget.q, r: explosionTarget.r },
-              radius,
-              width: radius,
-              visualType: projectile.visualType === "dragon-spirit-big" ? "dragon-spirit-radiation" : "lobster-radiation",
-              damage: projectile.radiationTotalDamage / ticks,
-              stunChance: 0,
-              startedAt: now,
-              nextTickAt: now + projectile.radiationTickMs,
-              tickMs: projectile.radiationTickMs,
-              endAt: now + projectile.radiationDurationMs
-            });
-          }
           if (projectile.sandwormParalyzeOnBody || projectile.sandwormKillOnHead) {
             if (projectile.owner !== "player") {
               if (projectile.sandwormKillOnHead && snakeHeadHitAtCenter(snake, explosionTarget)) playerDamage = Math.max(playerDamage, playerHp);
@@ -2073,24 +2019,26 @@
       if (playerHp <= 0 || computerHp <= 0) endGame(playerHp <= 0, computerHp <= 0);
     }
 
-    function addProjectileImpactVisual(projectile, now) {
-      if (projectile.kind === "lobsterPalmSetup") return;
-      if (projectile.kind === "lobsterPalm") return;
+    function addProjectileBlastVisual(projectile, now, options = {}) {
+      if (projectile.kind === "lobsterPalmSetup") return {};
+      if (projectile.kind === "lobsterPalm") return {};
       if (projectile.kind === "lobsterPalmBurst") {
+        const visualType = burstVisualType(projectile);
         blasts.push({
           kind: "circle",
           target: projectile.target,
           owner: projectile.owner,
           radius: projectile.burstRadius,
-          visualType: burstVisualType(projectile),
+          visualType,
           hand: projectile.hand,
           startedAt: now,
           endAt: now + blastDurationMs * 1.25
         });
-        triggerBoardShake(burstVisualType(projectile), now);
-        return;
+        triggerBoardShake(visualType, now);
+        return { visualType };
       }
       if (projectile.kind === "line") {
+        const visualType = projectile.visualType || attackVisualType(projectile.owner, projectile.profile);
         blasts.push({
           kind: "line",
           lineCells: projectile.lineCells,
@@ -2100,12 +2048,12 @@
           outerDamageMultiplier: projectile.outerDamageMultiplier,
           target: projectile.target,
           owner: projectile.owner,
-          visualType: projectile.visualType || attackVisualType(projectile.owner, projectile.profile),
+          visualType,
           startedAt: now,
           endAt: now + blastDurationMs
         });
-        triggerBoardShake(projectile.visualType || attackVisualType(projectile.owner, projectile.profile), now);
-        return;
+        triggerBoardShake(visualType, now);
+        return { visualType };
       }
       if (projectile.kind === "headCircle" && projectile.followHead) {
         const head = ownerHead(projectile.owner);
@@ -2134,7 +2082,7 @@
           radius,
           width: radius,
           visualType: projectile.visualType === "dragon-spirit-big" ? "dragon-spirit-radiation" : "lobster-radiation",
-          damage: 0,
+          damage: options.radiationDamage ?? 0,
           stunChance: 0,
           startedAt: now,
           nextTickAt: now + projectile.radiationTickMs,
@@ -2142,6 +2090,11 @@
           endAt: now + projectile.radiationDurationMs
         });
       }
+      return { explosionTarget, radius, visualType };
+    }
+
+    function addProjectileImpactVisual(projectile, now) {
+      addProjectileBlastVisual(projectile, now);
     }
 
     function advanceGameOverVisuals(now) {
@@ -3934,8 +3887,6 @@
       startGame({ computerBattle: true, resetRelayScore: true });
     });
 
-    let autoBattleSpeedDrag = null;
-
     function applyAutoBattleSpeedIndex(index) {
       const nextIndex = Math.max(0, Math.min(autoBattleSpeeds.length - 1, index));
       if (autoBattleSpeeds[nextIndex] === computerBattleSpeed) return;
@@ -3943,82 +3894,6 @@
       resetAutoBattleStepTimers();
       updateAutoBattleControls();
     }
-
-    autoBattleSpeedSelect.addEventListener("pointerdown", event => {
-      event.preventDefault();
-      event.stopPropagation();
-      if (!isPlayerAutoControlActive()) return;
-      autoBattleSpeedDrag = {
-        pointerId: event.pointerId,
-        startY: event.clientY,
-        startIndex: autoBattleSpeeds.indexOf(computerBattleSpeed),
-        moved: false
-      };
-      autoBattleSpeedSelect.classList.add("is-dragging");
-      autoBattleSpeedSelect.setPointerCapture(event.pointerId);
-    });
-
-    autoBattleSpeedSelect.addEventListener("pointermove", event => {
-      if (!autoBattleSpeedDrag || event.pointerId !== autoBattleSpeedDrag.pointerId) return;
-      event.preventDefault();
-      event.stopPropagation();
-      const dragDistance = event.clientY - autoBattleSpeedDrag.startY;
-      if (Math.abs(dragDistance) > 6) {
-        autoBattleSpeedDrag.moved = true;
-        setAutoSpeedMenuOpen(false);
-      }
-      const stepDelta = Math.round((event.clientY - autoBattleSpeedDrag.startY) / 28);
-      applyAutoBattleSpeedIndex(autoBattleSpeedDrag.startIndex + stepDelta);
-    });
-
-    function endAutoBattleSpeedDrag(event) {
-      if (!autoBattleSpeedDrag || event.pointerId !== autoBattleSpeedDrag.pointerId) return;
-      event.preventDefault();
-      event.stopPropagation();
-      const shouldToggleMenu = !autoBattleSpeedDrag.moved && isPlayerAutoControlActive();
-      autoBattleSpeedSelect.classList.remove("is-dragging");
-      if (autoBattleSpeedSelect.hasPointerCapture(event.pointerId)) {
-        autoBattleSpeedSelect.releasePointerCapture(event.pointerId);
-      }
-      autoBattleSpeedDrag = null;
-      if (shouldToggleMenu) setAutoSpeedMenuOpen(autoSpeedMenu.hidden);
-    }
-
-    autoBattleSpeedSelect.addEventListener("pointerup", endAutoBattleSpeedDrag);
-    autoBattleSpeedSelect.addEventListener("pointercancel", endAutoBattleSpeedDrag);
-
-    autoBattleSpeedSelect.addEventListener("wheel", event => {
-      if (!isPlayerAutoControlActive()) return;
-      event.preventDefault();
-      event.stopPropagation();
-      const currentIndex = autoBattleSpeeds.indexOf(computerBattleSpeed);
-      const direction = event.deltaY > 0 ? 1 : -1;
-      applyAutoBattleSpeedIndex(currentIndex + direction);
-    }, { passive: false });
-
-    autoBattleSpeedSelect.addEventListener("keydown", event => {
-      if (!isPlayerAutoControlActive() || !["ArrowUp", "ArrowDown", "Enter", " "].includes(event.key)) return;
-      event.preventDefault();
-      event.stopPropagation();
-      if (event.key === "Enter" || event.key === " ") {
-        setAutoSpeedMenuOpen(autoSpeedMenu.hidden);
-        return;
-      }
-      const currentIndex = autoBattleSpeeds.indexOf(computerBattleSpeed);
-      applyAutoBattleSpeedIndex(currentIndex + (event.key === "ArrowDown" ? 1 : -1));
-    });
-
-    autoSpeedMenu.addEventListener("click", event => {
-      event.stopPropagation();
-      const button = event.target.closest("[data-auto-speed]");
-      if (!button || !isPlayerAutoControlActive()) return;
-      setComputerBattleSpeed(button.dataset.autoSpeed);
-      resetAutoBattleStepTimers();
-      updateAutoBattleControls();
-      setAutoSpeedMenuOpen(false);
-    });
-
-    let replaySpeedDrag = null;
 
     function replayPlaybackSpeedIndex() {
       const options = replaySpeedOptions();
@@ -4035,73 +3910,114 @@
       renderReplaySpeedMenu();
     }
 
-    replaySpeedSelect.addEventListener("pointerdown", event => {
-      event.preventDefault();
-      event.stopPropagation();
-      if (!HexSnakeReplay.playback) return;
-      replaySpeedDrag = {
-        pointerId: event.pointerId,
-        startY: event.clientY,
-        startIndex: replayPlaybackSpeedIndex(),
-        moved: false
-      };
-      replaySpeedSelect.classList.add("is-dragging");
-      replaySpeedSelect.setPointerCapture(event.pointerId);
-    });
+    function bindSpeedScrubber({
+      select,
+      menu,
+      isActive,
+      currentIndex,
+      applyIndex,
+      setMenuOpen,
+      menuButtonSelector,
+      applyMenuButton
+    }) {
+      let drag = null;
 
-    replaySpeedSelect.addEventListener("pointermove", event => {
-      if (!replaySpeedDrag || event.pointerId !== replaySpeedDrag.pointerId) return;
-      event.preventDefault();
-      event.stopPropagation();
-      const dragDistance = event.clientY - replaySpeedDrag.startY;
-      if (Math.abs(dragDistance) > 6) {
-        replaySpeedDrag.moved = true;
-        setReplaySpeedMenuOpen(false);
-      }
-      const stepDelta = Math.round((event.clientY - replaySpeedDrag.startY) / 28);
-      applyReplayPlaybackSpeedIndex(replaySpeedDrag.startIndex + stepDelta);
-    });
+      select.addEventListener("pointerdown", event => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!isActive()) return;
+        drag = {
+          pointerId: event.pointerId,
+          startY: event.clientY,
+          startIndex: currentIndex(),
+          moved: false
+        };
+        select.classList.add("is-dragging");
+        select.setPointerCapture(event.pointerId);
+      });
 
-    function endReplaySpeedDrag(event) {
-      if (!replaySpeedDrag || event.pointerId !== replaySpeedDrag.pointerId) return;
-      event.preventDefault();
-      event.stopPropagation();
-      const shouldToggleMenu = !replaySpeedDrag.moved && HexSnakeReplay.playback;
-      replaySpeedSelect.classList.remove("is-dragging");
-      if (replaySpeedSelect.hasPointerCapture(event.pointerId)) {
-        replaySpeedSelect.releasePointerCapture(event.pointerId);
+      select.addEventListener("pointermove", event => {
+        if (!drag || event.pointerId !== drag.pointerId) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const dragDistance = event.clientY - drag.startY;
+        if (Math.abs(dragDistance) > 6) {
+          drag.moved = true;
+          setMenuOpen(false);
+        }
+        const stepDelta = Math.round((event.clientY - drag.startY) / 28);
+        applyIndex(drag.startIndex + stepDelta);
+      });
+
+      function endDrag(event) {
+        if (!drag || event.pointerId !== drag.pointerId) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const shouldToggleMenu = !drag.moved && isActive();
+        select.classList.remove("is-dragging");
+        if (select.hasPointerCapture(event.pointerId)) {
+          select.releasePointerCapture(event.pointerId);
+        }
+        drag = null;
+        if (shouldToggleMenu) setMenuOpen(menu.hidden);
       }
-      replaySpeedDrag = null;
-      if (shouldToggleMenu) setReplaySpeedMenuOpen(replaySpeedMenu.hidden);
+
+      select.addEventListener("pointerup", endDrag);
+      select.addEventListener("pointercancel", endDrag);
+
+      select.addEventListener("wheel", event => {
+        if (!isActive()) return;
+        event.preventDefault();
+        event.stopPropagation();
+        applyIndex(currentIndex() + (event.deltaY > 0 ? 1 : -1));
+      }, { passive: false });
+
+      select.addEventListener("keydown", event => {
+        if (!isActive() || !["ArrowUp", "ArrowDown", "Enter", " "].includes(event.key)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        if (event.key === "Enter" || event.key === " ") {
+          setMenuOpen(menu.hidden);
+          return;
+        }
+        applyIndex(currentIndex() + (event.key === "ArrowDown" ? 1 : -1));
+      });
+
+      menu.addEventListener("click", event => {
+        event.stopPropagation();
+        const button = event.target.closest(menuButtonSelector);
+        if (!button || !isActive()) return;
+        applyMenuButton(button);
+        setMenuOpen(false);
+      });
     }
 
-    replaySpeedSelect.addEventListener("pointerup", endReplaySpeedDrag);
-    replaySpeedSelect.addEventListener("pointercancel", endReplaySpeedDrag);
-
-    replaySpeedSelect.addEventListener("wheel", event => {
-      if (!HexSnakeReplay.playback) return;
-      event.preventDefault();
-      event.stopPropagation();
-      applyReplayPlaybackSpeedIndex(replayPlaybackSpeedIndex() + (event.deltaY > 0 ? 1 : -1));
-    }, { passive: false });
-
-    replaySpeedSelect.addEventListener("keydown", event => {
-      if (!HexSnakeReplay.playback || !["ArrowUp", "ArrowDown", "Enter", " "].includes(event.key)) return;
-      event.preventDefault();
-      event.stopPropagation();
-      if (event.key === "Enter" || event.key === " ") {
-        setReplaySpeedMenuOpen(replaySpeedMenu.hidden);
-        return;
+    bindSpeedScrubber({
+      select: autoBattleSpeedSelect,
+      menu: autoSpeedMenu,
+      isActive: isPlayerAutoControlActive,
+      currentIndex: () => autoBattleSpeeds.indexOf(computerBattleSpeed),
+      applyIndex: applyAutoBattleSpeedIndex,
+      setMenuOpen: setAutoSpeedMenuOpen,
+      menuButtonSelector: "[data-auto-speed]",
+      applyMenuButton(button) {
+        setComputerBattleSpeed(button.dataset.autoSpeed);
+        resetAutoBattleStepTimers();
+        updateAutoBattleControls();
       }
-      applyReplayPlaybackSpeedIndex(replayPlaybackSpeedIndex() + (event.key === "ArrowDown" ? 1 : -1));
     });
 
-    replaySpeedMenu.addEventListener("click", event => {
-      event.stopPropagation();
-      const button = event.target.closest("[data-replay-speed]");
-      if (!button || !HexSnakeReplay.playback) return;
-      HexSnakeReplay.setPlaybackSpeed(button.dataset.replaySpeed);
-      setReplaySpeedMenuOpen(false);
+    bindSpeedScrubber({
+      select: replaySpeedSelect,
+      menu: replaySpeedMenu,
+      isActive: () => Boolean(HexSnakeReplay.playback),
+      currentIndex: replayPlaybackSpeedIndex,
+      applyIndex: applyReplayPlaybackSpeedIndex,
+      setMenuOpen: setReplaySpeedMenuOpen,
+      menuButtonSelector: "[data-replay-speed]",
+      applyMenuButton(button) {
+        HexSnakeReplay.setPlaybackSpeed(button.dataset.replaySpeed);
+      }
     });
 
     let replayBoardGesture = null;
