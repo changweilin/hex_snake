@@ -695,10 +695,17 @@ function characterStoryMarkup(character) {
 }
 
 function formatIntroMotto(motto) {
-  return String(motto || "")
+  const lines = String(motto || "")
     .trim()
-    .replace(/([，。！？；：、,.!?;:])\s*/g, "$1<br>")
-    .replace(/(?:<br>)+$/, "");
+    .replace(/([，。！？；：、,.!?;:])\s*/g, "$1\n")
+    .split(/\n+/)
+    .map(line => line.trim())
+    .filter(Boolean);
+  return lines.map((line, index) => {
+    const prefix = index === 0 ? "「" : "　";
+    const suffix = index === lines.length - 1 ? "」" : "　";
+    return `${prefix}${line}${suffix}`;
+  }).join("<br>");
 }
 
 function foodIconMarkup(typeOrId, extraClass = "") {
@@ -1404,7 +1411,7 @@ function renderIntroPortraits(showDetails = introDetailsOpen) {
                     <span class="intro-avatar-label"><span class="owner-name ${owner === "player" ? "is-p1" : "is-p2"}">${ownerMeta(owner).label}</span> · ${character ? character.name : "隨機選擇"}</span>
                     <button class="secondary portrait-arrow portrait-label-arrow" type="button" data-portrait-owner="${owner}" data-portrait-shift="1" aria-label="${ownerMeta(owner).label} 下一位">›</button>
                   </div>
-                  <p class="intro-avatar-motto ${character ? "" : "is-placeholder"}">「${formatIntroMotto(motto)}」</p>
+                  <p class="intro-avatar-motto ${character ? "" : "is-placeholder"}">${formatIntroMotto(motto)}</p>
                 </div>
               `;
     }).join("")}

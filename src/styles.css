@@ -3301,6 +3301,7 @@
       line-height: 1.28;
       text-align: center;
       text-wrap: balance;
+      white-space: break-spaces;
       overflow-wrap: anywhere;
     }
 
