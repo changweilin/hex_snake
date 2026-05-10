@@ -13,6 +13,10 @@
       --cell-alt: #303c4d;
       --p1-color: #f59e0b;
       --p2-color: #a78bfa;
+      --z-session-overlay: 1100;
+      --z-settings-tools: 1200;
+      --z-settings-open: 1210;
+      --z-settings-modal: 1300;
     }
 
     * {
@@ -584,9 +588,9 @@
     }
 
     .overlay.is-session-modal {
-      position: fixed;
-      z-index: 1100;
-      padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+      position: absolute;
+      z-index: var(--z-session-overlay);
+      padding: 12px;
     }
 
     .dialog {
@@ -1572,15 +1576,6 @@
       margin-bottom: 12px;
     }
 
-    .intro-brand-logo {
-      display: block;
-      width: min(152px, 42vw);
-      aspect-ratio: 1;
-      object-fit: contain;
-      margin: 0 auto 10px;
-      filter: drop-shadow(0 16px 32px rgba(14, 165, 233, 0.22));
-    }
-
     .dialog-actions button {
       position: relative;
       z-index: 1;
@@ -2336,11 +2331,11 @@
       display: grid;
       justify-items: end;
       gap: 10px;
-      z-index: 220;
+      z-index: var(--z-settings-tools);
     }
 
     .settings-section.open {
-      z-index: 260;
+      z-index: var(--z-settings-open);
     }
 
     .settings-actions {
@@ -2451,7 +2446,7 @@
     .settings-content {
       position: fixed;
       inset: 0;
-      z-index: 140;
+      z-index: var(--z-settings-modal);
       display: grid;
       place-items: center;
       padding: max(14px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
@@ -4071,7 +4066,7 @@
     .rules-modal {
       position: fixed;
       inset: 0;
-      z-index: 140;
+      z-index: var(--z-settings-modal);
       display: grid;
       place-items: center;
       padding: max(14px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
@@ -4821,7 +4816,7 @@
         align-items: start;
         overflow: visible;
         position: relative;
-        z-index: 220;
+        z-index: var(--z-settings-tools);
       }
 
       .side .section.settings-section {
@@ -4852,7 +4847,7 @@
       }
 
       .side .settings-section.open {
-        z-index: 260;
+        z-index: var(--z-settings-open);
       }
 
       .side .settings-section .settings-toggle {
@@ -4888,7 +4883,7 @@
       .side .settings-section .settings-content {
         position: fixed;
         inset: 0;
-        z-index: 140;
+        z-index: var(--z-settings-modal);
         display: grid;
         place-items: center;
         width: auto;
@@ -5269,6 +5264,61 @@
         min-height: 36px;
         padding: 7px 5px;
         font-size: clamp(0.68rem, 2.9vw, 0.82rem);
+      }
+
+      .overlay.is-session-modal {
+        align-items: start;
+      }
+
+      .overlay.is-session-modal .dialog {
+        width: min(100%, 420px);
+        height: min(100%, calc(100% - 12px));
+        max-height: calc(100% - 12px);
+        display: grid;
+        grid-template-rows: minmax(0, 1fr) auto;
+        gap: 8px;
+        align-content: stretch;
+        overflow: hidden;
+      }
+
+      .overlay.is-session-modal #winnerPortrait {
+        min-height: 0;
+        overflow: hidden;
+      }
+
+      .overlay.is-session-modal #winnerPortrait:has(.intro-avatar-gate),
+      .overlay.is-session-modal #winnerPortrait:has(.portrait-pair) {
+        margin-bottom: 0;
+        display: grid;
+        grid-template-rows: minmax(0, 1fr);
+        gap: 0;
+      }
+
+      .overlay.is-session-modal .intro-avatar-gate,
+      .overlay.is-session-modal .portrait-pair {
+        min-height: 0;
+        gap: 8px;
+        align-items: start;
+        margin-bottom: 0;
+      }
+
+      .overlay.is-session-modal .intro-avatar-button {
+        min-height: 0;
+        gap: 4px;
+      }
+
+      .overlay.is-session-modal .intro-avatar-button .fighter-portrait,
+      .overlay.is-session-modal .portrait-pair .fighter-portrait {
+        width: min(100%, 22dvh);
+        justify-self: center;
+      }
+
+      .overlay.is-session-modal .intro-avatar-label-controls {
+        margin-top: 2px;
+      }
+
+      .overlay.is-session-modal .intro-avatar-label {
+        font-size: 0.66rem;
       }
 
       .tutorial-visual {

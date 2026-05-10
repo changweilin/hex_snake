@@ -1287,7 +1287,6 @@ function renderWinnerPortrait(owner, playerLost = false, computerLost = false) {
   characterStage.hidden = true;
   characterStage.innerHTML = "";
   winnerPortrait.innerHTML = `
-        <img class="intro-brand-logo" src="${brandLogoPath}" alt="" decoding="async">
         <div class="portrait-pair">
           <div class="fighter-portrait result-portrait ${owner === "player" ? "is-winner" : ""} ${playerPose === "defeat" ? "is-defeated" : ""}" data-owner="player" data-result-owner="player" data-owner-mark="${ownerMeta("player").mark}" title="選擇 P1 角色" style="${characterStyle(playerCharacter, "player")}">
             <span class="result-badge">${playerResult}</span>
@@ -1313,7 +1312,6 @@ function renderIntroPortraits(showDetails = introDetailsOpen) {
   characterStage.innerHTML = "";
   if (!showDetails) {
     winnerPortrait.innerHTML = `
-          <img class="intro-brand-logo" src="${brandLogoPath}" alt="" decoding="async">
           <div class="intro-avatar-gate">
             ${["player", "computer"].map(owner => {
       const character = selectedCharacterFor(owner);
