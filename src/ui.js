@@ -9,6 +9,7 @@ let maxInitialLength = 12;
 let attackNeedTotal = 6;
 let maxAmmo = 3;
 const autoBattleSpeeds = [4, 2, 1.5, 1, 0.75, 0.5, 0.25];
+const brandLogoPath = "assets/logos/white-dragon-logo.png";
 let smallAttackFoodCost = 2;
 let smallAttackBombCost = 1;
 let bigAttackBombCost = 2;
@@ -1173,8 +1174,11 @@ function buildRulesContent() {
         </section>
         <section class="rules-block rules-about-me" aria-labelledby="rulesAboutTitle">
           <div class="rules-about-heading">
-            <h3 id="rulesAboutTitle">About Me</h3>
-            <strong class="rules-about-name">Chang Wei Lin</strong>
+            <img class="rules-about-logo" src="${brandLogoPath}" alt="" decoding="async" loading="lazy">
+            <div class="rules-about-copy">
+              <h3 id="rulesAboutTitle">About Me</h3>
+              <strong class="rules-about-name">Chang Wei Lin</strong>
+            </div>
           </div>
           <p class="rules-about-line">我愛星空至深，無懼黑夜。</p>
           <blockquote class="rules-about-quote">
@@ -1305,6 +1309,7 @@ function renderIntroPortraits(showDetails = introDetailsOpen) {
   characterStage.innerHTML = "";
   if (!showDetails) {
     winnerPortrait.innerHTML = `
+          <img class="intro-brand-logo" src="${brandLogoPath}" alt="" decoding="async">
           <div class="intro-avatar-gate">
             ${["player", "computer"].map(owner => {
       const character = selectedCharacterFor(owner);

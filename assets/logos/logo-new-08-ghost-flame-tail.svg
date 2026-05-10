@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Ghost Flame Tail Logo</title>
+  <desc id="desc">A flame-tail creature mark merging dragon flow, eel motion, and ghost-lobster energy.</desc>
+  <path d="M128 30c37 32 50 64 31 96 27 0 48 21 48 49 0 34-28 58-79 58-51 0-79-24-79-58 0-29 22-50 50-49-20-32-7-64 29-96Z" fill="#f8fafc" stroke="#111827" stroke-linejoin="round" stroke-width="9"/>
+  <path d="M128 63c22 24 27 44 14 61 21 4 34 19 34 40 0 25-18 39-48 39-30 0-48-14-48-39 0-21 13-36 34-40-13-17-8-37 14-61Z" fill="#22d3ee" stroke="#111827" stroke-linejoin="round" stroke-width="7"/>
+  <path d="M88 95C64 87 51 66 53 39c24 9 39 27 35 56ZM168 95c24-8 37-29 35-56-24 9-39 27-35 56Z" fill="#ef4444" stroke="#111827" stroke-linejoin="round" stroke-width="7"/>
+  <g fill="#f8fafc" stroke="#111827" stroke-linejoin="round" stroke-width="5">
+    <path d="M105 149h46l-9 17h-28Z"/>
+    <path d="M112 176h32l-7 14h-18Z"/>
+  </g>
+</svg>

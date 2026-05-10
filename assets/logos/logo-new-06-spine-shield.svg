@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Spine Shield Logo</title>
+  <desc id="desc">A shield-like creature spine made from six polished plates and restrained elemental accents.</desc>
+  <path d="M128 27 202 64v67c0 44-29 76-74 98-45-22-74-54-74-98V64Z" fill="#f8fafc" stroke="#111827" stroke-linejoin="round" stroke-width="9"/>
+  <path d="M128 54c28 29 42 60 42 92s-14 55-42 71c-28-16-42-39-42-71s14-63 42-92Z" fill="#22d3ee" stroke="#111827" stroke-linejoin="round" stroke-width="8"/>
+  <g stroke="#111827" stroke-linejoin="round" stroke-width="5">
+    <path d="M128 62 149 82l-21 20-21-20Z" fill="#f59e0b"/>
+    <path d="M128 99 150 118l-22 20-22-20Z" fill="#f8fafc"/>
+    <path d="M128 136 150 155l-22 20-22-20Z" fill="#f8fafc"/>
+  </g>
+  <path d="M74 88c22 7 38 22 47 44M182 88c-22 7-38 22-47 44" fill="none" stroke="#111827" stroke-linecap="round" stroke-width="7"/>
+  <path d="M90 72 74 43l33 13M166 72l16-29-33 13" fill="#f59e0b" stroke="#111827" stroke-linejoin="round" stroke-width="6"/>
+</svg>

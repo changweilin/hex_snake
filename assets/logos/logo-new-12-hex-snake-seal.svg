@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Hex Snake Seal Logo</title>
+  <desc id="desc">A premium hexagonal snake seal with six scale ticks, built for small app and title use.</desc>
+  <path d="M128 24 216 75v106l-88 51-88-51V75Z" fill="none" stroke="#111827" stroke-linejoin="round" stroke-width="10"/>
+  <path d="M91 85c28-24 79-19 85 21 6 38-46 49-63 24-12-18 0-37 24-37 24 0 42 15 50 42" fill="none" stroke="#111827" stroke-linecap="round" stroke-linejoin="round" stroke-width="18"/>
+  <path d="M96 88c25-15 62-9 66 20 3 21-26 27-36 13-4-6 1-13 11-13 14 0 27 10 35 28" fill="none" stroke="#22d3ee" stroke-linecap="round" stroke-linejoin="round" stroke-width="7"/>
+  <g fill="#f59e0b" stroke="#111827" stroke-linejoin="round" stroke-width="5">
+    <path d="M80 58 100 49l12 18-21 9Z"/>
+    <path d="M124 45 146 45l7 21-25 1Z"/>
+    <path d="M169 63 189 75l-9 20-21-12Z"/>
+    <path d="M178 172 199 181l-13 20-20-9Z"/>
+    <path d="M124 190 149 189l-7 22h-23Z"/>
+    <path d="M68 162 89 153l12 19-21 10Z"/>
+  </g>
+  <circle cx="158" cy="102" r="7" fill="#f8fafc" stroke="#111827" stroke-width="5"/>
+</svg>

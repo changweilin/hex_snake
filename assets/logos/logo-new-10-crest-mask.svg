@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Crest Mask Logo</title>
+  <desc id="desc">A symmetrical creature mask abstracting big eyes, horns, antennae, claws, and segmented armor.</desc>
+  <path d="M128 34c45 18 70 54 70 101 0 41-27 71-70 88-43-17-70-47-70-88 0-47 25-83 70-101Z" fill="#f8fafc" stroke="#111827" stroke-linejoin="round" stroke-width="9"/>
+  <path d="M79 90C66 62 70 40 91 24c8 25 11 47-12 66ZM177 90c13-28 9-50-12-66-8 25-11 47 12 66Z" fill="#ef4444" stroke="#111827" stroke-linejoin="round" stroke-width="7"/>
+  <path d="M86 136c22-19 47-22 42-74 28 21 43 46 43 75 0 29-17 51-43 64-26-13-42-35-42-65Z" fill="#10b981" stroke="#111827" stroke-linejoin="round" stroke-width="7"/>
+  <g fill="#f8fafc" stroke="#111827" stroke-linejoin="round" stroke-width="6">
+    <path d="M88 116c19-8 36-4 51 12-21 11-40 8-57-8 1-2 3-3 6-4Z"/>
+    <path d="M168 116c-19-8-36-4-51 12 21 11 40 8 57-8-1-2-3-3-6-4Z"/>
+  </g>
+  <path d="M111 160h34l-8 17h-18Z" fill="#ef4444" stroke="#111827" stroke-linejoin="round" stroke-width="5"/>
+</svg>

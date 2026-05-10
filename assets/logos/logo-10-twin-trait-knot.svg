@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Twin Trait Knot Logo</title>
+  <desc id="desc">Two interlocked creature traits, claw and feather, form a balanced knot with a hexagonal center.</desc>
+  <g stroke="#122018" stroke-width="9" stroke-linejoin="round">
+    <path d="M40 88c43-2 75 12 98 40-35 18-68 16-99-7 22-6 40-17 55-33Z" fill="#22c55e"/>
+    <path d="M216 168c-43 2-75-12-98-40 35-18 68-16 99 7-22 6-40 17-55 33Z" fill="#ef4444"/>
+    <path d="M168 40c2 43-12 75-40 98-18-35-16-68 7-99 6 22 17 40 33 55Z" fill="#f4c95d"/>
+    <path d="M88 216c-2-43 12-75 40-98 18 35 16 68-7 99-6-22-17-40-33-55Z" fill="#22c55e"/>
+    <path d="M128 95 157 112v32l-29 17-29-17v-32Z" fill="#f4c95d"/>
+  </g>
+</svg>

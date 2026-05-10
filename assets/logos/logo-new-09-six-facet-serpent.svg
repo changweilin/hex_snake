@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Six Facet Serpent Logo</title>
+  <desc id="desc">Six refined facets form a restrained star around a central serpent curve.</desc>
+  <g stroke="#111827" stroke-linejoin="round" stroke-width="7">
+    <path d="M128 31 153 71l-25 24-25-24Z" fill="#f59e0b"/>
+    <path d="M184 58 184 106l-35 11-11-37Z" fill="#f8fafc"/>
+    <path d="M217 128 177 153l-24-25 24-25Z" fill="#2563eb"/>
+    <path d="M184 198 138 176l11-37 35 11Z" fill="#f8fafc"/>
+    <path d="M128 225 103 185l25-24 25 24Z" fill="#f59e0b"/>
+    <path d="M72 198 72 150l35-11 11 37Z" fill="#f8fafc"/>
+    <path d="M39 128 79 103l24 25-24 25Z" fill="#2563eb"/>
+    <path d="M72 58 118 80l-11 37-35-11Z" fill="#f8fafc"/>
+  </g>
+  <path d="M95 142c27 24 78 7 66-30-8-23-44-25-62-6" fill="none" stroke="#111827" stroke-linecap="round" stroke-linejoin="round" stroke-width="13"/>
+  <circle cx="153" cy="107" r="7" fill="#111827"/>
+</svg>

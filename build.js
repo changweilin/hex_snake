@@ -7,6 +7,10 @@ const characterDataPath = path.join(root, "data", "characters.json");
 const audioManifestPath = path.join(root, "assets", "audio", "characters", "manifest.json");
 const portraitVariants = ["human", "beast", "chibi"];
 const deployedPortraitSizes = ["sm", "md"];
+const staticUiAssets = [
+  "assets/logos/white-dragon-logo.png",
+  "assets/logos/white-dragon-favicon.png"
+];
 const defaultDistBudgetMb = 200;
 const forbiddenDistEntries = [
   { label: "_source_chroma source assets", pattern: /(^|\/)_source_chroma(\/|$)/ },
@@ -183,6 +187,7 @@ fs.mkdirSync(outDir, { recursive: true });
 copyFile("index.html", manifest);
 copyDirectory("data", manifest);
 copyDirectory("src", manifest);
+staticUiAssets.forEach(relativePath => copyFile(relativePath, manifest));
 collectRuntimeAssets().forEach(relativePath => copyFile(relativePath, manifest));
 
 const manifestPath = path.join(outDir, "build-asset-manifest.json");

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Venom Lattice Logo</title>
+  <desc id="desc">A dark lattice of insect armor and poison channels, reduced to hexagonal geometry and neon cuts.</desc>
+  <g stroke="#111114" stroke-width="8" stroke-linejoin="round">
+    <path d="M128 24 188 59v70l-60 103-60-103V59Z" fill="#111114"/>
+    <path d="M91 62h74l-37 34Z" fill="#d9f99d"/>
+    <path d="M84 104h88l-44 34Z" fill="#5b21b6"/>
+    <path d="M92 149h72l-36 29Z" fill="#d9f99d"/>
+    <path d="M105 192h46l-23 23Z" fill="#5b21b6"/>
+    <path d="M68 86 31 103l37 20ZM188 86l37 17-37 20Z" fill="#d9f99d"/>
+    <path d="M79 132 45 164l47-2ZM177 132l34 32-47-2Z" fill="#5b21b6"/>
+  </g>
+</svg>

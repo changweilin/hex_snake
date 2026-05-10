@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Six Scale Ring Logo</title>
+  <desc id="desc">A minimal ring made from six interlocking scale blocks, representing the six chibi characters as one system.</desc>
+  <g stroke="#111827" stroke-width="8" stroke-linejoin="round">
+    <path d="M126 27 154 44 140 82h-32L94 44Z" fill="#f4c95d"/>
+    <path d="M174 54 203 71v34l-40 8-16-28Z" fill="#2dd4bf"/>
+    <path d="M207 128v33l-29 17-27-30 16-28Z" fill="#2dd4bf"/>
+    <path d="M130 229 101 212l14-38h32l14 38Z" fill="#f4c95d"/>
+    <path d="M82 202 53 185v-34l40-8 16 28Z" fill="#2dd4bf"/>
+    <path d="M49 128V95l29-17 27 30-16 28Z" fill="#2dd4bf"/>
+    <path d="M128 88 163 108v40l-35 20-35-20v-40Z" fill="#f8fafc"/>
+  </g>
+</svg>

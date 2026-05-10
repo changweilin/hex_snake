@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Venom Eye Loop Logo</title>
+  <desc id="desc">A dark, premium loop with venom eyes and subtle scale cuts, inspired by the sharper chibi forms.</desc>
+  <path d="M63 158c0-44 33-77 77-77 26 0 48 13 55 35-26-9-55 1-70 24-13 20-3 41 22 41 22 0 37-15 39-39 21 42-12 78-57 78-39 0-66-24-66-62Z" fill="#111827"/>
+  <path d="M86 153c10-26 31-39 62-39 19 0 34 5 45 15" fill="none" stroke="#a3e635" stroke-linecap="round" stroke-width="9"/>
+  <g fill="#f8fafc" stroke="#a3e635" stroke-linejoin="round" stroke-width="5">
+    <path d="M100 112c15-4 28 0 38 12-15 9-31 7-45-5 1-3 3-5 7-7Z"/>
+    <path d="M159 151c15-4 28 0 38 12-15 9-31 7-45-5 1-3 3-5 7-7Z"/>
+  </g>
+  <path d="M108 65 82 36l42 12M153 65l27-29-42 12" fill="#a3e635" stroke="#111827" stroke-linejoin="round" stroke-width="7"/>
+</svg>
