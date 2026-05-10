@@ -87,6 +87,16 @@ function loadHighAiStrategies(root = path.resolve(__dirname, "..")) {
   return highAiStrategiesFromData(loadJson(filePath));
 }
 
+function loadExtremeAiStrategies(root = path.resolve(__dirname, "..")) {
+  const filePath = path.join(root, "data", "extreme-ai-strategies.json");
+  if (!fs.existsSync(filePath)) return {};
+  return highAiStrategiesFromData(loadJson(filePath));
+}
+
+function isHighAiDifficultyValue(value) {
+  return value === "high" || value === "extreme";
+}
+
 function keyOf(cell) {
   return `${cell.q},${cell.r}`;
 }
@@ -684,7 +694,7 @@ function makePolicy(overrides = {}) {
     aimPrecision: clamp(Number(overrides.aimPrecision ?? 0.78), 0, 1),
     skillStrategy: overrides.skillStrategy || "balanced",
     foodStrategy: overrides.foodStrategy || "balanced",
-    aiDifficulty: ["novice", "low", "medium", "high"].includes(inferredDifficulty) ? inferredDifficulty : "medium",
+    aiDifficulty: ["novice", "low", "medium", "high", "extreme"].includes(inferredDifficulty) ? inferredDifficulty : "medium",
     strategyId: overrides.strategyId,
     characterStrategyId: overrides.characterStrategyId,
     hasCustomStrategyWeights: Boolean(overrides.strategyWeights),
@@ -709,15 +719,15 @@ function normalizeStrategyWeights(overrides = {}) {
     || (skillStrategy === "spamSmall" ? "low" : skillStrategy === "preferBig" ? "high" : "medium");
   const defaults = {
     movement: {
-      safePath: difficulty === "high" ? 1.6 : difficulty === "low" ? 0.9 : 1.2,
-      leastDamage: difficulty === "high" ? 1.3 : 1,
+      safePath: isHighAiDifficultyValue(difficulty) ? 1.6 : difficulty === "low" ? 0.9 : 1.2,
+      leastDamage: isHighAiDifficultyValue(difficulty) ? 1.3 : 1,
       fastestArrival: difficulty === "low" ? 1.3 : 1
     },
     food: {
       fastestArrival: 1,
       ownDeficit: foodStrategy === "selfStockpile" ? 1.6 : 0.8,
       opponentDeficit: foodStrategy === "denyOpponent" ? 1.5 : 0.45,
-      ownPreferred: foodStrategy === "preferredFood" ? 1.8 : difficulty === "high" ? 1.1 : 0.75,
+      ownPreferred: foodStrategy === "preferredFood" ? 1.8 : isHighAiDifficultyValue(difficulty) ? 1.1 : 0.75,
       opponentPreferred: foodStrategy === "denyOpponent" ? 1.4 : 0.35
     },
     skillAllocation: {
@@ -728,19 +738,19 @@ function normalizeStrategyWeights(overrides = {}) {
       lethal: 3,
       nearFullEnergy: skillStrategy === "saveBurst" ? 1.6 : 0.75,
       opponentDebuffed: difficulty === "low" ? 0.4 : 1.25,
-      opponentAlmostReady: difficulty === "high" ? 1.2 : 0.65,
-      nearOpponent: difficulty === "high" ? 1.15 : 0.85,
+      opponentAlmostReady: isHighAiDifficultyValue(difficulty) ? 1.2 : 0.65,
+      nearOpponent: isHighAiDifficultyValue(difficulty) ? 1.15 : 0.85,
       farOpponent: skillStrategy === "preferBig" ? 0.75 : 0.35
     },
     castTarget: {
       targetHead: 1.3,
-      bodyCluster: difficulty === "high" ? 1.2 : 0.8,
-      targetNearestFood: difficulty === "high" ? 0.8 : 0.5
+      bodyCluster: isHighAiDifficultyValue(difficulty) ? 1.2 : 0.8,
+      targetNearestFood: isHighAiDifficultyValue(difficulty) ? 0.8 : 0.5
     },
     castDirection: {
       selfHeadToOpponentHead: 1.4,
-      opponentBodyLongestAxis: difficulty === "high" ? 1.1 : 0.7,
-      opponentHeadToNearestFood: difficulty === "high" ? 0.8 : 0.4
+      opponentBodyLongestAxis: isHighAiDifficultyValue(difficulty) ? 1.1 : 0.7,
+      opponentHeadToNearestFood: isHighAiDifficultyValue(difficulty) ? 0.8 : 0.4
     }
   };
   return {
@@ -754,11 +764,15 @@ function normalizeStrategyWeights(overrides = {}) {
 }
 
 function makeFighter(owner, character, start, direction, settings, balance, policy) {
-  if (policy.aiDifficulty === "high" && !policy.hasCustomStrategyWeights) {
-    const highStrategyWeights = balance.highAiStrategies?.[character.id];
+  if (isHighAiDifficultyValue(policy.aiDifficulty) && !policy.hasCustomStrategyWeights) {
+    const strategyWeightsByCharacter = policy.aiDifficulty === "extreme"
+      ? balance.extremeAiStrategies
+      : balance.highAiStrategies;
+    const highStrategyWeights = strategyWeightsByCharacter?.[character.id];
     if (highStrategyWeights) {
-      policy.strategyId = policy.strategyId || "high-ai-default";
-      policy.characterStrategyId = policy.characterStrategyId || `${character.id}:high-ai-default`;
+      const defaultStrategyId = `${policy.aiDifficulty}-ai-default`;
+      policy.strategyId = policy.strategyId || defaultStrategyId;
+      policy.characterStrategyId = policy.characterStrategyId || `${character.id}:${defaultStrategyId}`;
       policy.strategyWeights = normalizeStrategyWeights({ ...policy, strategyWeights: highStrategyWeights });
       policy.hasCustomStrategyWeights = true;
     }
@@ -990,7 +1004,7 @@ function shouldUseBigAttack(state, fighter, opponent, balance) {
     const distance = hexDistance(fighter.snake[0], perceivedSnakeFor(state, fighter, opponent)[0]);
     return !canAttack(fighter, "small", balance) || hasResourcePressure(fighter, balance) || lateGameSkillPhase(state, fighter, opponent, balance) >= 0.86 || distance <= 2 && state.rng.next() < 0.35 || state.rng.next() < 0.18;
   }
-  if (difficulty === "medium" || difficulty === "high") {
+  if (difficulty === "medium" || isHighAiDifficultyValue(difficulty)) {
     const lethal = strongestVisibleDamage(state, fighter, opponent, balance, "big") >= opponent.hp;
     return isDebuffed(opponent, state.now) || lethal || hasResourcePressure(fighter, balance) || lateGameSkillPhase(state, fighter, opponent, balance) >= 0.78;
   }
@@ -1000,7 +1014,7 @@ function shouldUseBigAttack(state, fighter, opponent, balance) {
 function foodValueFor(fighter, opponent, food, policy, state = null) {
   const ownDistance = state ? wrappedDistance(state, fighter.snake[0], food) : hexDistance(fighter.snake[0], food);
   const opponentDistance = state ? wrappedDistance(state, opponent.snake[0], food) : hexDistance(opponent.snake[0], food);
-  const highDifficulty = policy.aiDifficulty === "high" && state;
+  const highDifficulty = isHighAiDifficultyValue(policy.aiDifficulty) && state;
   const ownArrivalTime = highDifficulty ? arrivalTimeForDistance(fighter, state.balance, ownDistance, state.now) : ownDistance;
   const opponentArrivalTime = highDifficulty ? arrivalTimeForDistance(opponent, state.balance, opponentDistance, state.now) : opponentDistance;
   const weights = policy.strategyWeights.food;
@@ -1049,7 +1063,7 @@ function fighterPrefersFood(fighter, food) {
 }
 
 function foodRaceAdvantage(state, fighter, opponent, food) {
-  if (fighter.policy.aiDifficulty === "high") {
+  if (isHighAiDifficultyValue(fighter.policy.aiDifficulty)) {
     const opponentHead = perceivedSnakeFor(state, fighter, opponent)[0] || opponent.snake[0];
     return arrivalTimeForDistance(fighter, state.balance, wrappedDistance(state, fighter.snake[0], food), state.now)
       - arrivalTimeForDistance(opponent, state.balance, wrappedDistance(state, opponentHead, food), state.now);
@@ -1078,7 +1092,7 @@ function stableFoodRaceTieOwner(food) {
 }
 
 function contestedFoodTieWinner(state, fighter, opponent, food) {
-  if (fighter.policy.aiDifficulty !== "high") return null;
+  if (!isHighAiDifficultyValue(fighter.policy.aiDifficulty)) return null;
   const opponentHead = perceivedSnakeFor(state, fighter, opponent)[0] || opponent.snake[0];
   const ownArrival = foodArrivalFrom(state, fighter, fighter.snake[0], food);
   const opponentArrival = foodArrivalFrom(state, opponent, opponentHead, food);
@@ -1107,7 +1121,7 @@ function filterContestedFoodTargets(state, fighter, opponent, foods) {
 }
 
 function shouldAbandonFoodTarget(state, fighter, opponent, food, lockedScore, bestScore, targetAge) {
-  if (fighter.policy.aiDifficulty !== "high") return false;
+  if (!isHighAiDifficultyValue(fighter.policy.aiDifficulty)) return false;
   const occupied = movementOccupiedSet(state, fighter, opponent);
   const reachable = reachableSpace(state, food, occupied, DEAD_END_MIN_SPACE);
   const expectedDamage = expectedDamageAt(state, fighter, food);
@@ -1167,7 +1181,7 @@ function filterUnsafeFoodTargets(state, fighter, opponent, foods) {
   }));
   const maxOpponentAdvantage = Math.max(0, ...withRace.map(row => row.opponentAdvantage));
   const filtered = withRace
-    .filter(row => fighter.policy.aiDifficulty !== "high" || row.expectedDamage < fighter.hp)
+    .filter(row => !isHighAiDifficultyValue(fighter.policy.aiDifficulty) || row.expectedDamage < fighter.hp)
     .filter(row => !(maxOpponentAdvantage > 0 && row.opponentAdvantage === maxOpponentAdvantage))
     .filter(row => row.reachable >= DEAD_END_MIN_SPACE)
     .map(row => row.food);
@@ -1190,7 +1204,7 @@ function nearbyOpenSpace(state, cell, occupied) {
 }
 
 function movementTargetBenefit(state, fighter, target) {
-  if (fighter.policy.aiDifficulty !== "high" || !target) return 0;
+  if (!isHighAiDifficultyValue(fighter.policy.aiDifficulty) || !target) return 0;
   const cache = activeCacheFor(state, fighter);
   const cacheKey = keyOf(target);
   if (cache?.targetBenefits.has(cacheKey)) return cache.targetBenefits.get(cacheKey);
@@ -1201,7 +1215,7 @@ function movementTargetBenefit(state, fighter, target) {
 }
 
 function opponentEtaThreatForCell(state, fighter, opponent, from, cell, opponentHead) {
-  if (fighter.policy.aiDifficulty !== "high" || !cell || !opponentHead) return 0;
+  if (!isHighAiDifficultyValue(fighter.policy.aiDifficulty) || !cell || !opponentHead) return 0;
   const ownArrival = arrivalTimeForDistance(fighter, state.balance, wrappedDistance(state, from, cell), state.now);
   const opponentArrival = arrivalTimeForDistance(opponent, state.balance, wrappedDistance(state, opponentHead, cell), state.now);
   if (!Number.isFinite(ownArrival) || !Number.isFinite(opponentArrival)) return 0;
@@ -1330,7 +1344,7 @@ function directionToward(state, fighter, opponent, target) {
     const key = keyOf(cell);
     if (!targetDistanceCache.has(key)) {
       const distance = wrappedDistance(state, cell, target);
-      targetDistanceCache.set(key, fighter.policy.aiDifficulty === "high"
+      targetDistanceCache.set(key, isHighAiDifficultyValue(fighter.policy.aiDifficulty)
         ? arrivalTimeForDistance(fighter, state.balance, distance, state.now)
         : distance);
     }
@@ -1345,13 +1359,13 @@ function directionToward(state, fighter, opponent, target) {
   const hardSafe = viable.filter(option => !option.blocked && !option.headThreat && !option.deadEnd && !option.lethalThreat);
   const safe = hardSafe.length ? hardSafe : viable.filter(option => !option.blocked && !option.headThreat && !option.lethalThreat && option.risk < 20);
   const candidates = safe.length ? safe : viable;
-  if (fighter.policy.aiDifficulty === "high" && candidates.length > 1) {
+  if (isHighAiDifficultyValue(fighter.policy.aiDifficulty) && candidates.length > 1) {
     candidates.forEach(option => {
       option.lookaheadScore = lookaheadMovementScore(state, fighter, opponent, option, target, perceivedOpponent, opponentThreat, distanceToTarget);
     });
   }
   candidates.sort((a, b) => a.score - b.score || a.risk - b.risk);
-  if (fighter.policy.aiDifficulty === "high") {
+  if (isHighAiDifficultyValue(fighter.policy.aiDifficulty)) {
     candidates.sort((a, b) => (a.lookaheadScore ?? a.score) - (b.lookaheadScore ?? b.score) || a.score - b.score || a.risk - b.risk);
   }
   if (state.rng.next() > fighter.policy.pathPrecision) return state.rng.item(viable).direction;
@@ -1682,7 +1696,7 @@ function chooseAiAttackProfile(state, fighter, opponent, balance) {
     : lethalProfiles.sort((a, b) => attackResourceCost(a, balance) - attackResourceCost(b, balance))[0];
   if (lethal) return lethal;
   if (fighter.policy.aiDifficulty === "low" && shouldUseBigAttack(state, fighter, opponent, balance)) return "big";
-  if (fighter.policy.aiDifficulty !== "high") {
+  if (!isHighAiDifficultyValue(fighter.policy.aiDifficulty)) {
     if (shouldUseBigAttack(state, fighter, opponent, balance)) return "big";
     if (shouldSaveSmallForBig(state, fighter, opponent, balance)) return null;
     if (canAttack(fighter, "small", balance)) return "small";
@@ -1713,7 +1727,7 @@ function chooseAttackTarget(state, attacker, defender, balance, profile) {
   if (profile === "big" && attacker.character.id === "moray") return chooseMorayLineAttackPlan(state, attacker, defender, balance).target;
   const maxDamageTarget = bestBodyClusterTarget(state, targetSnake, stats, balance) || targetHead;
   if (attackTargetDamageScore(state, targetSnake, maxDamageTarget, stats, balance) >= defender.hp) return { ...maxDamageTarget };
-  if (attacker.policy.aiDifficulty === "high") {
+  if (isHighAiDifficultyValue(attacker.policy.aiDifficulty)) {
     const best = highAttackTargetRows(state, attacker, defender, balance, profile)[0];
     if (best) return { ...best.target };
   }
@@ -2485,6 +2499,9 @@ function createMatchState(options) {
   if (!balance.highAiStrategies) {
     balance.highAiStrategies = loadHighAiStrategies(path.resolve(__dirname, ".."));
   }
+  if (!balance.extremeAiStrategies) {
+    balance.extremeAiStrategies = loadExtremeAiStrategies(path.resolve(__dirname, ".."));
+  }
   const settings = {
     gridSize: options.gridSize ?? balance.defaults.gridSize,
     foodCount: options.foodCount ?? balance.defaults.foodCount,
@@ -2737,6 +2754,8 @@ module.exports = {
   loadCharacters,
   highAiStrategiesFromData,
   loadHighAiStrategies,
+  loadExtremeAiStrategies,
+  isHighAiDifficultyValue,
   hexDistance,
   wrappedDistance,
   createBoard,

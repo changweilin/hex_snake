@@ -1,0 +1,294 @@
+{
+  "generatedAt": "2026-05-10T13:19:11.797Z",
+  "source": "C:\\Users\\user\\Documents\\app\\hex_snake\\reports\\strategy-full-overnight-cem-shortlist-bg-20260509-114019\\best-strategies-for-apply.json",
+  "strategies": {
+    "dragon": {
+      "strategyId": "dragon-ga1-child-7-414691817",
+      "winRate": 0.545,
+      "outcomeWinRate": 0.545,
+      "drawRate": 0,
+      "decisiveGames": 1200,
+      "decisiveWinRate": 0.545,
+      "games": 1200,
+      "wins": 654,
+      "losses": 546,
+      "draws": 0,
+      "strategyWeights": {
+        "movement": {
+          "safePath": 0,
+          "leastDamage": 0.2715,
+          "fastestArrival": 1.6307
+        },
+        "food": {
+          "fastestArrival": 2.9036,
+          "ownDeficit": 0,
+          "opponentDeficit": 0.2211,
+          "ownPreferred": 0.5889,
+          "opponentPreferred": 1.8496
+        },
+        "skillAllocation": {
+          "preferSmall": 0.3276,
+          "preferBig": 0.7384
+        },
+        "castTiming": {
+          "lethal": 3,
+          "nearFullEnergy": 2.7801,
+          "opponentDebuffed": 2.8321,
+          "opponentAlmostReady": 2.8193,
+          "nearOpponent": 2.9298,
+          "farOpponent": 2.3458
+        },
+        "castTarget": {
+          "targetHead": 1.4989,
+          "bodyCluster": 1.4133,
+          "targetNearestFood": 0.5646
+        },
+        "castDirection": {
+          "selfHeadToOpponentHead": 0.2249,
+          "opponentBodyLongestAxis": 1.2834,
+          "opponentHeadToNearestFood": 3
+        }
+      }
+    },
+    "sandworm": {
+      "strategyId": "sandworm-ga6-elite-3",
+      "winRate": 0.53,
+      "outcomeWinRate": 0.53,
+      "drawRate": 0,
+      "decisiveGames": 1200,
+      "decisiveWinRate": 0.53,
+      "games": 1200,
+      "wins": 636,
+      "losses": 564,
+      "draws": 0,
+      "strategyWeights": {
+        "movement": {
+          "safePath": 0.1129,
+          "leastDamage": 0.7874,
+          "fastestArrival": 2.8607
+        },
+        "food": {
+          "fastestArrival": 3,
+          "ownDeficit": 0,
+          "opponentDeficit": 0.4337,
+          "ownPreferred": 0,
+          "opponentPreferred": 0.0967
+        },
+        "skillAllocation": {
+          "preferSmall": 0.5887,
+          "preferBig": 2.0431
+        },
+        "castTiming": {
+          "lethal": 3,
+          "nearFullEnergy": 2.4702,
+          "opponentDebuffed": 0.4822,
+          "opponentAlmostReady": 0.6841,
+          "nearOpponent": 2.8723,
+          "farOpponent": 0.0365
+        },
+        "castTarget": {
+          "targetHead": 1.298,
+          "bodyCluster": 0.118,
+          "targetNearestFood": 3
+        },
+        "castDirection": {
+          "selfHeadToOpponentHead": 0.2923,
+          "opponentBodyLongestAxis": 0.5419,
+          "opponentHeadToNearestFood": 2.6615
+        }
+      }
+    },
+    "quetzal": {
+      "strategyId": "quetzal-ga1-child-23-341143910",
+      "winRate": 0.5675,
+      "outcomeWinRate": 0.5675,
+      "drawRate": 0,
+      "decisiveGames": 1200,
+      "decisiveWinRate": 0.5675,
+      "games": 1200,
+      "wins": 681,
+      "losses": 519,
+      "draws": 0,
+      "strategyWeights": {
+        "movement": {
+          "safePath": 0.0955,
+          "leastDamage": 0.2973,
+          "fastestArrival": 2.9007
+        },
+        "food": {
+          "fastestArrival": 3,
+          "ownDeficit": 0,
+          "opponentDeficit": 0.2605,
+          "ownPreferred": 0.0373,
+          "opponentPreferred": 0.1531
+        },
+        "skillAllocation": {
+          "preferSmall": 1.2042,
+          "preferBig": 1.2887
+        },
+        "castTiming": {
+          "lethal": 3,
+          "nearFullEnergy": 1.1674,
+          "opponentDebuffed": 0.5349,
+          "opponentAlmostReady": 0,
+          "nearOpponent": 0.2991,
+          "farOpponent": 1.8739
+        },
+        "castTarget": {
+          "targetHead": 2.9111,
+          "bodyCluster": 0,
+          "targetNearestFood": 0.1628
+        },
+        "castDirection": {
+          "selfHeadToOpponentHead": 0,
+          "opponentBodyLongestAxis": 0.1477,
+          "opponentHeadToNearestFood": 2.3087
+        }
+      }
+    },
+    "moray": {
+      "strategyId": "moray-rl8-sample-4-939688707",
+      "winRate": 0.551667,
+      "outcomeWinRate": 0.551667,
+      "drawRate": 0,
+      "decisiveGames": 1200,
+      "decisiveWinRate": 0.551667,
+      "games": 1200,
+      "wins": 662,
+      "losses": 538,
+      "draws": 0,
+      "strategyWeights": {
+        "movement": {
+          "safePath": 0.19,
+          "leastDamage": 0.835,
+          "fastestArrival": 2.3494
+        },
+        "food": {
+          "fastestArrival": 2.8599,
+          "ownDeficit": 1.395,
+          "opponentDeficit": 0.4144,
+          "ownPreferred": 0,
+          "opponentPreferred": 0
+        },
+        "skillAllocation": {
+          "preferSmall": 0.5061,
+          "preferBig": 1.6741
+        },
+        "castTiming": {
+          "lethal": 3,
+          "nearFullEnergy": 1.642,
+          "opponentDebuffed": 2.2151,
+          "opponentAlmostReady": 2.0453,
+          "nearOpponent": 0.8054,
+          "farOpponent": 1.2601
+        },
+        "castTarget": {
+          "targetHead": 2.2973,
+          "bodyCluster": 0.2571,
+          "targetNearestFood": 1.0065
+        },
+        "castDirection": {
+          "selfHeadToOpponentHead": 0.6941,
+          "opponentBodyLongestAxis": 1.0062,
+          "opponentHeadToNearestFood": 2.105
+        }
+      }
+    },
+    "lobster": {
+      "strategyId": "lobster-cem2-sample-4-824005634",
+      "winRate": 0.515833,
+      "outcomeWinRate": 0.515833,
+      "drawRate": 0,
+      "decisiveGames": 1200,
+      "decisiveWinRate": 0.515833,
+      "games": 1200,
+      "wins": 619,
+      "losses": 581,
+      "draws": 0,
+      "strategyWeights": {
+        "movement": {
+          "safePath": 0.3447,
+          "leastDamage": 1.1602,
+          "fastestArrival": 1.4993
+        },
+        "food": {
+          "fastestArrival": 2.8753,
+          "ownDeficit": 0.3618,
+          "opponentDeficit": 2.1475,
+          "ownPreferred": 0.4779,
+          "opponentPreferred": 0.3
+        },
+        "skillAllocation": {
+          "preferSmall": 1.5019,
+          "preferBig": 0.8961
+        },
+        "castTiming": {
+          "lethal": 3,
+          "nearFullEnergy": 0.6852,
+          "opponentDebuffed": 2.5703,
+          "opponentAlmostReady": 2.2345,
+          "nearOpponent": 1.2487,
+          "farOpponent": 2.3331
+        },
+        "castTarget": {
+          "targetHead": 0.7644,
+          "bodyCluster": 2.9585,
+          "targetNearestFood": 1.3341
+        },
+        "castDirection": {
+          "selfHeadToOpponentHead": 2.6707,
+          "opponentBodyLongestAxis": 1.7406,
+          "opponentHeadToNearestFood": 0.1929
+        }
+      }
+    },
+    "gu_king": {
+      "strategyId": "gu_king-ga6-child-16-611540625",
+      "winRate": 0.533333,
+      "outcomeWinRate": 0.533333,
+      "drawRate": 0,
+      "decisiveGames": 1200,
+      "decisiveWinRate": 0.533333,
+      "games": 1200,
+      "wins": 640,
+      "losses": 560,
+      "draws": 0,
+      "strategyWeights": {
+        "movement": {
+          "safePath": 0.0746,
+          "leastDamage": 0.4224,
+          "fastestArrival": 2.7843
+        },
+        "food": {
+          "fastestArrival": 2.9403,
+          "ownDeficit": 0.0029,
+          "opponentDeficit": 0.7762,
+          "ownPreferred": 0.0621,
+          "opponentPreferred": 0.2876
+        },
+        "skillAllocation": {
+          "preferSmall": 0.3047,
+          "preferBig": 0.917
+        },
+        "castTiming": {
+          "lethal": 3,
+          "nearFullEnergy": 2.8941,
+          "opponentDebuffed": 2.6904,
+          "opponentAlmostReady": 0.4786,
+          "nearOpponent": 0.1226,
+          "farOpponent": 0
+        },
+        "castTarget": {
+          "targetHead": 3,
+          "bodyCluster": 0,
+          "targetNearestFood": 0.0477
+        },
+        "castDirection": {
+          "selfHeadToOpponentHead": 0.0749,
+          "opponentBodyLongestAxis": 0.0583,
+          "opponentHeadToNearestFood": 2.5465
+        }
+      }
+    }
+  }
+}

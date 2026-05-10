@@ -234,7 +234,7 @@
     }
 
     function setComputerDifficulty(value) {
-      computerDifficulty = ["novice", "low", "medium", "high"].includes(value) ? value : "medium";
+      computerDifficulty = ["novice", "low", "medium", "high", "extreme"].includes(value) ? value : "medium";
       computerDifficultyInput.value = computerDifficulty;
     }
 
@@ -2172,6 +2172,49 @@
       if (playerHp <= 0 || computerHp <= 0) endGame(playerHp <= 0, computerHp <= 0);
     }
 
+    function advanceOwnerMovement(owner, next, eatenFood) {
+      const parts = owner === "player" ? snake : computerSnake;
+      const ate = Boolean(eatenFood);
+      parts.unshift(next);
+      if (!ate) {
+        parts.pop();
+        return null;
+      }
+
+      if (owner === "player") {
+        score += 1;
+        collectFood("player", eatenFood);
+        best = Math.max(best, score);
+        localStorage.setItem("hexSnakeBest", String(best));
+        lastFeedElapsedMs = 0;
+        lastPlayerFoodAt = performance.now();
+        playerFoodTargetKey = null;
+        playerFoodTargetAt = 0;
+        playerHp = Math.min(maxHpForSnake(snake), playerHp + foodHealAmount());
+      } else {
+        computerScore += 1;
+        lastComputerFoodAt = performance.now();
+        computerFoodTargetKey = null;
+        computerFoodTargetAt = 0;
+        if (computerCanGrow()) {
+          collectFood("computer", eatenFood);
+          computerHp = Math.min(maxHpForSnake(computerSnake), computerHp + foodHealAmount());
+        } else {
+          parts.pop();
+        }
+      }
+
+      return { owner, key: keyOf(next) };
+    }
+
+    function replaceConsumedFoods(consumedFoods, attemptedFood = false) {
+      const consumed = consumedFoods.filter(Boolean);
+      if (!attemptedFood && !consumed.length) return;
+      const eatenKeys = new Set(consumed.map(food => food.key));
+      if (eatenKeys.size) foods = foods.filter(food => !eatenKeys.has(keyOf(food)));
+      placeFoods(consumed.map(food => food.owner));
+    }
+
     function step(headCollisionOrder = "simultaneous", now = performance.now()) {
       if (isPlayerAutoControlActive()) {
         nextDir = chooseAutoDirection("player");
@@ -2229,53 +2272,9 @@
         return;
       }
 
-      if (!playerCollision) {
-        snake.unshift(next);
-      }
-      if (!computerCollision) {
-        computerSnake.unshift(computerNext);
-      }
-
-      if (!playerCollision && eating) {
-        score += 1;
-        collectFood("player", eatenFood);
-        best = Math.max(best, score);
-        localStorage.setItem("hexSnakeBest", String(best));
-        lastFeedElapsedMs = 0;
-        lastPlayerFoodAt = performance.now();
-        playerFoodTargetKey = null;
-        playerFoodTargetAt = 0;
-        playerHp = Math.min(maxHpForSnake(snake), playerHp + foodHealAmount());
-      } else if (!playerCollision) {
-        snake.pop();
-      }
-
-      if (!computerCollision && computerEating) {
-        computerScore += 1;
-        lastComputerFoodAt = performance.now();
-        computerFoodTargetKey = null;
-        computerFoodTargetAt = 0;
-        if (computerCanGrow()) {
-          collectFood("computer", computerEatenFood);
-          computerHp = Math.min(maxHpForSnake(computerSnake), computerHp + foodHealAmount());
-        } else {
-          computerSnake.pop();
-        }
-      } else if (!computerCollision) {
-        computerSnake.pop();
-      }
-
-      if (eating || computerEating) {
-        const eatenKeys = new Set([
-          !playerCollision && eating ? nextKey : null,
-          !computerCollision && computerEating ? computerNextKey : null
-        ].filter(Boolean));
-        foods = foods.filter(food => !eatenKeys.has(keyOf(food)));
-        placeFoods([
-          !playerCollision && eating ? "player" : null,
-          !computerCollision && computerEating ? "computer" : null
-        ].filter(Boolean));
-      }
+      const playerConsumedFood = !playerCollision ? advanceOwnerMovement("player", next, eatenFood) : null;
+      const computerConsumedFood = !computerCollision ? advanceOwnerMovement("computer", computerNext, computerEatenFood) : null;
+      replaceConsumedFoods([playerConsumedFood, computerConsumedFood], eating || computerEating);
 
       if (!playerCollision && running && !paused) maybeAutoBattlePlayerAttack(now);
       if (!computerCollision && running && !paused) maybeComputerAttack(now);
@@ -2305,22 +2304,8 @@
         return;
       }
 
-      snake.unshift(next);
-      if (eating) {
-        score += 1;
-        collectFood("player", eatenFood);
-        best = Math.max(best, score);
-        localStorage.setItem("hexSnakeBest", String(best));
-        lastFeedElapsedMs = 0;
-        lastPlayerFoodAt = performance.now();
-        playerFoodTargetKey = null;
-        playerFoodTargetAt = 0;
-        playerHp = Math.min(maxHpForSnake(snake), playerHp + foodHealAmount());
-        foods = foods.filter(food => keyOf(food) !== nextKey);
-        placeFoods(["player"]);
-      } else {
-        snake.pop();
-      }
+      const consumedFood = advanceOwnerMovement("player", next, eatenFood);
+      replaceConsumedFoods([consumedFood], eating);
       if (running && !paused) maybeAutoBattlePlayerAttack(now);
       updateHud();
     }
@@ -2344,23 +2329,8 @@
         return;
       }
 
-      computerSnake.unshift(computerNext);
-      if (computerEating) {
-        computerScore += 1;
-        lastComputerFoodAt = performance.now();
-        computerFoodTargetKey = null;
-        computerFoodTargetAt = 0;
-        if (computerCanGrow()) {
-          collectFood("computer", computerEatenFood);
-          computerHp = Math.min(maxHpForSnake(computerSnake), computerHp + foodHealAmount());
-        } else {
-          computerSnake.pop();
-        }
-        foods = foods.filter(food => keyOf(food) !== computerNextKey);
-        placeFoods(["computer"]);
-      } else {
-        computerSnake.pop();
-      }
+      const consumedFood = advanceOwnerMovement("computer", computerNext, computerEatenFood);
+      replaceConsumedFoods([consumedFood], computerEating);
       if (running && !paused) maybeComputerAttack(now);
       updateHud();
     }

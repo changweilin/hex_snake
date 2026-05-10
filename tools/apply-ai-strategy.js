@@ -5,7 +5,7 @@ const path = require("path");
 const { loadCharacters } = require("./sim-core");
 
 const root = path.resolve(__dirname, "..");
-const strategyDataPath = path.join(root, "data", "high-ai-strategies.json");
+const defaultStrategyDataPath = path.join(root, "data", "high-ai-strategies.json");
 
 function parseArgs(argv) {
   const args = {};
@@ -37,6 +37,10 @@ function resolveInput(args) {
   const input = args.input || args.bestStrategies || args["best-strategies"];
   if (!input) throw new Error("--input must point to a best-strategies.json file.");
   return path.resolve(root, input);
+}
+
+function resolveOutput(args) {
+  return args.output ? path.resolve(root, args.output) : defaultStrategyDataPath;
 }
 
 function rowsFromInput(file) {
@@ -88,10 +92,11 @@ function updateIndex() {
 function main() {
   const args = parseArgs(process.argv.slice(2));
   const inputPath = resolveInput(args);
+  const outputPath = resolveOutput(args);
   const characters = loadCharacters(root);
   const strategyData = buildStrategyData(rowsFromInput(readJson(inputPath)), characters, inputPath);
-  writeJson(strategyDataPath, strategyData);
-  console.log(`Wrote ${strategyDataPath}`);
+  writeJson(outputPath, strategyData);
+  console.log(`Wrote ${outputPath}`);
 }
 
 if (require.main === module) {

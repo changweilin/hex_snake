@@ -2521,6 +2521,33 @@ test("high difficulty applies character-specific default strategy weights", () =
   assert.equal(state.fighters.computer.policy.strategyWeights.movement.safePath, 0.25);
 });
 
+test("extreme difficulty applies character-specific best strategy weights", () => {
+  const tunedBalance = JSON.parse(JSON.stringify(balance));
+  tunedBalance.highAiStrategies = {
+    dragon: {
+      movement: { safePath: 0.25, leastDamage: 0.5, fastestArrival: 0.75 }
+    }
+  };
+  tunedBalance.extremeAiStrategies = {
+    dragon: {
+      movement: { safePath: 2.75, leastDamage: 0.5, fastestArrival: 0.75 },
+      food: { fastestArrival: 0.5 },
+      skillAllocation: { preferSmall: 2.5, preferBig: 0.25 },
+      castTiming: { lethal: 3 }
+    }
+  };
+  const state = createMatchState({
+    balance: tunedBalance,
+    playerCharacter: characterById.get("dragon"),
+    computerCharacter: characterById.get("dragon"),
+    computerModel: { aiDifficulty: "extreme", pathPrecision: 1, aimPrecision: 1 }
+  });
+  assert.equal(state.fighters.computer.policy.aiDifficulty, "extreme");
+  assert.equal(state.fighters.player.policy.strategyWeights.movement.safePath, 1.2);
+  assert.equal(state.fighters.computer.policy.strategyWeights.movement.safePath, 2.75);
+  assert.ok(state.fighters.computer.policy.strategyWeights.castTarget.targetHead >= 0);
+});
+
 test("simulate-balance strategy files select rows by character", () => {
   const strategyFile = {
     strategies: {

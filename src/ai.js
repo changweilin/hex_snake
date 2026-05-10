@@ -246,6 +246,7 @@
       }
     };
     let highAiStrategyWeightsByCharacter = { ...baselineHighAiStrategyWeightsByCharacter };
+    let extremeAiStrategyWeightsByCharacter = { ...baselineHighAiStrategyWeightsByCharacter };
 
     function highAiStrategiesFromData(file) {
       const rows = file?.strategies || file?.bestStrategies || file;
@@ -262,19 +263,37 @@
       return {};
     }
 
-    async function loadHighAiStrategyConfig() {
+    function isHighAiDifficulty() {
+      return computerDifficulty === "high" || computerDifficulty === "extreme";
+    }
+
+    async function loadAiStrategyFile(source, fallbackWeights, label) {
       try {
-        const response = await fetch("data/high-ai-strategies.json", { cache: "no-store" });
+        const response = await fetch(source, { cache: "no-store" });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const nextWeights = highAiStrategiesFromData(await response.json());
         if (!Object.keys(nextWeights).length) throw new Error("No character strategy weights found.");
-        highAiStrategyWeightsByCharacter = {
-          ...baselineHighAiStrategyWeightsByCharacter,
+        return {
+          ...fallbackWeights,
           ...nextWeights
         };
       } catch (error) {
-        console.warn(`Using built-in high AI strategies: ${error.message}`);
+        console.warn(`Using built-in ${label} AI strategies: ${error.message}`);
+        return { ...fallbackWeights };
       }
+    }
+
+    async function loadHighAiStrategyConfig() {
+      highAiStrategyWeightsByCharacter = await loadAiStrategyFile(
+        "data/high-ai-strategies.json",
+        baselineHighAiStrategyWeightsByCharacter,
+        "high"
+      );
+      extremeAiStrategyWeightsByCharacter = await loadAiStrategyFile(
+        "data/extreme-ai-strategies.json",
+        baselineHighAiStrategyWeightsByCharacter,
+        "extreme"
+      );
     }
     const lobsterPalmStepMs = 45;
 
@@ -298,38 +317,38 @@
     function defaultAiStrategyWeights() {
       return {
         movement: {
-          safePath: computerDifficulty === "high" ? 1.6 : computerDifficulty === "low" ? 0.9 : 1.2,
-          leastDamage: computerDifficulty === "high" ? 1.3 : 1,
+          safePath: isHighAiDifficulty() ? 1.6 : computerDifficulty === "low" ? 0.9 : 1.2,
+          leastDamage: isHighAiDifficulty() ? 1.3 : 1,
           fastestArrival: computerDifficulty === "low" ? 1.3 : 1
         },
         food: {
           fastestArrival: 1,
           ownDeficit: 0.8,
-          opponentDeficit: computerDifficulty === "high" ? 1.5 : 0.45,
-          ownPreferred: computerDifficulty === "high" ? 1.1 : 0.75,
-          opponentPreferred: computerDifficulty === "high" ? 1.4 : 0.35
+          opponentDeficit: isHighAiDifficulty() ? 1.5 : 0.45,
+          ownPreferred: isHighAiDifficulty() ? 1.1 : 0.75,
+          opponentPreferred: isHighAiDifficulty() ? 1.4 : 0.35
         },
         skillAllocation: {
-          preferSmall: computerDifficulty === "low" ? 2.1 : computerDifficulty === "high" ? 0.45 : 1,
-          preferBig: computerDifficulty === "high" ? 2.1 : computerDifficulty === "low" ? 0.45 : 1
+          preferSmall: computerDifficulty === "low" ? 2.1 : isHighAiDifficulty() ? 0.45 : 1,
+          preferBig: isHighAiDifficulty() ? 2.1 : computerDifficulty === "low" ? 0.45 : 1
         },
         castTiming: {
           lethal: 3,
           nearFullEnergy: 0.75,
           opponentDebuffed: computerDifficulty === "low" ? 0.4 : 1.25,
-          opponentAlmostReady: computerDifficulty === "high" ? 1.2 : 0.65,
-          nearOpponent: computerDifficulty === "high" ? 1.15 : 0.85,
-          farOpponent: computerDifficulty === "high" ? 0.75 : 0.35
+          opponentAlmostReady: isHighAiDifficulty() ? 1.2 : 0.65,
+          nearOpponent: isHighAiDifficulty() ? 1.15 : 0.85,
+          farOpponent: isHighAiDifficulty() ? 0.75 : 0.35
         },
         castTarget: {
           targetHead: 1.3,
-          bodyCluster: computerDifficulty === "high" ? 1.2 : 0.8,
-          targetNearestFood: computerDifficulty === "high" ? 0.8 : 0.5
+          bodyCluster: isHighAiDifficulty() ? 1.2 : 0.8,
+          targetNearestFood: isHighAiDifficulty() ? 0.8 : 0.5
         },
         castDirection: {
           selfHeadToOpponentHead: 1.4,
-          opponentBodyLongestAxis: computerDifficulty === "high" ? 1.1 : 0.7,
-          opponentHeadToNearestFood: computerDifficulty === "high" ? 0.8 : 0.4
+          opponentBodyLongestAxis: isHighAiDifficulty() ? 1.1 : 0.7,
+          opponentHeadToNearestFood: isHighAiDifficulty() ? 0.8 : 0.4
         }
       };
     }
@@ -359,8 +378,11 @@
     }
 
     function aiStrategyWeightsFor(owner) {
-      if (computerDifficulty !== "high") return defaultAiStrategyWeights();
-      return normalizeAiStrategyWeights(highAiStrategyWeightsByCharacter[characterFor(owner).id]);
+      if (!isHighAiDifficulty()) return defaultAiStrategyWeights();
+      const strategyWeightsByCharacter = computerDifficulty === "extreme"
+        ? extremeAiStrategyWeightsByCharacter
+        : highAiStrategyWeightsByCharacter;
+      return normalizeAiStrategyWeights(strategyWeightsByCharacter[characterFor(owner).id]);
     }
 
     function ownerSnake(owner) {
@@ -476,7 +498,7 @@
     }
 
     function aiAvoidsOpponentBody() {
-      const ignoreBodyChance = { novice: 0.55, low: 0.35, medium: 0, high: 0 }[computerDifficulty] ?? 0;
+      const ignoreBodyChance = { novice: 0.55, low: 0.35, medium: 0, high: 0, extreme: 0 }[computerDifficulty] ?? 0;
       return Math.random() >= ignoreBodyChance;
     }
 
@@ -564,7 +586,7 @@
         const distance = hexDistance(ownerHead(owner), perceivedSnakeFor(owner, opponentOf(owner), now)[0]);
         return !canAttack(owner, "small") || hasResourcePressure(owner) || lateGameSkillPhase(owner, now) >= 0.86 || (distance <= 2 && Math.random() < 0.35) || Math.random() < 0.18;
       }
-      if (computerDifficulty === "medium" || computerDifficulty === "high") {
+      if (computerDifficulty === "medium" || isHighAiDifficulty()) {
         const lethal = strongestVisibleDamage(owner, "big", now) >= ownerHp(opponentOf(owner));
         return hasOpponentDebuff(owner, now) || lethal || hasResourcePressure(owner) || lateGameSkillPhase(owner, now) >= 0.78;
       }
@@ -753,7 +775,7 @@
       if (lethal) return lethal;
       if (computerDifficulty === "low" && shouldUseBigAttack(owner, now)) return "big";
 
-      if (computerDifficulty === "high") {
+      if (isHighAiDifficulty()) {
         const available = ["small", "big"]
           .filter(profile => canAttack(owner, profile))
           .filter(profile => profile !== "small" || !shouldSaveSmallForBig(owner, now));
@@ -914,7 +936,7 @@
       const stats = attackStats(ownerStock(owner), profile);
       if (profile === "big" && characterFor(owner).id === "moray") return chooseMorayLineAttackPlan(owner, now).target;
 
-      if (computerDifficulty === "high") {
+      if (isHighAiDifficulty()) {
         const maxDamageTarget = bestBodyClusterTarget(targetSnake, stats) || targetHead;
         if (attackTargetDamage(targetSnake, maxDamageTarget, stats.radius, stats.damage) >= ownerHp(opponent)) return { ...maxDamageTarget };
         const best = highAttackTargetRows(owner, profile, now)[0];
@@ -1049,7 +1071,7 @@
       const opponentDeficit = normalizedTypes.reduce((sum, type) => sum + maxFoodStock - (opponentStock[type] || 0), 0) / Math.max(1, normalizedTypes.length);
       const preferred = foodMatchesPreference(profile.preferredFood, food);
       const opponentPreferred = foodMatchesPreference(opponentProfile.preferredFood, food);
-      if (computerDifficulty === "high") {
+      if (isHighAiDifficulty()) {
         const ownResourceValue = foodResourceValueFor(owner, food);
         const opponentResourceValue = foodResourceValueFor(opponent, food);
         const raceLead = opponentArrivalTime - ownArrivalTime;
@@ -1070,7 +1092,7 @@
     }
 
     function foodRaceAdvantage(owner, opponent, food, now) {
-      if (computerDifficulty === "high") {
+      if (isHighAiDifficulty()) {
         const opponentHead = perceivedSnakeFor(owner, opponent, now)[0] || ownerHead(opponent);
         return arrivalTimeForDistance(owner, wrappedDistance(ownerHead(owner), food), now)
           - arrivalTimeForDistance(opponent, wrappedDistance(opponentHead, food), now);
@@ -1118,7 +1140,7 @@
     }
 
     function contestedFoodTieWinner(owner, opponent, food, now) {
-      if (computerDifficulty !== "high") return null;
+      if (!isHighAiDifficulty()) return null;
       if (!isAutoFoodRaceTieBreakActive(owner, opponent)) return null;
       const ownHead = ownerHead(owner);
       const opponentHead = perceivedSnakeFor(owner, opponent, now)[0] || ownerHead(opponent);
@@ -1159,7 +1181,7 @@
     }
 
     function shouldAbandonFoodTarget(owner, opponent, food, now, lockedScore, bestScore, targetAge) {
-      if (computerDifficulty !== "high") return false;
+      if (!isHighAiDifficulty()) return false;
       const occupied = movementOccupiedSet(owner, opponent, now);
       const reachable = reachableSpace(food, occupied, deadEndMinSpace);
       const expectedDamage = expectedDamageAt(owner, food, now);
@@ -1219,7 +1241,7 @@
       }));
       const maxOpponentAdvantage = Math.max(0, ...withRace.map(row => row.opponentAdvantage));
       const filtered = withRace
-        .filter(row => computerDifficulty !== "high" || row.expectedDamage < ownerHp(owner))
+        .filter(row => !isHighAiDifficulty() || row.expectedDamage < ownerHp(owner))
         .filter(row => !(maxOpponentAdvantage > 0 && row.opponentAdvantage === maxOpponentAdvantage))
         .filter(row => row.reachable >= deadEndMinSpace)
         .map(row => row.food);
@@ -1238,7 +1260,7 @@
     }
 
     function movementTargetBenefit(owner, opponent, target, now) {
-      if (computerDifficulty !== "high" || !target) return 0;
+      if (!isHighAiDifficulty() || !target) return 0;
       const cache = activeCacheFor(owner, now);
       const cacheKey = keyOf(target);
       if (cache?.targetBenefits.has(cacheKey)) return cache.targetBenefits.get(cacheKey);
@@ -1249,7 +1271,7 @@
     }
 
     function opponentEtaThreatForCell(owner, opponent, from, cell, opponentHead, now) {
-      if (computerDifficulty !== "high" || !cell || !opponentHead) return 0;
+      if (!isHighAiDifficulty() || !cell || !opponentHead) return 0;
       const ownArrival = arrivalTimeForDistance(owner, wrappedDistance(from, cell), now);
       const opponentArrival = arrivalTimeForDistance(opponent, wrappedDistance(opponentHead, cell), now);
       if (!Number.isFinite(ownArrival) || !Number.isFinite(opponentArrival)) return 0;
@@ -1267,7 +1289,7 @@
       const headThreat = keyOf(opponentThreat) === nextKey;
       const danger = headThreat ? 20 : 0;
       const wallPressure = nearbyOpenSpace(next, occupied);
-      const pathDistance = computerDifficulty === "high" ? Number.POSITIVE_INFINITY : shortestFoodDistance(next, occupied);
+      const pathDistance = isHighAiDifficulty() ? Number.POSITIVE_INFINITY : shortestFoodDistance(next, occupied);
       const targetDistance = distanceToTarget(next);
       const expectedDamage = expectedDamageAt(owner, next, now);
       const reachable = reachableSpace(next, occupied, 10);
@@ -1278,7 +1300,7 @@
       const etaThreat = opponentEtaThreatForCell(owner, opponent, snakeParts[0], next, opponentSnake[0], now);
       const targetBenefit = movementTargetBenefit(owner, opponent, target, now);
       const risk = (blocked ? 100 : 0) + danger + etaThreat + trapRisk * 4 + expectedDamage;
-      const fallbackValue = computerDifficulty === "high"
+      const fallbackValue = isHighAiDifficulty()
         ? targetDistance + danger
         : nearestFoodDistance(next) + targetDistance * 0.45 + danger - wallPressure * 0.08;
       return {
@@ -1288,9 +1310,9 @@
         headThreat,
         deadEnd,
         lethalThreat,
-        pathValue: computerDifficulty === "high" ? targetDistance : Number.isFinite(pathDistance) ? pathDistance : nearestFoodDistance(next),
+        pathValue: isHighAiDifficulty() ? targetDistance : Number.isFinite(pathDistance) ? pathDistance : nearestFoodDistance(next),
         risk,
-        tacticalValue: computerDifficulty === "high"
+        tacticalValue: isHighAiDifficulty()
           ? weights.fastestArrival * targetDistance + weights.safePath * risk + weights.leastDamage * expectedDamage + etaThreat * 0.65 - targetBenefit / (1 + targetDistance) * 1.15 - wallPressure * 0.04
           : (Number.isFinite(pathDistance) ? pathDistance : nearestFoodDistance(next)) + targetDistance * 0.45 + danger - wallPressure * 0.08,
         fallbackValue
@@ -1386,7 +1408,7 @@
           const key = keyOf(cell);
           if (!targetDistanceCache.has(key)) {
             const distance = wrappedDistance(cell, target);
-            targetDistanceCache.set(key, computerDifficulty === "high" ? arrivalTimeForDistance(owner, distance, now) : distance);
+            targetDistanceCache.set(key, isHighAiDifficulty() ? arrivalTimeForDistance(owner, distance, now) : distance);
           }
           return targetDistanceCache.get(key);
         };
@@ -1402,18 +1424,18 @@
         const hardSafe = options.filter(option => !option.blocked && !option.headThreat && !option.deadEnd && !option.lethalThreat);
         const rankedOptions = hardSafe.length ? hardSafe : options.filter(option => !option.blocked && !option.headThreat && !option.lethalThreat);
         const sortableOptions = rankedOptions.length ? rankedOptions : options;
-        if (computerDifficulty === "high" && sortableOptions.length > 1) {
+        if (isHighAiDifficulty() && sortableOptions.length > 1) {
           sortableOptions.forEach(option => {
             option.lookaheadValue = withAiPerf("lookaheadMovementScore", () => lookaheadMovementScore(owner, opponent, option, target, opponentSnake, opponentThreat, now, distanceToTarget));
           });
         }
         sortableOptions.sort((a, b) => {
-          if (computerDifficulty === "high") return (a.lookaheadValue ?? a.tacticalValue) - (b.lookaheadValue ?? b.tacticalValue) || a.tacticalValue - b.tacticalValue;
+          if (isHighAiDifficulty()) return (a.lookaheadValue ?? a.tacticalValue) - (b.lookaheadValue ?? b.tacticalValue) || a.tacticalValue - b.tacticalValue;
           const aValue = Number.isFinite(a.tacticalValue) ? a.tacticalValue : a.fallbackValue;
           const bValue = Number.isFinite(b.tacticalValue) ? b.tacticalValue : b.fallbackValue;
           return aValue - bValue;
         });
-        const randomChance = { high: 0, medium: 0.3, low: 0.52, novice: 0.52 }[computerDifficulty];
+        const randomChance = { high: 0, extreme: 0, medium: 0.3, low: 0.52, novice: 0.52 }[computerDifficulty];
 
         if (Math.random() < randomChance) return randomItem(sortableOptions).direction;
         return sortableOptions[0].direction;
