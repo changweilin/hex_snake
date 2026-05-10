@@ -694,6 +694,13 @@ function characterStoryMarkup(character) {
   return `${motto}${moves}${story}`;
 }
 
+function formatIntroMotto(motto) {
+  return String(motto || "")
+    .trim()
+    .replace(/([，。！？；：、,.!?;:])\s*/g, "$1<br>")
+    .replace(/(?:<br>)+$/, "");
+}
+
 function foodIconMarkup(typeOrId, extraClass = "") {
   const type = typeof typeOrId === "string" ? foodTypeById.get(typeOrId) : typeOrId;
   if (!type) return "";
@@ -1382,6 +1389,7 @@ function renderIntroPortraits(showDetails = introDetailsOpen) {
             ${["player", "computer"].map(owner => {
       const character = selectedCharacterFor(owner);
       const label = owner === "player" ? "P1" : "P2";
+      const motto = character?.motto || "開局抽選後揭曉座右銘";
       return `
                 <div class="intro-avatar-button" role="button" tabindex="0" data-owner="${owner}" data-open-intro="${owner}" style="${characterStyle(character || {
         color: ownerMeta(owner).color,
@@ -1396,6 +1404,7 @@ function renderIntroPortraits(showDetails = introDetailsOpen) {
                     <span class="intro-avatar-label"><span class="owner-name ${owner === "player" ? "is-p1" : "is-p2"}">${ownerMeta(owner).label}</span> · ${character ? character.name : "隨機選擇"}</span>
                     <button class="secondary portrait-arrow portrait-label-arrow" type="button" data-portrait-owner="${owner}" data-portrait-shift="1" aria-label="${ownerMeta(owner).label} 下一位">›</button>
                   </div>
+                  <p class="intro-avatar-motto ${character ? "" : "is-placeholder"}">「${formatIntroMotto(motto)}」</p>
                 </div>
               `;
     }).join("")}

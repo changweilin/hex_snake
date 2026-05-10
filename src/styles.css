@@ -3291,6 +3291,24 @@
       white-space: nowrap;
     }
 
+    .intro-avatar-motto {
+      width: 100%;
+      margin: 0;
+      padding: 0 4px;
+      color: color-mix(in srgb, var(--ink), var(--fighter-line) 22%);
+      font-size: 0.76rem;
+      font-weight: 760;
+      line-height: 1.28;
+      text-align: center;
+      text-wrap: balance;
+      overflow-wrap: anywhere;
+    }
+
+    .intro-avatar-motto.is-placeholder {
+      color: color-mix(in srgb, var(--muted), transparent 12%);
+      font-weight: 700;
+    }
+
     .portrait-select .portrait-pair {
       margin-bottom: 0;
     }
@@ -5281,6 +5299,12 @@
         overflow: hidden;
       }
 
+      .overlay.is-session-modal .dialog:has(.intro-avatar-gate) {
+        height: auto;
+        grid-template-rows: auto auto;
+        align-content: start;
+      }
+
       .overlay.is-session-modal #winnerPortrait {
         min-height: 0;
         overflow: hidden;
@@ -5319,6 +5343,11 @@
 
       .overlay.is-session-modal .intro-avatar-label {
         font-size: 0.66rem;
+      }
+
+      .overlay.is-session-modal .intro-avatar-motto {
+        font-size: 0.62rem;
+        line-height: 1.22;
       }
 
       .tutorial-visual {
@@ -5476,6 +5505,11 @@
       .intro-avatar-label,
       .portrait-option-label {
         font-size: 0.68rem;
+      }
+
+      .intro-avatar-motto {
+        font-size: 0.64rem;
+        line-height: 1.22;
       }
 
       .overlay.intro-details .portrait-pair {
