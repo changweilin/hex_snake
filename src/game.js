@@ -4420,6 +4420,7 @@
       resetGame();
       resize();
       renderIntroPortraits(false);
+      overlay.classList.add("show");
       if (shouldShowTutorial()) showTutorial(0);
       preloadPortraitsFor("player");
       preloadPortraitsFor("computer");
