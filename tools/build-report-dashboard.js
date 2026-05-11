@@ -54,6 +54,8 @@ function round(value, digits = 4) {
 }
 
 function percentValue(value) {
+  if (value === null || value === undefined) return null;
+  if (String(value).trim() === "") return null;
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
 }
@@ -709,6 +711,23 @@ function dashboardHtml(data) {
     .panel-body {
       padding: 14px;
     }
+    .matrix-tools {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      background: #fbfcfd;
+    }
+    .matrix-tools .tag {
+      min-height: 26px;
+    }
+    .character-summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
     .matrix-wrap {
       overflow: auto;
       max-width: 100%;
@@ -745,6 +764,13 @@ function dashboardHtml(data) {
       position: sticky;
       left: 0;
       z-index: 2;
+    }
+    .matrix-table tr.is-selected td:first-child,
+    .matrix-table th.is-selected,
+    .matrix-table td.is-selected {
+      outline: 2px solid rgba(15, 139, 159, 0.28);
+      outline-offset: -2px;
+      background: #eaf6f8;
     }
     .heat {
       border-radius: 5px;
@@ -925,12 +951,12 @@ function dashboardHtml(data) {
       .app { grid-template-columns: 1fr; }
       .sidebar { min-height: auto; max-height: 44vh; border-right: 0; border-bottom: 1px solid var(--border); }
       .overview-grid, .split, .runner-grid { grid-template-columns: 1fr; }
-      .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .kpis, .character-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
     @media (max-width: 680px) {
       .topbar { height: auto; align-items: flex-start; flex-direction: column; padding: 12px 14px; gap: 10px; }
       .content { padding: 14px; }
-      .kpis, .meta-grid, .metric-list { grid-template-columns: 1fr; }
+      .kpis, .meta-grid, .metric-list, .character-summary { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -944,6 +970,8 @@ function dashboardHtml(data) {
       <div class="filters">
         <input id="search" class="field" type="search" placeholder="Search reports">
         <select id="typeFilter" class="field"></select>
+        <select id="characterFilter" class="field"></select>
+        <select id="matrixScope" class="field"></select>
       </div>
       <div id="runList" class="run-list"></div>
     </aside>
@@ -977,6 +1005,8 @@ function dashboardHtml(data) {
       runId: data.runs[0] ? data.runs[0].id : null,
       search: "",
       type: "all",
+      character: "all",
+      matrixScope: "player",
       profileId: runner.profiles && runner.profiles[0] ? runner.profiles[0].id : "",
       extraArgs: "",
       runnerMessage: ""
@@ -990,6 +1020,7 @@ function dashboardHtml(data) {
       ["runner", "Runner"]
     ];
     const fmt = new Intl.NumberFormat("en-US");
+    const characterSort = ${JSON.stringify(characterOrder)};
     const pct = value => Number.isFinite(Number(value)) ? (Number(value) * 100).toFixed(1) + "%" : "-";
     const shortDate = value => value ? new Date(value).toLocaleString() : "-";
     const activeRun = () => data.runs.find(run => run.id === state.runId) || data.runs[0] || null;
@@ -1012,6 +1043,52 @@ function dashboardHtml(data) {
     }
     function deltaClass(value) {
       return Number(value) >= 0 ? "delta-pos" : "delta-neg";
+    }
+    function average(values) {
+      const finite = values.map(Number).filter(Number.isFinite);
+      return finite.length ? finite.reduce((sum, value) => sum + value, 0) / finite.length : null;
+    }
+    function sortCharacters(ids) {
+      return ids.slice().sort((left, right) =>
+        (characterSort.indexOf(left) < 0 ? 999 : characterSort.indexOf(left)) -
+        (characterSort.indexOf(right) < 0 ? 999 : characterSort.indexOf(right)) ||
+        left.localeCompare(right)
+      );
+    }
+    function allCharacters() {
+      const ids = new Set();
+      data.runs.forEach(run => {
+        (run.matrices || []).forEach(matrix => {
+          (matrix.characters || []).forEach(id => ids.add(id));
+          (matrix.rows || []).forEach(row => ids.add(row.characterId));
+        });
+        (run.strategies || []).forEach(row => ids.add(row.characterId));
+      });
+      return sortCharacters([...ids].filter(Boolean));
+    }
+    function matrixHasCharacter(matrix, characterId) {
+      if (!matrix || characterId === "all") return true;
+      return (matrix.characters || []).includes(characterId) || (matrix.rows || []).some(row => row.characterId === characterId);
+    }
+    function runHasCharacter(run, characterId) {
+      if (characterId === "all") return true;
+      return (run.matrices || []).some(matrix => matrixHasCharacter(matrix, characterId)) ||
+        (run.strategies || []).some(row => row.characterId === characterId);
+    }
+    function matrixRow(matrix, characterId) {
+      return matrix && matrix.rows ? matrix.rows.find(row => row.characterId === characterId) : null;
+    }
+    function cellValue(row, opponent) {
+      const cell = row && row.cells ? row.cells.find(item => item.opponent === opponent) : null;
+      return cell ? cell.value : null;
+    }
+    function matrixCharacterAverage(matrix, characterId, scope = state.matrixScope) {
+      if (!matrix || characterId === "all") return matrix ? matrix.overall : null;
+      if (scope === "opponent") {
+        return average((matrix.rows || []).map(row => row.characterId === characterId ? null : cellValue(row, characterId)));
+      }
+      const row = matrixRow(matrix, characterId);
+      return row ? average((row.cells || []).map(cell => cell.opponent === characterId ? null : cell.value)) : null;
     }
     function currentMatrix(run) {
       if (!run || !run.matrices.length) return null;
@@ -1039,7 +1116,8 @@ function dashboardHtml(data) {
       return data.runs.filter(run => {
         const matchesSearch = !q || [run.name, run.type, run.status, run.path].some(value => String(value || "").toLowerCase().includes(q));
         const matchesType = state.type === "all" || run.type === state.type;
-        return matchesSearch && matchesType;
+        const matchesCharacter = runHasCharacter(run, state.character);
+        return matchesSearch && matchesType && matchesCharacter;
       });
     }
     function renderFilters() {
@@ -1047,6 +1125,18 @@ function dashboardHtml(data) {
       const select = document.getElementById("typeFilter");
       select.innerHTML = types.map(type => '<option value="' + esc(type) + '">' + esc(type) + '</option>').join("");
       select.value = state.type;
+      const characterSelect = document.getElementById("characterFilter");
+      const characters = ["all", ...allCharacters()];
+      if (!characters.includes(state.character)) state.character = "all";
+      characterSelect.innerHTML = characters.map(character => '<option value="' + esc(character) + '">' + esc(character === "all" ? "all characters" : character) + '</option>').join("");
+      characterSelect.value = state.character;
+      const scopeSelect = document.getElementById("matrixScope");
+      scopeSelect.innerHTML = [
+        ["player", "as player"],
+        ["opponent", "as opponent"]
+      ].map(([value, label]) => '<option value="' + value + '">' + label + '</option>').join("");
+      scopeSelect.value = state.matrixScope;
+      scopeSelect.disabled = state.character === "all";
     }
     function renderRunList() {
       const runs = filteredRuns();
@@ -1089,29 +1179,85 @@ function dashboardHtml(data) {
     function renderKpis(run) {
       const matrix = matrixForDisplay(run);
       const progress = run && run.progress ? run.progress.progress : null;
+      const selectedAverage = state.character === "all"
+        ? matrix && matrix.overall
+        : matrixCharacterAverage(matrix, state.character);
+      const selectedLabel = state.character === "all"
+        ? (matrix ? matrix.label : "no matrix")
+        : state.character + " " + state.matrixScope;
       return '<div class="kpis">' +
         '<div class="card kpi"><label>Total runs</label><strong>' + fmt.format(data.kpis.totalRuns) + '</strong><span>' + fmt.format(data.kpis.matrixRuns) + ' with matrices</span></div>' +
         '<div class="card kpi"><label>Running</label><strong>' + fmt.format(data.kpis.runningRuns) + '</strong><span>checkpoint-aware runs</span></div>' +
-        '<div class="card kpi"><label>Selected avg</label><strong>' + pct(matrix && matrix.overall) + '</strong><span>' + esc(matrix ? matrix.label : "no matrix") + '</span></div>' +
+        '<div class="card kpi"><label>Selected avg</label><strong>' + pct(selectedAverage) + '</strong><span>' + esc(selectedLabel) + '</span></div>' +
         '<div class="card kpi"><label>Best delta</label><strong class="' + deltaClass(data.kpis.bestDelta) + '">' + pct(data.kpis.bestDelta) + '</strong><span>' + esc(data.kpis.bestDeltaRunId || "no comparison") + '</span></div>' +
         '</div>' +
         (progress ? '<div class="card kpi"><label>Selected progress</label><strong>' + pct(progress.percent) + '</strong><span>' + fmt.format(progress.completedGames || 0) + " / " + fmt.format(progress.plannedGames || 0) + " games</span></div>" : "");
     }
     function renderMatrix(matrix) {
       if (!matrix) return '<div class="panel"><div class="panel-body note">No matrix data found for this report.</div></div>';
-      const chars = matrix.characters;
-      const body = matrix.rows.map(row => '<tr><td>' + esc(row.characterId) + '</td>' +
+      const selected = state.character === "all" ? null : state.character;
+      if (selected && !matrixHasCharacter(matrix, selected)) {
+        return '<div class="panel"><div class="panel-body note">No matrix cells found for ' + esc(selected) + ' in this report.</div></div>';
+      }
+      const chars = selected && state.matrixScope === "opponent" ? [selected] : matrix.characters;
+      const rows = selected && state.matrixScope === "player"
+        ? matrix.rows.filter(row => row.characterId === selected)
+        : selected && state.matrixScope === "opponent"
+          ? matrix.rows.filter(row => row.characterId !== selected)
+        : matrix.rows;
+      const rowAverages = rows.map(row => average(chars.map(id => id === row.characterId ? null : cellValue(row, id))));
+      const shownAverage = selected ? average(rowAverages) : matrix.overall;
+      const body = rows.map((row, rowIndex) => '<tr class="' + (row.characterId === selected ? 'is-selected' : '') + '"><td>' + esc(row.characterId) + '</td>' +
         chars.map(id => {
           const cell = row.cells.find(item => item.opponent === id);
           const value = cell ? cell.value : null;
-          return '<td>' + (Number.isFinite(Number(value)) ? '<span class="heat" style="background:' + heatColor(value) + '">' + pct(value) + '</span>' : '<span class="empty">-</span>') + '</td>';
+          return '<td class="' + (id === selected ? 'is-selected' : '') + '">' + (Number.isFinite(Number(value)) ? '<span class="heat" style="background:' + heatColor(value) + '">' + pct(value) + '</span>' : '<span class="empty">-</span>') + '</td>';
         }).join("") +
-        '<td><strong>' + pct(row.average) + '</strong></td></tr>').join("");
+        '<td><strong>' + pct(rowAverages[rowIndex]) + '</strong></td></tr>').join("");
+      const filterText = selected
+        ? ' / filter ' + selected + ' ' + (state.matrixScope === "opponent" ? "as opponent" : "as player")
+        : "";
       return '<div class="panel">' +
-        '<div class="panel-head"><div><h2>' + esc(matrix.label) + ' win-rate matrix</h2><p>' + esc(matrix.source) + ' / overall ' + pct(matrix.overall) + '</p></div></div>' +
+        '<div class="panel-head"><div><h2>' + esc(matrix.label) + ' win-rate matrix</h2><p>' + esc(matrix.source) + ' / shown avg ' + pct(shownAverage) + filterText + '</p></div></div>' +
+        '<div class="matrix-tools"><span class="tag">' + esc(selected || "all characters") + '</span><span class="note">' + (selected ? esc(state.matrixScope === "opponent" ? "Rows show opponents' win rate against the selected character." : "Row shows selected character win rate against each opponent.") : "Use the character filter in the sidebar to narrow this matrix.") + '</span></div>' +
         '<div class="matrix-wrap"><table class="matrix-table">' +
-        '<thead><tr><th>character</th>' + chars.map(id => '<th>' + esc(id) + '</th>').join("") + '<th>avg</th></tr></thead>' +
+        '<thead><tr><th>character</th>' + chars.map(id => '<th class="' + (id === selected ? 'is-selected' : '') + '">' + esc(id) + '</th>').join("") + '<th>avg</th></tr></thead>' +
         '<tbody>' + body + '</tbody></table></div></div>';
+    }
+    function renderCharacterBreakdown(matrix) {
+      const selected = state.character === "all" ? null : state.character;
+      if (!selected || !matrix || !matrixHasCharacter(matrix, selected)) return "";
+      const playerRow = matrixRow(matrix, selected);
+      const pairRows = (matrix.characters || [])
+        .filter(opponent => opponent !== selected)
+        .map(opponent => {
+          const selectedAsPlayer = cellValue(playerRow, opponent);
+          const opponentRow = matrixRow(matrix, opponent);
+          const opponentAsPlayer = cellValue(opponentRow, selected);
+          const seatDelta = Number.isFinite(Number(selectedAsPlayer)) && Number.isFinite(Number(opponentAsPlayer))
+            ? Number(selectedAsPlayer) - Number(opponentAsPlayer)
+            : null;
+          return { opponent, selectedAsPlayer, opponentAsPlayer, seatDelta };
+        })
+        .filter(row => Number.isFinite(Number(row.selectedAsPlayer)) || Number.isFinite(Number(row.opponentAsPlayer)))
+        .sort((left, right) => Number(right.selectedAsPlayer ?? -1) - Number(left.selectedAsPlayer ?? -1));
+      const asPlayerValues = pairRows.map(row => row.selectedAsPlayer);
+      const opponentWinValues = pairRows.map(row => row.opponentAsPlayer);
+      const best = pairRows.filter(row => Number.isFinite(Number(row.selectedAsPlayer)))[0];
+      const hardest = pairRows.filter(row => Number.isFinite(Number(row.selectedAsPlayer))).slice().sort((left, right) => Number(left.selectedAsPlayer) - Number(right.selectedAsPlayer))[0];
+      return '<div class="panel">' +
+        '<div class="panel-head"><div><h2>' + esc(selected) + ' win-rate detail</h2><p>' + esc(matrix.label) + ' / ' + esc(matrix.source) + '</p></div></div>' +
+        '<div class="panel-body grid">' +
+        '<div class="character-summary">' +
+        renderMetric("as player avg", pct(average(asPlayerValues))) +
+        renderMetric("best opponent", best ? best.opponent + " " + pct(best.selectedAsPlayer) : "-") +
+        renderMetric("hardest opponent", hardest ? hardest.opponent + " " + pct(hardest.selectedAsPlayer) : "-") +
+        renderMetric("opponents avg vs selected", pct(average(opponentWinValues))) +
+        '</div>' +
+        '<div class="table-wrap"><table>' +
+        '<thead><tr><th>opponent</th><th>' + esc(selected) + ' as player</th><th>opponent as player</th><th>seat delta</th></tr></thead>' +
+        '<tbody>' + pairRows.map(row => '<tr><td><strong>' + esc(row.opponent) + '</strong></td><td>' + pct(row.selectedAsPlayer) + '</td><td>' + pct(row.opponentAsPlayer) + '</td><td class="' + deltaClass(row.seatDelta) + '">' + pct(row.seatDelta) + '</td></tr>').join("") + '</tbody>' +
+        '</table></div></div></div>';
     }
     function renderProgress(run) {
       if (!run || !run.progress) return '<div class="panel"><div class="panel-body note">No live training-progress.json is available for this report.</div></div>';
@@ -1139,6 +1285,7 @@ function dashboardHtml(data) {
       const usingScoped = runScoped && scopedRows.length > 0;
       const rows = (usingScoped ? scopedRows : data.strategies)
         .slice()
+        .filter(row => state.character === "all" || row.characterId === state.character)
         .sort((a, b) => Number(b.winRate ?? b.decisiveWinRate ?? -1) - Number(a.winRate ?? a.decisiveWinRate ?? -1))
         .slice(0, 300);
       if (!rows.length) return '<div class="panel"><div class="panel-body note">No strategy summary rows found.</div></div>';
@@ -1151,14 +1298,15 @@ function dashboardHtml(data) {
     }
     function renderCompare() {
       const rows = data.runs
-        .filter(run => run.matrices.length || Number.isFinite(run.delta))
+        .filter(run => (run.matrices.length || Number.isFinite(run.delta)) && runHasCharacter(run, state.character))
         .map(run => {
           const matrix = currentMatrix(run);
-          return { run, avg: matrix ? matrix.overall : null, matrixLabel: matrix ? matrix.label : "-", delta: run.delta };
+          const avg = state.character === "all" ? (matrix ? matrix.overall : null) : matrixCharacterAverage(matrix, state.character);
+          return { run, avg, matrixLabel: matrix ? matrix.label : "-", delta: run.delta };
         })
         .sort((a, b) => Number(b.delta ?? b.avg ?? -1) - Number(a.delta ?? a.avg ?? -1));
       return '<div class="panel">' +
-        '<div class="panel-head"><div><h2>Version comparison</h2><p>Matrix averages and target-vs-baseline deltas</p></div></div>' +
+        '<div class="panel-head"><div><h2>Version comparison</h2><p>' + (state.character === "all" ? "Matrix averages and target-vs-baseline deltas" : "Filtered averages for " + esc(state.character) + " " + esc(state.matrixScope)) + '</p></div></div>' +
         '<div class="table-wrap"><table>' +
         '<thead><tr><th>run</th><th>type</th><th>status</th><th>matrix</th><th>average</th><th>delta</th><th>modified</th></tr></thead>' +
         '<tbody>' + rows.map(item => '<tr><td><strong>' + esc(item.run.name) + '</strong><div class="note mono">' + esc(item.run.path) + '</div></td><td>' + esc(item.run.type) + '</td><td><span class="tag ' + (statusClass(item.run.status) === "running" ? "warn" : "good") + '">' + esc(item.run.status) + '</span></td><td>' + esc(item.matrixLabel) + '</td><td>' + pct(item.avg) + '</td><td class="' + deltaClass(item.delta) + '">' + pct(item.delta) + '</td><td>' + shortDate(item.run.generatedAt || item.run.modifiedAt) + '</td></tr>').join("") + '</tbody>' +
@@ -1258,6 +1406,7 @@ function dashboardHtml(data) {
         renderKpis(run) +
         '<div class="overview-grid grid"><div class="grid">' +
         renderMatrix(matrixForDisplay(run)) +
+        renderCharacterBreakdown(matrixForDisplay(run)) +
         renderStrategies(true) +
         '</div><div class="side-stack">' +
         renderProgress(run) +
@@ -1268,8 +1417,8 @@ function dashboardHtml(data) {
       const run = activeRun();
       if (state.tab === "overview") return renderOverview(run);
       if (state.tab === "matrix") return run && run.matrices.length > 1
-        ? run.matrices.map(renderMatrix).join("")
-        : renderMatrix(matrixForDisplay(run));
+        ? run.matrices.map(matrix => renderMatrix(matrix) + renderCharacterBreakdown(matrix)).join("")
+        : renderMatrix(matrixForDisplay(run)) + renderCharacterBreakdown(matrixForDisplay(run));
       if (state.tab === "training") return '<div class="split">' + renderProgress(run) + renderCompare() + '</div>';
       if (state.tab === "strategy") return renderStrategies(false);
       if (state.tab === "compare") return renderCompare();
@@ -1368,6 +1517,19 @@ function dashboardHtml(data) {
     document.getElementById("typeFilter").addEventListener("change", event => {
       state.type = event.target.value;
       renderRunList();
+    });
+    document.getElementById("characterFilter").addEventListener("change", event => {
+      state.character = event.target.value;
+      if (state.character === "all") state.matrixScope = "player";
+      const runs = filteredRuns();
+      if (!runs.some(run => run.id === state.runId)) {
+        state.runId = runs[0] ? runs[0].id : (data.runs[0] ? data.runs[0].id : null);
+      }
+      render();
+    });
+    document.getElementById("matrixScope").addEventListener("change", event => {
+      state.matrixScope = event.target.value;
+      render();
     });
     document.getElementById("openLatest").addEventListener("click", () => {
       state.runId = data.runs[0] ? data.runs[0].id : null;

@@ -1195,44 +1195,60 @@ test("moray big attack chooses the longest opponent body line instead of forcing
   const target = chooseAttackTarget(state, attacker, defender, balance, "big");
   assert.equal(target.r, 2);
   assert.equal(launchAttack(state, attacker, defender, "big", state.now, balance), true);
-  const line = state.projectiles.find(projectile => projectile.kind === "line");
+  const line = state.projectiles.find(projectile => projectile.kind === "lineHazardSetup");
   const lineKeys = new Set(line.lineCells.map(key));
   assert.equal(lineKeys.has(key(defender.snake[0])), false);
   longLine.forEach(segment => assert.equal(lineKeys.has(key(segment)), true));
 });
 
-test("moray big attack schedules eight 0.2x line strikes", () => {
-  const state = createMatchState({
-    balance,
-    playerCharacter: characterById.get("dragon"),
-    computerCharacter: characterById.get("moray"),
-    seed: "moray-single-strike",
-    initialBombs: balance.attack.bigAttackBombCost,
-    initialStock: Object.fromEntries(FOOD_TYPES.map(type => [type, 2])),
-    computerModel: { aiDifficulty: "high", aimPrecision: 1, pathPrecision: 1 }
-  });
-  const attacker = state.fighters.computer;
-  const defender = state.fighters.player;
-  attacker.snake = [{ q: 5, r: -5 }];
-  defender.snake = [{ q: 0, r: 0 }, { q: 1, r: 0 }];
-  defender.hp = 100;
-  state.foods = [];
+test("moray big attack creates a speed-scaled continuous line hazard", () => {
+  function launchMoray(carbStock, seed) {
+    const state = createMatchState({
+      balance,
+      playerCharacter: characterById.get("dragon"),
+      computerCharacter: characterById.get("moray"),
+      seed,
+      initialBombs: balance.attack.bigAttackBombCost,
+      initialStock: { protein: 2, fat: 2, fiber: 2, carb: carbStock },
+      computerModel: { aiDifficulty: "high", aimPrecision: 1, pathPrecision: 1 }
+    });
+    const attacker = state.fighters.computer;
+    const defender = state.fighters.player;
+    attacker.snake = [{ q: 5, r: -5 }];
+    defender.snake = [{ q: 0, r: 0 }];
+    defender.hp = 1000;
+    state.foods = [];
+    assert.equal(launchAttack(state, attacker, defender, "big", state.now, balance), true);
+    const setup = state.projectiles.find(projectile => projectile.kind === "lineHazardSetup");
+    return { state, attacker, defender, setup };
+  }
 
-  assert.equal(launchAttack(state, attacker, defender, "big", state.now, balance), true);
-  const bigStats = attackStats(attacker.stock, "big", balance);
-  const smallStats = attackStats(attacker.stock, "small", balance);
-  const lines = state.projectiles
-    .filter(projectile => projectile.kind === "line")
-    .sort((left, right) => left.impactAt - right.impactAt);
-  assert.equal(lines.length, 8);
-  lines.forEach((line, index) => {
-    assert.ok(Math.abs(line.damage - bigStats.damage * balance.attack.ultimates.moray.damageMultiplier) < 1e-9);
-    assert.ok(Math.abs(line.impactAt - (state.now + smallStats.delay + index * smallStats.delay * balance.attack.ultimates.moray.strikeIntervalMultiplier)) < 1e-9);
-    assert.equal(line.headDamageMultiplier, undefined);
-    assert.equal(line.stackStun, true);
-    assert.ok(Math.abs(line.stunChance - 0.17) < 1e-9);
-    assert.ok(Math.abs(line.headStunChance - 0.34) < 1e-9);
-  });
+  function countDamageTicks(state, defender, setup) {
+    resolveProjectiles(state, setup.impactAt, balance);
+    let ticks = 0;
+    while (state.hazards.length) {
+      const hazard = state.hazards[0];
+      const beforeHp = defender.hp;
+      resolveHazards(state, hazard.nextTickAt, balance);
+      if (defender.hp < beforeHp) ticks += 1;
+      if (hazard.nextTickAt > hazard.endAt) break;
+    }
+    return ticks;
+  }
+
+  const normal = launchMoray(2, "moray-continuous-normal");
+  const normalBigStats = attackStats(normal.attacker.stock, "big", balance);
+  const normalSmallStats = attackStats(normal.attacker.stock, "small", balance);
+  assert.ok(Math.abs(normal.setup.damage - normalBigStats.damage * balance.attack.ultimates.moray.damageMultiplier) < 1e-9);
+  assert.ok(Math.abs(normal.setup.tickMs - normalSmallStats.delay) < 1e-9);
+  assert.ok(Math.abs(normal.setup.fieldEndAt - normal.setup.fieldStartedAt - balance.attack.baseAttackDelayMs * 0.31 * balance.attack.ultimates.moray.durationBaseTicks) < 1e-9);
+  assert.equal(normal.setup.stackStun, true);
+  assert.ok(Math.abs(normal.setup.stunChance - 0.17) < 1e-9);
+  assert.ok(Math.abs(normal.setup.headStunChance - 0.34) < 1e-9);
+  assert.equal(countDamageTicks(normal.state, normal.defender, normal.setup), 4);
+
+  const fast = launchMoray(balance.resources.maxFoodStock + 2, "moray-continuous-fast");
+  assert.equal(countDamageTicks(fast.state, fast.defender, fast.setup), 8);
 });
 
 test("moray fractional line range spills into the outer band with proportional damage", () => {
@@ -1260,13 +1276,15 @@ test("moray fractional line range spills into the outer band with proportional d
   state.foods = [];
 
   assert.equal(launchAttack(state, attacker, defender, "big", state.now, balance), true);
-  const line = state.projectiles.find(projectile => projectile.kind === "line");
+  const line = state.projectiles.find(projectile => projectile.kind === "lineHazardSetup");
   assert.equal(line.width, 1);
   assert.equal(line.fullDamageWidth, 0);
   assert.equal(line.outerDamageMultiplier, 0.25);
 
   const expectedDamage = line.damage * (centerLine.length + line.outerDamageMultiplier);
   resolveProjectiles(state, line.impactAt, balance);
+  const hazard = state.hazards.find(item => item.kind === "lineHazard");
+  resolveHazards(state, hazard.nextTickAt, balance);
   assert.ok(Math.abs(defender.hp - (100 - expectedDamage)) < 1e-9);
 });
 
@@ -1335,10 +1353,14 @@ test("circle attacks use body damage but head stun chance", () => {
   assert.deepEqual(resolveCircleAgainst([{ q: 0, r: 0 }, { q: 0, r: 1 }]), { damage: 5, stunned: true });
 });
 
-test("dragon radiation and quetzal swamp do not stun", () => {
+test("dragon radiation does not stun and quetzal swamp stuns only on the first tick", () => {
   const tunedBalance = JSON.parse(JSON.stringify(balance));
   tunedBalance.attack.baseAttackStunChance = 1;
   tunedBalance.attack.attackStunChanceBonusPerPoint = 0;
+  tunedBalance.attack.bodyHitStunChance = 1;
+  tunedBalance.attack.bodyHitStunChanceBonusPerPoint = 0;
+  tunedBalance.attack.headHitStunChance = 1;
+  tunedBalance.attack.headHitStunChanceBonusPerPoint = 0;
 
   const dragonState = createMatchState({
     balance: tunedBalance,
@@ -1382,10 +1404,22 @@ test("dragon radiation and quetzal swamp do not stun", () => {
   quetzalDefender.hp = 1000;
   assert.equal(launchAttack(quetzalState, quetzal, quetzalDefender, "big", quetzalState.now, tunedBalance), true);
   const swamp = quetzalState.hazards.find(hazard => hazard.kind === "swamp");
-  assert.equal(swamp.stunChance, 0);
+  assert.equal(swamp.stunChance, 1);
+  assert.equal(swamp.stunTicksRemaining, 1);
+  assert.equal(swamp.slowChance, 1);
+  assert.equal(swamp.slowDurationMs, tunedBalance.attack.ultimates.quetzal.slowDurationMs);
   assert.equal(swamp.tickMs, tunedBalance.attack.ultimates.quetzal.tickMs);
-  resolveHazards(quetzalState, swamp.nextTickAt, tunedBalance);
+  const firstTickAt = swamp.nextTickAt;
+  resolveHazards(quetzalState, firstTickAt, tunedBalance);
+  assert.equal(quetzalDefender.stunUntil, firstTickAt + tunedBalance.attack.attackStunMs);
+  assert.equal(quetzalDefender.slowUntil, firstTickAt + tunedBalance.attack.ultimates.quetzal.slowDurationMs);
+  assert.equal(swamp.stunTicksRemaining, 0);
+  quetzalDefender.stunUntil = 0;
+  quetzalDefender.slowUntil = 0;
+  const secondTickAt = swamp.nextTickAt;
+  resolveHazards(quetzalState, secondTickAt, tunedBalance);
   assert.equal(quetzalDefender.stunUntil, 0);
+  assert.equal(quetzalDefender.slowUntil, secondTickAt + tunedBalance.attack.ultimates.quetzal.slowDurationMs);
 });
 
 test("dragon and quetzal floor effects survive caster interruption", () => {
@@ -1870,14 +1904,15 @@ test("lobster second palm volley starts from current head and retracks the turn"
   assert.deepEqual(secondFist.pathCells.at(-1), computer.snake[0]);
 });
 
-test("gu king big attack uses 1.5x damage and steps toward highest damage", () => {
+test("gu king big attack uses configured wave damage and steps toward highest damage", () => {
   const state = createMatchState({
     balance,
     playerCharacter: characterById.get("gu_king"),
     computerCharacter: characterById.get("dragon"),
-    seed: "gu-king-1-5x",
+    seed: "gu-king-wave-damage",
     initialBombs: balance.attack.bigAttackBombCost,
-    initialStock: Object.fromEntries(FOOD_TYPES.map(type => [type, 2]))
+    initialStock: Object.fromEntries(FOOD_TYPES.map(type => [type, 2])),
+    playerModel: { aiDifficulty: "high", aimPrecision: 1, pathPrecision: 1 }
   });
   const player = state.fighters.player;
   const computer = state.fighters.computer;
@@ -1894,15 +1929,23 @@ test("gu king big attack uses 1.5x damage and steps toward highest damage", () =
   const bigDamage = attackStats(player.stock, "big", balance).damage;
   const blasts = state.projectiles.filter(projectile => projectile.kind === "circle" && projectile.profile === "big");
   assert.equal(blasts.length, 3);
-  blasts.forEach(projectile => assert.equal(projectile.damage, bigDamage * 1.5));
+  blasts.forEach(projectile => assert.equal(projectile.damage, bigDamage * balance.attack.ultimates.gu_king.damageMultiplier));
+  const cellKey = cell => `${cell.q},${cell.r}`;
   const bestStep = currentTarget => DIRECTIONS
     .map((_, direction) => nextWrappedCell(currentTarget, direction, state.radius))
     .reduce((best, candidate) => {
-      const damage = damageSnake(computer.snake, candidate, blasts[0].radius, blasts[0].damage, balance);
-      return damage > best.damage ? { target: candidate, damage } : best;
+      const next = {
+        target: candidate,
+        damage: damageSnake(computer.snake, candidate, blasts[0].radius, blasts[0].damage, balance),
+        headDistance: hexDistance(candidate, computer.snake[0])
+      };
+      if (next.damage > best.damage) return next;
+      if (next.damage === best.damage && cellKey(best.target) !== cellKey(currentTarget) && next.headDistance < best.headDistance) return next;
+      return best;
     }, {
       target: currentTarget,
-      damage: damageSnake(computer.snake, currentTarget, blasts[0].radius, blasts[0].damage, balance)
+      damage: damageSnake(computer.snake, currentTarget, blasts[0].radius, blasts[0].damage, balance),
+      headDistance: hexDistance(currentTarget, computer.snake[0])
     }).target;
   assert.deepEqual(blasts[0].target, bestStep(originalTarget));
   assert.deepEqual(blasts[1].target, bestStep(blasts[0].target));

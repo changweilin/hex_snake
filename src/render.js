@@ -2856,7 +2856,7 @@
           drawProjectileCore(point.x, point.y, projectile, progress, blastCharacter, point.angle || 0);
           return;
         }
-        if (projectile.kind === "line") {
+        if (projectile.kind === "line" || projectile.kind === "lineHazardSetup") {
           const progress = Math.min(1, Math.max(0, (now - projectile.createdAt) / (projectile.delay || baseAttackDelayMs)));
           const lineTextureCells = cachedEffectCells(projectile, "visualCells", projectile.lineCells, projectile.width, projectile.excludedCells);
           const linePlan = effectVisualPlanFor(projectile.visualType, "line", blastCharacter);

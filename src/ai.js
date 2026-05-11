@@ -295,7 +295,7 @@
         "extreme"
       );
     }
-    const lobsterPalmStepMs = 45;
+    const lobsterPalmStepMs = 33.75;
 
     function ultimateSetting(characterId, key, fallback) {
       const value = attackUltimateBalance?.[characterId]?.[key];
@@ -892,15 +892,26 @@
       };
     }
 
+    function morayFieldDurationMs() {
+      return baseAttackDelayMs * smallAttackDelayScale * Math.max(1, ultimateSetting("moray", "durationBaseTicks", 4));
+    }
+
+    function morayFieldTickMs(stock) {
+      return Math.max(1, attackStats(stock, "small").delay);
+    }
+
+    function morayFieldDamageTicks(stock) {
+      return Math.max(1, Math.floor((morayFieldDurationMs() + 1e-9) / morayFieldTickMs(stock)));
+    }
+
     function morayLinePlanDamage(owner, plan, now) {
       const opponent = opponentOf(owner);
       const targetSnake = perceivedSnakeFor(owner, opponent, now);
       if (!targetSnake.length || !plan?.target) return 0;
       const lineShape = bandShapeFromTotalWidth(attackStats(ownerStock(owner), "small").radius);
       const stats = morayLineCandidateStats(targetSnake, boardLineThrough(plan.target, plan.direction), lineShape);
-      const strikeCount = Math.max(1, Math.round(ultimateSetting("moray", "strikeCount", 8)));
-      const damageMultiplier = ultimateSetting("moray", "damageMultiplier", 0.2);
-      return stats.damageScore * attackDamage(ownerStock(owner), "big") * damageMultiplier * strikeCount;
+      const damageMultiplier = ultimateSetting("moray", "damageMultiplier", 0.24);
+      return stats.damageScore * attackDamage(ownerStock(owner), "big") * damageMultiplier * morayFieldDamageTicks(ownerStock(owner));
     }
 
     function chooseAiAttackDirection(owner, target, now) {
@@ -1006,7 +1017,7 @@
       projectiles.forEach(projectile => {
         if (projectile.owner !== opponent) return;
         if (!isProjectileVisibleTo(owner, projectile, now)) return;
-        if (projectile.kind === "line") {
+        if (projectile.kind === "line" || projectile.kind === "lineHazardSetup") {
           const multiplier = projectile.lineCells?.reduce((best, lineCell) => (
             Math.max(best, lineBandDamageMultiplier(hexDistance(lineCell, cell), projectile))
           ), 0) || 0;
@@ -1019,7 +1030,12 @@
       hazards.forEach(hazard => {
         if (hazard.owner !== opponent || now > hazard.endAt) return;
         if (hazard.kind === "radiation") damage += (hazard.damage || 0) * circleDamageMultiplier(hexDistance(cell, hazard.target), hazard.radius || 0);
-        if (hazard.cells?.some(hazardCell => hexDistance(hazardCell, cell) <= hazard.width)) damage += hazard.damage || 0;
+        if (hazard.kind !== "radiation" && hazard.cells?.length) {
+          const multiplier = hazard.cells.reduce((best, hazardCell) => (
+            Math.max(best, lineBandDamageMultiplier(hexDistance(hazardCell, cell), hazard))
+          ), 0);
+          damage += (hazard.damage || 0) * multiplier;
+        }
       });
       return damage;
     }
