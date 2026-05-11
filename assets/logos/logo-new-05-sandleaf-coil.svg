@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Sandleaf Coil Logo</title>
+  <desc id="desc">A balanced coil built from sand plates and leaf feathers, referencing the six creature elements.</desc>
+  <path d="M67 166c12-47 53-70 91-52 23 11 32 34 19 55-17 27-61 30-88 7 27 48 96 44 124-2" fill="none" stroke="#111827" stroke-linecap="round" stroke-linejoin="round" stroke-width="17"/>
+  <path d="M75 164c12-35 45-50 73-36 15 7 20 22 12 35-10 16-36 17-53 5" fill="none" stroke="#f59e0b" stroke-linecap="round" stroke-linejoin="round" stroke-width="8"/>
+  <g stroke="#111827" stroke-linejoin="round" stroke-width="6">
+    <path d="M116 69c-23-3-39-19-44-43 24 5 39 20 44 43Z" fill="#10b981"/>
+    <path d="M143 70c9-23 27-35 53-34-10 23-28 34-53 34Z" fill="#10b981"/>
+    <path d="M90 105 111 91l20 14-20 14Z" fill="#f8fafc"/>
+    <path d="M126 95 147 81l20 14-20 14Z" fill="#f8fafc"/>
+    <path d="M158 108 179 94l20 14-20 14Z" fill="#f8fafc"/>
+  </g>
+  <circle cx="164" cy="146" r="8" fill="#111827"/>
+</svg>

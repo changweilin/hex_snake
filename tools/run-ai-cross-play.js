@@ -46,13 +46,25 @@ function stringArg(args, key, fallback) {
   return args[key] === undefined ? fallback : String(args[key]);
 }
 
+function difficultyArg(args, fallback = "high") {
+  const value = stringArg(args, "difficulty", fallback);
+  if (!["high", "extreme"].includes(value)) throw new Error("--difficulty must be high or extreme.");
+  return value;
+}
+
+function defaultStrategyPathForDifficulty(difficulty) {
+  return difficulty === "extreme" ? "data/extreme-ai-strategies.json" : "data/high-ai-strategies.json";
+}
+
 function stamp(date = new Date()) {
   return date.toISOString().replace(/[-:]/g, "").replace(/\..+$/, "").replace("T", "-");
 }
 
 function readJsonIfPresent(filePath) {
   if (!filePath) return null;
-  return JSON.parse(fs.readFileSync(path.resolve(root, filePath), "utf8"));
+  const resolved = path.resolve(root, filePath);
+  if (!fs.existsSync(resolved)) return null;
+  return JSON.parse(fs.readFileSync(resolved, "utf8"));
 }
 
 function writeJson(filePath, value) {
@@ -129,6 +141,7 @@ function matrixToMarkdown(matrix, characters, report) {
     "# Character Cross Win Rates",
     "",
     `Generated: ${report.generatedAt}`,
+    `Difficulty: ${report.config.difficulty}`,
     `Runs per ordered pair: ${report.config.runs}`,
     `Seed: ${report.config.seed}`,
     `Strategy source: ${report.config.strategySource}`,
@@ -142,10 +155,10 @@ function matrixToMarkdown(matrix, characters, report) {
   return lines.join("\n");
 }
 
-function highModel(strategyFile, characterId) {
+function highModel(strategyFile, characterId, difficulty = "high") {
   const row = strategyRowForCharacter(strategyFile, characterId);
-  if (row) return modelFromStrategyWeights(row);
-  return { aiDifficulty: "high", pathPrecision: 1, aimPrecision: 1, skillStrategy: "preferBig", foodStrategy: "denyOpponent" };
+  if (row) return modelFromStrategyWeights(row, difficulty);
+  return { aiDifficulty: difficulty, pathPrecision: 1, aimPrecision: 1, skillStrategy: "preferBig", foodStrategy: "denyOpponent" };
 }
 
 function buildOrderedPairs(characters) {
@@ -159,7 +172,7 @@ function buildOrderedPairs(characters) {
   return pairs;
 }
 
-function runPair({ balance, strategyFile, seed, runs, pair }) {
+function runPair({ balance, strategyFile, difficulty, seed, runs, pair }) {
   const { playerCharacter, computerCharacter } = pair;
   return runSeries({
     balance,
@@ -167,8 +180,8 @@ function runPair({ balance, strategyFile, seed, runs, pair }) {
     computerCharacter,
     seed: `${seed}:${playerCharacter.id}:vs:${computerCharacter.id}`,
     runs,
-    playerModel: highModel(strategyFile, playerCharacter.id),
-    computerModel: highModel(strategyFile, computerCharacter.id)
+    playerModel: highModel(strategyFile, playerCharacter.id, difficulty),
+    computerModel: highModel(strategyFile, computerCharacter.id, difficulty)
   });
 }
 
@@ -178,10 +191,10 @@ function chunkItems(items, chunkCount) {
   return chunks.filter(chunk => chunk.length);
 }
 
-function runPairsSync({ balance, strategyFile, seed, runs, indexedPairs }) {
+function runPairsSync({ balance, strategyFile, difficulty, seed, runs, indexedPairs }) {
   return indexedPairs.map(({ index, pair }) => ({
     index,
-    result: runPair({ balance, strategyFile, seed, runs, pair })
+    result: runPair({ balance, strategyFile, difficulty, seed, runs, pair })
   }));
 }
 
@@ -196,14 +209,15 @@ function runPairsInWorker(payload) {
   });
 }
 
-async function runPairs({ balance, strategyFile, seed, runs, pairs, jobs }) {
+async function runPairs({ balance, strategyFile, difficulty, seed, runs, pairs, jobs }) {
   const indexedPairs = pairs.map((pair, index) => ({ index, pair }));
-  if (jobs <= 1 || indexedPairs.length <= 1) return runPairsSync({ balance, strategyFile, seed, runs, indexedPairs });
+  if (jobs <= 1 || indexedPairs.length <= 1) return runPairsSync({ balance, strategyFile, difficulty, seed, runs, indexedPairs });
   const workerCount = Math.min(jobs, indexedPairs.length);
   const chunks = chunkItems(indexedPairs, workerCount);
   const rows = await Promise.all(chunks.map(chunk => runPairsInWorker({
     balance,
     strategyFile,
+    difficulty,
     seed,
     runs,
     indexedPairs: chunk
@@ -217,21 +231,25 @@ async function runCrossPlay(options = {}) {
   const runs = Math.max(1, Math.floor(Number(options.runs ?? 1)));
   const cpuCount = typeof os.availableParallelism === "function" ? os.availableParallelism() : os.cpus().length;
   const jobs = Math.max(1, Math.floor(Number(options.jobs ?? cpuCount)));
+  const difficulty = options.difficulty || "high";
+  if (!["high", "extreme"].includes(difficulty)) throw new Error("difficulty must be high or extreme.");
   const seed = String(options.seed || `ai-cross-${stamp()}`);
-  const strategyFile = options.strategyFile || readJsonIfPresent("data/high-ai-strategies.json");
+  const defaultStrategyPath = defaultStrategyPathForDifficulty(difficulty);
+  const strategyFile = options.strategyFile || readJsonIfPresent(defaultStrategyPath);
   const outputBase = options.outputBase || path.join(reportsDir, `ai-cross-${stamp()}-${seed.replace(/[^a-zA-Z0-9]+/g, "-").slice(0, 32)}`);
   const pairs = buildOrderedPairs(characters);
-  const results = (await runPairs({ balance, strategyFile, seed, runs, pairs, jobs })).map(row => row.result);
+  const results = (await runPairs({ balance, strategyFile, difficulty, seed, runs, pairs, jobs })).map(row => row.result);
 
   const report = {
     generatedAt: new Date().toISOString(),
     config: {
       seed,
+      difficulty,
       runs,
       jobs,
       orderedPairs: results.length,
       skipMirror: true,
-      strategySource: options.strategySource || "data/high-ai-strategies.json"
+      strategySource: options.strategySource || defaultStrategyPath
     },
     results
   };
@@ -249,9 +267,11 @@ async function runCrossPlay(options = {}) {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
-  const strategyPath = stringArg(args, "strategy-file", "data/high-ai-strategies.json");
+  const difficulty = difficultyArg(args);
+  const strategyPath = stringArg(args, "strategy-file", defaultStrategyPathForDifficulty(difficulty));
   const outputBase = args.output ? path.resolve(root, args.output) : undefined;
   const result = await runCrossPlay({
+    difficulty,
     runs: numberArg(args, "runs", 1),
     jobs: numberArg(args, "jobs", typeof os.availableParallelism === "function" ? os.availableParallelism() : os.cpus().length),
     seed: stringArg(args, "seed", `ai-cross-${stamp()}`),

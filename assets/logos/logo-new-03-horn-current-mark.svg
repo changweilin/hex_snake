@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Horn Current Mark Logo</title>
+  <desc id="desc">A precise dragon-eel head mark with twin horns and a flowing current tail.</desc>
+  <g stroke="#111827" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M95 77C74 61 72 42 82 26c17 13 29 29 36 50Z" fill="#f8fafc" stroke-width="7"/>
+    <path d="M157 77c21-16 23-35 13-51-17 13-29 29-36 50Z" fill="#f8fafc" stroke-width="7"/>
+    <path d="M67 128c14-42 51-64 90-48 26 11 41 34 38 62-36 30-89 27-128-14Z" fill="#22d3ee" stroke-width="9"/>
+    <path d="M75 130c34 2 60 16 75 45 18 35 42 37 61 17" fill="none" stroke-width="16"/>
+    <path d="M78 128c33-3 67 4 101 25" fill="none" stroke="#f8fafc" stroke-width="7"/>
+  </g>
+  <path d="M126 101c18 0 31 10 37 23-20 11-43 8-58-7 4-10 11-16 21-16Z" fill="#f8fafc" stroke="#111827" stroke-linejoin="round" stroke-width="7"/>
+  <circle cx="131" cy="113" r="6" fill="#111827"/>
+  <path d="M98 166c17-3 35-2 54 5" fill="none" stroke="#2563eb" stroke-linecap="round" stroke-width="7"/>
+</svg>

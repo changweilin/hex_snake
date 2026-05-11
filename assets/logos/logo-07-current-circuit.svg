@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Current Circuit Logo</title>
+  <desc id="desc">A simple circuit-current mark with six nodes, combining eel electricity, snake movement, and board paths.</desc>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M50 82h54l24-34 24 34h54" stroke="#101827" stroke-width="18"/>
+    <path d="M50 82h54l24-34 24 34h54" stroke="#7dd3fc" stroke-width="8"/>
+    <path d="M206 174h-54l-24 34-24-34H50" stroke="#101827" stroke-width="18"/>
+    <path d="M206 174h-54l-24 34-24-34H50" stroke="#2563eb" stroke-width="8"/>
+    <path d="M128 74 111 122h33l-16 60" stroke="#f8fafc" stroke-width="16"/>
+    <path d="M128 74 111 122h33l-16 60" stroke="#101827" stroke-width="7"/>
+  </g>
+  <g fill="#f8fafc" stroke="#101827" stroke-width="7">
+    <circle cx="50" cy="82" r="13"/>
+    <circle cx="206" cy="82" r="13"/>
+    <circle cx="50" cy="174" r="13"/>
+    <circle cx="206" cy="174" r="13"/>
+  </g>
+</svg>

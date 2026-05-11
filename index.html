@@ -3,7 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-  <link rel="icon" href="data:,">
+  <link rel="icon" href="assets/logos/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/logos/white-dragon-favicon-32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/logos/white-dragon-apple-touch.png">
   <title>六角貪食蛇對戰</title>
   <link rel="stylesheet" href="src/styles.css">
 </head>
@@ -12,7 +14,7 @@
     <section class="stage">
       <header class="topbar">
         <div class="report-panel">
-          <h1>六角貪食蛇對戰</h1>
+          <h1><img class="site-title-logo" src="assets/logos/white-dragon-logo.png" alt="" decoding="async"><span class="site-title-text">六角貪食蛇對戰</span></h1>
           <div class="status" id="status">右搖桿控制前進，左搖桿瞄準後放開攻擊。</div>
         </div>
         <div class="metrics" aria-label="P1 P2 狀態">
@@ -46,11 +48,11 @@
           <span class="cooldown-value" id="cooldownBigValue">0</span>
         </div>
         <div class="character-stage" id="characterStage"></div>
-        <div class="overlay show" id="overlay">
+        <div class="overlay" id="overlay">
           <div class="dialog">
             <div id="winnerPortrait" hidden></div>
             <h2 id="overlayTitle">準備開局</h2>
-            <p id="overlayText">每吃 1 個食物獲得 2 點能量，集滿 6 點獲得 1 枚炸彈，最多 3 枚；HP 上限為（蛇長 + 1）× 4；能量與炸彈都滿時，施放消耗炸彈的招式會立刻把滿能量轉為 1 枚炸彈；小招消耗目前最高的食物庫存 2 點與 1 枚炸彈，大招消耗 2 枚炸彈與四種庫存各 2 點。</p>
+            <p id="overlayText">每吃 1 個食物獲得 2 點能量，集滿 6 點獲得 1 枚炸彈，最多 3 枚；HP 上限為（蛇長 + 1）× 10；能量與炸彈都滿時，施放消耗炸彈的招式會立刻把滿能量轉為 1 枚炸彈；小招消耗目前最高的食物庫存 2 點與 1 枚炸彈，大招消耗 2 枚炸彈與四種庫存各 2 點。</p>
             <div class="dialog-actions">
               <button id="startButton" type="button">開始</button>
               <button id="computerBattleButton" class="secondary" type="button">自動對弈</button>
@@ -58,23 +60,6 @@
             </div>
             <button id="introCloseButton" class="secondary intro-close-button" type="button" hidden>關閉</button>
           </div>
-        </div>
-        <div class="replay-controls" id="replayControls" hidden aria-label="重播控制">
-          <label for="replaySpeedSelect">重播</label>
-          <button id="replayReverseButton" class="secondary" type="button">倒放</button>
-          <button id="replayPlayButton" type="button">暫停</button>
-          <input id="replayTimeline" type="range" min="0" max="0" step="1" value="0" aria-label="重播時間軸">
-          <select id="replaySpeedSelect" aria-label="重播速度">
-            <option value="0.25">x0.25</option>
-            <option value="0.5">x0.5</option>
-            <option value="0.75">x0.75</option>
-            <option value="1" selected>x1</option>
-            <option value="1.5">x1.5</option>
-            <option value="2">x2</option>
-            <option value="4">x4</option>
-          </select>
-          <button id="replayExitButton" class="secondary" type="button">離開</button>
-          <span class="replay-time" id="replayTime">0:00 / 0:00</span>
         </div>
       </div>
     </section>
@@ -125,6 +110,7 @@
               <option value="low">低</option>
               <option value="medium" selected>中</option>
               <option value="high">高</option>
+              <option value="extreme">極難</option>
             </select>
           </div>
           <label class="field settings-toggle-field">
@@ -291,6 +277,22 @@
             <button id="autoBattleSpeedSelect" class="speed-scrubber" type="button" role="slider" aria-orientation="vertical" aria-valuemin="0.25" aria-valuemax="4" aria-valuenow="1" aria-haspopup="menu" aria-controls="autoSpeedMenu" aria-expanded="false" aria-label="按住上下滑動調整自動對弈速度，單擊開啟選項">x1</button>
             <div class="auto-speed-menu" id="autoSpeedMenu" hidden aria-label="選擇自動對弈速度"></div>
             <button type="button" data-auto-pause aria-label="暫停">⏸</button>
+          </div>
+          <div class="replay-controls" id="replayControls" hidden aria-label="重播控制">
+            <div class="replay-primary-controls">
+              <label for="replaySpeedSelect">重播</label>
+              <button id="replaySpeedSelect" class="speed-scrubber" type="button" role="slider" aria-orientation="vertical" aria-valuemin="0.25" aria-valuemax="4" aria-valuenow="1" aria-haspopup="menu" aria-controls="replaySpeedMenu" aria-expanded="false" aria-label="按住上下滑動調整重播速度，單擊開啟選項">x1</button>
+              <div class="auto-speed-menu replay-speed-menu" id="replaySpeedMenu" hidden aria-label="選擇重播速度"></div>
+              <button id="replayPrevButton" class="secondary" type="button" aria-label="上一筆重播">‹</button>
+              <button id="replayPlayButton" type="button" aria-label="暫停">⏸</button>
+              <button id="replayNextButton" class="secondary" type="button" aria-label="下一筆重播">›</button>
+              <button id="replayReverseButton" class="secondary" type="button" aria-label="倒放">↩</button>
+              <button id="replayExitButton" class="secondary" type="button" aria-label="離開重播">×</button>
+            </div>
+            <div class="replay-timeline-row">
+              <input id="replayTimeline" type="range" min="0" max="0" step="1" value="0" aria-label="重播時間軸">
+              <span class="replay-time" id="replayTime">0:00 / 0:00</span>
+            </div>
           </div>
           <div class="relay-panel" id="relayPanel" hidden aria-label="自動接力賽">
             <label>

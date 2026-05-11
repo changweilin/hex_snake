@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Hex Path H Logo</title>
+  <desc id="desc">A fresh Hex Snake logo direction using an H-like path made of six rounded hex-grid strokes.</desc>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M72 48v160M184 48v160M72 128h112" stroke="#111827" stroke-width="44"/>
+    <path d="M72 48v160M184 48v160M72 128h112" stroke="#f8fafc" stroke-width="26"/>
+    <path d="M72 48v160M184 48v160M72 128h112" stroke="#22d3ee" stroke-width="8"/>
+  </g>
+  <path d="M47 45 72 24l25 21-25 21Z" fill="#f3bd4e" stroke="#111827" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M159 211 184 190l25 21-25 21Z" fill="#f3bd4e" stroke="#111827" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M128 92 160 128l-32 36-32-36Z" fill="#f8fafc" stroke="#111827" stroke-width="8" stroke-linejoin="round"/>
+</svg>

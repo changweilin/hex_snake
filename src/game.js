@@ -234,7 +234,7 @@
     }
 
     function setComputerDifficulty(value) {
-      computerDifficulty = ["novice", "low", "medium", "high"].includes(value) ? value : "medium";
+      computerDifficulty = ["novice", "low", "medium", "high", "extreme"].includes(value) ? value : "medium";
       computerDifficultyInput.value = computerDifficulty;
     }
 
@@ -618,6 +618,33 @@
       return !gameOverSettlementPending && performance.now() >= restartUnlockAt;
     }
 
+    function beginStartLogoCountdown() {
+      if (HexSnakeReplay.isPlaybackMode() || running || startLogoCountdownPending || isLogoTransitionActive()) return false;
+      if (gameOver) {
+        if (!canRestartAfterGameOver()) return false;
+        returnToStartScreen();
+      }
+      startLogoCountdownPending = true;
+      setSettingsLocked(true);
+      setStatus("開局倒數中：3 秒後開始。");
+      playStartLogoCountdown().then(ready => {
+        startLogoCountdownPending = false;
+        if (!ready || running || gameOver || HexSnakeReplay.isPlaybackMode()) {
+          if (!running && !gameOver) setSettingsLocked(false);
+          return;
+        }
+        startGame();
+      });
+      return true;
+    }
+
+    function skipLogoTransition() {
+      if (logoTransitionDirection() !== "in" || gameOverLogoTransitionEndsAt <= 0) return false;
+      gameOverLogoTransitionEndsAt = 0;
+      showGameOverSettlement();
+      return true;
+    }
+
     function startGame(options = {}) {
       if (HexSnakeReplay.isPlaybackMode()) return false;
       if (gameOver && !canRestartAfterGameOver()) return false;
@@ -661,7 +688,8 @@
     function autoStartGame() {
       if (running && !gameOver) return true;
       if (gameOver) return false;
-      return startGame();
+      beginStartLogoCountdown();
+      return false;
     }
 
     function returnToStartScreen() {
@@ -914,6 +942,28 @@
       if (open) renderAutoSpeedMenu();
     }
 
+    function replaySpeedOptions() {
+      return [...HexSnakeReplay.playbackSpeeds].sort((a, b) => b - a);
+    }
+
+    function replaySpeedLabel(value) {
+      return `x${Number(value).toString()}`;
+    }
+
+    function renderReplaySpeedMenu() {
+      const playback = HexSnakeReplay.playback;
+      const selectedSpeed = playback?.speed ?? 1;
+      replaySpeedMenu.innerHTML = replaySpeedOptions().map(speed => `
+        <button class="${speed === selectedSpeed ? "is-selected" : ""}" type="button" data-replay-speed="${speed}">${replaySpeedLabel(speed)}</button>
+      `).join("");
+    }
+
+    function setReplaySpeedMenuOpen(open) {
+      replaySpeedMenu.hidden = !open;
+      replaySpeedSelect.setAttribute("aria-expanded", open ? "true" : "false");
+      if (open) renderReplaySpeedMenu();
+    }
+
     function setComputerBattleSpeed(value, persist = true) {
       computerBattleSpeed = normalizeAutoBattleSpeed(value);
       autoBattleSpeedSelect.textContent = autoBattleSpeedLabel(computerBattleSpeed);
@@ -950,9 +1000,11 @@
       gameOverSettlementPending = false;
       gameOverRelayStartOptions = null;
       gameOverContinuousVisualDeadlineAt = 0;
+      gameOverLogoTransitionEndsAt = 0;
       gameOverResultOwner = null;
       gameOverPlayerLost = false;
       gameOverComputerLost = false;
+      clearLogoTransition();
     }
 
     function resetRelayScore() {
@@ -1350,6 +1402,97 @@
       });
     }
 
+    function guKingBestDamageStep(currentTarget, targetSnake, radius, damage) {
+      const head = targetSnake[0];
+      const current = {
+        target: { q: currentTarget.q, r: currentTarget.r },
+        damage: damageSnake(targetSnake, currentTarget, radius, damage),
+        headDistance: head ? hexDistance(currentTarget, head) : 0
+      };
+      return directions
+        .map((_, direction) => nextWrappedCell(currentTarget, direction))
+        .reduce((best, candidate) => {
+          const next = {
+            target: candidate,
+            damage: damageSnake(targetSnake, candidate, radius, damage),
+            headDistance: head ? hexDistance(candidate, head) : 0
+          };
+          if (next.damage > best.damage) return next;
+          if (next.damage === best.damage && keyOf(best.target) !== keyOf(current.target) && next.headDistance < best.headDistance) return next;
+          return best;
+        }, current).target;
+    }
+
+    function scheduleLobsterPalmVolley({
+      owner,
+      source,
+      direction,
+      targetSnake,
+      now,
+      smallDelay,
+      fistStepMs,
+      contactRadius,
+      contactDamage,
+      burstRadius,
+      burstDamage,
+      stunChance,
+      headStunChance,
+      vulnerabilityChance,
+      visualType,
+      hand
+    }) {
+      const path = lobsterFistPath(source, direction, targetSnake);
+      const hits = pathHits(path, targetSnake);
+      const firstHit = hits[0];
+      const travelPath = firstHit ? path.slice(0, firstHit.index + 1) : path;
+      const endCell = firstHit?.cell || path[path.length - 1] || source;
+      const travelDelay = smallDelay + travelPath.length * fistStepMs;
+      projectiles.push({
+        kind: "lobsterPalm",
+        owner,
+        profile: "big",
+        source: { q: source.q, r: source.r },
+        target: { q: endCell.q, r: endCell.r },
+        pathCells: travelPath,
+        visualType,
+        hand,
+        createdAt: now,
+        impactAt: now + travelDelay,
+        delay: travelDelay,
+        radius: contactRadius,
+        damage: contactDamage,
+        burstRadius,
+        burstDamage,
+        stunChance,
+        headStunChance,
+        vulnerabilityChance
+      });
+      const burstHits = firstHit ? [firstHit] : [{ cell: endCell, index: Math.max(0, travelPath.length - 1) }];
+      burstHits.forEach(hit => {
+        projectiles.push({
+          kind: "lobsterPalmBurst",
+          owner,
+          profile: "big",
+          source: { q: source.q, r: source.r },
+          target: { q: hit.cell.q, r: hit.cell.r },
+          visualType,
+          hand,
+          hidden: true,
+          createdAt: now,
+          impactAt: now + smallDelay + (hit.index + 1) * fistStepMs,
+          delay: smallDelay + (hit.index + 1) * fistStepMs,
+          radius: contactRadius,
+          damage: contactDamage,
+          burstRadius,
+          burstDamage,
+          stunChance,
+          headStunChance,
+          vulnerabilityChance
+        });
+      });
+      return travelDelay;
+    }
+
     function lobsterPalmVulnerabilityChance(stock) {
       return attackStunChance(stock, ultimateSetting("lobster", "vulnerabilityChance", 0.3));
     }
@@ -1369,14 +1512,7 @@
         : directionFromSourceToTarget(source, target, ownerDirection(owner));
 
       if (character.id === "lobster") {
-        const targetSnake = owner === "player" ? computerSnake : snake;
-        const path = lobsterFistPath(source, direction, targetSnake);
-        const hits = pathHits(path, targetSnake);
-        const firstHit = hits[0];
-        const travelPath = firstHit ? path.slice(0, firstHit.index + 1) : path;
-        const endCell = firstHit?.cell || path[path.length - 1] || source;
-        const fistStepMs = ultimateSetting(character.id, "fistStepMs", lobsterPalmStepMs);
-        const travelDelay = small.delay + travelPath.length * fistStepMs;
+        const fistStepMs = ultimateSetting(character.id, "fistStepMs", 36);
         const volleys = Math.max(1, Math.round(ultimateSetting(character.id, "volleyCount", 2)));
         const contactDamage = bigDamage * ultimateSetting(character.id, "contactDamageMultiplier", 0.6);
         const contactRadius = Math.max(0.25, ultimateSetting(character.id, "contactRadius", 1));
@@ -1387,43 +1523,46 @@
           : lobsterPalmVulnerabilityChance(stock);
         const visualType = "lobster-palm-big";
         const volleyIntervalMs = attackDelay(stock);
+        let maxTravelDelay = 0;
         for (let volley = 0; volley < volleys; volley += 1) {
           const volleyDelay = volley * volleyIntervalMs;
           const hand = volley % 2 === 0 ? "right" : "left";
-          projectiles.push({
-            kind: "lobsterPalm",
-            owner,
-            profile: "big",
-            source: { q: source.q, r: source.r },
-            target: { q: endCell.q, r: endCell.r },
-            pathCells: travelPath,
-            visualType,
-            hand,
-            createdAt: now + volleyDelay,
-            impactAt: now + volleyDelay + travelDelay,
-            delay: travelDelay,
-            radius: contactRadius,
-            damage: contactDamage,
-            burstRadius,
-            burstDamage,
-            stunChance,
-            headStunChance: options.hitStunChances?.head ?? stunChance,
-            vulnerabilityChance: palmVulnerabilityChance
-          });
-          const burstHits = firstHit ? [firstHit] : [{ cell: endCell, index: Math.max(0, travelPath.length - 1) }];
-          burstHits.forEach(hit => {
+          if (volley === 0) {
+            maxTravelDelay = Math.max(maxTravelDelay, scheduleLobsterPalmVolley({
+              owner,
+              source,
+              direction,
+              targetSnake: owner === "player" ? computerSnake : snake,
+              now,
+              smallDelay: small.delay,
+              fistStepMs,
+              contactRadius,
+              contactDamage,
+              burstRadius,
+              burstDamage,
+              stunChance,
+              headStunChance: options.hitStunChances?.head ?? stunChance,
+              vulnerabilityChance: palmVulnerabilityChance,
+              visualType,
+              hand
+            }));
+          } else {
+            const maxSteps = Math.max(1, Math.ceil((radius * 2 + 1) / 2));
+            maxTravelDelay = Math.max(maxTravelDelay, small.delay + maxSteps * fistStepMs);
             projectiles.push({
-              kind: "lobsterPalmBurst",
+              kind: "lobsterPalmSetup",
               owner,
               profile: "big",
-              source: { q: source.q, r: source.r },
-              target: { q: hit.cell.q, r: hit.cell.r },
+              target: { q: target.q, r: target.r },
+              direction,
               visualType,
               hand,
               hidden: true,
               createdAt: now + volleyDelay,
-              impactAt: now + volleyDelay + small.delay + (hit.index + 1) * fistStepMs,
-              delay: small.delay + (hit.index + 1) * fistStepMs,
+              impactAt: now + volleyDelay,
+              delay: 0,
+              smallDelay: small.delay,
+              fistStepMs,
               radius: contactRadius,
               damage: contactDamage,
               burstRadius,
@@ -1432,9 +1571,9 @@
               headStunChance: options.hitStunChances?.head ?? stunChance,
               vulnerabilityChance: palmVulnerabilityChance
             });
-          });
+          }
         }
-        return travelDelay + (volleys - 1) * volleyIntervalMs;
+        return maxTravelDelay + (volleys - 1) * volleyIntervalMs;
       }
 
       if (character.id === "moray") {
@@ -1442,33 +1581,33 @@
         const lineCells = boardLineThrough(lineOrigin, direction);
         const lineShape = bandShapeFromTotalWidth(small.radius);
         const excludedCells = (owner === "player" ? snake : computerSnake).map(segment => ({ q: segment.q, r: segment.r }));
-        const strikeCount = Math.max(1, Math.round(ultimateSetting(character.id, "strikeCount", 8)));
-        const strikeIntervalMs = small.delay * Math.max(0, ultimateSetting(character.id, "strikeIntervalMultiplier", 0.5));
-        const damage = bigDamage * ultimateSetting(character.id, "damageMultiplier", 0.2);
-        for (let index = 0; index < strikeCount; index += 1) {
-          const strikeDelay = index * strikeIntervalMs;
-          projectiles.push({
-            kind: "line",
-            owner,
-            profile: "big",
-            source: { q: source.q, r: source.r },
-            target: { q: target.q, r: target.r },
-            lineCells,
-            excludedCells,
-            width: lineShape.width,
-            fullDamageWidth: lineShape.fullDamageWidth,
-            outerDamageMultiplier: lineShape.outerDamageMultiplier,
-            visualType: attackVisualType(owner, "big"),
-            createdAt: now + strikeDelay,
-            impactAt: now + strikeDelay + small.delay,
-            delay: small.delay,
-            damage,
-            stunChance,
-            headStunChance: options.hitStunChances?.head ?? stunChance,
-            stackStun: strikeCount > 1
-          });
-        }
-        return small.delay + (strikeCount - 1) * strikeIntervalMs;
+        const durationMs = baseAttackDelayMs * smallAttackDelayScale * Math.max(1, ultimateSetting(character.id, "durationBaseTicks", 4));
+        const tickMs = Math.max(1, small.delay);
+        const damage = bigDamage * ultimateSetting(character.id, "damageMultiplier", 0.24);
+        projectiles.push({
+          kind: "lineHazardSetup",
+          owner,
+          profile: "big",
+          source: { q: source.q, r: source.r },
+          target: { q: target.q, r: target.r },
+          lineCells,
+          excludedCells,
+          width: lineShape.width,
+          fullDamageWidth: lineShape.fullDamageWidth,
+          outerDamageMultiplier: lineShape.outerDamageMultiplier,
+          visualType: attackVisualType(owner, "big"),
+          createdAt: now,
+          impactAt: now + tickMs,
+          delay: tickMs,
+          tickMs,
+          fieldStartedAt: now,
+          fieldEndAt: now + durationMs,
+          damage,
+          stunChance,
+          headStunChance: options.hitStunChances?.head ?? stunChance,
+          stackStun: true
+        });
+        return durationMs;
       }
 
       if (character.id === "quetzal") {
@@ -1477,6 +1616,7 @@
         const extensionDamageMultiplier = Math.max(0, Math.min(1, (stock.protein || 0) / maxFoodStock));
         const outwardWidth = extensionDamageMultiplier > 0 ? 1 : 0;
         const tickMs = ultimateSetting(character.id, "tickMs", baseStepMs);
+        const slowDurationMs = ultimateSetting(character.id, "slowDurationMs", 2000);
         hazards.push({
           kind: "swamp",
           owner,
@@ -1488,7 +1628,12 @@
           outerDamageMultiplier: extensionDamageMultiplier,
           visualType: attackVisualType(owner, "big"),
           damage: bigDamage * ultimateDamageMultiplier(character.id),
-          stunChance: 0,
+          stunChance,
+          headStunChance: options.hitStunChances?.head ?? stunChance,
+          stunTicksRemaining: 1,
+          slowChance: 1,
+          slowStack: false,
+          slowDurationMs,
           startedAt: now + small.delay,
           nextTickAt: now + small.delay,
           tickMs,
@@ -1523,7 +1668,7 @@
           impactAt: now + delay,
           delay,
           radius: Math.max(0.5, small.radius * 0.5),
-          damage: bigDamage * ultimateSetting(character.id, "damageMultiplier", 8),
+          damage: bigDamage * ultimateSetting(character.id, "damageMultiplier", 7),
           stunChance,
           headStunChance: options.hitStunChances?.head ?? stunChance,
           hidden: true,
@@ -1536,7 +1681,7 @@
 
       if (character.id === "dragon") {
         const spiritRadius = small.radius * ultimateSetting(character.id, "radiusMultiplier", 2);
-        const impactDamage = bigDamage * ultimateSetting(character.id, "impactDamageMultiplier", 1.5);
+        const impactDamage = bigDamage * ultimateSetting(character.id, "impactDamageMultiplier", 1.08);
         const radiationTotalDamage = bigDamage * ultimateSetting(character.id, "radiationDamageMultiplier", 2);
         const radiationDurationMs = ultimateSetting(character.id, "radiationDurationMs", 4000);
         const radiationTickMs = ultimateSetting(character.id, "radiationTickMs", 500);
@@ -1562,6 +1707,7 @@
             stunChance,
             headStunChance: options.hitStunChances?.head ?? stunChance,
             flat: true,
+            ignoreCasterInterrupt: true,
             visualType
           });
         }
@@ -1571,17 +1717,21 @@
       if (character.id === "gu_king") {
         const volleyIntervalMs = small.delay;
         const firstImpactDelay = small.delay;
+        const targetSnake = owner === "player" ? computerSnake : snake;
+        const damage = bigDamage * ultimateSetting(character.id, "damageMultiplier", 1.414);
+        let waveTarget = { q: target.q, r: target.r };
         for (let index = 0; index < 3; index += 1) {
           const impactDelay = firstImpactDelay + index * volleyIntervalMs;
+          waveTarget = guKingBestDamageStep(waveTarget, targetSnake, small.radius, damage);
           pushCircleAttack({
             owner,
             profile: "big",
-            target,
+            target: waveTarget,
             createdAt: now,
             impactAt: now + impactDelay,
             delay: impactDelay,
             radius: small.radius,
-            damage: bigDamage * ultimateSetting(character.id, "damageMultiplier", 1.5),
+            damage,
             stunChance,
             headStunChance: options.hitStunChances?.head ?? stunChance
           });
@@ -1696,6 +1846,30 @@
       return stunChanceForHeadHit(lineProjectileHitsHead(parts, projectile), projectile);
     }
 
+    function effectCellsHitHead(parts, effectCells = [], width = 0, excludedCells = [], minDistance = 0, outerDamageMultiplier = 1, fullDamageWidth = 0) {
+      const head = parts[0];
+      if (!head) return false;
+      if (cellKeySet(excludedCells || []).has(keyOf(head))) return false;
+      return effectCells.some(cell => {
+        const distance = hexDistance(head, cell);
+        if (distance < minDistance || distance > width) return false;
+        return lineBandDamageMultiplier(distance, { width, fullDamageWidth, outerDamageMultiplier }) > 0;
+      });
+    }
+
+    function hazardHitsHead(parts, hazard, excludedCells = []) {
+      if (hazard.kind === "radiation") return circleAttackHitsHead(parts, hazard.target, hazard.radius);
+      return effectCellsHitHead(
+        parts,
+        hazard.cells || hazard.lineCells || [],
+        hazard.width || 0,
+        excludedCells,
+        hazard.minDistance || 0,
+        hazard.outerDamageMultiplier ?? 1,
+        hazard.fullDamageWidth || 0
+      );
+    }
+
     function snakeBodyHitAtCenter(parts, target) {
       return parts.slice(1).some(segment => keyOf(segment) === keyOf(target));
     }
@@ -1727,7 +1901,7 @@
 
     function interruptCasting(owner) {
       const beforeCount = projectiles.length;
-      projectiles = projectiles.filter(projectile => projectile.owner !== owner);
+      projectiles = projectiles.filter(projectile => projectile.owner !== owner || projectile.ignoreCasterInterrupt);
       return projectiles.length !== beforeCount;
     }
 
@@ -1750,6 +1924,24 @@
         computerSlowUntil = Math.max(computerSlowUntil, slowUntil);
       }
       showStatusCallout(owner, interrupted ? "暈眩！招式中斷" : "暈眩！", { interrupted });
+      return true;
+    }
+
+    function applyAttackSlow(owner, chance = 1, durationMs = 2000, now = performance.now(), options = {}) {
+      if (Math.random() >= chance) return false;
+      if (isOwnerSandwormArmored(owner, now)) {
+        clearOwnerAbnormalStatus(owner, now);
+        return false;
+      }
+      const currentSlowUntil = owner === "player" ? playerSlowUntil : computerSlowUntil;
+      const slowUntil = options.stack === false && currentSlowUntil > now
+        ? currentSlowUntil
+        : Math.max(currentSlowUntil, now + durationMs);
+      if (owner === "player") {
+        playerSlowUntil = slowUntil;
+      } else {
+        computerSlowUntil = slowUntil;
+      }
       return true;
     }
 
@@ -1822,7 +2014,53 @@
         let computerDamage = 0;
         let playerStunChance = projectile.stunChance;
         let computerStunChance = projectile.stunChance;
-        if (projectile.kind === "lobsterPalm") {
+        if (projectile.kind === "lineHazardSetup") {
+          hazards.push({
+            kind: "lineHazard",
+            owner: projectile.owner,
+            cells: projectile.lineCells,
+            damageExcludedCells: projectile.excludedCells,
+            visualExcludedCells: projectile.excludedCells,
+            width: projectile.width,
+            minDistance: projectile.minDistance || 0,
+            fullDamageWidth: projectile.fullDamageWidth || 0,
+            outerDamageMultiplier: projectile.outerDamageMultiplier ?? 1,
+            visualType: projectile.visualType,
+            damage: projectile.damage,
+            profile: projectile.profile,
+            stunChance: projectile.stunChance,
+            headStunChance: projectile.headStunChance,
+            stackStun: projectile.stackStun,
+            startedAt: projectile.fieldStartedAt ?? now,
+            nextTickAt: now,
+            tickMs: projectile.tickMs,
+            endAt: projectile.fieldEndAt ?? now
+          });
+          return;
+        } else if (projectile.kind === "lobsterPalmSetup") {
+          const source = ownerHead(projectile.owner);
+          if (source) {
+            scheduleLobsterPalmVolley({
+              owner: projectile.owner,
+              source,
+              direction: Number.isInteger(projectile.direction) ? projectile.direction : ownerDirection(projectile.owner),
+              targetSnake: projectile.owner === "player" ? computerSnake : snake,
+              now,
+              smallDelay: projectile.smallDelay,
+              fistStepMs: projectile.fistStepMs,
+              contactRadius: projectile.radius,
+              contactDamage: projectile.damage,
+              burstRadius: projectile.burstRadius,
+              burstDamage: projectile.burstDamage,
+              stunChance: projectile.stunChance,
+              headStunChance: projectile.headStunChance,
+              vulnerabilityChance: projectile.vulnerabilityChance,
+              visualType: projectile.visualType,
+              hand: projectile.hand
+            });
+          }
+          return;
+        } else if (projectile.kind === "lobsterPalm") {
           return;
         } else if (projectile.kind === "lobsterPalmBurst") {
           const defenderOwner = projectile.owner === "player" ? "computer" : "player";
@@ -1838,77 +2076,23 @@
             || (projectile.burstDamage > 0 && circleAttackHitsHead(computerSnake, projectile.target, projectile.burstRadius));
           playerStunChance = stunChanceForHeadHit(playerHeadHit, projectile);
           computerStunChance = stunChanceForHeadHit(computerHeadHit, projectile);
-          blasts.push({
-            kind: "circle",
-            target: projectile.target,
-            owner: projectile.owner,
-            radius: projectile.burstRadius,
-            visualType: burstVisualType(projectile),
-            hand: projectile.hand,
-            startedAt: now,
-            endAt: now + blastDurationMs * 1.25
-          });
-          triggerBoardShake(burstVisualType(projectile), now);
+          addProjectileBlastVisual(projectile, now);
         } else if (projectile.kind === "line") {
           playerDamage = damageSnakeCells(snake, projectile.lineCells, projectile.width, projectile.damage, projectile.excludedCells, 0, projectile.outerDamageMultiplier ?? 1, projectile.fullDamageWidth ?? 0);
           computerDamage = damageSnakeCells(computerSnake, projectile.lineCells, projectile.width, projectile.damage, projectile.excludedCells, 0, projectile.outerDamageMultiplier ?? 1, projectile.fullDamageWidth ?? 0);
           playerStunChance = lineProjectileStunChance(snake, projectile);
           computerStunChance = lineProjectileStunChance(computerSnake, projectile);
-          blasts.push({
-            kind: "line",
-            lineCells: projectile.lineCells,
-            excludedCells: projectile.excludedCells,
-            width: projectile.width,
-            fullDamageWidth: projectile.fullDamageWidth,
-            outerDamageMultiplier: projectile.outerDamageMultiplier,
-            target: projectile.target,
-            owner: projectile.owner,
-            visualType: projectile.visualType || attackVisualType(projectile.owner, projectile.profile),
-            startedAt: now,
-            endAt: now + blastDurationMs
-          });
-          triggerBoardShake(projectile.visualType || attackVisualType(projectile.owner, projectile.profile), now);
+          addProjectileBlastVisual(projectile, now);
         } else {
-          if (projectile.kind === "headCircle" && projectile.followHead) {
-            const head = ownerHead(projectile.owner);
-            projectile.explosionTarget = { q: head.q, r: head.r };
-            projectile.target = { q: projectile.explosionTarget.q, r: projectile.explosionTarget.r };
-          }
-          const explosionTarget = projectile.explosionTarget || projectile.target;
-          const radius = projectile.radius || baseBlastHexRadius;
+          const radiationDamage = projectile.kind === "headCircle" && projectile.radiationDurationMs
+            ? projectile.radiationTotalDamage / Math.max(1, Math.ceil(projectile.radiationDurationMs / projectile.radiationTickMs))
+            : 0;
+          const { explosionTarget, radius } = addProjectileBlastVisual(projectile, now, { radiationDamage });
           const damage = projectile.damage || 1;
           playerDamage = damageSnake(snake, explosionTarget, radius, damage);
           computerDamage = damageSnake(computerSnake, explosionTarget, radius, damage);
           playerStunChance = stunChanceForHeadHit(circleAttackHitsHead(snake, explosionTarget, radius), projectile);
           computerStunChance = stunChanceForHeadHit(circleAttackHitsHead(computerSnake, explosionTarget, radius), projectile);
-          blasts.push({
-            kind: "circle",
-            target: explosionTarget,
-            owner: projectile.owner,
-            radius,
-            visualType: projectile.visualType || attackVisualType(projectile.owner, projectile.profile),
-            hand: projectile.hand,
-            startedAt: now,
-            endAt: now + blastDurationMs
-          });
-          triggerBoardShake(projectile.visualType || attackVisualType(projectile.owner, projectile.profile), now);
-          if (projectile.kind === "headCircle" && projectile.radiationDurationMs) {
-            const ticks = Math.max(1, Math.ceil(projectile.radiationDurationMs / projectile.radiationTickMs));
-            hazards.push({
-              kind: "radiation",
-              owner: projectile.owner,
-              target: { q: explosionTarget.q, r: explosionTarget.r },
-              radius,
-              width: radius,
-              visualType: projectile.visualType === "dragon-spirit-big" ? "dragon-spirit-radiation" : "lobster-radiation",
-              damage: projectile.radiationTotalDamage / ticks,
-              stunChance: 0,
-              startedAt: now,
-              nextTickAt: now + projectile.radiationTickMs,
-              tickMs: projectile.radiationTickMs,
-              endAt: now + projectile.radiationDurationMs
-            });
-          }
           if (projectile.sandwormParalyzeOnBody || projectile.sandwormKillOnHead) {
             if (projectile.owner !== "player") {
               if (projectile.sandwormKillOnHead && snakeHeadHitAtCenter(snake, explosionTarget)) playerDamage = Math.max(playerDamage, playerHp);
@@ -1936,23 +2120,26 @@
       if (playerHp <= 0 || computerHp <= 0) endGame(playerHp <= 0, computerHp <= 0);
     }
 
-    function addProjectileImpactVisual(projectile, now) {
-      if (projectile.kind === "lobsterPalm") return;
+    function addProjectileBlastVisual(projectile, now, options = {}) {
+      if (projectile.kind === "lobsterPalmSetup") return {};
+      if (projectile.kind === "lobsterPalm") return {};
       if (projectile.kind === "lobsterPalmBurst") {
+        const visualType = burstVisualType(projectile);
         blasts.push({
           kind: "circle",
           target: projectile.target,
           owner: projectile.owner,
           radius: projectile.burstRadius,
-          visualType: burstVisualType(projectile),
+          visualType,
           hand: projectile.hand,
           startedAt: now,
           endAt: now + blastDurationMs * 1.25
         });
-        triggerBoardShake(burstVisualType(projectile), now);
-        return;
+        triggerBoardShake(visualType, now);
+        return { visualType };
       }
-      if (projectile.kind === "line") {
+      if (projectile.kind === "lineHazardSetup") {
+        const visualType = projectile.visualType || attackVisualType(projectile.owner, projectile.profile);
         blasts.push({
           kind: "line",
           lineCells: projectile.lineCells,
@@ -1962,12 +2149,30 @@
           outerDamageMultiplier: projectile.outerDamageMultiplier,
           target: projectile.target,
           owner: projectile.owner,
-          visualType: projectile.visualType || attackVisualType(projectile.owner, projectile.profile),
+          visualType,
           startedAt: now,
           endAt: now + blastDurationMs
         });
-        triggerBoardShake(projectile.visualType || attackVisualType(projectile.owner, projectile.profile), now);
-        return;
+        triggerBoardShake(visualType, now);
+        return { visualType };
+      }
+      if (projectile.kind === "line") {
+        const visualType = projectile.visualType || attackVisualType(projectile.owner, projectile.profile);
+        blasts.push({
+          kind: "line",
+          lineCells: projectile.lineCells,
+          excludedCells: projectile.excludedCells,
+          width: projectile.width,
+          fullDamageWidth: projectile.fullDamageWidth,
+          outerDamageMultiplier: projectile.outerDamageMultiplier,
+          target: projectile.target,
+          owner: projectile.owner,
+          visualType,
+          startedAt: now,
+          endAt: now + blastDurationMs
+        });
+        triggerBoardShake(visualType, now);
+        return { visualType };
       }
       if (projectile.kind === "headCircle" && projectile.followHead) {
         const head = ownerHead(projectile.owner);
@@ -1996,7 +2201,7 @@
           radius,
           width: radius,
           visualType: projectile.visualType === "dragon-spirit-big" ? "dragon-spirit-radiation" : "lobster-radiation",
-          damage: 0,
+          damage: options.radiationDamage ?? 0,
           stunChance: 0,
           startedAt: now,
           nextTickAt: now + projectile.radiationTickMs,
@@ -2004,6 +2209,11 @@
           endAt: now + projectile.radiationDurationMs
         });
       }
+      return { explosionTarget, radius, visualType };
+    }
+
+    function addProjectileImpactVisual(projectile, now) {
+      addProjectileBlastVisual(projectile, now);
     }
 
     function advanceGameOverVisuals(now) {
@@ -2038,7 +2248,9 @@
 
     function showGameOverSettlement() {
       gameOverSettlementPending = false;
+      gameOverLogoTransitionEndsAt = 0;
       if (!gameOver || running || HexSnakeReplay.isPlaybackMode()) return;
+      clearLogoTransition();
       renderWinnerPortrait(gameOverResultOwner, gameOverPlayerLost, gameOverComputerLost);
       overlay.classList.add("show");
       if (gameOverRelayStartOptions) {
@@ -2065,20 +2277,85 @@
         const damageExcludedCells = hazard.damageExcludedCells || hazard.excludedCells || [];
         let playerDamage = hazard.kind === "radiation"
           ? damageSnake(snake, hazard.target, hazard.radius, hazard.damage)
-          : damageSnakeCells(snake, hazard.cells, hazard.width, hazard.damage, hazard.owner === "player" ? damageExcludedCells : [], hazard.minDistance || 0, hazard.outerDamageMultiplier ?? 1);
+          : damageSnakeCells(snake, hazard.cells, hazard.width, hazard.damage, hazard.owner === "player" ? damageExcludedCells : [], hazard.minDistance || 0, hazard.outerDamageMultiplier ?? 1, hazard.fullDamageWidth || 0);
         let computerDamage = hazard.kind === "radiation"
           ? damageSnake(computerSnake, hazard.target, hazard.radius, hazard.damage)
-          : damageSnakeCells(computerSnake, hazard.cells, hazard.width, hazard.damage, hazard.owner === "computer" ? damageExcludedCells : [], hazard.minDistance || 0, hazard.outerDamageMultiplier ?? 1);
+          : damageSnakeCells(computerSnake, hazard.cells, hazard.width, hazard.damage, hazard.owner === "computer" ? damageExcludedCells : [], hazard.minDistance || 0, hazard.outerDamageMultiplier ?? 1, hazard.fullDamageWidth || 0);
+        const playerStunChance = stunChanceForHeadHit(
+          hazardHitsHead(snake, hazard, hazard.owner === "player" ? damageExcludedCells : []),
+          hazard
+        );
+        const computerStunChance = stunChanceForHeadHit(
+          hazardHitsHead(computerSnake, hazard, hazard.owner === "computer" ? damageExcludedCells : []),
+          hazard
+        );
+        const canApplyStun = (hazard.stunTicksRemaining ?? Infinity) > 0;
         if (hazard.owner === "player") playerDamage = 0;
         if (hazard.owner === "computer") computerDamage = 0;
         if (isOwnerDamageImmune("player", now)) playerDamage = 0;
         if (isOwnerDamageImmune("computer", now)) computerDamage = 0;
         applyBlastDamage("player", playerDamage, now);
         applyBlastDamage("computer", computerDamage, now);
-        if (hazard.owner !== "player" && playerDamage > 0) applyAttackStun("player", hazard.stunChance, now, { interrupt: false });
-        if (hazard.owner !== "computer" && computerDamage > 0) applyAttackStun("computer", hazard.stunChance, now, { interrupt: false });
+        if (hazard.owner !== "player" && playerDamage > 0 && hazard.slowChance > 0) {
+          applyAttackSlow("player", hazard.slowChance, hazard.slowDurationMs ?? 2000, now, { stack: hazard.slowStack });
+        }
+        if (hazard.owner !== "computer" && computerDamage > 0 && hazard.slowChance > 0) {
+          applyAttackSlow("computer", hazard.slowChance, hazard.slowDurationMs ?? 2000, now, { stack: hazard.slowStack });
+        }
+        if (canApplyStun && hazard.owner !== "player" && playerDamage > 0) {
+          applyAttackStun("player", playerStunChance, now, { interrupt: false, stack: hazard.stackStun });
+        }
+        if (canApplyStun && hazard.owner !== "computer" && computerDamage > 0) {
+          applyAttackStun("computer", computerStunChance, now, { interrupt: false, stack: hazard.stackStun });
+        }
+        if (Number.isFinite(hazard.stunTicksRemaining)) {
+          hazard.stunTicksRemaining = Math.max(0, hazard.stunTicksRemaining - 1);
+        }
       });
       if (playerHp <= 0 || computerHp <= 0) endGame(playerHp <= 0, computerHp <= 0);
+    }
+
+    function advanceOwnerMovement(owner, next, eatenFood) {
+      const parts = owner === "player" ? snake : computerSnake;
+      const ate = Boolean(eatenFood);
+      parts.unshift(next);
+      if (!ate) {
+        parts.pop();
+        return null;
+      }
+
+      if (owner === "player") {
+        score += 1;
+        collectFood("player", eatenFood);
+        best = Math.max(best, score);
+        localStorage.setItem("hexSnakeBest", String(best));
+        lastFeedElapsedMs = 0;
+        lastPlayerFoodAt = performance.now();
+        playerFoodTargetKey = null;
+        playerFoodTargetAt = 0;
+        playerHp = Math.min(maxHpForSnake(snake), playerHp + foodHealAmount());
+      } else {
+        computerScore += 1;
+        lastComputerFoodAt = performance.now();
+        computerFoodTargetKey = null;
+        computerFoodTargetAt = 0;
+        if (computerCanGrow()) {
+          collectFood("computer", eatenFood);
+          computerHp = Math.min(maxHpForSnake(computerSnake), computerHp + foodHealAmount());
+        } else {
+          parts.pop();
+        }
+      }
+
+      return { owner, key: keyOf(next) };
+    }
+
+    function replaceConsumedFoods(consumedFoods, attemptedFood = false) {
+      const consumed = consumedFoods.filter(Boolean);
+      if (!attemptedFood && !consumed.length) return;
+      const eatenKeys = new Set(consumed.map(food => food.key));
+      if (eatenKeys.size) foods = foods.filter(food => !eatenKeys.has(keyOf(food)));
+      placeFoods(consumed.map(food => food.owner));
     }
 
     function step(headCollisionOrder = "simultaneous", now = performance.now()) {
@@ -2138,53 +2415,9 @@
         return;
       }
 
-      if (!playerCollision) {
-        snake.unshift(next);
-      }
-      if (!computerCollision) {
-        computerSnake.unshift(computerNext);
-      }
-
-      if (!playerCollision && eating) {
-        score += 1;
-        collectFood("player", eatenFood);
-        best = Math.max(best, score);
-        localStorage.setItem("hexSnakeBest", String(best));
-        lastFeedElapsedMs = 0;
-        lastPlayerFoodAt = performance.now();
-        playerFoodTargetKey = null;
-        playerFoodTargetAt = 0;
-        playerHp = Math.min(maxHpForSnake(snake), playerHp + foodHealAmount());
-      } else if (!playerCollision) {
-        snake.pop();
-      }
-
-      if (!computerCollision && computerEating) {
-        computerScore += 1;
-        lastComputerFoodAt = performance.now();
-        computerFoodTargetKey = null;
-        computerFoodTargetAt = 0;
-        if (computerCanGrow()) {
-          collectFood("computer", computerEatenFood);
-          computerHp = Math.min(maxHpForSnake(computerSnake), computerHp + foodHealAmount());
-        } else {
-          computerSnake.pop();
-        }
-      } else if (!computerCollision) {
-        computerSnake.pop();
-      }
-
-      if (eating || computerEating) {
-        const eatenKeys = new Set([
-          !playerCollision && eating ? nextKey : null,
-          !computerCollision && computerEating ? computerNextKey : null
-        ].filter(Boolean));
-        foods = foods.filter(food => !eatenKeys.has(keyOf(food)));
-        placeFoods([
-          !playerCollision && eating ? "player" : null,
-          !computerCollision && computerEating ? "computer" : null
-        ].filter(Boolean));
-      }
+      const playerConsumedFood = !playerCollision ? advanceOwnerMovement("player", next, eatenFood) : null;
+      const computerConsumedFood = !computerCollision ? advanceOwnerMovement("computer", computerNext, computerEatenFood) : null;
+      replaceConsumedFoods([playerConsumedFood, computerConsumedFood], eating || computerEating);
 
       if (!playerCollision && running && !paused) maybeAutoBattlePlayerAttack(now);
       if (!computerCollision && running && !paused) maybeComputerAttack(now);
@@ -2214,22 +2447,8 @@
         return;
       }
 
-      snake.unshift(next);
-      if (eating) {
-        score += 1;
-        collectFood("player", eatenFood);
-        best = Math.max(best, score);
-        localStorage.setItem("hexSnakeBest", String(best));
-        lastFeedElapsedMs = 0;
-        lastPlayerFoodAt = performance.now();
-        playerFoodTargetKey = null;
-        playerFoodTargetAt = 0;
-        playerHp = Math.min(maxHpForSnake(snake), playerHp + foodHealAmount());
-        foods = foods.filter(food => keyOf(food) !== nextKey);
-        placeFoods(["player"]);
-      } else {
-        snake.pop();
-      }
+      const consumedFood = advanceOwnerMovement("player", next, eatenFood);
+      replaceConsumedFoods([consumedFood], eating);
       if (running && !paused) maybeAutoBattlePlayerAttack(now);
       updateHud();
     }
@@ -2253,23 +2472,8 @@
         return;
       }
 
-      computerSnake.unshift(computerNext);
-      if (computerEating) {
-        computerScore += 1;
-        lastComputerFoodAt = performance.now();
-        computerFoodTargetKey = null;
-        computerFoodTargetAt = 0;
-        if (computerCanGrow()) {
-          collectFood("computer", computerEatenFood);
-          computerHp = Math.min(maxHpForSnake(computerSnake), computerHp + foodHealAmount());
-        } else {
-          computerSnake.pop();
-        }
-        foods = foods.filter(food => keyOf(food) !== computerNextKey);
-        placeFoods(["computer"]);
-      } else {
-        computerSnake.pop();
-      }
+      const consumedFood = advanceOwnerMovement("computer", computerNext, computerEatenFood);
+      replaceConsumedFoods([consumedFood], computerEating);
       if (running && !paused) maybeComputerAttack(now);
       updateHud();
     }
@@ -2278,6 +2482,8 @@
       if (gameOver) return;
       clearGameOverSettlementTimer();
       const shouldContinueRelay = relayMode && (computerBattleMode || playerAutoMode);
+      const endedInAutoMode = isPlayerAutoControlActive();
+      const shouldUseGameOverLogo = !endedInAutoMode && !shouldContinueRelay && !HexSnakeReplay.isPlaybackMode();
       const nextRelayStartOptions = computerBattleMode
         ? { computerBattle: true }
         : { playerAuto: true };
@@ -2288,8 +2494,9 @@
       computerBattleManualOverride = false;
       gameOver = true;
       gameOverContinuousVisualDeadlineAt = gameOverAt + gameOverContinuousVisualMaxWaitMs;
+      gameOverLogoTransitionEndsAt = shouldUseGameOverLogo ? gameOverAt + logoTransitionDurationMs : 0;
       updateAutoBattleControls();
-      restartUnlockAt = gameOverAt + gameOverRestartDelayMs;
+      restartUnlockAt = gameOverAt + (shouldUseGameOverLogo ? logoTransitionDurationMs : gameOverRestartDelayMs);
       setSettingsLocked(false);
       if (totalElapsedMs > bestTotalMs) {
         bestTotalMs = totalElapsedMs;
@@ -2339,15 +2546,30 @@
         ? `${scoreText}。${resultReason} 接力賽：P1 ${relayPlayerWins} 勝，P2 ${relayComputerWins} 勝，平手 ${relayDraws}。`
         : `${scoreText}。${resultReason}`;
       overlayText.hidden = true;
+      if (shouldUseGameOverLogo) {
+        const winnerLabel = winnerOwner === "player" ? "P1" : winnerOwner === "computer" ? "P2" : null;
+        const winnerCharacter = winnerOwner ? characterFor(winnerOwner) : null;
+        const winnerMessage = winnerOwner
+          ? `\u606d\u559c ${winnerLabel}\uff08${winnerCharacter?.name || "\u96a8\u6a5f\u9078\u64c7"}\uff09\u7372\u52dd`
+          : "\u672c\u5c40\u5e73\u624b";
+        showLogoTransition("in", { message: winnerMessage });
+      }
       cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(loop);
     }
 
     function loop(now) {
       if (!running) {
-        const visualsActive = gameOverSettlementPending && advanceGameOverVisuals(now || performance.now());
+        const frameNow = now || performance.now();
+        const visualsActive = gameOverSettlementPending && advanceGameOverVisuals(frameNow);
         draw();
-        if (visualsActive) {
+        if (gameOverSettlementPending && gameOverLogoTransitionEndsAt) {
+          if (frameNow < gameOverLogoTransitionEndsAt) {
+            rafId = requestAnimationFrame(loop);
+          } else {
+            showGameOverSettlement();
+          }
+        } else if (visualsActive) {
           rafId = requestAnimationFrame(loop);
         } else if (gameOverSettlementPending) {
           showGameOverSettlement();
@@ -2428,6 +2650,11 @@
     }
 
     function beginControlPadAttackPointer(event) {
+      if (isLogoTransitionActive()) {
+        event.preventDefault();
+        event.stopPropagation();
+        return true;
+      }
       if (!shouldUseControlPadAttackDirection()) return false;
       if (!running || gameOver) {
         if (!autoStartGame()) return true;
@@ -2564,6 +2791,7 @@
 
     function moveTargetStick(event) {
       if (HexSnakeReplay.isPlaybackMode()) return;
+      if (isLogoTransitionActive()) return;
       if (!running || gameOver) {
         if (!autoStartGame()) return;
       }
@@ -2963,7 +3191,7 @@
     function togglePause() {
       if (HexSnakeReplay.isPlaybackMode()) return;
       if (!running || gameOver) {
-        startGame();
+        beginStartLogoCountdown();
         return;
       }
       paused = !paused;
@@ -3516,6 +3744,7 @@
     function handleAttackButtonDown(event, profile) {
       event.preventDefault();
       event.stopPropagation();
+      if (isLogoTransitionActive()) return;
       attackButtonPointerId = event.pointerId;
       setAttackButtonHighlight(profile);
       triggerTouchFeedback(event, profile === "big" ? 12 : 8);
@@ -3530,6 +3759,7 @@
     function handleAttackButtonUp(event, profile) {
       event.preventDefault();
       event.stopPropagation();
+      if (isLogoTransitionActive()) return;
       if (attackButtonPointerId !== null && event.pointerId !== attackButtonPointerId) return;
       attackButtonPointerId = null;
       if (event.currentTarget.hasPointerCapture?.(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
@@ -3548,6 +3778,7 @@
     function handleKeyboardAimButtonDown(event, profile) {
       event.preventDefault();
       event.stopPropagation();
+      if (isLogoTransitionActive()) return;
       attackButtonPointerId = event.pointerId;
       try {
         event.currentTarget.setPointerCapture(event.pointerId);
@@ -3640,6 +3871,12 @@
     });
     replayReverseButton.addEventListener("click", () => {
       HexSnakeReplay.reversePlayback();
+    });
+    replayPrevButton.addEventListener("click", () => {
+      HexSnakeReplay.switchPlayback(-1);
+    });
+    replayNextButton.addEventListener("click", () => {
+      HexSnakeReplay.switchPlayback(1);
     });
     replaySpeedSelect.addEventListener("change", () => {
       HexSnakeReplay.setPlaybackSpeed(replaySpeedSelect.value);
@@ -3774,7 +4011,7 @@
       overlayText.textContent = `每吃 1 個食物獲得 2 點能量，集滿 ${attackNeedTotal} 點獲得 1 枚炸彈，最多 ${maxAmmo} 枚；HP 上限為（蛇長 + 1）× ${hpPerSnakeUnit}；能量與炸彈都滿時，施放消耗炸彈的招式會立刻把滿能量轉為 1 枚炸彈；小招消耗目前最高的食物庫存 ${smallAttackFoodCost} 點與 ${smallAttackBombCost} 枚炸彈，大招消耗 ${bigAttackBombCost} 枚炸彈與四種庫存各 2 點。`;
       startButton.textContent = "開始";
       setOverlayChromeVisible(true);
-      startGame();
+      beginStartLogoCountdown();
     });
 
     computerBattleButton.addEventListener("click", () => {
@@ -3790,8 +4027,6 @@
       startGame({ computerBattle: true, resetRelayScore: true });
     });
 
-    let autoBattleSpeedDrag = null;
-
     function applyAutoBattleSpeedIndex(index) {
       const nextIndex = Math.max(0, Math.min(autoBattleSpeeds.length - 1, index));
       if (autoBattleSpeeds[nextIndex] === computerBattleSpeed) return;
@@ -3800,83 +4035,249 @@
       updateAutoBattleControls();
     }
 
-    autoBattleSpeedSelect.addEventListener("pointerdown", event => {
-      event.preventDefault();
-      event.stopPropagation();
-      if (!isPlayerAutoControlActive()) return;
-      autoBattleSpeedDrag = {
-        pointerId: event.pointerId,
-        startY: event.clientY,
-        startIndex: autoBattleSpeeds.indexOf(computerBattleSpeed),
-        moved: false
-      };
-      autoBattleSpeedSelect.classList.add("is-dragging");
-      autoBattleSpeedSelect.setPointerCapture(event.pointerId);
-    });
-
-    autoBattleSpeedSelect.addEventListener("pointermove", event => {
-      if (!autoBattleSpeedDrag || event.pointerId !== autoBattleSpeedDrag.pointerId) return;
-      event.preventDefault();
-      event.stopPropagation();
-      const dragDistance = event.clientY - autoBattleSpeedDrag.startY;
-      if (Math.abs(dragDistance) > 6) {
-        autoBattleSpeedDrag.moved = true;
-        setAutoSpeedMenuOpen(false);
-      }
-      const stepDelta = Math.round((event.clientY - autoBattleSpeedDrag.startY) / 28);
-      applyAutoBattleSpeedIndex(autoBattleSpeedDrag.startIndex + stepDelta);
-    });
-
-    function endAutoBattleSpeedDrag(event) {
-      if (!autoBattleSpeedDrag || event.pointerId !== autoBattleSpeedDrag.pointerId) return;
-      event.preventDefault();
-      event.stopPropagation();
-      const shouldToggleMenu = !autoBattleSpeedDrag.moved && isPlayerAutoControlActive();
-      autoBattleSpeedSelect.classList.remove("is-dragging");
-      if (autoBattleSpeedSelect.hasPointerCapture(event.pointerId)) {
-        autoBattleSpeedSelect.releasePointerCapture(event.pointerId);
-      }
-      autoBattleSpeedDrag = null;
-      if (shouldToggleMenu) setAutoSpeedMenuOpen(autoSpeedMenu.hidden);
+    function replayPlaybackSpeedIndex() {
+      const options = replaySpeedOptions();
+      const currentIndex = options.indexOf(HexSnakeReplay.playback?.speed ?? 1);
+      return currentIndex >= 0 ? currentIndex : options.indexOf(1);
     }
 
-    autoBattleSpeedSelect.addEventListener("pointerup", endAutoBattleSpeedDrag);
-    autoBattleSpeedSelect.addEventListener("pointercancel", endAutoBattleSpeedDrag);
+    function applyReplayPlaybackSpeedIndex(index) {
+      if (!HexSnakeReplay.playback) return;
+      const options = replaySpeedOptions();
+      const nextIndex = Math.max(0, Math.min(options.length - 1, index));
+      if (options[nextIndex] === HexSnakeReplay.playback.speed) return;
+      HexSnakeReplay.setPlaybackSpeed(options[nextIndex]);
+      renderReplaySpeedMenu();
+    }
 
-    autoBattleSpeedSelect.addEventListener("wheel", event => {
-      if (!isPlayerAutoControlActive()) return;
-      event.preventDefault();
-      event.stopPropagation();
-      const currentIndex = autoBattleSpeeds.indexOf(computerBattleSpeed);
-      const direction = event.deltaY > 0 ? 1 : -1;
-      applyAutoBattleSpeedIndex(currentIndex + direction);
-    }, { passive: false });
+    function bindSpeedScrubber({
+      select,
+      menu,
+      isActive,
+      currentIndex,
+      applyIndex,
+      setMenuOpen,
+      menuButtonSelector,
+      applyMenuButton
+    }) {
+      let drag = null;
 
-    autoBattleSpeedSelect.addEventListener("keydown", event => {
-      if (!isPlayerAutoControlActive() || !["ArrowUp", "ArrowDown", "Enter", " "].includes(event.key)) return;
-      event.preventDefault();
-      event.stopPropagation();
-      if (event.key === "Enter" || event.key === " ") {
-        setAutoSpeedMenuOpen(autoSpeedMenu.hidden);
-        return;
+      select.addEventListener("pointerdown", event => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!isActive()) return;
+        drag = {
+          pointerId: event.pointerId,
+          startY: event.clientY,
+          startIndex: currentIndex(),
+          moved: false
+        };
+        select.classList.add("is-dragging");
+        select.setPointerCapture(event.pointerId);
+      });
+
+      select.addEventListener("pointermove", event => {
+        if (!drag || event.pointerId !== drag.pointerId) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const dragDistance = event.clientY - drag.startY;
+        if (Math.abs(dragDistance) > 6) {
+          drag.moved = true;
+          setMenuOpen(false);
+        }
+        const stepDelta = Math.round((event.clientY - drag.startY) / 28);
+        applyIndex(drag.startIndex + stepDelta);
+      });
+
+      function endDrag(event) {
+        if (!drag || event.pointerId !== drag.pointerId) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const shouldToggleMenu = !drag.moved && isActive();
+        select.classList.remove("is-dragging");
+        if (select.hasPointerCapture(event.pointerId)) {
+          select.releasePointerCapture(event.pointerId);
+        }
+        drag = null;
+        if (shouldToggleMenu) setMenuOpen(menu.hidden);
       }
-      const currentIndex = autoBattleSpeeds.indexOf(computerBattleSpeed);
-      applyAutoBattleSpeedIndex(currentIndex + (event.key === "ArrowDown" ? 1 : -1));
+
+      select.addEventListener("pointerup", endDrag);
+      select.addEventListener("pointercancel", endDrag);
+
+      select.addEventListener("wheel", event => {
+        if (!isActive()) return;
+        event.preventDefault();
+        event.stopPropagation();
+        applyIndex(currentIndex() + (event.deltaY > 0 ? 1 : -1));
+      }, { passive: false });
+
+      select.addEventListener("keydown", event => {
+        if (!isActive() || !["ArrowUp", "ArrowDown", "Enter", " "].includes(event.key)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        if (event.key === "Enter" || event.key === " ") {
+          setMenuOpen(menu.hidden);
+          return;
+        }
+        applyIndex(currentIndex() + (event.key === "ArrowDown" ? 1 : -1));
+      });
+
+      menu.addEventListener("click", event => {
+        event.stopPropagation();
+        const button = event.target.closest(menuButtonSelector);
+        if (!button || !isActive()) return;
+        applyMenuButton(button);
+        setMenuOpen(false);
+      });
+    }
+
+    bindSpeedScrubber({
+      select: autoBattleSpeedSelect,
+      menu: autoSpeedMenu,
+      isActive: isPlayerAutoControlActive,
+      currentIndex: () => autoBattleSpeeds.indexOf(computerBattleSpeed),
+      applyIndex: applyAutoBattleSpeedIndex,
+      setMenuOpen: setAutoSpeedMenuOpen,
+      menuButtonSelector: "[data-auto-speed]",
+      applyMenuButton(button) {
+        setComputerBattleSpeed(button.dataset.autoSpeed);
+        resetAutoBattleStepTimers();
+        updateAutoBattleControls();
+      }
     });
 
-    autoSpeedMenu.addEventListener("click", event => {
-      event.stopPropagation();
-      const button = event.target.closest("[data-auto-speed]");
-      if (!button || !isPlayerAutoControlActive()) return;
-      setComputerBattleSpeed(button.dataset.autoSpeed);
-      resetAutoBattleStepTimers();
-      updateAutoBattleControls();
-      setAutoSpeedMenuOpen(false);
+    bindSpeedScrubber({
+      select: replaySpeedSelect,
+      menu: replaySpeedMenu,
+      isActive: () => Boolean(HexSnakeReplay.playback),
+      currentIndex: replayPlaybackSpeedIndex,
+      applyIndex: applyReplayPlaybackSpeedIndex,
+      setMenuOpen: setReplaySpeedMenuOpen,
+      menuButtonSelector: "[data-replay-speed]",
+      applyMenuButton(button) {
+        HexSnakeReplay.setPlaybackSpeed(button.dataset.replaySpeed);
+      }
     });
+
+    let replayBoardGesture = null;
+    let lastReplayBoardTap = { at: 0, x: 0, y: 0 };
+    const replayBoardLongPressMs = 360;
+    const replayBoardTapMs = 320;
+    const replayBoardTapPx = 26;
+    const replayBoardSwipePx = 48;
+
+    function clearReplayBoardLongPressTimer() {
+      if (!replayBoardGesture?.longPressTimer) return;
+      clearTimeout(replayBoardGesture.longPressTimer);
+      replayBoardGesture.longPressTimer = null;
+    }
+
+    function beginReplayBoardGesture(event) {
+      if (!HexSnakeReplay.isPlaybackMode() || !HexSnakeReplay.playback) return false;
+      if (event.button > 0 || event.target.closest(".overlay")) return false;
+      event.preventDefault();
+      event.stopPropagation();
+      setReplaySpeedMenuOpen(false);
+      replayBoardGesture = {
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        startTime: performance.now(),
+        startReplayTime: HexSnakeReplay.playback.time,
+        startSpeedIndex: replayPlaybackSpeedIndex(),
+        activated: false,
+        moved: false,
+        mode: null,
+        longPressTimer: setTimeout(() => {
+          if (!replayBoardGesture || replayBoardGesture.pointerId !== event.pointerId || !HexSnakeReplay.playback) return;
+          replayBoardGesture.activated = true;
+          replayBoardGesture.startReplayTime = HexSnakeReplay.playback.time;
+          replayBoardGesture.startSpeedIndex = replayPlaybackSpeedIndex();
+        }, replayBoardLongPressMs)
+      };
+      playArea.setPointerCapture?.(event.pointerId);
+      return true;
+    }
+
+    function moveReplayBoardGesture(event) {
+      if (!replayBoardGesture || event.pointerId !== replayBoardGesture.pointerId) return false;
+      if (!HexSnakeReplay.playback) {
+        clearReplayBoardLongPressTimer();
+        replayBoardGesture = null;
+        return false;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      const dx = event.clientX - replayBoardGesture.startX;
+      const dy = event.clientY - replayBoardGesture.startY;
+      if (Math.hypot(dx, dy) > 8) replayBoardGesture.moved = true;
+      if (!replayBoardGesture.activated && Math.hypot(dx, dy) > 14) {
+        clearReplayBoardLongPressTimer();
+      }
+      if (!replayBoardGesture.activated) return true;
+
+      if (!replayBoardGesture.mode && Math.max(Math.abs(dx), Math.abs(dy)) > 12) {
+        replayBoardGesture.mode = Math.abs(dx) >= Math.abs(dy) ? "seek" : "speed";
+      }
+      if (replayBoardGesture.mode === "seek") {
+        const width = Math.max(1, playArea.getBoundingClientRect().width);
+        const nextTime = replayBoardGesture.startReplayTime + HexSnakeReplay.playback.duration * (dx / width);
+        HexSnakeReplay.seekPlayback(nextTime);
+      } else if (replayBoardGesture.mode === "speed") {
+        const stepDelta = Math.round(dy / 28);
+        applyReplayPlaybackSpeedIndex(replayBoardGesture.startSpeedIndex + stepDelta);
+      }
+      return true;
+    }
+
+    function endReplayBoardGesture(event) {
+      if (!replayBoardGesture || event.pointerId !== replayBoardGesture.pointerId) return false;
+      event.preventDefault();
+      event.stopPropagation();
+      const gesture = replayBoardGesture;
+      const dx = event.clientX - gesture.startX;
+      const dy = event.clientY - gesture.startY;
+      clearReplayBoardLongPressTimer();
+      if (playArea.hasPointerCapture?.(event.pointerId)) playArea.releasePointerCapture(event.pointerId);
+      replayBoardGesture = null;
+
+      if (gesture.activated) return true;
+      if (Math.abs(dx) >= replayBoardSwipePx && Math.abs(dx) > Math.abs(dy) * 1.25) {
+        lastReplayBoardTap = { at: 0, x: 0, y: 0 };
+        HexSnakeReplay.switchPlayback(dx < 0 ? 1 : -1);
+        return true;
+      }
+      if (Math.hypot(dx, dy) <= 12) {
+        const now = performance.now();
+        const tapDistance = Math.hypot(event.clientX - lastReplayBoardTap.x, event.clientY - lastReplayBoardTap.y);
+        if (now - lastReplayBoardTap.at <= replayBoardTapMs && tapDistance <= replayBoardTapPx) {
+          lastReplayBoardTap = { at: 0, x: 0, y: 0 };
+          HexSnakeReplay.togglePlaybackPaused();
+        } else {
+          lastReplayBoardTap = { at: now, x: event.clientX, y: event.clientY };
+        }
+      }
+      return true;
+    }
+
+    function cancelReplayBoardGesture(event) {
+      if (!replayBoardGesture || event.pointerId !== replayBoardGesture.pointerId) return false;
+      event.preventDefault();
+      event.stopPropagation();
+      clearReplayBoardLongPressTimer();
+      if (playArea.hasPointerCapture?.(event.pointerId)) playArea.releasePointerCapture(event.pointerId);
+      replayBoardGesture = null;
+      return true;
+    }
 
     document.addEventListener("pointerdown", event => {
-      if (autoSpeedMenu.hidden || autoBattlePanel.contains(event.target)) return;
-      setAutoSpeedMenuOpen(false);
+      if (!autoSpeedMenu.hidden && !autoBattlePanel.contains(event.target)) {
+        setAutoSpeedMenuOpen(false);
+      }
+      if (!replaySpeedMenu.hidden && !replayControls.contains(event.target)) {
+        setReplaySpeedMenuOpen(false);
+      }
     });
 
     relayModeInput.addEventListener("change", event => {
@@ -3965,14 +4366,41 @@
 
     playArea.addEventListener("pointerdown", event => {
       if (event.target.closest(".overlay")) return;
+      if (beginReplayBoardGesture(event)) return;
       beginBoardAttackPointer(event);
     });
-    playArea.addEventListener("pointermove", moveBoardAttackPointer);
-    playArea.addEventListener("pointerup", finishBoardAttackPointer);
-    playArea.addEventListener("pointercancel", cancelBoardAttackPointer);
-    window.addEventListener("pointermove", moveBoardAttackPointer);
-    window.addEventListener("pointerup", finishBoardAttackPointer);
-    window.addEventListener("pointercancel", cancelBoardAttackPointer);
+    playArea.addEventListener("pointermove", event => {
+      if (moveReplayBoardGesture(event)) return;
+      moveBoardAttackPointer(event);
+    });
+    playArea.addEventListener("pointerup", event => {
+      if (endReplayBoardGesture(event)) return;
+      finishBoardAttackPointer(event);
+    });
+    playArea.addEventListener("pointercancel", event => {
+      if (cancelReplayBoardGesture(event)) return;
+      cancelBoardAttackPointer(event);
+    });
+    window.addEventListener("pointermove", event => {
+      if (moveReplayBoardGesture(event)) return;
+      moveBoardAttackPointer(event);
+    });
+    window.addEventListener("pointerup", event => {
+      if (endReplayBoardGesture(event)) return;
+      finishBoardAttackPointer(event);
+    });
+    window.addEventListener("pointercancel", event => {
+      if (cancelReplayBoardGesture(event)) return;
+      cancelBoardAttackPointer(event);
+    });
+    window.addEventListener("click", event => {
+      const skipButton = event.target?.closest?.("[data-logo-skip]");
+      if (!skipButton) return;
+      if (skipLogoTransition()) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    });
 
     window.addEventListener("keydown", event => {
       if (pendingDirectionKeybind !== null) {
@@ -3987,6 +4415,14 @@
         if (event.key === " " && HexSnakeReplay.playback) {
           event.preventDefault();
           HexSnakeReplay.togglePlaybackPaused();
+        }
+        if (event.key === "ArrowLeft" && HexSnakeReplay.playback) {
+          event.preventDefault();
+          HexSnakeReplay.switchPlayback(-1);
+        }
+        if (event.key === "ArrowRight" && HexSnakeReplay.playback) {
+          event.preventDefault();
+          HexSnakeReplay.switchPlayback(1);
         }
         return;
       }
@@ -4013,6 +4449,16 @@
       }
       if (!replayModal.hidden) {
         if (event.key === "Escape" || event.key === "Esc") HexSnakeReplay.closeModal();
+        return;
+      }
+      if (isLogoTransitionActive()) {
+        if ((event.key === "Enter" || event.key === " ") && skipLogoTransition()) {
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
         return;
       }
       if (!settingsContent.hidden || !gmContent.hidden) {
@@ -4079,7 +4525,7 @@
       const key = event.key.toLowerCase();
       if (key === " ") {
         if (!running || gameOver) {
-          startGame();
+          beginStartLogoCountdown();
           return;
         }
         paused = !paused;
@@ -4162,6 +4608,7 @@
       resetGame();
       resize();
       renderIntroPortraits(false);
+      overlay.classList.add("show");
       if (shouldShowTutorial()) showTutorial(0);
       preloadPortraitsFor("player");
       preloadPortraitsFor("computer");

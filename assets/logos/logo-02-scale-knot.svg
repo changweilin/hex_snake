@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Scale Knot Logo</title>
+  <desc id="desc">Three folded scale ribbons form a compact knot, abstracting segmented bodies, armor, feathers, and fins.</desc>
+  <g stroke="#102033" stroke-width="9" stroke-linejoin="round">
+    <path d="M128 30 185 63 166 94 128 73 90 94 71 63Z" fill="#f4c95d"/>
+    <path d="M185 63v66l-37 21v-43l-38-21 18-32Z" fill="#2dd4bf"/>
+    <path d="M185 129 128 226 71 129h37l20 35 20-35Z" fill="#f8fafc"/>
+    <path d="M71 63 128 30l18 32-38 22v43l-37 21Z" fill="#2dd4bf"/>
+    <path d="M128 84 166 106v44l-38 22-38-22v-44Z" fill="none"/>
+  </g>
+</svg>

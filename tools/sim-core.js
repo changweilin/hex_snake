@@ -2,7 +2,7 @@ const fs = require("fs");
 const path = require("path");
 
 const FOOD_TYPES = ["protein", "fat", "fiber", "carb"];
-const LOBSTER_PALM_STEP_MS = 45;
+const LOBSTER_PALM_STEP_MS = 33.75;
 const SMALL_ATTACK_DELAY_SCALE = 0.31;
 const SMALL_ATTACK_COOLDOWN_SCALE = 0.29;
 const SANDWORM_REVEAL_BEFORE_IMPACT_MS = 200;
@@ -85,6 +85,16 @@ function loadHighAiStrategies(root = path.resolve(__dirname, "..")) {
   const filePath = path.join(root, "data", "high-ai-strategies.json");
   if (!fs.existsSync(filePath)) return {};
   return highAiStrategiesFromData(loadJson(filePath));
+}
+
+function loadExtremeAiStrategies(root = path.resolve(__dirname, "..")) {
+  const filePath = path.join(root, "data", "extreme-ai-strategies.json");
+  if (!fs.existsSync(filePath)) return {};
+  return highAiStrategiesFromData(loadJson(filePath));
+}
+
+function isHighAiDifficultyValue(value) {
+  return value === "high" || value === "extreme";
 }
 
 function keyOf(cell) {
@@ -263,6 +273,10 @@ function attackSpeedMultiplier(stock, balance) {
   return 1 + foodBonus(stock, "carb", balance.attack.attackSpeedBonusPerPoint, balance.attack.maxAttackSpeedBonus);
 }
 
+function attackCooldownMultiplier(stock, balance) {
+  return 1 + foodBonus(stock, "fiber", balance.attack.attackSpeedBonusPerPoint, balance.attack.maxAttackSpeedBonus);
+}
+
 function attackStunChance(stock, balance, baseChance = balance.attack.baseAttackStunChance) {
   return Math.min(1, baseChance + foodBonus(stock, "carb", balance.attack.attackStunChanceBonusPerPoint, balance.attack.maxAttackStunChanceBonus));
 }
@@ -423,7 +437,7 @@ function attackCooldown(stock, balance, profile = "big", characterId = null) {
   const baseCooldown = profile === "big" && characterId
     ? ultimateSetting(balance, characterId, "bigCooldownMs", balance.attack.baseAttackCooldownMs)
     : balance.attack.baseAttackCooldownMs;
-  return baseCooldown / attackSpeedMultiplier(stock, balance);
+  return baseCooldown / attackCooldownMultiplier(stock, balance);
 }
 
 function blastRadius(stock, balance) {
@@ -479,6 +493,18 @@ function attackStats(stock, profile, balance) {
     radius: Math.max(1, blastRadius(stock, balance) + (isSmall ? -1 : 0)),
     damage: attackDamage(stock, profile, balance)
   };
+}
+
+function morayFieldDurationMs(balance) {
+  return balance.attack.baseAttackDelayMs * SMALL_ATTACK_DELAY_SCALE * Math.max(1, ultimateSetting(balance, "moray", "durationBaseTicks", 4));
+}
+
+function morayFieldTickMs(stock, balance) {
+  return Math.max(1, attackStats(stock, "small", balance).delay);
+}
+
+function morayFieldDamageTicks(stock, balance) {
+  return Math.max(1, Math.floor((morayFieldDurationMs(balance) + 1e-9) / morayFieldTickMs(stock, balance)));
 }
 
 function bandDistanceFromTotalWidth(totalWidth) {
@@ -659,6 +685,30 @@ function lineProjectileStunChance(parts, projectile) {
   return stunChanceForHeadHit(lineProjectileHitsHead(parts, projectile), projectile);
 }
 
+function effectCellsHitHead(parts, effectCells = [], width = 0, excludedCells = [], minDistance = 0, outerDamageMultiplier = 1, fullDamageWidth = 0) {
+  const head = parts[0];
+  if (!head) return false;
+  if (cellKeySet(excludedCells || []).has(keyOf(head))) return false;
+  return effectCells.some(cell => {
+    const distance = hexDistance(head, cell);
+    if (distance < minDistance || distance > width) return false;
+    return lineBandDamageMultiplier(distance, { width, fullDamageWidth, outerDamageMultiplier }) > 0;
+  });
+}
+
+function hazardHitsHead(parts, hazard, excludedCells = []) {
+  if (hazard.kind === "radiation") return circleAttackHitsHead(parts, hazard.target, hazard.radius);
+  return effectCellsHitHead(
+    parts,
+    hazard.cells || hazard.lineCells || [],
+    hazard.width || 0,
+    excludedCells,
+    hazard.minDistance || 0,
+    hazard.outerDamageMultiplier ?? 1,
+    hazard.fullDamageWidth || 0
+  );
+}
+
 function snakeBodyHitAtCenter(parts, target) {
   return parts.slice(1).some(segment => keyOf(segment) === keyOf(target));
 }
@@ -680,7 +730,7 @@ function makePolicy(overrides = {}) {
     aimPrecision: clamp(Number(overrides.aimPrecision ?? 0.78), 0, 1),
     skillStrategy: overrides.skillStrategy || "balanced",
     foodStrategy: overrides.foodStrategy || "balanced",
-    aiDifficulty: ["novice", "low", "medium", "high"].includes(inferredDifficulty) ? inferredDifficulty : "medium",
+    aiDifficulty: ["novice", "low", "medium", "high", "extreme"].includes(inferredDifficulty) ? inferredDifficulty : "medium",
     strategyId: overrides.strategyId,
     characterStrategyId: overrides.characterStrategyId,
     hasCustomStrategyWeights: Boolean(overrides.strategyWeights),
@@ -705,15 +755,15 @@ function normalizeStrategyWeights(overrides = {}) {
     || (skillStrategy === "spamSmall" ? "low" : skillStrategy === "preferBig" ? "high" : "medium");
   const defaults = {
     movement: {
-      safePath: difficulty === "high" ? 1.6 : difficulty === "low" ? 0.9 : 1.2,
-      leastDamage: difficulty === "high" ? 1.3 : 1,
+      safePath: isHighAiDifficultyValue(difficulty) ? 1.6 : difficulty === "low" ? 0.9 : 1.2,
+      leastDamage: isHighAiDifficultyValue(difficulty) ? 1.3 : 1,
       fastestArrival: difficulty === "low" ? 1.3 : 1
     },
     food: {
       fastestArrival: 1,
       ownDeficit: foodStrategy === "selfStockpile" ? 1.6 : 0.8,
       opponentDeficit: foodStrategy === "denyOpponent" ? 1.5 : 0.45,
-      ownPreferred: foodStrategy === "preferredFood" ? 1.8 : difficulty === "high" ? 1.1 : 0.75,
+      ownPreferred: foodStrategy === "preferredFood" ? 1.8 : isHighAiDifficultyValue(difficulty) ? 1.1 : 0.75,
       opponentPreferred: foodStrategy === "denyOpponent" ? 1.4 : 0.35
     },
     skillAllocation: {
@@ -724,19 +774,19 @@ function normalizeStrategyWeights(overrides = {}) {
       lethal: 3,
       nearFullEnergy: skillStrategy === "saveBurst" ? 1.6 : 0.75,
       opponentDebuffed: difficulty === "low" ? 0.4 : 1.25,
-      opponentAlmostReady: difficulty === "high" ? 1.2 : 0.65,
-      nearOpponent: difficulty === "high" ? 1.15 : 0.85,
+      opponentAlmostReady: isHighAiDifficultyValue(difficulty) ? 1.2 : 0.65,
+      nearOpponent: isHighAiDifficultyValue(difficulty) ? 1.15 : 0.85,
       farOpponent: skillStrategy === "preferBig" ? 0.75 : 0.35
     },
     castTarget: {
       targetHead: 1.3,
-      bodyCluster: difficulty === "high" ? 1.2 : 0.8,
-      targetNearestFood: difficulty === "high" ? 0.8 : 0.5
+      bodyCluster: isHighAiDifficultyValue(difficulty) ? 1.2 : 0.8,
+      targetNearestFood: isHighAiDifficultyValue(difficulty) ? 0.8 : 0.5
     },
     castDirection: {
       selfHeadToOpponentHead: 1.4,
-      opponentBodyLongestAxis: difficulty === "high" ? 1.1 : 0.7,
-      opponentHeadToNearestFood: difficulty === "high" ? 0.8 : 0.4
+      opponentBodyLongestAxis: isHighAiDifficultyValue(difficulty) ? 1.1 : 0.7,
+      opponentHeadToNearestFood: isHighAiDifficultyValue(difficulty) ? 0.8 : 0.4
     }
   };
   return {
@@ -750,11 +800,15 @@ function normalizeStrategyWeights(overrides = {}) {
 }
 
 function makeFighter(owner, character, start, direction, settings, balance, policy) {
-  if (policy.aiDifficulty === "high" && !policy.hasCustomStrategyWeights) {
-    const highStrategyWeights = balance.highAiStrategies?.[character.id];
+  if (isHighAiDifficultyValue(policy.aiDifficulty) && !policy.hasCustomStrategyWeights) {
+    const strategyWeightsByCharacter = policy.aiDifficulty === "extreme"
+      ? balance.extremeAiStrategies
+      : balance.highAiStrategies;
+    const highStrategyWeights = strategyWeightsByCharacter?.[character.id];
     if (highStrategyWeights) {
-      policy.strategyId = policy.strategyId || "high-ai-default";
-      policy.characterStrategyId = policy.characterStrategyId || `${character.id}:high-ai-default`;
+      const defaultStrategyId = `${policy.aiDifficulty}-ai-default`;
+      policy.strategyId = policy.strategyId || defaultStrategyId;
+      policy.characterStrategyId = policy.characterStrategyId || `${character.id}:${defaultStrategyId}`;
       policy.strategyWeights = normalizeStrategyWeights({ ...policy, strategyWeights: highStrategyWeights });
       policy.hasCustomStrategyWeights = true;
     }
@@ -986,7 +1040,7 @@ function shouldUseBigAttack(state, fighter, opponent, balance) {
     const distance = hexDistance(fighter.snake[0], perceivedSnakeFor(state, fighter, opponent)[0]);
     return !canAttack(fighter, "small", balance) || hasResourcePressure(fighter, balance) || lateGameSkillPhase(state, fighter, opponent, balance) >= 0.86 || distance <= 2 && state.rng.next() < 0.35 || state.rng.next() < 0.18;
   }
-  if (difficulty === "medium" || difficulty === "high") {
+  if (difficulty === "medium" || isHighAiDifficultyValue(difficulty)) {
     const lethal = strongestVisibleDamage(state, fighter, opponent, balance, "big") >= opponent.hp;
     return isDebuffed(opponent, state.now) || lethal || hasResourcePressure(fighter, balance) || lateGameSkillPhase(state, fighter, opponent, balance) >= 0.78;
   }
@@ -996,7 +1050,7 @@ function shouldUseBigAttack(state, fighter, opponent, balance) {
 function foodValueFor(fighter, opponent, food, policy, state = null) {
   const ownDistance = state ? wrappedDistance(state, fighter.snake[0], food) : hexDistance(fighter.snake[0], food);
   const opponentDistance = state ? wrappedDistance(state, opponent.snake[0], food) : hexDistance(opponent.snake[0], food);
-  const highDifficulty = policy.aiDifficulty === "high" && state;
+  const highDifficulty = isHighAiDifficultyValue(policy.aiDifficulty) && state;
   const ownArrivalTime = highDifficulty ? arrivalTimeForDistance(fighter, state.balance, ownDistance, state.now) : ownDistance;
   const opponentArrivalTime = highDifficulty ? arrivalTimeForDistance(opponent, state.balance, opponentDistance, state.now) : opponentDistance;
   const weights = policy.strategyWeights.food;
@@ -1045,7 +1099,7 @@ function fighterPrefersFood(fighter, food) {
 }
 
 function foodRaceAdvantage(state, fighter, opponent, food) {
-  if (fighter.policy.aiDifficulty === "high") {
+  if (isHighAiDifficultyValue(fighter.policy.aiDifficulty)) {
     const opponentHead = perceivedSnakeFor(state, fighter, opponent)[0] || opponent.snake[0];
     return arrivalTimeForDistance(fighter, state.balance, wrappedDistance(state, fighter.snake[0], food), state.now)
       - arrivalTimeForDistance(opponent, state.balance, wrappedDistance(state, opponentHead, food), state.now);
@@ -1074,7 +1128,7 @@ function stableFoodRaceTieOwner(food) {
 }
 
 function contestedFoodTieWinner(state, fighter, opponent, food) {
-  if (fighter.policy.aiDifficulty !== "high") return null;
+  if (!isHighAiDifficultyValue(fighter.policy.aiDifficulty)) return null;
   const opponentHead = perceivedSnakeFor(state, fighter, opponent)[0] || opponent.snake[0];
   const ownArrival = foodArrivalFrom(state, fighter, fighter.snake[0], food);
   const opponentArrival = foodArrivalFrom(state, opponent, opponentHead, food);
@@ -1103,7 +1157,7 @@ function filterContestedFoodTargets(state, fighter, opponent, foods) {
 }
 
 function shouldAbandonFoodTarget(state, fighter, opponent, food, lockedScore, bestScore, targetAge) {
-  if (fighter.policy.aiDifficulty !== "high") return false;
+  if (!isHighAiDifficultyValue(fighter.policy.aiDifficulty)) return false;
   const occupied = movementOccupiedSet(state, fighter, opponent);
   const reachable = reachableSpace(state, food, occupied, DEAD_END_MIN_SPACE);
   const expectedDamage = expectedDamageAt(state, fighter, food);
@@ -1163,7 +1217,7 @@ function filterUnsafeFoodTargets(state, fighter, opponent, foods) {
   }));
   const maxOpponentAdvantage = Math.max(0, ...withRace.map(row => row.opponentAdvantage));
   const filtered = withRace
-    .filter(row => fighter.policy.aiDifficulty !== "high" || row.expectedDamage < fighter.hp)
+    .filter(row => !isHighAiDifficultyValue(fighter.policy.aiDifficulty) || row.expectedDamage < fighter.hp)
     .filter(row => !(maxOpponentAdvantage > 0 && row.opponentAdvantage === maxOpponentAdvantage))
     .filter(row => row.reachable >= DEAD_END_MIN_SPACE)
     .map(row => row.food);
@@ -1186,7 +1240,7 @@ function nearbyOpenSpace(state, cell, occupied) {
 }
 
 function movementTargetBenefit(state, fighter, target) {
-  if (fighter.policy.aiDifficulty !== "high" || !target) return 0;
+  if (!isHighAiDifficultyValue(fighter.policy.aiDifficulty) || !target) return 0;
   const cache = activeCacheFor(state, fighter);
   const cacheKey = keyOf(target);
   if (cache?.targetBenefits.has(cacheKey)) return cache.targetBenefits.get(cacheKey);
@@ -1197,7 +1251,7 @@ function movementTargetBenefit(state, fighter, target) {
 }
 
 function opponentEtaThreatForCell(state, fighter, opponent, from, cell, opponentHead) {
-  if (fighter.policy.aiDifficulty !== "high" || !cell || !opponentHead) return 0;
+  if (!isHighAiDifficultyValue(fighter.policy.aiDifficulty) || !cell || !opponentHead) return 0;
   const ownArrival = arrivalTimeForDistance(fighter, state.balance, wrappedDistance(state, from, cell), state.now);
   const opponentArrival = arrivalTimeForDistance(opponent, state.balance, wrappedDistance(state, opponentHead, cell), state.now);
   if (!Number.isFinite(ownArrival) || !Number.isFinite(opponentArrival)) return 0;
@@ -1326,7 +1380,7 @@ function directionToward(state, fighter, opponent, target) {
     const key = keyOf(cell);
     if (!targetDistanceCache.has(key)) {
       const distance = wrappedDistance(state, cell, target);
-      targetDistanceCache.set(key, fighter.policy.aiDifficulty === "high"
+      targetDistanceCache.set(key, isHighAiDifficultyValue(fighter.policy.aiDifficulty)
         ? arrivalTimeForDistance(fighter, state.balance, distance, state.now)
         : distance);
     }
@@ -1341,13 +1395,13 @@ function directionToward(state, fighter, opponent, target) {
   const hardSafe = viable.filter(option => !option.blocked && !option.headThreat && !option.deadEnd && !option.lethalThreat);
   const safe = hardSafe.length ? hardSafe : viable.filter(option => !option.blocked && !option.headThreat && !option.lethalThreat && option.risk < 20);
   const candidates = safe.length ? safe : viable;
-  if (fighter.policy.aiDifficulty === "high" && candidates.length > 1) {
+  if (isHighAiDifficultyValue(fighter.policy.aiDifficulty) && candidates.length > 1) {
     candidates.forEach(option => {
       option.lookaheadScore = lookaheadMovementScore(state, fighter, opponent, option, target, perceivedOpponent, opponentThreat, distanceToTarget);
     });
   }
   candidates.sort((a, b) => a.score - b.score || a.risk - b.risk);
-  if (fighter.policy.aiDifficulty === "high") {
+  if (isHighAiDifficultyValue(fighter.policy.aiDifficulty)) {
     candidates.sort((a, b) => (a.lookaheadScore ?? a.score) - (b.lookaheadScore ?? b.score) || a.score - b.score || a.risk - b.risk);
   }
   if (state.rng.next() > fighter.policy.pathPrecision) return state.rng.item(viable).direction;
@@ -1401,7 +1455,7 @@ function expectedDamageAtUncached(state, fighter, cell) {
   state.projectiles.forEach(projectile => {
     if (projectile.owner !== opponentOwner) return;
     if (!isProjectileVisibleTo(fighter, projectile, state.now)) return;
-    if (projectile.kind === "line") {
+    if (projectile.kind === "line" || projectile.kind === "lineHazardSetup") {
       const multiplier = projectile.lineCells?.reduce((best, lineCell) => (
         Math.max(best, lineBandDamageMultiplier(hexDistance(lineCell, cell), projectile))
       ), 0) || 0;
@@ -1414,7 +1468,12 @@ function expectedDamageAtUncached(state, fighter, cell) {
   state.hazards.forEach(hazard => {
     if (hazard.owner !== opponentOwner || state.now > hazard.endAt) return;
     if (hazard.kind === "radiation") damage += (hazard.damage || 0) * circleDamageMultiplier(hexDistance(cell, hazard.target), hazard.radius || 0);
-    if (hazard.cells?.some(hazardCell => hexDistance(hazardCell, cell) <= hazard.width)) damage += hazard.damage || 0;
+    if (hazard.kind !== "radiation" && hazard.cells?.length) {
+      const multiplier = hazard.cells.reduce((best, hazardCell) => (
+        Math.max(best, lineBandDamageMultiplier(hexDistance(hazardCell, cell), hazard))
+      ), 0);
+      damage += (hazard.damage || 0) * multiplier;
+    }
   });
   return damage;
 }
@@ -1444,6 +1503,7 @@ function expectedDamageAt(state, fighter, cell) {
 }
 
 function isProjectileVisibleTo(observer, projectile, now) {
+  if (projectile.kind === "lobsterPalmSetup") return false;
   if (projectile.owner === observer.owner) return true;
   if (!projectile.sandwormHidden) return true;
   return projectile.impactAt - now <= SANDWORM_REVEAL_BEFORE_IMPACT_MS;
@@ -1573,9 +1633,8 @@ function morayLinePlanDamage(state, attacker, defender, balance, plan) {
   if (!targetSnake.length || !plan?.target) return 0;
   const lineShape = bandShapeFromTotalWidth(attackStats(attacker.stock, "small", balance).radius);
   const stats = morayLineCandidateStats(targetSnake, boardLineThrough(state, plan.target, plan.direction), lineShape);
-  const strikeCount = Math.max(1, Math.round(ultimateSetting(balance, "moray", "strikeCount", 8)));
-  const damageMultiplier = ultimateSetting(balance, "moray", "damageMultiplier", 0.2);
-  return stats.damageScore * attackDamage(attacker.stock, "big", balance) * damageMultiplier * strikeCount;
+  const damageMultiplier = ultimateSetting(balance, "moray", "damageMultiplier", 0.24);
+  return stats.damageScore * attackDamage(attacker.stock, "big", balance) * damageMultiplier * morayFieldDamageTicks(attacker.stock, balance);
 }
 
 function chooseAttackDirection(state, attacker, defender, target, fallbackDirection = attacker.dir) {
@@ -1677,7 +1736,7 @@ function chooseAiAttackProfile(state, fighter, opponent, balance) {
     : lethalProfiles.sort((a, b) => attackResourceCost(a, balance) - attackResourceCost(b, balance))[0];
   if (lethal) return lethal;
   if (fighter.policy.aiDifficulty === "low" && shouldUseBigAttack(state, fighter, opponent, balance)) return "big";
-  if (fighter.policy.aiDifficulty !== "high") {
+  if (!isHighAiDifficultyValue(fighter.policy.aiDifficulty)) {
     if (shouldUseBigAttack(state, fighter, opponent, balance)) return "big";
     if (shouldSaveSmallForBig(state, fighter, opponent, balance)) return null;
     if (canAttack(fighter, "small", balance)) return "small";
@@ -1708,7 +1767,7 @@ function chooseAttackTarget(state, attacker, defender, balance, profile) {
   if (profile === "big" && attacker.character.id === "moray") return chooseMorayLineAttackPlan(state, attacker, defender, balance).target;
   const maxDamageTarget = bestBodyClusterTarget(state, targetSnake, stats, balance) || targetHead;
   if (attackTargetDamageScore(state, targetSnake, maxDamageTarget, stats, balance) >= defender.hp) return { ...maxDamageTarget };
-  if (attacker.policy.aiDifficulty === "high") {
+  if (isHighAiDifficultyValue(attacker.policy.aiDifficulty)) {
     const best = highAttackTargetRows(state, attacker, defender, balance, profile)[0];
     if (best) return { ...best.target };
   }
@@ -1769,8 +1828,10 @@ function boardLineThrough(state, origin, direction) {
   return cellsForwardFrom(state, start, direction, true);
 }
 
-function lobsterFistDirection(state, cursor, direction, targetSnake) {
-  const target = targetSnake[0];
+function lobsterFistDirection(state, cursor, direction, targetSnake, remainingSteps = 0) {
+  const head = targetSnake[0];
+  const bodyTarget = targetSnake.slice(1).sort((a, b) => hexDistance(cursor, a) - hexDistance(cursor, b))[0];
+  const target = head && hexDistance(cursor, head) <= remainingSteps ? head : (bodyTarget || head);
   if (!target) return direction;
   const candidates = [direction, (direction + 1) % DIRECTIONS.length, (direction - 1 + DIRECTIONS.length) % DIRECTIONS.length];
   candidates.sort((a, b) => {
@@ -1792,7 +1853,7 @@ function lobsterFistPath(state, source, direction, targetSnake) {
   const turnStep = Math.ceil(maxSteps / 2);
   for (let step = 0; step < maxSteps; step += 1) {
     if (step === turnStep) {
-      currentDirection = lobsterFistDirection(state, cursor, currentDirection, targetSnake);
+      currentDirection = lobsterFistDirection(state, cursor, currentDirection, targetSnake, maxSteps - step);
     }
     cursor = nextWrappedCell(cursor, currentDirection, state.radius);
     if (keyOf(cursor) === keyOf(source)) break;
@@ -1812,6 +1873,93 @@ function pushCircleAttack(state, attack) {
   state.projectiles.push({ kind: "circle", ...attack });
 }
 
+function guKingBestDamageStep(state, currentTarget, targetSnake, radius, damage, balance) {
+  const head = targetSnake[0];
+  const current = {
+    target: { ...currentTarget },
+    damage: damageSnake(targetSnake, currentTarget, radius, damage, balance),
+    headDistance: head ? hexDistance(currentTarget, head) : 0
+  };
+  return DIRECTIONS
+    .map((_, direction) => nextWrappedCell(currentTarget, direction, state.radius))
+    .reduce((best, candidate) => {
+      const next = {
+        target: candidate,
+        damage: damageSnake(targetSnake, candidate, radius, damage, balance),
+        headDistance: head ? hexDistance(candidate, head) : 0
+      };
+      if (next.damage > best.damage) return next;
+      if (next.damage === best.damage && keyOf(best.target) !== keyOf(current.target) && next.headDistance < best.headDistance) return next;
+      return best;
+    }, current).target;
+}
+
+function scheduleLobsterPalmVolley(state, {
+  owner,
+  source,
+  direction,
+  targetSnake,
+  now,
+  smallDelay,
+  fistStepMs,
+  contactRadius,
+  contactDamage,
+  burstRadius,
+  burstDamage,
+  stunChance,
+  headStunChance,
+  vulnerabilityChance,
+  hand
+}) {
+  const path = lobsterFistPath(state, source, direction, targetSnake);
+  const hits = pathHits(path, targetSnake);
+  const firstHit = hits[0];
+  const travelPath = firstHit ? path.slice(0, firstHit.index + 1) : path;
+  const endCell = firstHit?.cell || path[path.length - 1] || source;
+  const travelDelay = smallDelay + travelPath.length * fistStepMs;
+  state.projectiles.push({
+    kind: "lobsterPalm",
+    owner,
+    profile: "big",
+    source: { ...source },
+    target: { ...endCell },
+    pathCells: travelPath,
+    createdAt: now,
+    impactAt: now + travelDelay,
+    delay: travelDelay,
+    radius: contactRadius,
+    damage: contactDamage,
+    burstRadius,
+    burstDamage,
+    stunChance,
+    headStunChance,
+    vulnerabilityChance,
+    hand
+  });
+  const burstHits = firstHit ? [firstHit] : [{ cell: endCell, index: Math.max(0, travelPath.length - 1) }];
+  for (const hit of burstHits) {
+    state.projectiles.push({
+      kind: "lobsterPalmBurst",
+      owner,
+      profile: "big",
+      source: { ...source },
+      target: { ...hit.cell },
+      createdAt: now,
+      impactAt: now + smallDelay + (hit.index + 1) * fistStepMs,
+      delay: smallDelay + (hit.index + 1) * fistStepMs,
+      radius: contactRadius,
+      damage: contactDamage,
+      burstRadius,
+      burstDamage,
+      stunChance,
+      headStunChance,
+      vulnerabilityChance,
+      hand
+    });
+  }
+  return travelDelay;
+}
+
 function lobsterPalmVulnerabilityChance(stock, balance) {
   return attackStunChance(stock, balance, ultimateSetting(balance, "lobster", "vulnerabilityChance", 0.3));
 }
@@ -1823,11 +1971,6 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
   const direction = Number.isInteger(aimDirection) ? aimDirection : directionFromSourceToTarget(source, target, attacker.dir);
   const characterId = attacker.character.id;
   if (characterId === "lobster") {
-    const path = lobsterFistPath(state, source, direction, defender.snake);
-    const hits = pathHits(path, defender.snake);
-    const firstHit = hits[0];
-    const travelPath = firstHit ? path.slice(0, firstHit.index + 1) : path;
-    const endCell = firstHit?.cell || path[path.length - 1] || source;
     const fistStepMs = ultimateSetting(balance, characterId, "fistStepMs", LOBSTER_PALM_STEP_MS);
     const contactRadius = Math.max(0.25, ultimateSetting(balance, characterId, "contactRadius", 1));
     const burstRadius = small.radius * ultimateSetting(balance, characterId, "burstRadiusMultiplier", 1.6);
@@ -1838,36 +1981,44 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
     const volleyIntervalMs = attackDelay(attacker.stock, balance);
     for (let volley = 0; volley < volleys; volley += 1) {
       const volleyDelay = volley * volleyIntervalMs;
-      state.projectiles.push({
-        kind: "lobsterPalm",
-        owner: attacker.owner,
-        profile: "big",
-        target: { ...endCell },
-        pathCells: travelPath,
-        impactAt: now + volleyDelay + small.delay + travelPath.length * fistStepMs,
-        radius: contactRadius,
-        damage: contactDamage,
-        burstRadius,
-        burstDamage,
-        stunChance,
-        headStunChance: hitStunChances?.head ?? stunChance,
-        vulnerabilityChance: palmVulnerabilityChance
-      });
-      const burstHits = firstHit ? [firstHit] : [{ cell: endCell, index: Math.max(0, travelPath.length - 1) }];
-      for (const hit of burstHits) {
+      const hand = volley % 2 === 0 ? "right" : "left";
+      if (volley === 0) {
+        scheduleLobsterPalmVolley(state, {
+          owner: attacker.owner,
+          source,
+          direction,
+          targetSnake: defender.snake,
+          now,
+          smallDelay: small.delay,
+          fistStepMs,
+          contactRadius,
+          contactDamage,
+          burstRadius,
+          burstDamage,
+          stunChance,
+          headStunChance: hitStunChances?.head ?? stunChance,
+          vulnerabilityChance: palmVulnerabilityChance,
+          hand
+        });
+      } else {
         state.projectiles.push({
-          kind: "lobsterPalmBurst",
+          kind: "lobsterPalmSetup",
           owner: attacker.owner,
           profile: "big",
-          target: { ...hit.cell },
-          impactAt: now + volleyDelay + small.delay + (hit.index + 1) * fistStepMs,
+          target: { ...target },
+          direction,
+          createdAt: now + volleyDelay,
+          impactAt: now + volleyDelay,
+          smallDelay: small.delay,
+          fistStepMs,
           radius: contactRadius,
           damage: contactDamage,
           burstRadius,
           burstDamage,
           stunChance,
           headStunChance: hitStunChances?.head ?? stunChance,
-          vulnerabilityChance: palmVulnerabilityChance
+          vulnerabilityChance: palmVulnerabilityChance,
+          hand
         });
       }
     }
@@ -1877,27 +2028,28 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
     const lineCells = boardLineThrough(state, target, direction);
     const lineShape = bandShapeFromTotalWidth(small.radius);
     const excludedCells = attacker.snake.map(segment => ({ ...segment }));
-    const strikeCount = Math.max(1, Math.round(ultimateSetting(balance, characterId, "strikeCount", 8)));
-    const strikeIntervalMs = small.delay * Math.max(0, ultimateSetting(balance, characterId, "strikeIntervalMultiplier", 0.5));
-    const damage = bigDamage * ultimateSetting(balance, characterId, "damageMultiplier", 0.2);
-    for (let index = 0; index < strikeCount; index += 1) {
-      state.projectiles.push({
-        kind: "line",
-        owner: attacker.owner,
-        profile: "big",
-        target,
-        lineCells,
-        excludedCells,
-        width: lineShape.width,
-        fullDamageWidth: lineShape.fullDamageWidth,
-        outerDamageMultiplier: lineShape.outerDamageMultiplier,
-        impactAt: now + small.delay + index * strikeIntervalMs,
-        damage,
-        stunChance,
-        headStunChance: hitStunChances?.head ?? stunChance,
-        stackStun: strikeCount > 1
-      });
-    }
+    const durationMs = morayFieldDurationMs(balance);
+    const tickMs = morayFieldTickMs(attacker.stock, balance);
+    const damage = bigDamage * ultimateSetting(balance, characterId, "damageMultiplier", 0.24);
+    state.projectiles.push({
+      kind: "lineHazardSetup",
+      owner: attacker.owner,
+      profile: "big",
+      target,
+      lineCells,
+      excludedCells,
+      width: lineShape.width,
+      fullDamageWidth: lineShape.fullDamageWidth,
+      outerDamageMultiplier: lineShape.outerDamageMultiplier,
+      impactAt: now + tickMs,
+      tickMs,
+      fieldStartedAt: now,
+      fieldEndAt: now + durationMs,
+      damage,
+      stunChance,
+      headStunChance: hitStunChances?.head ?? stunChance,
+      stackStun: true
+    });
     return;
   }
   if (characterId === "quetzal") {
@@ -1905,6 +2057,7 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
     const extensionDamageMultiplier = Math.max(0, Math.min(1, (attacker.stock.protein || 0) / balance.resources.maxFoodStock));
     const outwardWidth = extensionDamageMultiplier > 0 ? 1 : 0;
     const tickMs = ultimateSetting(balance, characterId, "tickMs", balance.movement.baseStepMs);
+    const slowDurationMs = ultimateSetting(balance, characterId, "slowDurationMs", 2000);
     state.hazards.push({
       kind: "swamp",
       owner: attacker.owner,
@@ -1915,7 +2068,11 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
       outerDamageMultiplier: extensionDamageMultiplier,
       damage: bigDamage * ultimateDamageMultiplier(balance, characterId),
       profile: "big",
-      stunChance: 0,
+      stunChance,
+      headStunChance: hitStunChances?.head ?? stunChance,
+      stunTicksRemaining: 1,
+      slowChance: 1,
+      slowDurationMs,
       startedAt: now + small.delay,
       nextTickAt: now + small.delay,
       tickMs,
@@ -1939,7 +2096,7 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
       target,
       impactAt: now + delay,
       radius: Math.max(0.5, small.radius * 0.5),
-      damage: bigDamage * ultimateSetting(balance, characterId, "damageMultiplier", 8),
+      damage: bigDamage * ultimateSetting(balance, characterId, "damageMultiplier", 7.2),
       stunChance,
       headStunChance: hitStunChances?.head ?? stunChance,
       sandwormHidden: true,
@@ -1950,9 +2107,9 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
   }
   if (characterId === "dragon") {
     const spiritRadius = small.radius * ultimateSetting(balance, characterId, "radiusMultiplier", 2);
-    const impactDamage = bigDamage * ultimateSetting(balance, characterId, "impactDamageMultiplier", 1.5);
-    const radiationTotalDamage = bigDamage * ultimateSetting(balance, characterId, "radiationDamageMultiplier", 2);
-    const radiationDurationMs = ultimateSetting(balance, characterId, "radiationDurationMs", 4000);
+    const impactDamage = bigDamage * ultimateSetting(balance, characterId, "impactDamageMultiplier", 1);
+    const radiationTotalDamage = bigDamage * ultimateSetting(balance, characterId, "radiationDamageMultiplier", 2.5);
+    const radiationDurationMs = ultimateSetting(balance, characterId, "radiationDurationMs", 5000);
     const radiationTickMs = ultimateSetting(balance, characterId, "radiationTickMs", 500);
     const firstImpactDelay = small.delay * ultimateSetting(balance, characterId, "firstImpactDelayMultiplier", 2);
     const volleys = 1;
@@ -1971,7 +2128,8 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
         radiationTotalDamage,
         stunChance,
         headStunChance: hitStunChances?.head ?? stunChance,
-        flat: true
+        flat: true,
+        ignoreCasterInterrupt: true
       });
     }
     return;
@@ -1979,15 +2137,18 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
   if (characterId === "gu_king") {
     const volleyIntervalMs = small.delay;
     const firstImpactDelay = small.delay;
+    const damage = bigDamage * ultimateSetting(balance, characterId, "damageMultiplier", 1.414);
+    let waveTarget = { ...target };
     for (let index = 0; index < 3; index += 1) {
       const impactDelay = firstImpactDelay + index * volleyIntervalMs;
+      waveTarget = guKingBestDamageStep(state, waveTarget, defender.snake, small.radius, damage, balance);
       pushCircleAttack(state, {
         owner: attacker.owner,
         profile: "big",
-        target,
+        target: { ...waveTarget },
         impactAt: now + impactDelay,
         radius: small.radius,
-        damage: bigDamage * ultimateSetting(balance, characterId, "damageMultiplier", 1.5),
+        damage,
         stunChance,
         headStunChance: hitStunChances?.head ?? stunChance
       });
@@ -2073,6 +2234,16 @@ function applyAttackStun(state, target, chance, now, balance, options = {}) {
   return true;
 }
 
+function applyAttackSlow(state, target, chance, durationMs, now) {
+  if (state.rng.next() >= chance) return false;
+  if (isStatusImmune(target, now)) {
+    clearAbnormalStatus(target, now);
+    return false;
+  }
+  target.slowUntil = Math.max(target.slowUntil, now + durationMs);
+  return true;
+}
+
 function applyVulnerability(state, target, chance, now) {
   if (state.rng.next() >= chance) return false;
   if (isStatusImmune(target, now)) {
@@ -2085,7 +2256,7 @@ function applyVulnerability(state, target, chance, now) {
 
 function interruptCasting(state, owner) {
   const beforeCount = state.projectiles.length;
-  state.projectiles = state.projectiles.filter(projectile => projectile.owner !== owner);
+  state.projectiles = state.projectiles.filter(projectile => projectile.owner !== owner || projectile.ignoreCasterInterrupt);
   return state.projectiles.length !== beforeCount;
 }
 
@@ -2115,7 +2286,47 @@ function resolveProjectiles(state, now, balance) {
     let computerDamage = 0;
     let playerStunChance = projectile.stunChance;
     let computerStunChance = projectile.stunChance;
-    if (projectile.kind === "lobsterPalm") {
+    if (projectile.kind === "lineHazardSetup") {
+      state.hazards.push({
+        kind: "lineHazard",
+        owner: projectile.owner,
+        cells: projectile.lineCells,
+        damageExcludedCells: projectile.excludedCells,
+        width: projectile.width,
+        minDistance: projectile.minDistance || 0,
+        fullDamageWidth: projectile.fullDamageWidth || 0,
+        outerDamageMultiplier: projectile.outerDamageMultiplier ?? 1,
+        damage: projectile.damage,
+        profile: projectile.profile,
+        stunChance: projectile.stunChance,
+        headStunChance: projectile.headStunChance,
+        stackStun: projectile.stackStun,
+        startedAt: projectile.fieldStartedAt ?? now,
+        nextTickAt: now,
+        tickMs: projectile.tickMs,
+        endAt: projectile.fieldEndAt ?? now
+      });
+      continue;
+    } else if (projectile.kind === "lobsterPalmSetup") {
+      scheduleLobsterPalmVolley(state, {
+        owner: projectile.owner,
+        source: { ...attacker.snake[0] },
+        direction: Number.isInteger(projectile.direction) ? projectile.direction : attacker.dir,
+        targetSnake: defender.snake,
+        now,
+        smallDelay: projectile.smallDelay,
+        fistStepMs: projectile.fistStepMs,
+        contactRadius: projectile.radius,
+        contactDamage: projectile.damage,
+        burstRadius: projectile.burstRadius,
+        burstDamage: projectile.burstDamage,
+        stunChance: projectile.stunChance,
+        headStunChance: projectile.headStunChance,
+        vulnerabilityChance: projectile.vulnerabilityChance,
+        hand: projectile.hand
+      });
+      continue;
+    } else if (projectile.kind === "lobsterPalm") {
       continue;
     } else if (projectile.kind === "lobsterPalmBurst") {
       const defenderDamage = damageSnake(defender.snake, projectile.target, projectile.radius, projectile.damage, balance);
@@ -2196,10 +2407,19 @@ function resolveHazards(state, now, balance) {
     const damageExcludedCells = hazard.damageExcludedCells || hazard.excludedCells || [];
     let playerDamage = hazard.kind === "radiation"
       ? damageSnake(state.fighters.player.snake, hazard.target, hazard.radius, hazard.damage, balance)
-      : damageSnakeCells(state.fighters.player.snake, hazard.cells, hazard.width, hazard.damage, hazard.owner === "player" ? damageExcludedCells : [], hazard.minDistance || 0, hazard.outerDamageMultiplier ?? 1);
+      : damageSnakeCells(state.fighters.player.snake, hazard.cells, hazard.width, hazard.damage, hazard.owner === "player" ? damageExcludedCells : [], hazard.minDistance || 0, hazard.outerDamageMultiplier ?? 1, hazard.fullDamageWidth || 0);
     let computerDamage = hazard.kind === "radiation"
       ? damageSnake(state.fighters.computer.snake, hazard.target, hazard.radius, hazard.damage, balance)
-      : damageSnakeCells(state.fighters.computer.snake, hazard.cells, hazard.width, hazard.damage, hazard.owner === "computer" ? damageExcludedCells : [], hazard.minDistance || 0, hazard.outerDamageMultiplier ?? 1);
+      : damageSnakeCells(state.fighters.computer.snake, hazard.cells, hazard.width, hazard.damage, hazard.owner === "computer" ? damageExcludedCells : [], hazard.minDistance || 0, hazard.outerDamageMultiplier ?? 1, hazard.fullDamageWidth || 0);
+    const playerStunChance = stunChanceForHeadHit(
+      hazardHitsHead(state.fighters.player.snake, hazard, hazard.owner === "player" ? damageExcludedCells : []),
+      hazard
+    );
+    const computerStunChance = stunChanceForHeadHit(
+      hazardHitsHead(state.fighters.computer.snake, hazard, hazard.owner === "computer" ? damageExcludedCells : []),
+      hazard
+    );
+    const canApplyStun = (hazard.stunTicksRemaining ?? Infinity) > 0;
     if (hazard.owner === "player") playerDamage = 0;
     if (hazard.owner === "computer") computerDamage = 0;
     if (isDamageImmune(state.fighters.player, now)) playerDamage = 0;
@@ -2207,8 +2427,17 @@ function resolveHazards(state, now, balance) {
     const appliedPlayerDamage = applyDamage(state, state.fighters.player, playerDamage, hazard.profile || "big", now);
     const appliedComputerDamage = applyDamage(state, state.fighters.computer, computerDamage, hazard.profile || "big", now);
     attacker.stats.damageDealt += hazard.owner === "player" ? appliedComputerDamage : appliedPlayerDamage;
-    if (hazard.owner !== "player" && appliedPlayerDamage > 0 && applyAttackStun(state, state.fighters.player, hazard.stunChance, now, balance, { interrupt: false })) attacker.stats.stunApplied += 1;
-    if (hazard.owner !== "computer" && appliedComputerDamage > 0 && applyAttackStun(state, state.fighters.computer, hazard.stunChance, now, balance, { interrupt: false })) attacker.stats.stunApplied += 1;
+    if (hazard.owner !== "player" && appliedPlayerDamage > 0 && hazard.slowChance > 0) {
+      applyAttackSlow(state, state.fighters.player, hazard.slowChance, hazard.slowDurationMs ?? 2000, now);
+    }
+    if (hazard.owner !== "computer" && appliedComputerDamage > 0 && hazard.slowChance > 0) {
+      applyAttackSlow(state, state.fighters.computer, hazard.slowChance, hazard.slowDurationMs ?? 2000, now);
+    }
+    if (canApplyStun && hazard.owner !== "player" && appliedPlayerDamage > 0 && applyAttackStun(state, state.fighters.player, playerStunChance, now, balance, { interrupt: false, stack: hazard.stackStun })) attacker.stats.stunApplied += 1;
+    if (canApplyStun && hazard.owner !== "computer" && appliedComputerDamage > 0 && applyAttackStun(state, state.fighters.computer, computerStunChance, now, balance, { interrupt: false, stack: hazard.stackStun })) attacker.stats.stunApplied += 1;
+    if (Number.isFinite(hazard.stunTicksRemaining)) {
+      hazard.stunTicksRemaining = Math.max(0, hazard.stunTicksRemaining - 1);
+    }
   }
 }
 
@@ -2364,6 +2593,9 @@ function createMatchState(options) {
   const balance = options.balance;
   if (!balance.highAiStrategies) {
     balance.highAiStrategies = loadHighAiStrategies(path.resolve(__dirname, ".."));
+  }
+  if (!balance.extremeAiStrategies) {
+    balance.extremeAiStrategies = loadExtremeAiStrategies(path.resolve(__dirname, ".."));
   }
   const settings = {
     gridSize: options.gridSize ?? balance.defaults.gridSize,
@@ -2617,6 +2849,8 @@ module.exports = {
   loadCharacters,
   highAiStrategiesFromData,
   loadHighAiStrategies,
+  loadExtremeAiStrategies,
+  isHighAiDifficultyValue,
   hexDistance,
   wrappedDistance,
   createBoard,

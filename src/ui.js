@@ -9,6 +9,10 @@ let maxInitialLength = 12;
 let attackNeedTotal = 6;
 let maxAmmo = 3;
 const autoBattleSpeeds = [4, 2, 1.5, 1, 0.75, 0.5, 0.25];
+const brandLogoPath = "assets/logos/white-dragon-logo.png";
+const logoTransitionDurationMs = 3000;
+const logoTransitionMessageDurationMs = 2000;
+const logoTransitionPieceMs = 520;
 let smallAttackFoodCost = 2;
 let smallAttackBombCost = 1;
 let bigAttackBombCost = 2;
@@ -57,7 +61,7 @@ let maxCollisionParalysisMs = 8000;
 let rangeDamageFalloffEnabled = false;
 let targetMaxHex = 6;
 let maxMatchMs = 240000;
-let hpPerSnakeUnit = 4;
+let hpPerSnakeUnit = 10;
 let gameOverRestartDelayMs = 700;
 const gameOverContinuousVisualMaxWaitMs = 1000;
 const smallAttackDelayScale = 0.31;
@@ -197,6 +201,7 @@ function applyBalanceConfig(config) {
     input.value = defaultSettings.initialStock[input.dataset.initialStock] || 0;
   });
   computerDifficultyInput.value = defaultSettings.computerDifficulty;
+  refreshTutorialSlides();
 }
 
 async function loadBalanceConfig() {
@@ -218,12 +223,12 @@ const directions = [
   { q: -1, r: 0, angle: -150, key: "a", label: "左方" }
 ];
 const foodTypes = [
-  { id: "protein", label: "蛋白", name: "蛋白", colorName: "紅色", foodName: "蛋白", effect: "爆炸半徑由 2 連續成長到 4，小數部分會讓最外圈承受對應比例傷害", color: "#ef4444", line: "#fecaca" },
-  { id: "fat", label: "脂肪", name: "脂肪", colorName: "黃色", foodName: "脂肪", effect: "攻擊傷害係數基礎 2，滿庫存約 3.4", color: "#facc15", line: "#fef08a" },
-  { id: "fiber", label: "纖維", name: "纖維", colorName: "綠色", foodName: "纖維", effect: "提升移動速度，滿庫存約 1.8x", color: "#22c55e", line: "#bbf7d0" },
-  { id: "carb", label: "碳水", name: "碳水", colorName: "藍色", foodName: "碳水", effect: "提升攻擊施展與冷卻速度，並提高命中暈眩機率", color: "#3b82f6", line: "#bfdbfe" }
+  { id: "protein", label: "蛋白", name: "蛋白", colorName: "紅色", foodName: "蛋白", effect: "提升爆炸半徑，外圈按距離遞減傷害", color: "#ef4444", line: "#fecaca" },
+  { id: "fat", label: "脂肪", name: "脂肪", colorName: "黃色", foodName: "脂肪", effect: "提升攻擊傷害倍率", color: "#facc15", line: "#fef08a" },
+  { id: "fiber", label: "纖維", name: "纖維", colorName: "綠色", foodName: "纖維", effect: "提升移動速度並縮短招式冷卻", color: "#22c55e", line: "#bbf7d0" },
+  { id: "carb", label: "碳水", name: "碳水", colorName: "藍色", foodName: "碳水", effect: "加快攻擊施展速度，並提高命中暈眩機率", color: "#3b82f6", line: "#bfdbfe" }
 ];
-const blackFoodType = { id: "black", label: "迷幻菇", name: "迷幻菇", colorName: "黑色", foodName: "迷幻菇", effect: "特殊食物；吃下後蛋白、脂肪、纖維、碳水隨機一種庫存 +1，並獲得 3 點能量", color: "#050505", line: "#e5e7eb" };
+const blackFoodType = { id: "black", label: "迷幻菇", name: "迷幻菇", colorName: "黑色", foodName: "迷幻菇", effect: "特殊食物；吃下後隨機補一種自然食物庫存，並獲得額外能量", color: "#050505", line: "#e5e7eb" };
 const dualFoodName = "蟠桃(雙色)";
 const foodTypeById = new Map([...foodTypes, blackFoodType].map(type => [type.id, type]));
 const stockFoodTypeIds = foodTypes.map(type => type.id);
@@ -329,6 +334,53 @@ function formatRichText(markup = "") {
     return emphasizedDepth > 0 ? part : formatInlineText(part);
   }).join("");
 }
+
+function formatRuleNumber(value, fractionDigits = 1) {
+  if (!Number.isFinite(value)) return "0";
+  const rounded = Number(value.toFixed(fractionDigits));
+  return Number.isInteger(rounded) ? String(rounded) : String(rounded);
+}
+
+function formatRulePercent(value) {
+  return `${Math.round(value * 100)}%`;
+}
+
+function formatRuleSeconds(ms) {
+  return `${formatRuleNumber(ms / 1000)} 秒`;
+}
+
+function stockWith(typeId, amount = maxFoodStock) {
+  return Object.fromEntries(foodTypes.map(type => [type.id, type.id === typeId ? amount : 0]));
+}
+
+function foodEffectDescription(type) {
+  if (!type) return "";
+  if (type.id === "protein") {
+    const maxRadius = baseBlastHexRadius * (1 + Math.min(1, maxFoodStock * proteinRangeBonusPerPoint));
+    return `爆炸半徑由 ${formatRuleNumber(baseBlastHexRadius)} 成長到最多 ${formatRuleNumber(maxRadius)}，外圈按距離遞減傷害。`;
+  }
+  if (type.id === "fat") {
+    const baseDamage = damageMultiplier(stockWith("fat", 0));
+    const maxDamage = damageMultiplier(stockWith("fat"));
+    return `基礎傷害倍率由 ${formatRuleNumber(baseDamage)} 提升到最多 ${formatRuleNumber(maxDamage)}；小招與大招再套用各自招式倍率。`;
+  }
+  if (type.id === "fiber") {
+    const maxMove = moveMultiplier(stockWith("fiber"));
+    const maxCooldown = attackCooldownMultiplier(stockWith("fiber"));
+    return `移動速度最多 ${formatRuleNumber(maxMove)}x，招式冷卻最多縮短到約 ${formatRulePercent(1 / maxCooldown)}。`;
+  }
+  if (type.id === "carb") {
+    const maxCast = attackSpeedMultiplier(stockWith("carb"));
+    const maxBodyStun = Math.min(1, bodyHitStunChance + Math.min(bodyHitMaxStunChanceBonus, maxFoodStock * bodyHitStunChanceBonusPerPoint));
+    const maxHeadStun = Math.min(1, headHitStunChance + Math.min(headHitMaxStunChanceBonus, maxFoodStock * headHitStunChanceBonusPerPoint));
+    return `施展速度最多 ${formatRuleNumber(maxCast)}x；身體命中暈眩率最高 ${formatRulePercent(maxBodyStun)}，頭部命中最高 ${formatRulePercent(maxHeadStun)}。`;
+  }
+  if (type.id === "black") {
+    return `特殊食物；吃下後隨機一種自然食物庫存 +1，並獲得 ${blackFoodEnergy} 點能量。`;
+  }
+  return type.effect || "";
+}
+
 const poseAliases = {
   opening: "opening",
   intro: "opening",
@@ -434,6 +486,7 @@ let relayRestartTimer = null;
 let gameOverRelayStartOptions = null;
 let gameOverSettlementPending = false;
 let gameOverContinuousVisualDeadlineAt = 0;
+let gameOverLogoTransitionEndsAt = 0;
 let gameOverResultOwner = null;
 let gameOverPlayerLost = false;
 let gameOverComputerLost = false;
@@ -530,6 +583,10 @@ let portraitVariantMode = portraitVariantModes.includes(storedPortraitVariant)
     ? "human"
     : defaultPortraitVariantMode;
 let restartUnlockAt = 0;
+let logoTransitionTimer = null;
+let logoCountdownTimer = null;
+let logoTransitionSerial = 0;
+let startLogoCountdownPending = false;
 
 function fighterArt(character, pose = "idle", portrait = false, variant = "medium") {
   const imageClass = `fighter-avatar-image${portrait ? " portrait" : ""}`;
@@ -604,7 +661,7 @@ function characterStyle(character, owner = null) {
 const commonSmallMoveGuide = "小招是所有角色共用的基本爆破：按小招鍵或點「小招」時，會依 X 鍵選擇的小招目標施放；在棋盤短點一下則以手勢位置輔助瞄準。";
 const characterMoveGuides = {
   dragon: {
-    big: "按大招鍵或點「大招」會依 Y 鍵選擇的大招目標快速施放；也可在棋盤長按指定落點。白龍會在目標格降下<strong>靈息爆發</strong>，命中後留下<strong>持續 4 秒</strong>的靈息傷害區。",
+    big: "按大招鍵或點「大招」會依 Y 鍵選擇的大招目標快速施放；也可在棋盤長按指定落點。白龍會在目標格降下<strong>靈息爆發</strong>，命中後留下<strong>持續 5 秒</strong>的靈息傷害區。",
     tip: "長按棋盤可把落點放在敵方必經路線；第一波爆發傷害更高，持續區域能逼迫對手轉向。"
   },
   sandworm: {
@@ -620,11 +677,11 @@ const characterMoveGuides = {
     tip: "棋盤拖曳時，拖曳方向比落點更重要；沿敵方身體長軸掃線最容易命中多段。"
   },
   lobster: {
-    big: "在棋盤拖曳可指定出拳方向，放開施放；按大招鍵或點「大招」則依 Y 鍵選擇的大招方向施放。智蝦會從頭部打出<strong>兩波追蹤連拳</strong>，拳路遇到第一個敵方蛇身會<strong>停下並爆發</strong>，小拳命中可能附加易傷，使下一次受到的傷害加倍。",
+    big: "在棋盤拖曳可指定出拳方向，放開施放；按大招鍵或點「大招」則依 Y 鍵選擇的大招方向施放。智蝦會從頭部打出<strong>兩波追蹤連拳</strong>，第二波會從當下頭部重新出拳並重新追蹤轉折；拳路遇到第一個敵方蛇身會<strong>停下並爆發</strong>，小拳命中可能附加易傷，使下一次受到的傷害加倍。",
     tip: "拖曳方向從自己頭部出拳；對準敵方頭部或彎折蛇身，兩波連拳更容易打滿。"
   },
   gu_king: {
-    big: "按大招鍵或點「大招」會依 Y 鍵選擇的大招目標快速施放；也可在棋盤長按指定毒爆中心。蠱王會在同一目標連續落下<strong>三段毒爆</strong>。",
+    big: "按大招鍵或點「大招」會依 Y 鍵選擇的大招目標快速施放；也可在棋盤長按指定毒爆中心。蠱王會連續落下<strong>三段毒爆</strong>，後續每波會往傷害最大的相鄰格推進一格。",
     tip: "長按棋盤可瞄準敵方必經格或被迫轉向的位置，讓三段毒爆覆蓋逃跑路線。"
   }
 };
@@ -645,6 +702,183 @@ function characterStoryMarkup(character) {
   return `${motto}${moves}${story}`;
 }
 
+function formatIntroMotto(motto) {
+  const lines = String(motto || "")
+    .trim()
+    .replace(/([，。！？；：、,.!?;:])\s*/g, "$1\n")
+    .split(/\n+/)
+    .map(line => line.trim())
+    .filter(Boolean);
+  return lines.map((line, index) => {
+    const prefix = index === 0 ? "「" : "　";
+    const suffix = index === lines.length - 1 ? "」" : "　";
+    return `${prefix}${line}${suffix}`;
+  }).join("<br>");
+}
+
+function logoTransitionClassNames() {
+  return ["logo-transition", "logo-transition-in", "logo-transition-out"];
+}
+
+function clearLogoTransitionTimers() {
+  if (logoTransitionTimer) {
+    clearTimeout(logoTransitionTimer);
+    logoTransitionTimer = null;
+  }
+  if (logoCountdownTimer) {
+    clearInterval(logoCountdownTimer);
+    logoCountdownTimer = null;
+  }
+}
+
+function clearLogoTransition() {
+  clearLogoTransitionTimers();
+  overlay.classList.remove(...logoTransitionClassNames());
+  if (winnerPortrait.querySelector("[data-logo-transition]")) {
+    winnerPortrait.hidden = true;
+    winnerPortrait.innerHTML = "";
+  }
+}
+
+function isLogoTransitionActive() {
+  return overlay.classList.contains("logo-transition") || Boolean(logoTransitionTimer);
+}
+
+function logoTransitionDirection() {
+  const node = winnerPortrait.querySelector("[data-logo-transition]");
+  return node ? node.getAttribute("data-logo-transition") : null;
+}
+
+function logoPoint(radius, degrees) {
+  const radians = (degrees - 90) * Math.PI / 180;
+  return {
+    x: 50 + Math.cos(radians) * radius,
+    y: 50 + Math.sin(radians) * radius
+  };
+}
+
+function logoSectorPath(innerRadius, outerRadius, startDegrees, endDegrees) {
+  const outerStart = logoPoint(outerRadius, startDegrees);
+  const outerEnd = logoPoint(outerRadius, endDegrees);
+  const innerEnd = logoPoint(innerRadius, endDegrees);
+  const innerStart = logoPoint(innerRadius, startDegrees);
+  const largeArc = endDegrees - startDegrees > 180 ? 1 : 0;
+  if (innerRadius <= 0) {
+    return [
+      `M 50 50`,
+      `L ${outerStart.x.toFixed(3)} ${outerStart.y.toFixed(3)}`,
+      `A ${outerRadius} ${outerRadius} 0 ${largeArc} 1 ${outerEnd.x.toFixed(3)} ${outerEnd.y.toFixed(3)}`,
+      "Z"
+    ].join(" ");
+  }
+  return [
+    `M ${outerStart.x.toFixed(3)} ${outerStart.y.toFixed(3)}`,
+    `A ${outerRadius} ${outerRadius} 0 ${largeArc} 1 ${outerEnd.x.toFixed(3)} ${outerEnd.y.toFixed(3)}`,
+    `L ${innerEnd.x.toFixed(3)} ${innerEnd.y.toFixed(3)}`,
+    `A ${innerRadius} ${innerRadius} 0 ${largeArc} 0 ${innerStart.x.toFixed(3)} ${innerStart.y.toFixed(3)}`,
+    "Z"
+  ].join(" ");
+}
+
+function logoSpiralMarkup(direction = "out") {
+  const rings = 4;
+  const segments = 14;
+  const total = rings * segments;
+  const maxDelay = Math.max(0, logoTransitionDurationMs - logoTransitionPieceMs);
+  const serial = logoTransitionSerial += 1;
+  const defs = [];
+  const pieces = [];
+  for (let ring = 0; ring < rings; ring += 1) {
+    const innerRadius = ring === 0 ? 0 : 7 + ring * 11;
+    const outerRadius = ring === rings - 1 ? 49 : 7 + (ring + 1) * 11;
+    for (let segment = 0; segment < segments; segment += 1) {
+      const start = segment * 360 / segments - 1.2;
+      const end = (segment + 1) * 360 / segments + 1.2;
+      const id = `logoSpiral${serial}-${ring}-${segment}`;
+      const outerFirstOrder = (rings - 1 - ring) * segments + ((segment + (rings - ring) * 2) % segments);
+      const order = direction === "in" ? total - 1 - outerFirstOrder : outerFirstOrder;
+      const delay = total <= 1 ? 0 : Math.round(order * maxDelay / (total - 1));
+      defs.push(`<clipPath id="${id}" clipPathUnits="userSpaceOnUse"><path d="${logoSectorPath(innerRadius, outerRadius, start, end)}"></path></clipPath>`);
+      pieces.push(`<image class="logo-spiral-piece" href="${brandLogoPath}" x="0" y="0" width="100" height="100" preserveAspectRatio="xMidYMid meet" clip-path="url(#${id})" style="--logo-delay:${delay}ms;"></image>`);
+    }
+  }
+  return `
+        <svg class="logo-spiral-logo" viewBox="0 0 100 100" role="img" aria-label="Hex Snake LOGO">
+          <defs>${defs.join("")}</defs>
+          ${pieces.join("")}
+        </svg>
+      `;
+}
+
+function escapeLogoTransitionMessage(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function logoTransitionMessageMarkup(message = "") {
+  const text = String(message || "").trim();
+  if (!text) return "";
+  const chars = [...text];
+  if (!chars.length) return "";
+  const delayStep = chars.length <= 1
+    ? 0
+    : Math.max(1, Math.floor((logoTransitionMessageDurationMs - 1) / (chars.length - 1)));
+  return `<div class="logo-transition-message" data-logo-message>${chars.map((char, index) => {
+    const displayChar = char === " " ? "\u00A0" : escapeLogoTransitionMessage(char);
+    const delay = Math.round(index * delayStep);
+    return `<span class="logo-transition-message-char" style="--logo-message-delay:${delay}ms">${displayChar}</span>`;
+  }).join("")}</div>`;
+}
+
+function showLogoTransition(direction = "out", options = {}) {
+  clearLogoTransitionTimers();
+  const safeDirection = direction === "in" ? "in" : "out";
+  overlay.classList.remove("intro-details", "tutorial-open", ...logoTransitionClassNames());
+  overlay.classList.add("show", "is-session-modal", "logo-transition", `logo-transition-${safeDirection}`);
+  overlayTitle.hidden = true;
+  overlayText.hidden = true;
+  startButton.hidden = true;
+  computerBattleButton.hidden = true;
+  replayArchiveButton.hidden = true;
+  introCloseButton.hidden = true;
+  winnerPortrait.hidden = false;
+  characterStage.hidden = true;
+  characterStage.innerHTML = "";
+  winnerPortrait.innerHTML = `
+        <div class="logo-transition-card" data-logo-transition="${safeDirection}" aria-live="polite">
+          <div class="logo-spiral-shell" aria-hidden="true">
+            ${logoSpiralMarkup(safeDirection)}
+          </div>
+          <div class="logo-transition-aux">
+            ${options.countdown ? `<div class="logo-countdown" data-logo-countdown>3</div>` : ""}
+            ${logoTransitionMessageMarkup(options.message || "")}
+            ${safeDirection === "in" ? `<button class="secondary logo-transition-skip" type="button" data-logo-skip>\u8df3\u904e</button>` : ""}
+          </div>
+        </div>
+      `;
+}
+
+function playStartLogoCountdown() {
+  if (isLogoTransitionActive()) return Promise.resolve(false);
+  showLogoTransition("out", { countdown: true });
+  const countdownEl = winnerPortrait.querySelector("[data-logo-countdown]");
+  const startedAt = performance.now();
+  logoCountdownTimer = setInterval(() => {
+    const remaining = Math.max(1, Math.ceil((logoTransitionDurationMs - (performance.now() - startedAt)) / 1000));
+    if (countdownEl) countdownEl.textContent = String(remaining);
+  }, 120);
+  return new Promise(resolve => {
+    logoTransitionTimer = setTimeout(() => {
+      clearLogoTransition();
+      resolve(true);
+    }, logoTransitionDurationMs);
+  });
+}
+
 function foodIconMarkup(typeOrId, extraClass = "") {
   const type = typeof typeOrId === "string" ? foodTypeById.get(typeOrId) : typeOrId;
   if (!type) return "";
@@ -657,65 +891,80 @@ function foodIconGroupMarkup(typeIds, label) {
   return `<span class="food-icon-group" aria-label="${label}">${icons}</span>`;
 }
 
-const tutorialSlides = [
-  {
-    title: "六角移動",
-    visual: "move",
-    tag: "移動 + 虛擬搖桿區",
-    lead: "目標是施展招式把敵方 <strong>HP 歸零</strong>。",
-    sections: [
-      {
-        title: "移動方式",
-        text: "用<strong>虛擬搖桿區</strong>或 <strong>W/E/D/X/Z/A</strong> 選六角方向；蒐集食物，逐步累積出招資源。"
-      },
-      {
-        title: "進食策略",
-        text: `食物以簡稱搭配棋盤顏色標示；先看資源圖表判斷缺哪種庫存、能量或炸彈。HP 上限為（蛇長 + 1）× ${hpPerSnakeUnit}；吃到食物會增加 1 段蛇身並回復 ${foodHealAmount()} 點 HP；${dualFoodName}會補棋盤上顯示的兩種庫存。食物庫存與炸彈決定能不能放招式；兩邊都要顧。`
-      },
-      {
-        title: "控制效果",
-        text: `攻擊命中身體時有 ${Math.round(bodyHitStunChance * 100)}% 基礎機率暈眩，命中頭部時有 ${Math.round(headHitStunChance * 100)}% 基礎機率暈眩，碳水（藍色）庫存會提高暈眩率；暈眩與麻痺會讓對手短時間無法順利走位，並中斷尚未命中的招式。`
-      },
-      {
-        title: "撞擊懲罰",
-        text: `撞到另一方會停止 ${collisionStunMs / 1000} 秒，再減速 ${collisionSlowMs / 1000} 秒；撞到自己懲罰加倍，累積停止時間超過 ${maxCollisionParalysisMs / 1000} 秒會落敗。`
-      }
-    ]
-  },
-  {
-    title: "資源總覽",
-    visual: "resources",
-    hideCopy: true,
-    tag: "資源圖表 + 食物效果",
-    lead: "四種自然食物與特殊食物的效果列在這裡；庫存上限已併在食物效果區塊最後面。",
-    points: [
-      "蛋白拉大爆炸半徑、脂肪增加傷害、纖維提高速度、碳水加快攻擊並提高暈眩。",
-      `能量滿 ${attackNeedTotal} 點轉成炸彈，炸彈最多 ${maxAmmo} 枚，是招式的主要消耗。`
-    ]
-  },
-  {
-    title: "招式操作",
-    visual: "small",
-    tag: "技能按鍵區",
-    lead: "小招適合快速出手，大招適合抓準時機收尾。",
-    sections: [
-      {
-        title: "小招操作",
-        text: "按<strong>鍵盤Q</strong> 或<strong>小招</strong>按鈕施放；短按棋盤也可施展小招。",
-        cost: `成本：目前最高的食物庫存 ${smallAttackFoodCost} 點，並消耗 ${smallAttackBombCost} 枚炸彈。`
-      },
-      {
-        title: "大招操作",
-        text: "按<strong>鍵盤R</strong> 或<strong>大招</strong>按鈕施放；長按或拖曳棋盤也可施展大招。",
-        cost: `成本：${bigAttackBombCost} 枚炸彈，且蛋白、脂肪、纖維、碳水四種庫存各 2 點。`
-      },
-      {
-        title: "瞄準細節",
-        text: "<strong>X</strong> 控制小招目標，<strong>Y</strong> 控制大招目標，可在敵方頭部、敵方中心、離敵方最近的食物之間循環；方向型大招會改為切換施放方向，或朝拖曳方向施展。"
-      }
-    ]
-  }
-];
+let tutorialSlides = [];
+
+function buildTutorialSlides() {
+  const directionKeyText = keybinds.directions.map(keyLabel).join("/");
+  const smallKey = keyLabel(keybinds.smallAttack);
+  const bigKey = keyLabel(keybinds.bigAttack);
+  const bigFoodCost = attackFoodCost("big");
+  return [
+    {
+      title: "六角移動",
+      visual: "move",
+      tag: "移動 + 虛擬搖桿區",
+      lead: `目標是在 ${formatTime(maxMatchMs)} 內施展招式，把敵方 <strong>HP 歸零</strong>。`,
+      sections: [
+        {
+          title: "移動方式",
+          text: `用<strong>虛擬搖桿區</strong>或 <strong>${directionKeyText}</strong> 選六角方向；蒐集食物，逐步累積出招資源。`
+        },
+        {
+          title: "進食策略",
+          text: `食物以簡稱搭配棋盤顏色標示；先看資源圖表判斷缺哪種庫存、能量或炸彈。HP 上限為（蛇長 + 1）× ${hpPerSnakeUnit}；吃到食物會增加 1 段蛇身並回復 ${foodHealAmount()} 點 HP；${dualFoodName}會補棋盤上顯示的兩種庫存。食物庫存與炸彈決定能不能放招式；兩邊都要顧。`
+        },
+        {
+          title: "控制效果",
+          text: `攻擊命中身體時有 ${formatRulePercent(bodyHitStunChance)} 基礎機率暈眩，命中頭部時有 ${formatRulePercent(headHitStunChance)} 基礎機率暈眩，碳水（藍色）庫存會提高暈眩率；暈眩與麻痺會讓對手短時間無法順利走位，並中斷尚未命中的招式。`
+        },
+        {
+          title: "撞擊懲罰",
+          text: `撞到另一方會停止 ${formatRuleSeconds(collisionStunMs)}，再減速 ${formatRuleSeconds(collisionSlowMs)}；撞到自己懲罰加倍，累積停止時間超過 ${formatRuleSeconds(maxCollisionParalysisMs)} 會落敗。`
+        }
+      ]
+    },
+    {
+      title: "資源總覽",
+      visual: "resources",
+      hideCopy: true,
+      tag: "資源圖表 + 食物效果",
+      lead: "四種自然食物與特殊食物的效果列在這裡；庫存上限已併在食物效果區塊最後面。",
+      points: [
+        "蛋白拉大爆炸半徑、脂肪增加傷害、纖維提高移動並縮短冷卻、碳水加快施展並提高暈眩。",
+        `能量滿 ${attackNeedTotal} 點轉成炸彈，炸彈最多 ${maxAmmo} 枚，是招式的主要消耗。`
+      ]
+    },
+    {
+      title: "招式操作",
+      visual: "small",
+      tag: "技能按鍵區",
+      lead: "小招適合快速出手，大招適合抓準時機收尾。",
+      sections: [
+        {
+          title: "小招操作",
+          text: `按<strong>${smallKey}</strong> 或<strong>小招</strong>按鈕施放；短按棋盤也可施展小招。`,
+          cost: `成本：目前最高的食物庫存 ${smallAttackFoodCost} 點，並消耗 ${smallAttackBombCost} 枚炸彈。`
+        },
+        {
+          title: "大招操作",
+          text: `按<strong>${bigKey}</strong> 或<strong>大招</strong>按鈕施放；長按或拖曳棋盤也可施展大招。`,
+          cost: `成本：${bigAttackBombCost} 枚炸彈，且蛋白、脂肪、纖維、碳水四種庫存各 ${bigFoodCost} 點。`
+        },
+        {
+          title: "瞄準細節",
+          text: "<strong>X</strong> 控制小招目標，<strong>Y</strong> 控制大招目標，可在敵方頭部、敵方中心、離敵方最近的食物之間循環；方向型大招會改為切換施放方向，或朝拖曳方向施展。"
+        }
+      ]
+    }
+  ];
+}
+
+function refreshTutorialSlides() {
+  tutorialSlides = buildTutorialSlides();
+  tutorialStepIndex = Math.max(0, Math.min(tutorialSlides.length - 1, tutorialStepIndex));
+}
+
+refreshTutorialSlides();
 let tutorialMoveCue = null;
 
 function tutorialCaptureCrop(type) {
@@ -973,7 +1222,7 @@ function tutorialFoodDetailListMarkup() {
   const naturalFoodItems = foodTypes.map(type => `
             <li>
               ${foodIconGroupMarkup(type.id, `自然產出${foodNameWithColor(type)}`)}
-              <span>${foodTermMarkup(type.id, foodNameWithColor(type))}：${formatRichText(type.effect)}。</span>
+              <span>${foodTermMarkup(type.id, foodNameWithColor(type))}：${formatRichText(foodEffectDescription(type))}</span>
             </li>
           `).join("");
   return `
@@ -985,7 +1234,7 @@ function tutorialFoodDetailListMarkup() {
             </li>
             <li>
               ${foodIconGroupMarkup("black", foodNameWithColor(blackFoodType))}
-              <span>${foodTermMarkup("black", foodNameWithColor(blackFoodType))}：${formatRichText(`${blackFoodType.effect}；不會自然產出。`)}</span>
+              <span>${foodTermMarkup("black", foodNameWithColor(blackFoodType))}：${formatRichText(`${foodEffectDescription(blackFoodType)}不會自然產出。`)}</span>
             </li>
           </ul>
         `;
@@ -1001,7 +1250,7 @@ function tutorialResourceGuideMarkup() {
           </div>
           <div class="tutorial-resource-guide-panel">
             <strong>能量與炸彈</strong>
-            <span>${formatRichText(`吃食物會累積能量；能量滿 ${attackNeedTotal} 點轉成炸彈，炸彈最多 ${maxAmmo} 枚，是招式的主要消耗。`)}</span>
+            <span>${formatRichText(`吃食物會累積能量；能量滿 ${attackNeedTotal} 點轉成炸彈，炸彈最多 ${maxAmmo} 枚。能量與炸彈都滿時，施放消耗炸彈的招式會立刻把滿能量轉為 1 枚炸彈。`)}</span>
           </div>
         </div>
       `;
@@ -1032,6 +1281,7 @@ function tutorialVisualMarkup(slide) {
 }
 
 function renderTutorialSlide() {
+  refreshTutorialSlides();
   const slide = tutorialSlides[tutorialStepIndex] || tutorialSlides[0];
   winnerPortrait.hidden = false;
   winnerPortrait.innerHTML = `
@@ -1066,6 +1316,7 @@ function renderTutorialSlide() {
 
 function setTutorialChrome() {
   overlay.classList.remove("intro-details");
+  overlay.classList.remove("is-session-modal");
   overlay.classList.add("tutorial-open");
   overlayTitle.hidden = true;
   overlayText.hidden = true;
@@ -1077,6 +1328,7 @@ function setTutorialChrome() {
 
 function showTutorial(startIndex = 0) {
   if (!rulesModal.hidden) closeRulesModal();
+  refreshTutorialSlides();
   tutorialStepIndex = Math.max(0, Math.min(tutorialSlides.length - 1, startIndex));
   setTutorialChrome();
   overlay.classList.add("show");
@@ -1157,12 +1409,13 @@ function buildRulesContent() {
   rulesContent.innerHTML = `
         <section class="rules-block rules-tutorial-callout" data-open-tutorial role="button" tabindex="0" aria-label="開啟基礎規則教學">
           <h3>基礎規則教學</h3>
-          <p>${formatRichText("想先用圖片快速看懂進食策略、移動、小招操作，可以點擊這裡重新開啟教學頁。")}</p>
+          <p>${formatRichText("想先用圖片快速看懂最新的進食策略、移動、資源與招式操作，可以點擊這裡重新開啟教學頁。")}</p>
         </section>
         <section class="rules-block">
           <h3>進階對戰</h3>
           <ul class="rules-list">
             <li><b>按鍵自訂</b>：${formatRichText("小招、大招、暫停、投降與六方向鍵都可在開局設定中修改；若方向鍵與 X / Y 目標鍵相同，X / Y 目標鍵會優先作用。")}</li>
+            <li><b>開局設定</b>：${formatRichText(`一般對戰使用預設蛇長 ${defaultSettings.initialLength}、速度 ${defaultSettings.initialSpeed}x；開局前可選擇角色、電腦難度與自動對戰。`)}</li>
           </ul>
         </section>
         <section class="rules-block">
@@ -1173,8 +1426,11 @@ function buildRulesContent() {
         </section>
         <section class="rules-block rules-about-me" aria-labelledby="rulesAboutTitle">
           <div class="rules-about-heading">
-            <h3 id="rulesAboutTitle">About Me</h3>
-            <strong class="rules-about-name">Chang Wei Lin</strong>
+            <img class="rules-about-logo" src="${brandLogoPath}" alt="" decoding="async" loading="lazy">
+            <div class="rules-about-copy">
+              <h3 id="rulesAboutTitle">About Me</h3>
+              <strong class="rules-about-name">Chang Wei Lin</strong>
+            </div>
           </div>
           <p class="rules-about-line">我愛星空至深，無懼黑夜。</p>
           <blockquote class="rules-about-quote">
@@ -1183,15 +1439,15 @@ function buildRulesContent() {
           </blockquote>
           <div class="rules-about-links" aria-label="About Me links">
             <a class="rules-about-link" href="https://github.com/changweilin" target="_blank" rel="noopener noreferrer" aria-label="Chang Wei Lin GitHub">
-              <img class="rules-about-icon" src="https://github.com/favicon.ico" alt="" aria-hidden="true" decoding="async" loading="eager">
+              <span class="rules-about-icon" aria-hidden="true">GH</span>
               <span>GitHub</span>
             </a>
             <a class="rules-about-link" href="https://www.linkedin.com/in/wei-lin-chang-ba38049a/" target="_blank" rel="noopener noreferrer" aria-label="Chang Wei Lin LinkedIn">
-              <img class="rules-about-icon" src="https://www.linkedin.com/favicon.ico" alt="" aria-hidden="true" decoding="async" loading="eager">
+              <span class="rules-about-icon" aria-hidden="true">in</span>
               <span>LinkedIn</span>
             </a>
             <a class="rules-about-link" href="https://changweilin.github.io/demo_link/" target="_blank" rel="noopener noreferrer" aria-label="Chang Wei Lin demo link">
-              <img class="rules-about-icon" src="https://changweilin.github.io/demo_link/favicon-32.png" alt="" aria-hidden="true" decoding="async" loading="eager">
+              <span class="rules-about-icon" aria-hidden="true">D</span>
               <span>Demo</span>
             </a>
           </div>
@@ -1214,7 +1470,7 @@ function closeRulesModal() {
 }
 
 function setOverlayChromeVisible(visible) {
-  overlay.classList.remove("intro-details", "tutorial-open");
+  overlay.classList.remove("intro-details", "tutorial-open", "is-session-modal", ...logoTransitionClassNames());
   overlayTitle.hidden = !visible;
   overlayText.hidden = !visible;
   startButton.hidden = !visible;
@@ -1224,7 +1480,8 @@ function setOverlayChromeVisible(visible) {
 }
 
 function setIntroLobbyChrome() {
-  overlay.classList.remove("intro-details", "tutorial-open");
+  overlay.classList.remove("intro-details", "tutorial-open", ...logoTransitionClassNames());
+  overlay.classList.add("is-session-modal");
   overlayTitle.hidden = true;
   overlayText.hidden = true;
   startButton.hidden = false;
@@ -1236,7 +1493,7 @@ function setIntroLobbyChrome() {
 
 function setIntroDetailsChrome() {
   overlay.classList.add("intro-details");
-  overlay.classList.remove("tutorial-open");
+  overlay.classList.remove("tutorial-open", "is-session-modal", ...logoTransitionClassNames());
   overlayTitle.hidden = true;
   overlayText.hidden = true;
   startButton.hidden = true;
@@ -1276,6 +1533,7 @@ function renderWinnerPortrait(owner, playerLost = false, computerLost = false) {
   const computerCharacter = characterFor("computer");
   const playerResult = owner ? (owner === "player" ? "P1 勝利" : "P1 敗北") : "P1 平手";
   const computerResult = owner ? (owner === "computer" ? "P2 勝利" : "P2 敗北") : "P2 平手";
+  overlay.classList.add("is-session-modal");
   winnerPortrait.hidden = false;
   characterStage.hidden = true;
   characterStage.innerHTML = "";
@@ -1309,6 +1567,7 @@ function renderIntroPortraits(showDetails = introDetailsOpen) {
             ${["player", "computer"].map(owner => {
       const character = selectedCharacterFor(owner);
       const label = owner === "player" ? "P1" : "P2";
+      const motto = character?.motto || "開局抽選後揭曉座右銘";
       return `
                 <div class="intro-avatar-button" role="button" tabindex="0" data-owner="${owner}" data-open-intro="${owner}" style="${characterStyle(character || {
         color: ownerMeta(owner).color,
@@ -1323,6 +1582,8 @@ function renderIntroPortraits(showDetails = introDetailsOpen) {
                     <span class="intro-avatar-label"><span class="owner-name ${owner === "player" ? "is-p1" : "is-p2"}">${ownerMeta(owner).label}</span> · ${character ? character.name : "隨機選擇"}</span>
                     <button class="secondary portrait-arrow portrait-label-arrow" type="button" data-portrait-owner="${owner}" data-portrait-shift="1" aria-label="${ownerMeta(owner).label} 下一位">›</button>
                   </div>
+                  <p class="intro-avatar-motto ${character ? "" : "is-placeholder"}">${formatIntroMotto(motto)}</p>
+                  <span class="intro-avatar-logo" aria-hidden="true"><img src="${brandLogoPath}" alt="" decoding="async" loading="lazy"></span>
                 </div>
               `;
     }).join("")}
@@ -1418,8 +1679,8 @@ function applySelectedPortraitCharacter(delta) {
 
 function renderPortraitLightbox() {
   const character = characterFor(portraitLightboxOwner);
-  portraitLightboxImage.src = portraitUrl(character, "intro", "full");
-  portraitLightboxImage.srcset = portraitSrcset(character, "intro", true);
+  portraitLightboxImage.src = portraitUrl(character, "intro", "md");
+  portraitLightboxImage.srcset = portraitSrcset(character, "intro");
   portraitLightboxImage.sizes = portraitSizesAttribute("full");
   portraitLightboxImage.alt = character.name;
   portraitLightboxImage.dataset.characterId = character.id;
@@ -1439,6 +1700,7 @@ function updatePortraitVariantButtons() {
 }
 
 function rerenderPortraitSurfaces() {
+  if (isLogoTransitionActive()) return;
   if (!characterStage.hidden) buildCharacterStage();
   if (!portraitLightbox.hidden) renderPortraitLightbox();
   if (overlay.classList.contains("show") && !winnerPortrait.hidden) {
@@ -1677,6 +1939,10 @@ function attackSpeedMultiplier(stock) {
   return 1 + foodBonus(stock, "carb", attackSpeedBonusPerPoint, maxAttackSpeedBonus);
 }
 
+function attackCooldownMultiplier(stock) {
+  return 1 + foodBonus(stock, "fiber", attackSpeedBonusPerPoint, maxAttackSpeedBonus);
+}
+
 function attackStunChance(stock, baseChance = baseAttackStunChance) {
   return Math.min(1, baseChance + foodBonus(stock, "carb", attackStunChanceBonusPerPoint, maxAttackStunChanceBonus));
 }
@@ -1704,7 +1970,7 @@ function attackCooldown(stock, profile = "big", characterId = null) {
   const baseCooldown = profile === "big" && characterId
     ? attackUltimateBalance?.[characterId]?.bigCooldownMs ?? baseAttackCooldownMs
     : baseAttackCooldownMs;
-  return baseCooldown / attackSpeedMultiplier(stock);
+  return baseCooldown / attackCooldownMultiplier(stock);
 }
 
 function attackProfileCooldown(stock, profile = "big", characterId = null) {

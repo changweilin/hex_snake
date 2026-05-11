@@ -60,12 +60,12 @@ function readJsonIfPresent(filePath) {
   return JSON.parse(fs.readFileSync(resolved, "utf8"));
 }
 
-function modelFromStrategyWeights(row) {
+function modelFromStrategyWeights(row, aiDifficulty = "high") {
   const strategyWeights = row.strategyWeights || row;
   const preferBig = strategyWeights.skillAllocation?.preferBig ?? 1;
   const preferSmall = strategyWeights.skillAllocation?.preferSmall ?? 1;
   return {
-    aiDifficulty: "high",
+    aiDifficulty,
     pathPrecision: 1,
     aimPrecision: 1,
     skillStrategy: preferBig > preferSmall * 1.2 ? "preferBig" : preferSmall > preferBig * 1.2 ? "spamSmall" : "balanced",

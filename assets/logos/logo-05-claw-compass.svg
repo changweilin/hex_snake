@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Claw Compass Logo</title>
+  <desc id="desc">A compact compass of claws and fins, symbolizing battle direction and the six-role creature cast.</desc>
+  <g stroke="#1f1720" stroke-width="9" stroke-linejoin="round">
+    <path d="M128 30 151 86h-46Z" fill="#f04444"/>
+    <path d="M204 72 178 126l-28-28Z" fill="#a8f3ff"/>
+    <path d="M204 184 150 158l28-28Z" fill="#f04444"/>
+    <path d="M128 226 105 170h46Z" fill="#a8f3ff"/>
+    <path d="M52 184 78 130l28 28Z" fill="#f04444"/>
+    <path d="M52 72 106 98l-28 28Z" fill="#a8f3ff"/>
+    <path d="M128 90 161 128l-33 38-33-38Z" fill="#fff7f0"/>
+  </g>
+  <path d="M101 128h54" fill="none" stroke="#1f1720" stroke-width="8" stroke-linecap="round"/>
+</svg>

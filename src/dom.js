@@ -19,8 +19,11 @@
     const replayControls = document.querySelector("#replayControls");
     const replayReverseButton = document.querySelector("#replayReverseButton");
     const replayPlayButton = document.querySelector("#replayPlayButton");
+    const replayPrevButton = document.querySelector("#replayPrevButton");
+    const replayNextButton = document.querySelector("#replayNextButton");
     const replayTimeline = document.querySelector("#replayTimeline");
     const replaySpeedSelect = document.querySelector("#replaySpeedSelect");
+    const replaySpeedMenu = document.querySelector("#replaySpeedMenu");
     const replayExitButton = document.querySelector("#replayExitButton");
     const replayTime = document.querySelector("#replayTime");
     const replayModal = document.querySelector("#replayModal");

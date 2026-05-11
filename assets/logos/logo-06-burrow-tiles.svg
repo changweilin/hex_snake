@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Burrow Tiles Logo</title>
+  <desc id="desc">A spiral-like route of angular hex tiles, inspired by burrowing, body segments, and hex-grid movement.</desc>
+  <g stroke="#2f2117" stroke-width="8" stroke-linejoin="round">
+    <path d="M128 28 166 50v44l-38 22-38-22V50Z" fill="#fff2bf"/>
+    <path d="M166 50 204 72v44l-38 22-38-22V72Z" fill="#d99a2b"/>
+    <path d="M166 138 204 160v44l-38 22-38-22v-44Z" fill="#7a4a22"/>
+    <path d="M90 138 128 160v44l-38 22-38-22v-44Z" fill="#d99a2b"/>
+    <path d="M52 72 90 50l38 22v44l-38 22-38-22Z" fill="#fff2bf"/>
+    <path d="M102 94h52M89 116h77M88 160h78M102 182h52" fill="none" stroke="#fff2bf" stroke-width="7" stroke-linecap="round"/>
+  </g>
+</svg>

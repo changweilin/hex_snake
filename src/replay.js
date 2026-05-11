@@ -1,5 +1,6 @@
     const replayRecentKey = "hexSnakeReplayRecent";
     const replayFavoritesKey = "hexSnakeReplayFavorites";
+    const replaySpeedKey = "hexSnakeReplaySpeed";
     const replayLimit = 5;
     const replaySnapshotIntervalMs = 200;
     const replayMaxSnapshots = 900;
@@ -8,6 +9,8 @@
     let lastReplaySnapshotAt = -Infinity;
     let replayMode = false;
     let replayPlayback = null;
+    let replayPlaylist = [];
+    let replayPlaylistIndex = -1;
     let replayReturnState = null;
     let replayRafId = 0;
     let replaySurrendered = false;
@@ -52,6 +55,26 @@
         ...record,
         snapshots: Array.isArray(record.snapshots) ? record.snapshots : []
       };
+    }
+
+    function normalizeReplaySpeed(value) {
+      const speed = Number(value);
+      return replayPlaybackSpeeds.includes(speed) ? speed : 1;
+    }
+
+    function storedReplaySpeed() {
+      return normalizeReplaySpeed(localStorage.getItem(replaySpeedKey));
+    }
+
+    function allReplayRecords() {
+      const records = [...replayLoadList(replayFavoritesKey), ...replayLoadList(replayRecentKey)]
+        .map(normalizeReplayRecord);
+      const seen = new Set();
+      return records.filter(record => {
+        if (!record?.id || seen.has(record.id)) return false;
+        seen.add(record.id);
+        return true;
+      });
     }
 
     function compactTimedItems(items, now, fields) {
@@ -252,7 +275,7 @@
     }
 
     function findReplayRecord(recordId) {
-      return [...replayLoadList(replayFavoritesKey), ...replayLoadList(replayRecentKey)].find(record => record.id === recordId);
+      return allReplayRecords().find(record => record.id === recordId);
     }
 
     function toggleReplayFavorite(recordId) {
@@ -350,15 +373,37 @@
       draw();
     }
 
+    function replayPlaybackSpeedLabel(value) {
+      return `x${Number(value).toString()}`;
+    }
+
     function updateReplayControls() {
       if (!replayPlayback) return;
       const duration = replayPlayback.duration;
+      const speedLabel = replayPlaybackSpeedLabel(replayPlayback.speed);
+      const playLabel = replayPlayback.paused ? "播放" : "暫停";
+      const reverseLabel = replayPlayback.direction < 0 ? "正放" : "倒放";
       replayTimeline.max = String(Math.max(0, Math.round(duration)));
       replayTimeline.value = String(Math.max(0, Math.min(duration, Math.round(replayPlayback.time))));
-      replayPlayButton.textContent = replayPlayback.paused ? "播放" : "暫停";
+      replaySpeedSelect.textContent = speedLabel;
+      replaySpeedSelect.dataset.value = String(replayPlayback.speed);
+      replaySpeedSelect.setAttribute("aria-valuenow", String(replayPlayback.speed));
+      replaySpeedSelect.setAttribute("aria-valuetext", speedLabel);
+      replayPlayButton.textContent = replayPlayback.paused ? "▶" : "⏸";
+      replayPlayButton.setAttribute("aria-label", playLabel);
+      replayPlayButton.title = playLabel;
       replayReverseButton.classList.toggle("is-selected", replayPlayback.direction < 0);
-      replayReverseButton.textContent = replayPlayback.direction < 0 ? "正放" : "倒放";
+      replayReverseButton.textContent = replayPlayback.direction < 0 ? "↪" : "↩";
+      replayReverseButton.setAttribute("aria-label", reverseLabel);
+      replayReverseButton.title = reverseLabel;
+      replayPrevButton.disabled = replayPlaylist.length <= 1;
+      replayNextButton.disabled = replayPlaylist.length <= 1;
       replayTime.textContent = `${formatTime(replayPlayback.time)} / ${formatTime(duration)}`;
+      if (!replaySpeedMenu.hidden) {
+        replaySpeedMenu.querySelectorAll("[data-replay-speed]").forEach(button => {
+          button.classList.toggle("is-selected", Number(button.dataset.replaySpeed) === replayPlayback.speed);
+        });
+      }
     }
 
     function captureReplayReturnState() {
@@ -456,9 +501,40 @@
       replayRafId = requestAnimationFrame(renderReplayFrame);
     }
 
-    function startReplayPlayback(record) {
+    function prepareReplayPlaylist(record) {
+      const current = normalizeReplayRecord(record);
+      replayPlaylist = allReplayRecords();
+      if (!replayPlaylist.some(item => item.id === current.id)) {
+        replayPlaylist.unshift(current);
+      }
+      replayPlaylistIndex = replayPlaylist.findIndex(item => item.id === current.id);
+      if (replayPlaylistIndex < 0) replayPlaylistIndex = 0;
+    }
+
+    function loadReplayPlaybackRecord(record) {
       record = normalizeReplayRecord(record);
       if (!record.snapshots.length) return;
+      replaySpeedMenu.hidden = true;
+      replaySpeedSelect.setAttribute("aria-expanded", "false");
+      replayPlayback = {
+        record,
+        time: 0,
+        duration: replayDuration(record),
+        speed: storedReplaySpeed(),
+        direction: 1,
+        paused: false,
+        lastFrameAt: performance.now()
+      };
+      applyReplaySnapshot(record.snapshots[0], record);
+      updateReplayControls();
+      cancelAnimationFrame(replayRafId);
+      replayRafId = requestAnimationFrame(renderReplayFrame);
+      return true;
+    }
+
+    function startReplayPlayback(record) {
+      record = normalizeReplayRecord(record);
+      if (!record.snapshots.length) return false;
       closeReplayModal();
       cancelAnimationFrame(rafId);
       clearRelayRestartTimer();
@@ -471,24 +547,22 @@
       computerBattleMode = false;
       playerAutoMode = false;
       computerBattleManualOverride = false;
+      updateAutoBattleControls();
       setSettingsLocked(true);
       setOverlayChromeVisible(false);
       overlay.classList.remove("show");
       replayControls.hidden = false;
-      replaySpeedSelect.value = "1";
-      replayPlayback = {
-        record,
-        time: 0,
-        duration: replayDuration(record),
-        speed: 1,
-        direction: 1,
-        paused: false,
-        lastFrameAt: 0
-      };
-      applyReplaySnapshot(record.snapshots[0], record);
-      updateReplayControls();
-      cancelAnimationFrame(replayRafId);
-      replayRafId = requestAnimationFrame(renderReplayFrame);
+      prepareReplayPlaylist(record);
+      loadReplayPlaybackRecord(record);
+      return true;
+    }
+
+    function switchReplayPlayback(delta) {
+      if (!replayPlayback) return false;
+      if (!replayPlaylist.length) prepareReplayPlaylist(replayPlayback.record);
+      if (replayPlaylist.length <= 1) return false;
+      replayPlaylistIndex = (replayPlaylistIndex + delta + replayPlaylist.length) % replayPlaylist.length;
+      return loadReplayPlaybackRecord(replayPlaylist[replayPlaylistIndex]);
     }
 
     function exitReplayPlayback() {
@@ -496,8 +570,12 @@
       cancelAnimationFrame(replayRafId);
       replayMode = false;
       replayPlayback = null;
+      replayPlaylist = [];
+      replayPlaylistIndex = -1;
       HexSnakeState.replay.mode = replayMode;
       replayControls.hidden = true;
+      replaySpeedMenu.hidden = true;
+      replaySpeedSelect.setAttribute("aria-expanded", "false");
       setSettingsLocked(false);
       restoreReplayReturnState(replayReturnState);
       replayReturnState = null;
@@ -531,6 +609,7 @@
       deleteRecord: deleteReplayRecord,
       startPlayback: startReplayPlayback,
       exitPlayback: exitReplayPlayback,
+      switchPlayback: switchReplayPlayback,
       updateControls: updateReplayControls,
       togglePlaybackPaused() {
         if (!replayPlayback) return false;
@@ -549,14 +628,16 @@
       },
       setPlaybackSpeed(value) {
         if (!replayPlayback) return false;
-        const speed = Number(value);
-        replayPlayback.speed = replayPlaybackSpeeds.includes(speed) ? speed : 1;
+        replayPlayback.speed = normalizeReplaySpeed(value);
+        localStorage.setItem(replaySpeedKey, String(replayPlayback.speed));
         replayPlayback.lastFrameAt = performance.now();
+        updateReplayControls();
         return true;
       },
       seekPlayback(value) {
         if (!replayPlayback) return false;
-        replayPlayback.time = Number(value) || 0;
+        const nextTime = Number(value) || 0;
+        replayPlayback.time = Math.max(0, Math.min(replayPlayback.duration, nextTime));
         replayPlayback.paused = true;
         replayPlayback.lastFrameAt = performance.now();
         applyReplaySnapshot(snapshotForReplayTime(replayPlayback.record, replayPlayback.time), replayPlayback.record);

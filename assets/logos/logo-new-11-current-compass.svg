@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Current Compass Logo</title>
+  <desc id="desc">A compass-like logo with an eel current, dragon horns, and six directional scale cuts.</desc>
+  <circle cx="128" cy="128" r="90" fill="#f8fafc" stroke="#111827" stroke-width="9"/>
+  <g stroke="#111827" stroke-linejoin="round" stroke-width="6">
+    <path d="M128 38 143 88h-30Z" fill="#f59e0b"/>
+    <path d="M128 218 113 168h30Z" fill="#f59e0b"/>
+    <path d="M38 128 88 113v30Z" fill="#2563eb"/>
+    <path d="M218 128 168 143v-30Z" fill="#2563eb"/>
+  </g>
+  <path d="M71 145c28-41 62-55 103-43-20 12-28 27-23 46 5 21 24 30 52 26-44 33-94 26-132-29Z" fill="#2563eb" stroke="#111827" stroke-linejoin="round" stroke-width="8"/>
+  <path d="M94 140c27-22 56-30 87-23" fill="none" stroke="#f8fafc" stroke-linecap="round" stroke-width="7"/>
+  <circle cx="154" cy="123" r="7" fill="#111827"/>
+</svg>

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Crest Cut Logo</title>
+  <desc id="desc">A minimal crest made from horn cuts, claw notches, and a single wave line, avoiding character-face imagery.</desc>
+  <g stroke="#17202a" stroke-width="9" stroke-linejoin="round">
+    <path d="M128 26 196 65v81l-68 84-68-84V65Z" fill="#f3bd4e"/>
+    <path d="M88 69 67 39l44 12ZM168 69l21-30-44 12Z" fill="#fff8e8"/>
+    <path d="M86 103h84l-12 50-30 32-30-32Z" fill="#fff8e8"/>
+    <path d="M95 124h66l-10 28-12-18-11 28-11-28-12 18Z" fill="#17202a"/>
+  </g>
+  <path d="M74 165c18 8 36 8 54 0 18 8 36 8 54 0" fill="none" stroke="#38c8ff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

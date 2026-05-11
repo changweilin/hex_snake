@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Six Direction Bloom Logo</title>
+  <desc id="desc">A six-direction bloom built from feather, fin, and claw-like wedges around a clean hexagonal void.</desc>
+  <g stroke="#10251c" stroke-width="8" stroke-linejoin="round">
+    <path d="M128 24c17 29 17 54 0 77-17-23-17-48 0-77Z" fill="#13b981"/>
+    <path d="M203 64c-1 34-14 56-42 67 0-32 14-55 42-67Z" fill="#2dd4bf"/>
+    <path d="M203 192c-28-12-42-35-42-67 28 11 41 34 42 67Z" fill="#13b981"/>
+    <path d="M128 232c-17-29-17-54 0-77 17 23 17 48 0 77Z" fill="#2dd4bf"/>
+    <path d="M53 192c1-34 14-56 42-67 0 32-14 55-42 67Z" fill="#13b981"/>
+    <path d="M53 64c28 12 42 35 42 67-28-11-41-34-42-67Z" fill="#2dd4bf"/>
+    <path d="M128 92 159 110v36l-31 18-31-18v-36Z" fill="#f4c95d"/>
+  </g>
+</svg>

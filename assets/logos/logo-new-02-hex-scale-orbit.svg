@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Hex Scale Orbit Logo</title>
+  <desc id="desc">Six armor-scale facets orbit a curled serpent path inside a hexagonal seal.</desc>
+  <polygon points="128,28 210,76 210,180 128,228 46,180 46,76" fill="#f8fafc" stroke="#111827" stroke-linejoin="round" stroke-width="9"/>
+  <g stroke="#111827" stroke-linejoin="round" stroke-width="6">
+    <path d="M128 47 150 62 141 91h-26l-9-29Z" fill="#f59e0b"/>
+    <path d="M181 80 203 95l-4 31-29 7-14-23Z" fill="#10b981"/>
+    <path d="M199 151 190 179l-29 12-19-21 13-25Z" fill="#10b981"/>
+    <path d="M128 209 106 194l9-29h26l9 29Z" fill="#f59e0b"/>
+    <path d="M75 176 53 161l4-31 29-7 14 23Z" fill="#10b981"/>
+    <path d="M57 105 66 77l29-12 19 21-13 25Z" fill="#10b981"/>
+  </g>
+  <path d="M91 151c19 25 70 16 69-20-1-33-48-35-58-11 7 4 21 6 32 1" fill="none" stroke="#111827" stroke-linecap="round" stroke-linejoin="round" stroke-width="14"/>
+</svg>
