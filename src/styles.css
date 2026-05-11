@@ -3597,6 +3597,7 @@
     .portrait-card-controls {
       position: relative;
       display: grid;
+      width: 100%;
       touch-action: pan-y;
     }
 
