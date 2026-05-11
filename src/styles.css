@@ -3657,14 +3657,16 @@
       place-items: center;
       overflow: hidden;
       cursor: default;
+      --random-portrait-mark-size: 96%;
     }
 
     .overlay.intro-details .fighter-portrait.is-random {
+      --random-portrait-mark-size: 100%;
       cursor: default;
     }
 
     .random-portrait-mark {
-      width: min(54%, 132px);
+      width: var(--random-portrait-mark-size);
       aspect-ratio: 1;
       border-radius: 999px;
       display: grid;

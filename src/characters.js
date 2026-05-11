@@ -122,7 +122,7 @@
           line: ownerMeta(owner).line,
           accent: "#fbbf24"
         }, owner)}">
-          <span class="random-portrait-mark" aria-hidden="true">?</span>
+          <span class="fighter-avatar-image random-portrait-mark" aria-hidden="true">?</span>
         </div>
       `;
     }
