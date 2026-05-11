@@ -1,4 +1,4 @@
-let minGridSize = 6;
+﻿let minGridSize = 6;
 let maxGridSize = 12;
 let minFoodCount = 1;
 let maxFoodCount = 4;
@@ -1848,7 +1848,7 @@ function renderIntroPortraits(showDetails = introDetailsOpen) {
                   ? null
                   : startLogoCharacterFor(owner);
                 const label = owner === "player" ? "P1" : "P2";
-                const motto = character?.motto || "開局抽選後揭曉";
+                const motto = character?.motto || "機緣一轉，百人角色待君擇。\n心念既定，千道關卡隨我闖。";
                 return `
                 <div class="intro-avatar-button" role="button" tabindex="0" data-owner="${owner}" data-open-intro="${owner}" style="${characterStyle(
                   character || {
@@ -2630,3 +2630,4 @@ function formatTime(ms) {
   const seconds = totalSeconds % 60;
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
+
