@@ -1566,6 +1566,7 @@ function renderIntroPortraits(showDetails = introDetailsOpen) {
           <div class="intro-avatar-gate">
             ${["player", "computer"].map(owner => {
       const character = selectedCharacterFor(owner);
+      const logoCharacter = startLogoCharacterFor(owner);
       const label = owner === "player" ? "P1" : "P2";
       const motto = character?.motto || "開局抽選後揭曉座右銘";
       return `
@@ -1583,7 +1584,7 @@ function renderIntroPortraits(showDetails = introDetailsOpen) {
                     <button class="secondary portrait-arrow portrait-label-arrow" type="button" data-portrait-owner="${owner}" data-portrait-shift="1" aria-label="${ownerMeta(owner).label} 下一位">›</button>
                   </div>
                   <p class="intro-avatar-motto ${character ? "" : "is-placeholder"}">${formatIntroMotto(motto)}</p>
-                  <span class="intro-avatar-logo" aria-hidden="true"><img src="${brandLogoPath}" alt="" decoding="async" loading="lazy"></span>
+                  <span class="intro-avatar-logo" aria-hidden="true"><img src="${logoCharacter ? avatarUrl(logoCharacter, "sm") : brandLogoPath}" srcset="${logoCharacter ? avatarSrcset(logoCharacter) : ""}" sizes="52px" alt="${logoCharacter ? `${logoCharacter.name} 頭像` : "logo"}" decoding="async" loading="lazy"></span>
                 </div>
               `;
     }).join("")}
@@ -1645,10 +1646,20 @@ function setPortraitCharacterForOwner(owner, characterId, showDetails = introDet
   selectedPortraitOwner = owner === "computer" ? "computer" : "player";
   if (selectedPortraitOwner === "player") {
     playerCharacterChoice = characterId;
-    if (characterId !== randomCharacterChoiceId) playerCharacterId = characterId;
+    if (characterId === randomCharacterChoiceId) {
+      ensureStartLogoRandomCharacterId(selectedPortraitOwner);
+    } else {
+      playerCharacterId = characterId;
+      clearStartLogoRandomCharacterId(selectedPortraitOwner);
+    }
   } else {
     computerCharacterChoice = characterId;
-    if (characterId !== randomCharacterChoiceId) computerCharacterId = characterId;
+    if (characterId === randomCharacterChoiceId) {
+      ensureStartLogoRandomCharacterId(selectedPortraitOwner);
+    } else {
+      computerCharacterId = characterId;
+      clearStartLogoRandomCharacterId(selectedPortraitOwner);
+    }
   }
   syncCharacterInputs();
   saveCharacterChoices();

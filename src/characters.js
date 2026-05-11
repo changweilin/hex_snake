@@ -76,6 +76,41 @@
       return isRandomCharacterChoice(owner) ? null : characterFor(owner);
     }
 
+    const startLogoRandomCharacterIds = {
+      player: null,
+      computer: null
+    };
+
+    function startLogoOwner(owner) {
+      return owner === "computer" ? "computer" : "player";
+    }
+
+    function ensureStartLogoRandomCharacterId(owner) {
+      const safeOwner = startLogoOwner(owner);
+      const existing = startLogoRandomCharacterIds[safeOwner];
+      if (existing && characterById.has(existing)) return existing;
+      const randomId = randomCharacter().id;
+      if (randomId) startLogoRandomCharacterIds[safeOwner] = randomId;
+      return randomId;
+    }
+
+    function consumeStartLogoRandomCharacterId(owner) {
+      const safeOwner = startLogoOwner(owner);
+      const randomId = startLogoRandomCharacterIds[safeOwner];
+      startLogoRandomCharacterIds[safeOwner] = null;
+      return randomId;
+    }
+
+    function clearStartLogoRandomCharacterId(owner) {
+      const safeOwner = startLogoOwner(owner);
+      startLogoRandomCharacterIds[safeOwner] = null;
+    }
+
+    function startLogoCharacterFor(owner) {
+      if (!isRandomCharacterChoice(owner)) return characterFor(owner);
+      return characterById.get(ensureStartLogoRandomCharacterId(owner)) || characters[0];
+    }
+
     function randomCharacter() {
       return characters[Math.floor(Math.random() * characters.length)] || characters[0];
     }

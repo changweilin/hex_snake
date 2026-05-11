@@ -50,7 +50,7 @@
 
     function resolveCharacterChoice(owner, choice) {
       const fallback = owner === "player" ? characters[0] : characters[Math.min(1, characters.length - 1)];
-      if (choice === randomCharacterChoiceId) return randomCharacter().id;
+      if (choice === randomCharacterChoiceId) return consumeStartLogoRandomCharacterId(owner) || randomCharacter().id;
       return characterById.has(choice) ? choice : fallback.id;
     }
 
