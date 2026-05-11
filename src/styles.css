@@ -3547,8 +3547,15 @@
       line-height: 1.28;
       text-align: center;
       text-wrap: balance;
-      white-space: break-spaces;
-      overflow-wrap: anywhere;
+      white-space: normal;
+      overflow-wrap: normal;
+    }
+
+    .intro-avatar-motto-line {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: pre;
     }
 
     .intro-avatar-motto.is-placeholder {

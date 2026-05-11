@@ -833,19 +833,71 @@ function characterStoryMarkup(character) {
 }
 
 function formatIntroMotto(motto) {
-  const lines = String(motto || "")
+  const text = String(motto || "")
     .trim()
-    .replace(/([，。！？；：、,.!?;:])\s*/g, "$1\n")
-    .split(/\n+/)
-    .map((line) => line.trim())
-    .filter(Boolean);
+    .replace(/\r\n?/g, "\n")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\s*\n+\s*/g, "\n");
+  const punctuation = /[，。！？；：、,.!?;:]/u;
+  const segments = [];
+  let segment = "";
+  for (const char of text) {
+    if (char === "\n") {
+      if (segment.trim()) segments.push(segment.trim());
+      segment = "";
+      continue;
+    }
+    segment += char;
+    if (punctuation.test(char)) {
+      segments.push(segment.trim());
+      segment = "";
+    }
+  }
+  if (segment.trim()) segments.push(segment.trim());
+  const units = segments.length ? segments : [text];
+  const measure = (value) => [...String(value || "").replace(/\s+/g, "")]
+    .length;
+  const splitUnit = (unit) => {
+    const chars = [...String(unit || "").trim()];
+    if (chars.length <= 1) return [chars.join(""), ""];
+    const center = Math.ceil(chars.length / 2);
+    let splitAt = center;
+    while (splitAt < chars.length && punctuation.test(chars[splitAt])) {
+      splitAt += 1;
+    }
+    if (splitAt >= chars.length) splitAt = center;
+    return [
+      chars.slice(0, splitAt).join("").trim(),
+      chars.slice(splitAt).join("").trim(),
+    ];
+  };
+  const lines =
+    units.length <= 1
+      ? splitUnit(units[0] || "")
+      : (() => {
+          let bestIndex = 1;
+          let bestScore = Infinity;
+          for (let index = 1; index < units.length; index += 1) {
+            const first = units.slice(0, index).join("");
+            const second = units.slice(index).join("");
+            const score = Math.abs(measure(first) - measure(second));
+            if (score < bestScore) {
+              bestScore = score;
+              bestIndex = index;
+            }
+          }
+          return [
+            units.slice(0, bestIndex).join(""),
+            units.slice(bestIndex).join(""),
+          ];
+        })();
   return lines
     .map((line, index) => {
       const prefix = index === 0 ? "「" : "　";
       const suffix = index === lines.length - 1 ? "」" : "　";
-      return `${prefix}${line}${suffix}`;
+      return `<span class="intro-avatar-motto-line">${prefix}${line}${suffix}</span>`;
     })
-    .join("<br>");
+    .join("");
 }
 
 function logoTransitionClassNames() {
