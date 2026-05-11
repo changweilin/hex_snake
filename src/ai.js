@@ -295,7 +295,7 @@
         "extreme"
       );
     }
-    const lobsterPalmStepMs = 33.75;
+    const lobsterPalmStepMs = 35.4375;
 
     function ultimateSetting(characterId, key, fallback) {
       const value = attackUltimateBalance?.[characterId]?.[key];

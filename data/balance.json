@@ -76,14 +76,14 @@
       "dragon": {
         "bigCooldownMs": 4800,
         "radiusMultiplier": 2,
-        "impactDamageMultiplier": 0,
+        "impactDamageMultiplier": 1.08,
         "radiationDamageMultiplier": 2,
         "radiationDurationMs": 4000,
         "radiationTickMs": 500,
         "firstImpactDelayMultiplier": 2
       },
       "lobster": {
-        "fistStepMs": 33.75,
+        "fistStepMs": 35.4375,
         "contactDamageMultiplier": 0.6,
         "contactRadius": 1,
         "burstRadiusMultiplier": 1.6,
@@ -102,13 +102,13 @@
       },
       "quetzal": {
         "bigCooldownMs": 3600,
-        "damageMultiplier": 1.8,
+        "damageMultiplier": 2,
         "tickMs": 460,
         "slowDurationMs": 2000
       },
       "moray": {
         "bigCooldownMs": 3600,
-        "damageMultiplier": 0.24,
+        "damageMultiplier": 0.2304,
         "durationBaseTicks": 4
       },
       "gu_king": {

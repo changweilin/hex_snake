@@ -618,6 +618,33 @@
       return !gameOverSettlementPending && performance.now() >= restartUnlockAt;
     }
 
+    function beginStartLogoCountdown() {
+      if (HexSnakeReplay.isPlaybackMode() || running || startLogoCountdownPending || isLogoTransitionActive()) return false;
+      if (gameOver) {
+        if (!canRestartAfterGameOver()) return false;
+        returnToStartScreen();
+      }
+      startLogoCountdownPending = true;
+      setSettingsLocked(true);
+      setStatus("開局倒數中：3 秒後開始。");
+      playStartLogoCountdown().then(ready => {
+        startLogoCountdownPending = false;
+        if (!ready || running || gameOver || HexSnakeReplay.isPlaybackMode()) {
+          if (!running && !gameOver) setSettingsLocked(false);
+          return;
+        }
+        startGame();
+      });
+      return true;
+    }
+
+    function skipLogoTransition() {
+      if (logoTransitionDirection() !== "in" || gameOverLogoTransitionEndsAt <= 0) return false;
+      gameOverLogoTransitionEndsAt = 0;
+      showGameOverSettlement();
+      return true;
+    }
+
     function startGame(options = {}) {
       if (HexSnakeReplay.isPlaybackMode()) return false;
       if (gameOver && !canRestartAfterGameOver()) return false;
@@ -661,7 +688,8 @@
     function autoStartGame() {
       if (running && !gameOver) return true;
       if (gameOver) return false;
-      return startGame();
+      beginStartLogoCountdown();
+      return false;
     }
 
     function returnToStartScreen() {
@@ -972,9 +1000,11 @@
       gameOverSettlementPending = false;
       gameOverRelayStartOptions = null;
       gameOverContinuousVisualDeadlineAt = 0;
+      gameOverLogoTransitionEndsAt = 0;
       gameOverResultOwner = null;
       gameOverPlayerLost = false;
       gameOverComputerLost = false;
+      clearLogoTransition();
     }
 
     function resetRelayScore() {
@@ -1482,7 +1512,7 @@
         : directionFromSourceToTarget(source, target, ownerDirection(owner));
 
       if (character.id === "lobster") {
-        const fistStepMs = ultimateSetting(character.id, "fistStepMs", 33.75);
+        const fistStepMs = ultimateSetting(character.id, "fistStepMs", 35.4375);
         const volleys = Math.max(1, Math.round(ultimateSetting(character.id, "volleyCount", 2)));
         const contactDamage = bigDamage * ultimateSetting(character.id, "contactDamageMultiplier", 0.6);
         const contactRadius = Math.max(0.25, ultimateSetting(character.id, "contactRadius", 1));
@@ -1651,7 +1681,7 @@
 
       if (character.id === "dragon") {
         const spiritRadius = small.radius * ultimateSetting(character.id, "radiusMultiplier", 2);
-        const impactDamage = bigDamage * ultimateSetting(character.id, "impactDamageMultiplier", 0);
+        const impactDamage = bigDamage * ultimateSetting(character.id, "impactDamageMultiplier", 1.08);
         const radiationTotalDamage = bigDamage * ultimateSetting(character.id, "radiationDamageMultiplier", 2);
         const radiationDurationMs = ultimateSetting(character.id, "radiationDurationMs", 4000);
         const radiationTickMs = ultimateSetting(character.id, "radiationTickMs", 500);
@@ -2218,7 +2248,9 @@
 
     function showGameOverSettlement() {
       gameOverSettlementPending = false;
+      gameOverLogoTransitionEndsAt = 0;
       if (!gameOver || running || HexSnakeReplay.isPlaybackMode()) return;
+      clearLogoTransition();
       renderWinnerPortrait(gameOverResultOwner, gameOverPlayerLost, gameOverComputerLost);
       overlay.classList.add("show");
       if (gameOverRelayStartOptions) {
@@ -2450,6 +2482,8 @@
       if (gameOver) return;
       clearGameOverSettlementTimer();
       const shouldContinueRelay = relayMode && (computerBattleMode || playerAutoMode);
+      const endedInAutoMode = computerBattleMode || playerAutoMode;
+      const shouldUseGameOverLogo = !endedInAutoMode && !shouldContinueRelay && !HexSnakeReplay.isPlaybackMode();
       const nextRelayStartOptions = computerBattleMode
         ? { computerBattle: true }
         : { playerAuto: true };
@@ -2460,8 +2494,9 @@
       computerBattleManualOverride = false;
       gameOver = true;
       gameOverContinuousVisualDeadlineAt = gameOverAt + gameOverContinuousVisualMaxWaitMs;
+      gameOverLogoTransitionEndsAt = shouldUseGameOverLogo ? gameOverAt + logoTransitionDurationMs : 0;
       updateAutoBattleControls();
-      restartUnlockAt = gameOverAt + gameOverRestartDelayMs;
+      restartUnlockAt = gameOverAt + (shouldUseGameOverLogo ? logoTransitionDurationMs : gameOverRestartDelayMs);
       setSettingsLocked(false);
       if (totalElapsedMs > bestTotalMs) {
         bestTotalMs = totalElapsedMs;
@@ -2511,15 +2546,23 @@
         ? `${scoreText}。${resultReason} 接力賽：P1 ${relayPlayerWins} 勝，P2 ${relayComputerWins} 勝，平手 ${relayDraws}。`
         : `${scoreText}。${resultReason}`;
       overlayText.hidden = true;
+      if (shouldUseGameOverLogo) showLogoTransition("in");
       cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(loop);
     }
 
     function loop(now) {
       if (!running) {
-        const visualsActive = gameOverSettlementPending && advanceGameOverVisuals(now || performance.now());
+        const frameNow = now || performance.now();
+        const visualsActive = gameOverSettlementPending && advanceGameOverVisuals(frameNow);
         draw();
-        if (visualsActive) {
+        if (gameOverSettlementPending && gameOverLogoTransitionEndsAt) {
+          if (frameNow < gameOverLogoTransitionEndsAt) {
+            rafId = requestAnimationFrame(loop);
+          } else {
+            showGameOverSettlement();
+          }
+        } else if (visualsActive) {
           rafId = requestAnimationFrame(loop);
         } else if (gameOverSettlementPending) {
           showGameOverSettlement();
@@ -2600,6 +2643,11 @@
     }
 
     function beginControlPadAttackPointer(event) {
+      if (isLogoTransitionActive()) {
+        event.preventDefault();
+        event.stopPropagation();
+        return true;
+      }
       if (!shouldUseControlPadAttackDirection()) return false;
       if (!running || gameOver) {
         if (!autoStartGame()) return true;
@@ -2736,6 +2784,7 @@
 
     function moveTargetStick(event) {
       if (HexSnakeReplay.isPlaybackMode()) return;
+      if (isLogoTransitionActive()) return;
       if (!running || gameOver) {
         if (!autoStartGame()) return;
       }
@@ -3135,7 +3184,7 @@
     function togglePause() {
       if (HexSnakeReplay.isPlaybackMode()) return;
       if (!running || gameOver) {
-        startGame();
+        beginStartLogoCountdown();
         return;
       }
       paused = !paused;
@@ -3688,6 +3737,7 @@
     function handleAttackButtonDown(event, profile) {
       event.preventDefault();
       event.stopPropagation();
+      if (isLogoTransitionActive()) return;
       attackButtonPointerId = event.pointerId;
       setAttackButtonHighlight(profile);
       triggerTouchFeedback(event, profile === "big" ? 12 : 8);
@@ -3702,6 +3752,7 @@
     function handleAttackButtonUp(event, profile) {
       event.preventDefault();
       event.stopPropagation();
+      if (isLogoTransitionActive()) return;
       if (attackButtonPointerId !== null && event.pointerId !== attackButtonPointerId) return;
       attackButtonPointerId = null;
       if (event.currentTarget.hasPointerCapture?.(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
@@ -3720,6 +3771,7 @@
     function handleKeyboardAimButtonDown(event, profile) {
       event.preventDefault();
       event.stopPropagation();
+      if (isLogoTransitionActive()) return;
       attackButtonPointerId = event.pointerId;
       try {
         event.currentTarget.setPointerCapture(event.pointerId);
@@ -3952,7 +4004,7 @@
       overlayText.textContent = `每吃 1 個食物獲得 2 點能量，集滿 ${attackNeedTotal} 點獲得 1 枚炸彈，最多 ${maxAmmo} 枚；HP 上限為（蛇長 + 1）× ${hpPerSnakeUnit}；能量與炸彈都滿時，施放消耗炸彈的招式會立刻把滿能量轉為 1 枚炸彈；小招消耗目前最高的食物庫存 ${smallAttackFoodCost} 點與 ${smallAttackBombCost} 枚炸彈，大招消耗 ${bigAttackBombCost} 枚炸彈與四種庫存各 2 點。`;
       startButton.textContent = "開始";
       setOverlayChromeVisible(true);
-      startGame();
+      beginStartLogoCountdown();
     });
 
     computerBattleButton.addEventListener("click", () => {
@@ -4334,6 +4386,14 @@
       if (cancelReplayBoardGesture(event)) return;
       cancelBoardAttackPointer(event);
     });
+    window.addEventListener("click", event => {
+      const skipButton = event.target?.closest?.("[data-logo-skip]");
+      if (!skipButton) return;
+      if (skipLogoTransition()) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    });
 
     window.addEventListener("keydown", event => {
       if (pendingDirectionKeybind !== null) {
@@ -4382,6 +4442,16 @@
       }
       if (!replayModal.hidden) {
         if (event.key === "Escape" || event.key === "Esc") HexSnakeReplay.closeModal();
+        return;
+      }
+      if (isLogoTransitionActive()) {
+        if ((event.key === "Enter" || event.key === " ") && skipLogoTransition()) {
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
         return;
       }
       if (!settingsContent.hidden || !gmContent.hidden) {
@@ -4448,7 +4518,7 @@
       const key = event.key.toLowerCase();
       if (key === " ") {
         if (!running || gameOver) {
-          startGame();
+          beginStartLogoCountdown();
           return;
         }
         paused = !paused;

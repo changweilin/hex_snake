@@ -10,6 +10,8 @@ let attackNeedTotal = 6;
 let maxAmmo = 3;
 const autoBattleSpeeds = [4, 2, 1.5, 1, 0.75, 0.5, 0.25];
 const brandLogoPath = "assets/logos/white-dragon-logo.png";
+const logoTransitionDurationMs = 3000;
+const logoTransitionPieceMs = 520;
 let smallAttackFoodCost = 2;
 let smallAttackBombCost = 1;
 let bigAttackBombCost = 2;
@@ -483,6 +485,7 @@ let relayRestartTimer = null;
 let gameOverRelayStartOptions = null;
 let gameOverSettlementPending = false;
 let gameOverContinuousVisualDeadlineAt = 0;
+let gameOverLogoTransitionEndsAt = 0;
 let gameOverResultOwner = null;
 let gameOverPlayerLost = false;
 let gameOverComputerLost = false;
@@ -579,6 +582,10 @@ let portraitVariantMode = portraitVariantModes.includes(storedPortraitVariant)
     ? "human"
     : defaultPortraitVariantMode;
 let restartUnlockAt = 0;
+let logoTransitionTimer = null;
+let logoCountdownTimer = null;
+let logoTransitionSerial = 0;
+let startLogoCountdownPending = false;
 
 function fighterArt(character, pose = "idle", portrait = false, variant = "medium") {
   const imageClass = `fighter-avatar-image${portrait ? " portrait" : ""}`;
@@ -706,6 +713,144 @@ function formatIntroMotto(motto) {
     const suffix = index === lines.length - 1 ? "」" : "　";
     return `${prefix}${line}${suffix}`;
   }).join("<br>");
+}
+
+function logoTransitionClassNames() {
+  return ["logo-transition", "logo-transition-in", "logo-transition-out"];
+}
+
+function clearLogoTransitionTimers() {
+  if (logoTransitionTimer) {
+    clearTimeout(logoTransitionTimer);
+    logoTransitionTimer = null;
+  }
+  if (logoCountdownTimer) {
+    clearInterval(logoCountdownTimer);
+    logoCountdownTimer = null;
+  }
+}
+
+function clearLogoTransition() {
+  clearLogoTransitionTimers();
+  overlay.classList.remove(...logoTransitionClassNames());
+  if (winnerPortrait.querySelector("[data-logo-transition]")) {
+    winnerPortrait.hidden = true;
+    winnerPortrait.innerHTML = "";
+  }
+}
+
+function isLogoTransitionActive() {
+  return overlay.classList.contains("logo-transition") || Boolean(logoTransitionTimer);
+}
+
+function logoTransitionDirection() {
+  const node = winnerPortrait.querySelector("[data-logo-transition]");
+  return node ? node.getAttribute("data-logo-transition") : null;
+}
+
+function logoPoint(radius, degrees) {
+  const radians = (degrees - 90) * Math.PI / 180;
+  return {
+    x: 50 + Math.cos(radians) * radius,
+    y: 50 + Math.sin(radians) * radius
+  };
+}
+
+function logoSectorPath(innerRadius, outerRadius, startDegrees, endDegrees) {
+  const outerStart = logoPoint(outerRadius, startDegrees);
+  const outerEnd = logoPoint(outerRadius, endDegrees);
+  const innerEnd = logoPoint(innerRadius, endDegrees);
+  const innerStart = logoPoint(innerRadius, startDegrees);
+  const largeArc = endDegrees - startDegrees > 180 ? 1 : 0;
+  if (innerRadius <= 0) {
+    return [
+      `M 50 50`,
+      `L ${outerStart.x.toFixed(3)} ${outerStart.y.toFixed(3)}`,
+      `A ${outerRadius} ${outerRadius} 0 ${largeArc} 1 ${outerEnd.x.toFixed(3)} ${outerEnd.y.toFixed(3)}`,
+      "Z"
+    ].join(" ");
+  }
+  return [
+    `M ${outerStart.x.toFixed(3)} ${outerStart.y.toFixed(3)}`,
+    `A ${outerRadius} ${outerRadius} 0 ${largeArc} 1 ${outerEnd.x.toFixed(3)} ${outerEnd.y.toFixed(3)}`,
+    `L ${innerEnd.x.toFixed(3)} ${innerEnd.y.toFixed(3)}`,
+    `A ${innerRadius} ${innerRadius} 0 ${largeArc} 0 ${innerStart.x.toFixed(3)} ${innerStart.y.toFixed(3)}`,
+    "Z"
+  ].join(" ");
+}
+
+function logoSpiralMarkup(direction = "out") {
+  const rings = 4;
+  const segments = 14;
+  const total = rings * segments;
+  const maxDelay = Math.max(0, logoTransitionDurationMs - logoTransitionPieceMs);
+  const serial = logoTransitionSerial += 1;
+  const defs = [];
+  const pieces = [];
+  for (let ring = 0; ring < rings; ring += 1) {
+    const innerRadius = ring === 0 ? 0 : 7 + ring * 11;
+    const outerRadius = ring === rings - 1 ? 49 : 7 + (ring + 1) * 11;
+    for (let segment = 0; segment < segments; segment += 1) {
+      const start = segment * 360 / segments - 1.2;
+      const end = (segment + 1) * 360 / segments + 1.2;
+      const id = `logoSpiral${serial}-${ring}-${segment}`;
+      const outerFirstOrder = (rings - 1 - ring) * segments + ((segment + (rings - ring) * 2) % segments);
+      const order = direction === "in" ? total - 1 - outerFirstOrder : outerFirstOrder;
+      const delay = total <= 1 ? 0 : Math.round(order * maxDelay / (total - 1));
+      defs.push(`<clipPath id="${id}" clipPathUnits="userSpaceOnUse"><path d="${logoSectorPath(innerRadius, outerRadius, start, end)}"></path></clipPath>`);
+      pieces.push(`<image class="logo-spiral-piece" href="${brandLogoPath}" x="0" y="0" width="100" height="100" preserveAspectRatio="xMidYMid meet" clip-path="url(#${id})" style="--logo-delay:${delay}ms;"></image>`);
+    }
+  }
+  return `
+        <svg class="logo-spiral-logo" viewBox="0 0 100 100" role="img" aria-label="Hex Snake LOGO">
+          <defs>${defs.join("")}</defs>
+          ${pieces.join("")}
+        </svg>
+      `;
+}
+
+function showLogoTransition(direction = "out", options = {}) {
+  clearLogoTransitionTimers();
+  const safeDirection = direction === "in" ? "in" : "out";
+  overlay.classList.remove("intro-details", "tutorial-open", ...logoTransitionClassNames());
+  overlay.classList.add("show", "is-session-modal", "logo-transition", `logo-transition-${safeDirection}`);
+  overlayTitle.hidden = true;
+  overlayText.hidden = true;
+  startButton.hidden = true;
+  computerBattleButton.hidden = true;
+  replayArchiveButton.hidden = true;
+  introCloseButton.hidden = true;
+  winnerPortrait.hidden = false;
+  characterStage.hidden = true;
+  characterStage.innerHTML = "";
+  winnerPortrait.innerHTML = `
+        <div class="logo-transition-card" data-logo-transition="${safeDirection}" aria-live="polite">
+          <div class="logo-spiral-shell" aria-hidden="true">
+            ${logoSpiralMarkup(safeDirection)}
+          </div>
+          <div class="logo-transition-aux">
+            ${options.countdown ? `<div class="logo-countdown" data-logo-countdown>3</div>` : ""}
+            ${safeDirection === "in" ? `<button class="secondary logo-transition-skip" type="button" data-logo-skip>跳過（Enter/空白）</button>` : ""}
+          </div>
+        </div>
+      `;
+}
+
+function playStartLogoCountdown() {
+  if (isLogoTransitionActive()) return Promise.resolve(false);
+  showLogoTransition("out", { countdown: true });
+  const countdownEl = winnerPortrait.querySelector("[data-logo-countdown]");
+  const startedAt = performance.now();
+  logoCountdownTimer = setInterval(() => {
+    const remaining = Math.max(1, Math.ceil((logoTransitionDurationMs - (performance.now() - startedAt)) / 1000));
+    if (countdownEl) countdownEl.textContent = String(remaining);
+  }, 120);
+  return new Promise(resolve => {
+    logoTransitionTimer = setTimeout(() => {
+      clearLogoTransition();
+      resolve(true);
+    }, logoTransitionDurationMs);
+  });
 }
 
 function foodIconMarkup(typeOrId, extraClass = "") {
@@ -1299,7 +1444,7 @@ function closeRulesModal() {
 }
 
 function setOverlayChromeVisible(visible) {
-  overlay.classList.remove("intro-details", "tutorial-open", "is-session-modal");
+  overlay.classList.remove("intro-details", "tutorial-open", "is-session-modal", ...logoTransitionClassNames());
   overlayTitle.hidden = !visible;
   overlayText.hidden = !visible;
   startButton.hidden = !visible;
@@ -1309,7 +1454,7 @@ function setOverlayChromeVisible(visible) {
 }
 
 function setIntroLobbyChrome() {
-  overlay.classList.remove("intro-details", "tutorial-open");
+  overlay.classList.remove("intro-details", "tutorial-open", ...logoTransitionClassNames());
   overlay.classList.add("is-session-modal");
   overlayTitle.hidden = true;
   overlayText.hidden = true;
@@ -1322,7 +1467,7 @@ function setIntroLobbyChrome() {
 
 function setIntroDetailsChrome() {
   overlay.classList.add("intro-details");
-  overlay.classList.remove("tutorial-open", "is-session-modal");
+  overlay.classList.remove("tutorial-open", "is-session-modal", ...logoTransitionClassNames());
   overlayTitle.hidden = true;
   overlayText.hidden = true;
   startButton.hidden = true;
@@ -1412,6 +1557,7 @@ function renderIntroPortraits(showDetails = introDetailsOpen) {
                     <button class="secondary portrait-arrow portrait-label-arrow" type="button" data-portrait-owner="${owner}" data-portrait-shift="1" aria-label="${ownerMeta(owner).label} 下一位">›</button>
                   </div>
                   <p class="intro-avatar-motto ${character ? "" : "is-placeholder"}">${formatIntroMotto(motto)}</p>
+                  <span class="intro-avatar-logo" aria-hidden="true"><img src="${brandLogoPath}" alt="" decoding="async" loading="lazy"></span>
                 </div>
               `;
     }).join("")}
@@ -1528,6 +1674,7 @@ function updatePortraitVariantButtons() {
 }
 
 function rerenderPortraitSurfaces() {
+  if (isLogoTransitionActive()) return;
   if (!characterStage.hidden) buildCharacterStage();
   if (!portraitLightbox.hidden) renderPortraitLightbox();
   if (overlay.classList.contains("show") && !winnerPortrait.hidden) {
