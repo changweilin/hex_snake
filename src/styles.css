@@ -3683,6 +3683,12 @@
       box-shadow: 0 18px 45px rgba(0, 0, 0, 0.32);
     }
 
+    .random-portrait-mark.intro-avatar-logo-mark {
+      --random-portrait-mark-size: 66%;
+      font-size: clamp(1.1rem, 3.5vw, 1.8rem);
+      border-width: 1px;
+    }
+
     .overlay.intro-details .fighter-portrait .fighter-avatar-image,
     .overlay.intro-details .fighter-portrait .fighter-avatar {
       width: 90%;
