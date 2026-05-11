@@ -3941,7 +3941,6 @@
 
     overlay.addEventListener("pointerdown", event => {
       if (!isTutorialOpen() || event.button > 0) return;
-      if (event.target.closest("[data-tutorial-action]")) return;
       tutorialSwipeStartX = event.clientX;
       tutorialSwipeStartY = event.clientY;
       tutorialSwipePointerId = event.pointerId;
