@@ -3921,13 +3921,24 @@
       overlay.classList.add("show");
     });
 
+    const tutorialActionButtonFromEvent = (event) => {
+      const path = event.composedPath?.() || [];
+      for (const node of path) {
+        if (node instanceof Element && typeof node.closest === "function") {
+          const button = node.closest("[data-tutorial-action]");
+          if (button) return button;
+        }
+      }
+      return event.target?.closest?.("[data-tutorial-action]") || null;
+    };
+
     winnerPortrait.addEventListener("click", event => {
       if (tutorialSwipeDidMove) {
         tutorialSwipeDidMove = false;
         event.preventDefault();
         return;
       }
-      const button = event.target.closest("[data-tutorial-action]");
+      const button = tutorialActionButtonFromEvent(event);
       if (!button) return;
       const action = button.dataset.tutorialAction;
       if (action === "next") {
@@ -3941,6 +3952,7 @@
 
     overlay.addEventListener("pointerdown", event => {
       if (!isTutorialOpen() || event.button > 0) return;
+      if (tutorialActionButtonFromEvent(event)) return;
       tutorialSwipeStartX = event.clientX;
       tutorialSwipeStartY = event.clientY;
       tutorialSwipePointerId = event.pointerId;
