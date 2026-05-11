@@ -722,7 +722,7 @@
       width: 100%;
       display: grid;
       justify-items: center;
-      gap: 12px;
+      gap: 10px;
       align-items: start;
     }
 
@@ -742,19 +742,68 @@
       animation: logo-countdown-pulse 1000ms ease-in-out infinite;
     }
 
+    .logo-transition-message {
+      position: relative;
+      z-index: 3;
+      display: inline-flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 1px;
+      min-height: 1.2em;
+      color: #f8fafc;
+      font-size: clamp(1.08rem, 4vw, 1.5rem);
+      font-weight: 700;
+      line-height: 1.2;
+      letter-spacing: 0.01em;
+      white-space: nowrap;
+      text-align: center;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.52);
+      pointer-events: none;
+    }
+
+    .logo-transition-message-char {
+      opacity: 0;
+      transform: translateY(6px) scale(0.98);
+      animation: logo-message-reveal 180ms ease-out both;
+      animation-delay: var(--logo-message-delay);
+      display: inline-block;
+    }
+
     .logo-transition-skip {
       position: relative;
       z-index: 3;
       pointer-events: auto;
-      padding: 5px 12px;
-      border-color: rgba(226, 232, 240, 0.4);
+      min-width: 0;
+      min-height: 0;
+      padding: 3px 10px;
+      border: 1px solid rgba(226, 232, 240, 0.42);
       color: #f8fafc;
-      box-shadow: 0 12px 22px rgba(0, 0, 0, 0.26);
-      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-      min-height: 34px;
+      background: rgba(15, 23, 42, 0.72);
+      box-shadow: none;
+      text-shadow: none;
+      border-radius: 999px;
       white-space: nowrap;
-      line-height: 1;
-      font-size: 0.86rem;
+      line-height: 1.05;
+      font-size: 0.74rem;
+      letter-spacing: 0.04em;
+      font-weight: 600;
+      transition: background-color 120ms ease, border-color 120ms ease;
+    }
+
+    .logo-transition-skip:hover {
+      border-color: rgba(226, 232, 240, 0.64);
+      background: rgba(30, 41, 59, 0.82);
+    }
+
+    @keyframes logo-message-reveal {
+      0% {
+        opacity: 0;
+        transform: translateY(6px) scale(0.98);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
     }
 
     @keyframes logo-piece-out {
@@ -5527,12 +5576,20 @@
         overflow: visible;
       }
 
+      .overlay.logo-transition.is-session-modal {
+        align-items: center;
+      }
+
       .overlay.logo-transition.is-session-modal .logo-transition-card {
         gap: 10px;
       }
 
       .overlay.logo-transition.is-session-modal .logo-countdown {
         font-size: clamp(2.1rem, min(8vw, 10dvh), 4.2rem);
+      }
+
+      .overlay.logo-transition.is-session-modal .logo-transition-message {
+        font-size: clamp(1rem, 3.6vw, 1.32rem);
       }
 
       .overlay.is-session-modal .dialog:has(.intro-avatar-gate) {

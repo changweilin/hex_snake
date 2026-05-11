@@ -11,6 +11,7 @@ let maxAmmo = 3;
 const autoBattleSpeeds = [4, 2, 1.5, 1, 0.75, 0.5, 0.25];
 const brandLogoPath = "assets/logos/white-dragon-logo.png";
 const logoTransitionDurationMs = 3000;
+const logoTransitionMessageDurationMs = 2000;
 const logoTransitionPieceMs = 520;
 let smallAttackFoodCost = 2;
 let smallAttackBombCost = 1;
@@ -809,6 +810,30 @@ function logoSpiralMarkup(direction = "out") {
       `;
 }
 
+function escapeLogoTransitionMessage(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function logoTransitionMessageMarkup(message = "") {
+  const text = String(message || "").trim();
+  if (!text) return "";
+  const chars = [...text];
+  if (!chars.length) return "";
+  const delayStep = chars.length <= 1
+    ? 0
+    : Math.max(1, Math.floor((logoTransitionMessageDurationMs - 1) / (chars.length - 1)));
+  return `<div class="logo-transition-message" data-logo-message>${chars.map((char, index) => {
+    const displayChar = char === " " ? "\u00A0" : escapeLogoTransitionMessage(char);
+    const delay = Math.round(index * delayStep);
+    return `<span class="logo-transition-message-char" style="--logo-message-delay:${delay}ms">${displayChar}</span>`;
+  }).join("")}</div>`;
+}
+
 function showLogoTransition(direction = "out", options = {}) {
   clearLogoTransitionTimers();
   const safeDirection = direction === "in" ? "in" : "out";
@@ -830,7 +855,8 @@ function showLogoTransition(direction = "out", options = {}) {
           </div>
           <div class="logo-transition-aux">
             ${options.countdown ? `<div class="logo-countdown" data-logo-countdown>3</div>` : ""}
-            ${safeDirection === "in" ? `<button class="secondary logo-transition-skip" type="button" data-logo-skip>跳過（Enter/空白）</button>` : ""}
+            ${logoTransitionMessageMarkup(options.message || "")}
+            ${safeDirection === "in" ? `<button class="secondary logo-transition-skip" type="button" data-logo-skip>\u8df3\u904e</button>` : ""}
           </div>
         </div>
       `;

@@ -1512,7 +1512,7 @@
         : directionFromSourceToTarget(source, target, ownerDirection(owner));
 
       if (character.id === "lobster") {
-        const fistStepMs = ultimateSetting(character.id, "fistStepMs", 35.4375);
+        const fistStepMs = ultimateSetting(character.id, "fistStepMs", 36);
         const volleys = Math.max(1, Math.round(ultimateSetting(character.id, "volleyCount", 2)));
         const contactDamage = bigDamage * ultimateSetting(character.id, "contactDamageMultiplier", 0.6);
         const contactRadius = Math.max(0.25, ultimateSetting(character.id, "contactRadius", 1));
@@ -2482,7 +2482,7 @@
       if (gameOver) return;
       clearGameOverSettlementTimer();
       const shouldContinueRelay = relayMode && (computerBattleMode || playerAutoMode);
-      const endedInAutoMode = computerBattleMode || playerAutoMode;
+      const endedInAutoMode = isPlayerAutoControlActive();
       const shouldUseGameOverLogo = !endedInAutoMode && !shouldContinueRelay && !HexSnakeReplay.isPlaybackMode();
       const nextRelayStartOptions = computerBattleMode
         ? { computerBattle: true }
@@ -2546,7 +2546,14 @@
         ? `${scoreText}。${resultReason} 接力賽：P1 ${relayPlayerWins} 勝，P2 ${relayComputerWins} 勝，平手 ${relayDraws}。`
         : `${scoreText}。${resultReason}`;
       overlayText.hidden = true;
-      if (shouldUseGameOverLogo) showLogoTransition("in");
+      if (shouldUseGameOverLogo) {
+        const winnerLabel = winnerOwner === "player" ? "P1" : winnerOwner === "computer" ? "P2" : null;
+        const winnerCharacter = winnerOwner ? characterFor(winnerOwner) : null;
+        const winnerMessage = winnerOwner
+          ? `\u606d\u559c ${winnerLabel}\uff08${winnerCharacter?.name || "\u96a8\u6a5f\u9078\u64c7"}\uff09\u7372\u52dd`
+          : "\u672c\u5c40\u5e73\u624b";
+        showLogoTransition("in", { message: winnerMessage });
+      }
       cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(loop);
     }
