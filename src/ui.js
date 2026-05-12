@@ -1884,15 +1884,19 @@ function renderWinnerPortrait(owner, playerLost = false, computerLost = false) {
   winnerPortrait.hidden = false;
   hideCharacterStage();
   winnerPortrait.innerHTML = `
-        <div class="portrait-pair">
-          <div class="fighter-portrait result-portrait ${owner === "player" ? "is-winner" : ""} ${playerPose === "defeat" ? "is-defeated" : ""}" data-owner="player" data-result-owner="player" data-owner-mark="${ownerMeta("player").mark}" title="選擇 P1 角色" style="${characterStyle(playerCharacter, "player")}">
-            <span class="result-badge">${playerResult}</span>
-            ${fighterArt(playerCharacter, playerPose, true)}
+        <div class="portrait-pair result-pair">
+          <div class="result-entry ${owner === "player" ? "is-winner" : ""} ${playerPose === "defeat" ? "is-defeated" : ""}" data-owner="player" data-result-owner="player" title="選擇 P1 角色" style="${characterStyle(playerCharacter, "player")}">
+            <div class="fighter-portrait result-portrait ${owner === "player" ? "is-winner" : ""} ${playerPose === "defeat" ? "is-defeated" : ""}" data-owner="player" data-owner-mark="${ownerMeta("player").mark}">
+              <span class="result-badge">${playerResult}</span>
+              ${fighterArt(playerCharacter, playerPose, true)}
+            </div>
             <span class="result-quote">「${resultLineForCharacter(playerCharacter, playerPose)}」</span>
           </div>
-          <div class="fighter-portrait result-portrait ${owner === "computer" ? "is-winner" : ""} ${computerPose === "defeat" ? "is-defeated" : ""}" data-owner="computer" data-result-owner="computer" data-owner-mark="${ownerMeta("computer").mark}" title="選擇 P2 角色" style="${characterStyle(computerCharacter, "computer")}">
-            <span class="result-badge">${computerResult}</span>
-            ${fighterArt(computerCharacter, computerPose, true)}
+          <div class="result-entry ${owner === "computer" ? "is-winner" : ""} ${computerPose === "defeat" ? "is-defeated" : ""}" data-owner="computer" data-result-owner="computer" title="選擇 P2 角色" style="${characterStyle(computerCharacter, "computer")}">
+            <div class="fighter-portrait result-portrait ${owner === "computer" ? "is-winner" : ""} ${computerPose === "defeat" ? "is-defeated" : ""}" data-owner="computer" data-owner-mark="${ownerMeta("computer").mark}">
+              <span class="result-badge">${computerResult}</span>
+              ${fighterArt(computerCharacter, computerPose, true)}
+            </div>
             <span class="result-quote">「${resultLineForCharacter(computerCharacter, computerPose)}」</span>
           </div>
         </div>
@@ -2115,7 +2119,7 @@ function rerenderPortraitSurfaces() {
         '[data-result-owner="computer"]',
       );
       const winner =
-        winnerPortrait.querySelector(".result-portrait.is-winner")?.dataset
+        winnerPortrait.querySelector(".result-entry.is-winner")?.dataset
           .resultOwner || null;
       renderWinnerPortrait(
         winner,

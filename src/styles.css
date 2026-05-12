@@ -3663,6 +3663,14 @@
       overflow: hidden;
     }
 
+    .result-entry {
+      min-width: 0;
+      display: grid;
+      gap: 7px;
+      align-content: start;
+      cursor: pointer;
+    }
+
     #winnerPortrait {
       position: relative;
       z-index: 1;
@@ -3694,16 +3702,15 @@
     }
 
     .result-quote {
-      position: absolute;
-      left: 8px;
-      right: 8px;
-      bottom: 8px;
-      z-index: 4;
-      display: block;
+      display: grid;
+      place-items: center;
+      width: 100%;
+      min-height: 2.7em;
+      box-sizing: border-box;
       padding: 7px 9px;
       border-radius: 8px;
       border: 1px solid rgba(255, 255, 255, 0.18);
-      background: rgba(15, 23, 36, 0.78);
+      background: rgba(15, 23, 36, 0.74);
       color: #f8fafc;
       font-size: 0.78rem;
       font-weight: 850;
@@ -5929,6 +5936,18 @@
       .overlay.is-session-modal .portrait-pair .fighter-portrait {
         width: min(100%, 22dvh);
         justify-self: center;
+      }
+
+      .overlay.is-session-modal .result-entry {
+        gap: 5px;
+        min-width: 0;
+      }
+
+      .overlay.is-session-modal .result-quote {
+        min-height: 2.35em;
+        padding: 5px 6px;
+        font-size: 0.62rem;
+        line-height: 1.18;
       }
 
       .overlay.is-session-modal .intro-avatar-label-controls {
