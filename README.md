@@ -1,177 +1,189 @@
 # Hex Snake
 
-Hex Snake 是一款以六角格為核心的貪食蛇對戰遊戲。專案目前採用單頁 `HTML/CSS/JavaScript` 實作，搭配本機靜態伺服器、角色資料、平衡參數、AI 模擬與調校工具。
+## 1) 專案標題與簡介 (Title & Description)
 
-遊戲支援玩家對電腦的即時對戰、虛擬搖桿與 `AWEFXZ` 六方向鍵盤操作、角色選擇、頭像與音效資源、GM 除錯設定，以及用於驗證平衡性的自動模擬流程。
+`Hex Snake` 是一個在 HTML/CSS/JavaScript 打底下的網頁遊戲專案，核心玩法是「**六角格蜂巢棋盤**」上的蛇對戰。
 
-## 遊戲畫面
+遊戲支援：
 
-| 電腦版 | 手機版 |
-| --- | --- |
-| <img src="assets/screenshots/desktop-game.png" alt="Hex Snake 電腦版遊戲畫面" width="640"> | <img src="assets/screenshots/mobile-game.png" alt="Hex Snake 手機版遊戲畫面" width="240"> |
+- 角色選擇、角色對話/立繪資產動態載入
+- 人機對戰（P1 vs P2）
+- 進階控制設定（方向鍵綁定、特殊技能按鍵、左手模式）
+- 食物／資源系統、攻擊蓄力與冷卻機制、生命值與回合統計
+- 回放系統、重播封存、設定與戰績快取（`localStorage`）
+- AI 策略資料與模擬調參工作流（`tools/`）
 
-## 快速開始
+前端入口為 `index.html`，遊戲初始化於 `src/main.js`，並透過載入器動態注入 `src/` 目錄中的模組化腳本（`state`, `dom`, `ui`, `characters`, `audio`, `replay`, `ai`, `render`, `game`）。
 
-需求：
+## 2) 核心功能特性 (Features)
 
-- Node.js 18 或更新版本
+### 遊戲體驗
+
+- 六角格地圖的蛇行進與食物收集
+- P1/P2 狀態列（生命條、加速倍率、勝利指標、最佳紀錄）
+- 小技/大技與攻擊冷卻提示
+- 角色能力、勝負台詞、立繪切換流程
+
+### 角色與資源系統
+
+- `data/characters.json` 定義角色（名稱、外觀、技能、故事與結果台詞）
+- `data/balance.json` 定義難度參數、速度、食物、傷害、攻擊與生命回補邏輯
+- 遊戲啟動/重開時會套用預設角色與平衡參數
+
+### AI 與模擬工具
+
+- `tools/` 提供策略優化、模擬、對戰、回放與 QA 的腳本
+- 支援快速測試：`npm run test:quick`、`npm run test:smoke`
+- 支援完整模擬與策略實驗：`npm run simulate`、`npm run optimize:strategy`、`npm run simulate:ai-cross`
+
+### 建置與部署
+
+- `npm run build` 會將執行期資源複製至 `dist/`
+- 打包過程會：
+  - 僅納入執行期需要的 `src/data/assets` 資源
+  - 產生 `dist/build-asset-manifest.json`
+  - 可透過 `HEX_SNAKE_DIST_BUDGET_MB` 控制 `dist/` 大小上限
+- `.github/workflows/deploy.yml` 提供 GitHub Pages 部署流程
+
+## 3) 系統需求與安裝步驟 (Prerequisites & Installation)
+
+### 系統需求
+
+- Node.js 18+（建議 20）
 - npm
+- PowerShell（Windows）或 Bash（Linux/macOS）
 
-安裝依賴：
+### 安裝步驟
 
-```bash
+```powershell
+cd C:\Users\user\Documents\app\hex_snake
 npm install
 ```
 
-啟動開發伺服器：
+```bash
+cd /path/to/hex_snake
+npm install
+```
+
+> 使用既有 `package-lock.json` 的環境可改用 `npm ci`（更貼近 CI 行為）。
+
+## 4) 快速上手與使用範例 (Quick Start / Usage)
+
+### 開發模式（立即啟動）
 
 ```bash
 npm run dev
 ```
 
-預設位址：
-
-```text
-http://localhost:6287
-```
-
-指定連接埠：
+- 預設網址：`http://localhost:6287`
+- 預設主機：`0.0.0.0`
+- 可指定埠號：
 
 ```bash
 PORT=3000 npm run dev
 ```
 
-Windows PowerShell：
-
 ```powershell
-$env:PORT=3000; npm run dev
+$env:PORT=3000
+npm run dev
 ```
 
-## 建置與預覽
-
-產生 `dist/`：
+### 本機打包與測試靜態版
 
 ```bash
 npm run build
-```
-
-建置預設會檢查 `dist/` 是否小於等於 200 MB；若確認 artifact 成長是刻意的，可用環境變數調整：
-
-```powershell
-$env:HEX_SNAKE_DIST_BUDGET_MB=250; npm run build
-```
-
-從 `dist/` 啟動靜態伺服器：
-
-```bash
 npm start
 ```
 
-建置腳本會複製：
+`npm start` 會以 `dist/` 作為靜態根目錄（`--dist`）。
 
-- `index.html`
-- `assets/`
-- `data/`
+### 常用指令
 
-## 操作方式
+```bash
+npm run test
+npm run test:quick
+npm run test:smoke
+npm run simulate
+npm run simulate:run
+npm run simulate:jobs
+npm run simulate:scheduled
+npm run tune:balance
+npm run tune:ai-strategy
+npm run optimize:strategy
+npm run reports:dashboard
+npm run reports:dashboard:serve
+```
 
-- 移動：使用畫面上的六方向虛擬搖桿，或使用 `AWEFXZ` 鍵盤方向操作。
-- HP：上限依 `(蛇長 + 1) * 10` 計算。
-- 技能：小招消耗 1 枚炸彈與目前最高食物庫存 2 點；大招依照目前食物庫存與彈藥狀態判斷是否可用。
-- 設定：遊戲內可調整開局參數、角色、電腦難度、GM 模式與自動操作選項。
-- 自動對戰：可讓玩家或電腦進入自動操作，用於觀察 AI 表現與平衡狀態。
+### 建議遊玩流程（快速）
 
-遊戲偏好和部分設定會儲存在瀏覽器 `localStorage`。
+1. 執行 `npm run dev`
+2. 開啟 `http://localhost:6287`
+3. 點擊 `Start` 開局
+4. 進入設定可調整：
+   - 難度
+   - 角色
+   - 按鍵綁定與控制模式
 
-## 專案結構
+## 5) 專案架構說明 (Project Structure)
 
 ```text
 .
-├── assets/                 # 頭像、圖片、角色音效等遊戲資源
-├── data/
-│   ├── balance.json        # 棋盤、速度、攻擊、食物、資源等平衡參數
-│   ├── characters.json     # 角色 ID、外觀、頭像、技能與偏好資料
-│   └── high-ai-strategies.json
-├── doc/                    # 角色、音效、後續任務等設計文件
-├── reports/                # 模擬、調校、評估輸出
-├── skills/                 # Codex 工作流程輔助資料
-├── tools/                  # 測試、模擬、AI 策略、調校和資源產生腳本
-├── build.js                # 建置腳本
-├── index.html              # 遊戲主體
-├── package.json
-└── server.js               # 本機靜態伺服器
+├─ index.html              # 遊戲頁面、DOM 結構、載入器入口
+├─ server.js               # 本機靜態伺服器（支援 --dist、PORT、HOST）
+├─ build.js                # 建置腳本（輸出 dist/、資源清單與大小檢查）
+├─ package.json            # Scripts / 套件依賴定義
+├─ package-lock.json
+├─ dist/                   # 打包輸出（可選，通常由 CI/發佈使用）
+├─ src/                    # 遊戲核心邏輯
+│  ├─ main.js              # 載入進度、載入各模組腳本
+│  ├─ game.js              # 遊戲核心規則與回合流程
+│  ├─ state.js             # 遊戲狀態模型
+│  ├─ render.js            # 畫面與動畫繪製
+│  ├─ ui.js                # 畫面控制、HUD 與操作介面
+│  ├─ dom.js               # DOM 互動綁定
+│  ├─ characters.js        # 角色資料與選擇流程
+│  ├─ audio.js             # 音效載入與播放控制
+│  ├─ ai.js                # AI 決策邏輯
+│  ├─ replay.js            # 回放紀錄與回放匯入/重播
+├─ data/                   # 遊戲資料（JSON）
+│  ├─ characters.json
+│  ├─ balance.json
+│  ├─ high-ai-strategies.json
+│  └─ extreme-ai-strategies.json
+├─ assets/                 # 視覺素材與音訊
+│  ├─ logos/
+│  ├─ portraits/
+│  ├─ audio/
+│  └─ screenshots/
+├─ tools/                  # AI 調參、模擬、回歸測試工具
+│  ├─ sim-core.js
+│  ├─ simulate-balance.js
+│  ├─ run-tests.js
+│  ├─ run-strategy-optimization.js
+│  ├─ tune-*.js
+│  └─ ...
+├─ doc/                    # 專案操作與策略文件
+│  ├─ follow-up-execution-list.md
+│  ├─ legacy-global-dependencies.md
+│  ├─ strategy-optimization-sop.md
+│  └─ ...
+├─ reports/                # 模擬/訓練結果輸出與歷程快照
+├─ .github/
+│  └─ workflows/
+│     └─ deploy.yml       # GitHub Pages CI/CD
+└─ README.md
 ```
 
-## 常用指令
+## 6) 授權條款 (License)
 
-```bash
-npm run dev                  # 啟動開發伺服器
-npm run build                # 建置 dist/
-npm start                    # 從 dist/ 啟動伺服器
-npm test                     # 執行完整測試
-npm run test:quick           # 執行快速測試
-npm run test:smoke           # 執行瀏覽器 smoke test
-npm run audit:globals        # 產生 legacy global 依賴盤點
-npm run simulate             # 執行平衡模擬
-npm run simulate:run         # 執行排程模擬任務
-npm run simulate:jobs        # 檢視模擬任務列表
-npm run simulate:scheduled   # 啟動模擬排程器
-npm run simulate:ai-cross    # 執行 AI 交叉對戰
-npm run tune:balance         # 調整平衡參數
-npm run tune:lobster-palm-draw # 調整智蝦追蹤拳對局參數
-npm run tune:ai-strategy     # 調整 AI 策略
-npm run optimize:strategy    # 執行策略最佳化
-npm run evaluate:basic-gate  # 評估基礎 AI 門檻
-npm run reset:high-ai-basic  # 重設高階 AI 基礎策略
-npm run apply:ai-strategy    # 套用 AI 策略
-npm run reports:dashboard    # 產生策略與模擬報表 dashboard
-npm run reports:dashboard:serve # 啟動報表 dashboard server
-npm run generate:sfx         # 產生角色音效
-npm run characters:show      # 在 Windows PowerShell 正確讀取角色 JSON
-npm run data:check           # 檢查 data/ 與 dist/data/ 的 UTF-8 JSON
-```
+本專案採用 **Apache License 2.0**。  
+授權重點（簡版）：
 
-## 遊戲與資料設定
+- 可自由使用、修改、發佈及商用
+- 需保留原始版權與授權聲明
+- 修改後須註明變更
+- 若有修改並分發衍生作品，需包含相同授權
 
-主要資料都放在 `data/`：
+完整條文請參考官方版本：<https://www.apache.org/licenses/LICENSE-2.0>  
+建議在專案根目錄新增 `LICENSE` 檔，並放入 Apache 2.0 全文以完整對外釋出。
 
-- `data/balance.json`：預設棋盤大小、食物數量、初始速度、初始長度、資源上限、招式成本、移動速度、攻擊範圍、冷卻、暈眩、角色大招倍率等。
-- `data/characters.json`：角色 ID、代表色、頭像路徑、角色故事、招式文字、顏色設定與食物偏好。
-- `data/high-ai-strategies.json`：高階 AI 策略資料。
-
-修改資料後建議先跑快速測試：
-
-```bash
-npm run data:check
-npm run test:quick
-```
-
-Windows PowerShell 5.x 的預設 code page 可能會把無 BOM 的 UTF-8 誤判成系統碼頁，導致 `Get-Content data/characters.json` 看起來像亂碼。檔案仍應維持 UTF-8 without BOM，以免 Node 腳本直接 `JSON.parse` 時遇到 BOM；讀取角色資料請用：
-
-```powershell
-npm run characters:show
-```
-
-如果改動影響戰鬥規則、AI 或平衡參數，再補跑：
-
-```bash
-npm test
-npm run simulate
-```
-
-## 開發備註
-
-- `index.html` 是目前主要遊戲入口，包含介面、狀態管理、輸入、戰鬥流程與資源載入邏輯。
-- `server.js` 是輕量靜態伺服器，預設監聽 `0.0.0.0:6287`，可透過 `PORT` 和 `HOST` 環境變數調整。
-- `build.js` 只負責複製前端入口、資源與資料到 `dist/`。
-- `tools/sim-core.js` 提供模擬核心，多個測試、評估、調校腳本會共用它。
-- 遊戲設定、GM 選項與部分偏好會使用瀏覽器 `localStorage` 儲存。
-
-## 相關文件
-
-- `doc/follow-up-execution-list.md`：後續開發與驗證事項
-- `doc/legacy-global-dependencies.md`：legacy eval 載入順序與跨檔 global 依賴盤點
-- `doc/strategy-optimization-sop.md`：AI 策略最佳化、target-vs-baseline 驗證與套用流程
-- `doc/character-move-details.md`：角色招式與技能細節
-- `doc/character-voice-design.md`：角色語音與音效設計
-- `doc/chibi-portrait-effect-prompts.md`：Q 版頭像效果提示詞
