@@ -3930,6 +3930,7 @@
 
     .overlay.intro-details .fighter-portrait.is-random {
       --random-portrait-mark-size: 100%;
+      --random-portrait-mark-font-size: clamp(4.25rem, 16vw, 8rem);
       cursor: default;
     }
 
