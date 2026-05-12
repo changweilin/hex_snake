@@ -3278,6 +3278,14 @@
       pointer-events: none;
     }
 
+    .character-stage.is-overlay-visible {
+      z-index: calc(var(--z-session-overlay) + 20);
+    }
+
+    .character-stage.is-overlay-visible .fighter-card {
+      pointer-events: none;
+    }
+
     .fighter-card {
       position: relative;
       min-width: 0;

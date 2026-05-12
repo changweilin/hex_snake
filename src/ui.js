@@ -1062,8 +1062,6 @@ function showLogoTransition(direction = "out", options = {}) {
   replayArchiveButton.hidden = true;
   introCloseButton.hidden = true;
   winnerPortrait.hidden = false;
-  characterStage.hidden = true;
-  characterStage.innerHTML = "";
   winnerPortrait.innerHTML = `
         <div class="logo-transition-card" data-logo-transition="${safeDirection}" aria-live="polite">
           <div class="logo-spiral-shell" aria-hidden="true">
@@ -1617,6 +1615,7 @@ function showTutorial(startIndex = 0) {
   setTutorialChrome();
   overlay.classList.add("show");
   characterStage.hidden = true;
+  setCharacterStageOverlayMode(false);
   renderTutorialSlide();
 }
 
@@ -1820,10 +1819,16 @@ function setIntroDetailsChrome() {
   introCloseButton.hidden = false;
 }
 
-function buildCharacterStage() {
+function setCharacterStageOverlayMode(active) {
+  characterStage.classList.toggle("is-overlay-visible", Boolean(active));
+}
+
+function buildCharacterStage(options = {}) {
   characterStage.innerHTML = ["player", "computer"]
     .map((owner) => {
-      const character = characterFor(owner);
+      const character = options.startLogoCharacters
+        ? startLogoCharacterFor(owner)
+        : characterFor(owner);
       const holdHint = owner === "player" ? ' title="長按施放攻擊"' : "";
       return `
           <div class="fighter-card" data-owner="${owner}" style="${characterStyle(character, owner)}">
@@ -1839,12 +1844,21 @@ function buildCharacterStage() {
     .join("");
 }
 
+function showCharacterStage(options = {}) {
+  if (options.rebuild !== false || !characterStage.innerHTML) {
+    buildCharacterStage(options);
+  }
+  characterStage.hidden = false;
+  setCharacterStageOverlayMode(options.overlay);
+}
+
 function renderWinnerPortrait(owner, playerLost = false, computerLost = false) {
   setOverlayChromeVisible(true);
   if (!owner && !playerLost && !computerLost) {
     winnerPortrait.hidden = true;
     winnerPortrait.innerHTML = "";
     characterStage.hidden = false;
+    setCharacterStageOverlayMode(false);
     return;
   }
   const playerPose = owner === "player" ? "victory" : "defeat";
@@ -1863,8 +1877,7 @@ function renderWinnerPortrait(owner, playerLost = false, computerLost = false) {
     : "P2 平手";
   overlay.classList.add("is-session-modal");
   winnerPortrait.hidden = false;
-  characterStage.hidden = true;
-  characterStage.innerHTML = "";
+  showCharacterStage({ rebuild: false, overlay: true });
   winnerPortrait.innerHTML = `
         <div class="portrait-pair">
           <div class="fighter-portrait result-portrait ${owner === "player" ? "is-winner" : ""} ${playerPose === "defeat" ? "is-defeated" : ""}" data-owner="player" data-result-owner="player" data-owner-mark="${ownerMeta("player").mark}" title="選擇 P1 角色" style="${characterStyle(playerCharacter, "player")}">
@@ -1888,6 +1901,7 @@ function renderIntroPortraits(showDetails = introDetailsOpen) {
   const selectedCharacter = selectedCharacterFor(selectedPortraitOwner);
   winnerPortrait.hidden = false;
   characterStage.hidden = true;
+  setCharacterStageOverlayMode(false);
   characterStage.innerHTML = "";
   if (!showDetails) {
     winnerPortrait.innerHTML = `
@@ -2682,4 +2696,3 @@ function formatTime(ms) {
   const seconds = totalSeconds % 60;
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
-

@@ -624,7 +624,7 @@
         if (!canRestartAfterGameOver()) return false;
         returnToStartScreen();
       }
-      characterStage.hidden = true;
+      showCharacterStage({ startLogoCharacters: true, overlay: true });
       startLogoCountdownPending = true;
       setSettingsLocked(true);
       setStatus("開局倒數中：3 秒後開始。");
@@ -675,7 +675,7 @@
       setSettingsLocked(true);
       setStatus("對戰中：吃食物累積能量，集滿可獲得炸彈。");
       overlay.classList.remove("show");
-      characterStage.hidden = false;
+      showCharacterStage({ rebuild: false, overlay: false });
       updateAutoBattleControls();
       lastPlayerStep = performance.now();
       lastComputerStep = lastPlayerStep;
@@ -2251,7 +2251,7 @@
       gameOverSettlementPending = false;
       gameOverLogoTransitionEndsAt = 0;
       if (!gameOver || running || HexSnakeReplay.isPlaybackMode()) return;
-      characterStage.hidden = true;
+      showCharacterStage({ rebuild: false, overlay: true });
       clearLogoTransition();
       renderWinnerPortrait(gameOverResultOwner, gameOverPlayerLost, gameOverComputerLost);
       overlay.classList.add("show");
@@ -2495,7 +2495,7 @@
       playerAutoMode = false;
       computerBattleManualOverride = false;
       gameOver = true;
-      characterStage.hidden = true;
+      showCharacterStage({ rebuild: false, overlay: true });
       gameOverContinuousVisualDeadlineAt = gameOverAt + gameOverContinuousVisualMaxWaitMs;
       gameOverLogoTransitionEndsAt = shouldUseGameOverLogo ? gameOverAt + logoTransitionDurationMs : 0;
       updateAutoBattleControls();
@@ -4010,7 +4010,7 @@
         paused = false;
         setStatus("對戰中：吃食物累積能量，集滿可獲得炸彈。");
         overlay.classList.remove("show");
-        characterStage.hidden = false;
+        showCharacterStage({ rebuild: false, overlay: false });
         lastPlayerStep = performance.now();
         lastComputerStep = lastPlayerStep;
         lastTimerFrame = lastPlayerStep;
@@ -4630,6 +4630,7 @@
       if (isEffectComparisonMode()) {
         overlay.classList.remove("show");
         characterStage.hidden = true;
+        setCharacterStageOverlayMode(false);
         setStatus("Skill effect comparison mode.");
         cancelAnimationFrame(rafId);
         rafId = requestAnimationFrame(comparisonLoop);
