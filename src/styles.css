@@ -3924,7 +3924,8 @@
       place-items: center;
       overflow: hidden;
       cursor: default;
-      --random-portrait-mark-size: 96%;
+      --random-portrait-mark-size: 100%;
+      --random-portrait-mark-font-size: clamp(3.4rem, 13vw, 6.4rem);
     }
 
     .overlay.intro-details .fighter-portrait.is-random {
@@ -3943,10 +3944,20 @@
         radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.34), transparent 24%),
         color-mix(in srgb, var(--fighter-color), #101720 26%);
       color: var(--ink);
-      font-size: clamp(2.4rem, 9vw, 4.8rem);
+      font-size: var(--random-portrait-mark-font-size, clamp(2.4rem, 9vw, 4.8rem));
       font-weight: 950;
       line-height: 1;
       box-shadow: 0 18px 45px rgba(0, 0, 0, 0.32);
+    }
+
+    .fighter-portrait.is-random .random-portrait-mark {
+      width: var(--random-portrait-mark-size);
+      height: var(--random-portrait-mark-size);
+      box-sizing: border-box;
+      place-self: center;
+      border-radius: inherit;
+      animation: none;
+      transform: none;
     }
 
     .random-portrait-mark.intro-avatar-logo-mark {
@@ -3960,6 +3971,11 @@
       width: 90%;
       height: 90%;
       animation: none;
+    }
+
+    .overlay.intro-details .fighter-portrait.is-random .random-portrait-mark {
+      width: var(--random-portrait-mark-size);
+      height: var(--random-portrait-mark-size);
     }
 
     .portrait-controls {
