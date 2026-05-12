@@ -2251,7 +2251,7 @@
       gameOverSettlementPending = false;
       gameOverLogoTransitionEndsAt = 0;
       if (!gameOver || running || HexSnakeReplay.isPlaybackMode()) return;
-      showCharacterStage({ rebuild: false, overlay: true });
+      hideCharacterStage();
       clearLogoTransition();
       renderWinnerPortrait(gameOverResultOwner, gameOverPlayerLost, gameOverComputerLost);
       overlay.classList.add("show");
@@ -2495,7 +2495,8 @@
       playerAutoMode = false;
       computerBattleManualOverride = false;
       gameOver = true;
-      showCharacterStage({ rebuild: false, overlay: true });
+      if (shouldUseGameOverLogo) showCharacterStage({ rebuild: false, overlay: true });
+      else hideCharacterStage();
       gameOverContinuousVisualDeadlineAt = gameOverAt + gameOverContinuousVisualMaxWaitMs;
       gameOverLogoTransitionEndsAt = shouldUseGameOverLogo ? gameOverAt + logoTransitionDurationMs : 0;
       updateAutoBattleControls();

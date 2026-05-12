@@ -1852,6 +1852,11 @@ function showCharacterStage(options = {}) {
   setCharacterStageOverlayMode(options.overlay);
 }
 
+function hideCharacterStage() {
+  characterStage.hidden = true;
+  setCharacterStageOverlayMode(false);
+}
+
 function renderWinnerPortrait(owner, playerLost = false, computerLost = false) {
   setOverlayChromeVisible(true);
   if (!owner && !playerLost && !computerLost) {
@@ -1877,7 +1882,7 @@ function renderWinnerPortrait(owner, playerLost = false, computerLost = false) {
     : "P2 平手";
   overlay.classList.add("is-session-modal");
   winnerPortrait.hidden = false;
-  showCharacterStage({ rebuild: false, overlay: true });
+  hideCharacterStage();
   winnerPortrait.innerHTML = `
         <div class="portrait-pair">
           <div class="fighter-portrait result-portrait ${owner === "player" ? "is-winner" : ""} ${playerPose === "defeat" ? "is-defeated" : ""}" data-owner="player" data-result-owner="player" data-owner-mark="${ownerMeta("player").mark}" title="選擇 P1 角色" style="${characterStyle(playerCharacter, "player")}">
@@ -1900,8 +1905,7 @@ function renderIntroPortraits(showDetails = introDetailsOpen) {
   else setIntroLobbyChrome();
   const selectedCharacter = selectedCharacterFor(selectedPortraitOwner);
   winnerPortrait.hidden = false;
-  characterStage.hidden = true;
-  setCharacterStageOverlayMode(false);
+  hideCharacterStage();
   characterStage.innerHTML = "";
   if (!showDetails) {
     winnerPortrait.innerHTML = `

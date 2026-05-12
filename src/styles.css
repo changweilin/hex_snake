@@ -3278,6 +3278,10 @@
       pointer-events: none;
     }
 
+    .character-stage[hidden] {
+      display: none;
+    }
+
     .character-stage.is-overlay-visible {
       z-index: calc(var(--z-session-overlay) + 20);
     }
