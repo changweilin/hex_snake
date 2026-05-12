@@ -624,6 +624,7 @@
         if (!canRestartAfterGameOver()) return false;
         returnToStartScreen();
       }
+      characterStage.hidden = true;
       startLogoCountdownPending = true;
       setSettingsLocked(true);
       setStatus("開局倒數中：3 秒後開始。");
@@ -2250,6 +2251,7 @@
       gameOverSettlementPending = false;
       gameOverLogoTransitionEndsAt = 0;
       if (!gameOver || running || HexSnakeReplay.isPlaybackMode()) return;
+      characterStage.hidden = true;
       clearLogoTransition();
       renderWinnerPortrait(gameOverResultOwner, gameOverPlayerLost, gameOverComputerLost);
       overlay.classList.add("show");
@@ -2493,6 +2495,7 @@
       playerAutoMode = false;
       computerBattleManualOverride = false;
       gameOver = true;
+      characterStage.hidden = true;
       gameOverContinuousVisualDeadlineAt = gameOverAt + gameOverContinuousVisualMaxWaitMs;
       gameOverLogoTransitionEndsAt = shouldUseGameOverLogo ? gameOverAt + logoTransitionDurationMs : 0;
       updateAutoBattleControls();

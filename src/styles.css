@@ -17,6 +17,7 @@
       --z-settings-tools: 1200;
       --z-settings-open: 1210;
       --z-settings-modal: 1300;
+      --z-page-loading: 2000;
     }
 
     * {
@@ -43,6 +44,92 @@
       display: grid;
       place-items: center;
       padding: 18px;
+    }
+
+    .page-loading-progress {
+      position: fixed;
+      top: max(10px, env(safe-area-inset-top));
+      left: 50%;
+      z-index: var(--z-page-loading);
+      width: min(520px, calc(100vw - 28px));
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      padding: 9px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 999px;
+      background:
+        linear-gradient(135deg, rgba(32, 38, 51, 0.96), rgba(17, 23, 32, 0.92)),
+        rgba(17, 23, 32, 0.92);
+      box-shadow: 0 16px 46px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(14px);
+      opacity: 1;
+      pointer-events: none;
+      transform: translateX(-50%) translateY(0);
+      transition: opacity 220ms ease, transform 220ms ease, visibility 220ms ease;
+    }
+
+    .page-loading-progress[hidden] {
+      display: none;
+    }
+
+    .page-loading-progress.is-complete {
+      opacity: 0;
+      visibility: hidden;
+      transform: translateX(-50%) translateY(-12px);
+    }
+
+    .page-loading-track {
+      position: relative;
+      height: 9px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(7, 10, 16, 0.68);
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.44);
+    }
+
+    .page-loading-bar {
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: var(--page-loading-progress, 0%);
+      min-width: 10px;
+      border-radius: inherit;
+      background:
+        linear-gradient(90deg, #f59e0b, #facc15 44%, #a78bfa),
+        var(--accent);
+      box-shadow: 0 0 18px rgba(245, 158, 11, 0.48);
+      transition: width 180ms ease-out, background 180ms ease;
+    }
+
+    .page-loading-bar::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.48), transparent);
+      transform: translateX(-100%);
+      animation: page-loading-shine 950ms ease-in-out infinite;
+    }
+
+    .page-loading-label {
+      color: var(--ink);
+      font-size: 0.76rem;
+      font-weight: 900;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .page-loading-progress.is-error .page-loading-bar {
+      background: linear-gradient(90deg, #f06464, #fca5a5);
+      box-shadow: 0 0 18px rgba(240, 100, 100, 0.46);
+    }
+
+    @keyframes page-loading-shine {
+      to {
+        transform: translateX(120%);
+      }
     }
 
     .app {

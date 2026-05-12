@@ -10,6 +10,12 @@
   <link rel="stylesheet" href="src/styles.css">
 </head>
 <body>
+  <div class="page-loading-progress" id="pageLoadingProgress" role="progressbar" aria-label="Page loading progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+    <div class="page-loading-track" aria-hidden="true">
+      <span class="page-loading-bar"></span>
+    </div>
+    <span class="page-loading-label" id="pageLoadingLabel">Loading...</span>
+  </div>
   <main class="app" aria-label="六角貪食蛇對戰">
     <section class="stage">
       <header class="topbar">
