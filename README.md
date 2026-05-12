@@ -4,6 +4,12 @@ Hex Snake 是一款以六角格為核心的貪食蛇對戰遊戲。專案目前�
 
 遊戲支援玩家對電腦的即時對戰、虛擬搖桿與 `AWEFXZ` 六方向鍵盤操作、角色選擇、頭像與音效資源、GM 除錯設定，以及用於驗證平衡性的自動模擬流程。
 
+## 遊戲畫面
+
+| 電腦版 | 手機版 |
+| --- | --- |
+| <img src="assets/screenshots/desktop-game.png" alt="Hex Snake 電腦版遊戲畫面" width="640"> | <img src="assets/screenshots/mobile-game.png" alt="Hex Snake 手機版遊戲畫面" width="240"> |
+
 ## 快速開始
 
 需求：
