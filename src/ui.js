@@ -1,4 +1,4 @@
-let minGridSize = 6;
+﻿let minGridSize = 6;
 let maxGridSize = 12;
 let minFoodCount = 1;
 let maxFoodCount = 4;
@@ -81,10 +81,10 @@ let defaultSettings = {
     protein: 0,
     fat: 0,
     fiber: 0,
-    carb: 0
+    carb: 0,
   },
   playerCharacterId: "dragon",
-  computerCharacterId: "moray"
+  computerCharacterId: "moray",
 };
 const randomCharacterChoiceId = "__random__";
 let gridSize = 10;
@@ -119,53 +119,89 @@ function applyBalanceConfig(config) {
   maxInitialLength = Math.max(maxInitialLength, maxFoodStock);
   foodEnergy = config.resources?.foodEnergy ?? foodEnergy;
   blackFoodEnergy = config.resources?.blackFoodEnergy ?? blackFoodEnergy;
-  singleColorStockGain = config.resources?.singleColorStockGain ?? singleColorStockGain;
-  dualColorStockGain = config.resources?.dualColorStockGain ?? dualColorStockGain;
-  favoriteFoodBonusChance = config.resources?.favoriteFoodBonusChance ?? favoriteFoodBonusChance;
-  balancedFoodBonusChance = config.resources?.balancedFoodBonusChance ?? balancedFoodBonusChance;
-  blackFoodBonusChance = config.resources?.blackFoodBonusChance ?? blackFoodBonusChance;
-  blackFoodDoubleBonusChance = config.resources?.blackFoodDoubleBonusChance ?? blackFoodDoubleBonusChance;
+  singleColorStockGain =
+    config.resources?.singleColorStockGain ?? singleColorStockGain;
+  dualColorStockGain =
+    config.resources?.dualColorStockGain ?? dualColorStockGain;
+  favoriteFoodBonusChance =
+    config.resources?.favoriteFoodBonusChance ?? favoriteFoodBonusChance;
+  balancedFoodBonusChance =
+    config.resources?.balancedFoodBonusChance ?? balancedFoodBonusChance;
+  blackFoodBonusChance =
+    config.resources?.blackFoodBonusChance ?? blackFoodBonusChance;
+  blackFoodDoubleBonusChance =
+    config.resources?.blackFoodDoubleBonusChance ?? blackFoodDoubleBonusChance;
   baseStepMs = config.movement?.baseStepMs ?? baseStepMs;
   moveBonusPerPoint = config.movement?.moveBonusPerPoint ?? moveBonusPerPoint;
   maxMoveBonus = config.movement?.maxMoveBonus ?? maxMoveBonus;
   targetMaxHex = config.movement?.targetMaxHex ?? targetMaxHex;
-  smallAttackFoodCost = config.attack?.smallAttackFoodCost ?? smallAttackFoodCost;
-  smallAttackBombCost = config.attack?.smallAttackBombCost ?? smallAttackBombCost;
+  smallAttackFoodCost =
+    config.attack?.smallAttackFoodCost ?? smallAttackFoodCost;
+  smallAttackBombCost =
+    config.attack?.smallAttackBombCost ?? smallAttackBombCost;
   bigAttackBombCost = config.attack?.bigAttackBombCost ?? bigAttackBombCost;
-  smallAttackDamageMultiplier = config.attack?.smallAttackDamageMultiplier ?? smallAttackDamageMultiplier;
-  bigAttackDamageMultiplier = config.attack?.bigAttackDamageMultiplier ?? bigAttackDamageMultiplier;
+  smallAttackDamageMultiplier =
+    config.attack?.smallAttackDamageMultiplier ?? smallAttackDamageMultiplier;
+  bigAttackDamageMultiplier =
+    config.attack?.bigAttackDamageMultiplier ?? bigAttackDamageMultiplier;
   baseAttackDelayMs = config.attack?.baseAttackDelayMs ?? baseAttackDelayMs;
-  baseAttackCooldownMs = config.attack?.baseAttackCooldownMs ?? baseAttackCooldownMs;
+  baseAttackCooldownMs =
+    config.attack?.baseAttackCooldownMs ?? baseAttackCooldownMs;
   baseBlastHexRadius = config.attack?.baseBlastHexRadius ?? baseBlastHexRadius;
-  proteinRangeBonusPerPoint = config.attack?.proteinRangeBonusPerPoint ?? proteinRangeBonusPerPoint;
+  proteinRangeBonusPerPoint =
+    config.attack?.proteinRangeBonusPerPoint ?? proteinRangeBonusPerPoint;
   blastDurationMs = config.attack?.blastDurationMs ?? blastDurationMs;
-  attackSpeedBonusPerPoint = config.attack?.attackSpeedBonusPerPoint ?? attackSpeedBonusPerPoint;
-  maxAttackSpeedBonus = config.attack?.maxAttackSpeedBonus ?? maxAttackSpeedBonus;
-  damageBonusPerPoint = config.attack?.damageBonusPerPoint ?? damageBonusPerPoint;
+  attackSpeedBonusPerPoint =
+    config.attack?.attackSpeedBonusPerPoint ?? attackSpeedBonusPerPoint;
+  maxAttackSpeedBonus =
+    config.attack?.maxAttackSpeedBonus ?? maxAttackSpeedBonus;
+  damageBonusPerPoint =
+    config.attack?.damageBonusPerPoint ?? damageBonusPerPoint;
   maxDamageBonus = config.attack?.maxDamageBonus ?? maxDamageBonus;
-  baseAttackStunChance = config.attack?.baseAttackStunChance ?? baseAttackStunChance;
-  attackStunChanceBonusPerPoint = config.attack?.attackStunChanceBonusPerPoint ?? attackStunChanceBonusPerPoint;
-  maxAttackStunChanceBonus = config.attack?.maxAttackStunChanceBonus ?? maxAttackStunChanceBonus;
+  baseAttackStunChance =
+    config.attack?.baseAttackStunChance ?? baseAttackStunChance;
+  attackStunChanceBonusPerPoint =
+    config.attack?.attackStunChanceBonusPerPoint ??
+    attackStunChanceBonusPerPoint;
+  maxAttackStunChanceBonus =
+    config.attack?.maxAttackStunChanceBonus ?? maxAttackStunChanceBonus;
   bodyHitStunChance = config.attack?.bodyHitStunChance ?? bodyHitStunChance;
-  bodyHitStunChanceBonusPerPoint = config.attack?.bodyHitStunChanceBonusPerPoint ?? bodyHitStunChanceBonusPerPoint;
-  bodyHitMaxStunChanceBonus = config.attack?.bodyHitMaxStunChanceBonus ?? bodyHitMaxStunChanceBonus;
+  bodyHitStunChanceBonusPerPoint =
+    config.attack?.bodyHitStunChanceBonusPerPoint ??
+    bodyHitStunChanceBonusPerPoint;
+  bodyHitMaxStunChanceBonus =
+    config.attack?.bodyHitMaxStunChanceBonus ?? bodyHitMaxStunChanceBonus;
   headHitStunChance = config.attack?.headHitStunChance ?? headHitStunChance;
-  headHitStunChanceBonusPerPoint = config.attack?.headHitStunChanceBonusPerPoint ?? headHitStunChanceBonusPerPoint;
-  headHitMaxStunChanceBonus = config.attack?.headHitMaxStunChanceBonus ?? headHitMaxStunChanceBonus;
+  headHitStunChanceBonusPerPoint =
+    config.attack?.headHitStunChanceBonusPerPoint ??
+    headHitStunChanceBonusPerPoint;
+  headHitMaxStunChanceBonus =
+    config.attack?.headHitMaxStunChanceBonus ?? headHitMaxStunChanceBonus;
   attackStunMs = config.attack?.attackStunMs ?? attackStunMs;
   attackSlowMs = config.attack?.attackSlowMs ?? attackSlowMs;
-  rangeDamageFalloffEnabled = config.attack?.rangeDamageFalloffEnabled ?? rangeDamageFalloffEnabled;
+  rangeDamageFalloffEnabled =
+    config.attack?.rangeDamageFalloffEnabled ?? rangeDamageFalloffEnabled;
   attackUltimateBalance = config.attack?.ultimates || attackUltimateBalance;
   collisionStunMs = config.collision?.collisionStunMs ?? collisionStunMs;
   collisionSlowMs = config.collision?.collisionSlowMs ?? collisionSlowMs;
-  maxCollisionParalysisMs = config.collision?.maxCollisionParalysisMs ?? maxCollisionParalysisMs;
+  maxCollisionParalysisMs =
+    config.collision?.maxCollisionParalysisMs ?? maxCollisionParalysisMs;
   hpPerSnakeUnit = config.health?.hpPerSnakeUnit ?? hpPerSnakeUnit;
   preferredFoodWeight = config.foodWeights?.preferred ?? preferredFoodWeight;
   otherFoodWeight = config.foodWeights?.other ?? otherFoodWeight;
-  balancedDualChance = config.foodWeights?.balancedDualChance ?? balancedDualChance;
-  blackSpecialChance = config.foodWeights?.blackSpecialChance ?? blackSpecialChance;
+  balancedDualChance =
+    config.foodWeights?.balancedDualChance ?? balancedDualChance;
+  blackSpecialChance =
+    config.foodWeights?.blackSpecialChance ?? blackSpecialChance;
   maxMatchMs = config.simulation?.maxMatchMs ?? maxMatchMs;
-  defaultSettings = { ...defaultSettings, ...(config.defaults || {}), initialStock: { ...defaultSettings.initialStock, ...(config.defaults?.initialStock || {}) } };
+  defaultSettings = {
+    ...defaultSettings,
+    ...(config.defaults || {}),
+    initialStock: {
+      ...defaultSettings.initialStock,
+      ...(config.defaults?.initialStock || {}),
+    },
+  };
   gridSize = defaultSettings.gridSize;
   radius = gridSize - 1;
   foodCount = defaultSettings.foodCount;
@@ -196,7 +232,7 @@ function applyBalanceConfig(config) {
   initialEnergyInput.value = defaultSettings.initialEnergy;
   initialBombsInput.max = maxAmmo;
   initialBombsInput.value = defaultSettings.initialBombs;
-  initialStockInputs.forEach(input => {
+  initialStockInputs.forEach((input) => {
     input.max = maxFoodStock;
     input.value = defaultSettings.initialStock[input.dataset.initialStock] || 0;
   });
@@ -220,29 +256,78 @@ const directions = [
   { q: 1, r: 0, angle: 30, key: "d", label: "右方" },
   { q: 0, r: 1, angle: 90, key: "x", label: "右下" },
   { q: -1, r: 1, angle: 150, key: "z", label: "左下" },
-  { q: -1, r: 0, angle: -150, key: "a", label: "左方" }
+  { q: -1, r: 0, angle: -150, key: "a", label: "左方" },
 ];
 const foodTypes = [
-  { id: "protein", label: "蛋白", name: "蛋白", colorName: "紅色", foodName: "蛋白", effect: "提升爆炸半徑，外圈按距離遞減傷害", color: "#ef4444", line: "#fecaca" },
-  { id: "fat", label: "脂肪", name: "脂肪", colorName: "黃色", foodName: "脂肪", effect: "提升攻擊傷害倍率", color: "#facc15", line: "#fef08a" },
-  { id: "fiber", label: "纖維", name: "纖維", colorName: "綠色", foodName: "纖維", effect: "提升移動速度並縮短招式冷卻", color: "#22c55e", line: "#bbf7d0" },
-  { id: "carb", label: "碳水", name: "碳水", colorName: "藍色", foodName: "碳水", effect: "加快攻擊施展速度，並提高命中暈眩機率", color: "#3b82f6", line: "#bfdbfe" }
+  {
+    id: "protein",
+    label: "蛋白",
+    name: "蛋白",
+    colorName: "紅色",
+    foodName: "蛋白",
+    effect: "提升爆炸半徑，外圈按距離遞減傷害",
+    color: "#ef4444",
+    line: "#fecaca",
+  },
+  {
+    id: "fat",
+    label: "脂肪",
+    name: "脂肪",
+    colorName: "黃色",
+    foodName: "脂肪",
+    effect: "提升攻擊傷害倍率",
+    color: "#facc15",
+    line: "#fef08a",
+  },
+  {
+    id: "fiber",
+    label: "纖維",
+    name: "纖維",
+    colorName: "綠色",
+    foodName: "纖維",
+    effect: "提升移動速度並縮短招式冷卻",
+    color: "#22c55e",
+    line: "#bbf7d0",
+  },
+  {
+    id: "carb",
+    label: "碳水",
+    name: "碳水",
+    colorName: "藍色",
+    foodName: "碳水",
+    effect: "加快攻擊施展速度，並提高命中暈眩機率",
+    color: "#3b82f6",
+    line: "#bfdbfe",
+  },
 ];
-const blackFoodType = { id: "black", label: "迷幻菇", name: "迷幻菇", colorName: "黑色", foodName: "迷幻菇", effect: "特殊食物；吃下後隨機補一種自然食物庫存，並獲得額外能量", color: "#050505", line: "#e5e7eb" };
+const blackFoodType = {
+  id: "black",
+  label: "迷幻菇",
+  name: "迷幻菇",
+  colorName: "黑色",
+  foodName: "迷幻菇",
+  effect: "特殊食物；吃下後隨機補一種自然食物庫存，並獲得額外能量",
+  color: "#050505",
+  line: "#e5e7eb",
+};
 const dualFoodName = "蟠桃(雙色)";
-const foodTypeById = new Map([...foodTypes, blackFoodType].map(type => [type.id, type]));
-const stockFoodTypeIds = foodTypes.map(type => type.id);
+const foodTypeById = new Map(
+  [...foodTypes, blackFoodType].map((type) => [type.id, type]),
+);
+const stockFoodTypeIds = foodTypes.map((type) => type.id);
 const foodLabels = {
   balanced: "均衡",
   protein: "蛋白",
   fat: "脂肪",
   fiber: "纖維",
   carb: "碳水",
-  black: "迷幻菇"
+  black: "迷幻菇",
 };
 
 function foodNameWithColor(type) {
-  return type?.colorName ? `${type.name}（${type.colorName}）` : type?.name || "";
+  return type?.colorName
+    ? `${type.name}（${type.colorName}）`
+    : type?.name || "";
 }
 
 function compactFoodTerms(text = "") {
@@ -268,10 +353,10 @@ const inlineFoodTerms = [
   ["dual", dualFoodName],
   ["black", foodNameWithColor(blackFoodType)],
   ["black", blackFoodType.name],
-  ...foodTypes.flatMap(type => [
+  ...foodTypes.flatMap((type) => [
     [type.id, foodNameWithColor(type)],
-    [type.id, type.name]
-  ])
+    [type.id, type.name],
+  ]),
 ].sort((a, b) => b[1].length - a[1].length);
 
 const inlineKeywordTerms = [
@@ -297,19 +382,23 @@ const inlineKeywordTerms = [
   "暈眩",
   "小招",
   "大招",
-  "落敗"
+  "落敗",
 ].sort((a, b) => b.length - a.length);
 
 const inlineTermPattern = new RegExp(
-  [...inlineFoodTerms.map(([, label]) => label), ...inlineKeywordTerms].map(escapeRegExp).join("|"),
-  "g"
+  [...inlineFoodTerms.map(([, label]) => label), ...inlineKeywordTerms]
+    .map(escapeRegExp)
+    .join("|"),
+  "g",
 );
-const inlineFoodTermByLabel = new Map(inlineFoodTerms.map(([id, label]) => [label, id]));
+const inlineFoodTermByLabel = new Map(
+  inlineFoodTerms.map(([id, label]) => [label, id]),
+);
 const inlineKeywordSet = new Set(inlineKeywordTerms);
 
 function formatInlineText(text = "") {
   if (!text) return "";
-  return compactFoodTerms(text).replace(inlineTermPattern, match => {
+  return compactFoodTerms(text).replace(inlineTermPattern, (match) => {
     const foodId = inlineFoodTermByLabel.get(match);
     if (foodId) return foodTermMarkup(foodId, match);
     if (inlineKeywordSet.has(match)) return keywordMarkup(match);
@@ -320,19 +409,21 @@ function formatInlineText(text = "") {
 function formatRichText(markup = "") {
   const parts = compactFoodTerms(markup).split(/(<[^>]+>)/g);
   let emphasizedDepth = 0;
-  return parts.map(part => {
-    if (!part) return "";
-    if (part.startsWith("<")) {
-      const tag = part.match(/^<\/?\s*([a-z0-9-]+)/i)?.[1]?.toLowerCase();
-      const isClosing = /^<\//.test(part);
-      if (tag === "strong" || tag === "b") {
-        emphasizedDepth += isClosing ? -1 : 1;
-        emphasizedDepth = Math.max(0, emphasizedDepth);
+  return parts
+    .map((part) => {
+      if (!part) return "";
+      if (part.startsWith("<")) {
+        const tag = part.match(/^<\/?\s*([a-z0-9-]+)/i)?.[1]?.toLowerCase();
+        const isClosing = /^<\//.test(part);
+        if (tag === "strong" || tag === "b") {
+          emphasizedDepth += isClosing ? -1 : 1;
+          emphasizedDepth = Math.max(0, emphasizedDepth);
+        }
+        return part;
       }
-      return part;
-    }
-    return emphasizedDepth > 0 ? part : formatInlineText(part);
-  }).join("");
+      return emphasizedDepth > 0 ? part : formatInlineText(part);
+    })
+    .join("");
 }
 
 function formatRuleNumber(value, fractionDigits = 1) {
@@ -350,13 +441,17 @@ function formatRuleSeconds(ms) {
 }
 
 function stockWith(typeId, amount = maxFoodStock) {
-  return Object.fromEntries(foodTypes.map(type => [type.id, type.id === typeId ? amount : 0]));
+  return Object.fromEntries(
+    foodTypes.map((type) => [type.id, type.id === typeId ? amount : 0]),
+  );
 }
 
 function foodEffectDescription(type) {
   if (!type) return "";
   if (type.id === "protein") {
-    const maxRadius = baseBlastHexRadius * (1 + Math.min(1, maxFoodStock * proteinRangeBonusPerPoint));
+    const maxRadius =
+      baseBlastHexRadius *
+      (1 + Math.min(1, maxFoodStock * proteinRangeBonusPerPoint));
     return `爆炸半徑由 ${formatRuleNumber(baseBlastHexRadius)} 成長到最多 ${formatRuleNumber(maxRadius)}，外圈按距離遞減傷害。`;
   }
   if (type.id === "fat") {
@@ -371,8 +466,22 @@ function foodEffectDescription(type) {
   }
   if (type.id === "carb") {
     const maxCast = attackSpeedMultiplier(stockWith("carb"));
-    const maxBodyStun = Math.min(1, bodyHitStunChance + Math.min(bodyHitMaxStunChanceBonus, maxFoodStock * bodyHitStunChanceBonusPerPoint));
-    const maxHeadStun = Math.min(1, headHitStunChance + Math.min(headHitMaxStunChanceBonus, maxFoodStock * headHitStunChanceBonusPerPoint));
+    const maxBodyStun = Math.min(
+      1,
+      bodyHitStunChance +
+        Math.min(
+          bodyHitMaxStunChanceBonus,
+          maxFoodStock * bodyHitStunChanceBonusPerPoint,
+        ),
+    );
+    const maxHeadStun = Math.min(
+      1,
+      headHitStunChance +
+        Math.min(
+          headHitMaxStunChanceBonus,
+          maxFoodStock * headHitStunChanceBonusPerPoint,
+        ),
+    );
     return `施展速度最多 ${formatRuleNumber(maxCast)}x；身體命中暈眩率最高 ${formatRulePercent(maxBodyStun)}，頭部命中最高 ${formatRulePercent(maxHeadStun)}。`;
   }
   if (type.id === "black") {
@@ -389,7 +498,7 @@ const poseAliases = {
   small: "small",
   big: "big",
   victory: "victory",
-  defeat: "defeat"
+  defeat: "defeat",
 };
 const portraitPoses = new Set(Object.keys(poseAliases));
 let characters = [];
@@ -408,7 +517,7 @@ const colors = {
   computerBodyLine: "#4c1d95",
   eye: "#10160f",
   target: "#fde68a",
-  blast: "#fb923c"
+  blast: "#fb923c",
 };
 let keyToDir = new Map(directions.map((dir, index) => [dir.key, index]));
 const defaultKeybinds = {
@@ -416,7 +525,7 @@ const defaultKeybinds = {
   bigAttack: "r",
   pause: " ",
   surrender: "t",
-  directions: directions.map(direction => direction.key)
+  directions: directions.map((direction) => direction.key),
 };
 let keybinds = loadKeybinds();
 let selectedAttackProfile = "small";
@@ -424,11 +533,11 @@ const keyboardTargetModes = ["head", "centroid", "food"];
 const keyboardTargetModeLabels = {
   head: "目標頭部",
   centroid: "目標身體",
-  food: "目標最近食物"
+  food: "目標最近食物",
 };
 let keyboardAttackAim = {
   small: { targetModeIndex: 0, direction: 0 },
-  big: { targetModeIndex: 0, direction: 0 }
+  big: { targetModeIndex: 0, direction: 0 },
 };
 let keyboardAttackPreview = null;
 let keyboardAttackPreviewTimer = null;
@@ -476,7 +585,9 @@ let paused = false;
 let computerBattleMode = false;
 let playerAutoMode = false;
 let computerBattleManualOverride = false;
-let computerBattleSpeed = normalizeAutoBattleSpeed(localStorage.getItem("hexSnakeAutoBattleSpeed"));
+let computerBattleSpeed = normalizeAutoBattleSpeed(
+  localStorage.getItem("hexSnakeAutoBattleSpeed"),
+);
 let relayModePreference = localStorage.getItem("hexSnakeRelayMode") === "1";
 let relayMode = false;
 let relayPlayerWins = 0;
@@ -574,7 +685,7 @@ const defaultPortraitVariantMode = "human";
 const portraitVariantLabels = {
   human: "擬人版",
   beast: "幻獸版",
-  chibi: "Q獸版"
+  chibi: "Q獸版",
 };
 const storedPortraitVariant = localStorage.getItem("hexSnakePortraitVariant");
 let portraitVariantMode = portraitVariantModes.includes(storedPortraitVariant)
@@ -588,12 +699,21 @@ let logoCountdownTimer = null;
 let logoTransitionSerial = 0;
 let startLogoCountdownPending = false;
 
-function fighterArt(character, pose = "idle", portrait = false, variant = "medium") {
+function fighterArt(
+  character,
+  pose = "idle",
+  portrait = false,
+  variant = "medium",
+) {
   const imageClass = `fighter-avatar-image${portrait ? " portrait" : ""}`;
   const loadMode = portrait || pose === "attack" ? "eager" : "lazy";
   const initialSize = variant === "small" ? "sm" : "md";
-  const src = portrait ? portraitUrl(character, pose, initialSize) : avatarUrl(character, initialSize);
-  const srcset = portrait ? portraitSrcset(character, pose) : avatarSrcset(character);
+  const src = portrait
+    ? portraitUrl(character, pose, initialSize)
+    : avatarUrl(character, initialSize);
+  const srcset = portrait
+    ? portraitSrcset(character, pose)
+    : avatarSrcset(character);
   return `
         <img
           class="${imageClass}"
@@ -634,7 +754,9 @@ function setImageAttributeIfChanged(image, name, value) {
 }
 
 function updateFighterPortraitImage(module, character, pose = "idle") {
-  let image = module.querySelector(".fighter-avatar-image[data-duel-avatar='true']");
+  let image = module.querySelector(
+    ".fighter-avatar-image[data-duel-avatar='true']",
+  );
   if (!image) {
     module.innerHTML = fighterPortraitImage(character, pose);
     return;
@@ -658,62 +780,124 @@ function characterStyle(character, owner = null) {
   return `--fighter-color:${character.color};--fighter-line:${character.line};--fighter-accent:${character.accent};${ownerVars}`;
 }
 
-const commonSmallMoveGuide = "小招是所有角色共用的基本爆破：按小招鍵或點「小招」時，會依 X 鍵選擇的小招目標施放；在棋盤短點一下則以手勢位置輔助瞄準。";
+const commonSmallMoveGuide =
+  "小招是所有角色共用的基本爆破：按小招鍵或點「小招」時，會依 X 鍵選擇的小招目標施放；在棋盤短點一下則以手勢位置輔助瞄準。";
 const characterMoveGuides = {
   dragon: {
     big: "按大招鍵或點「大招」會依 Y 鍵選擇的大招目標快速施放；也可在棋盤長按指定落點。白龍會在目標格降下<strong>靈息爆發</strong>，命中後留下<strong>持續 5 秒</strong>的靈息傷害區。",
-    tip: "長按棋盤可把落點放在敵方必經路線；第一波爆發傷害更高，持續區域能逼迫對手轉向。"
+    tip: "長按棋盤可把落點放在敵方必經路線；第一波爆發傷害更高，持續區域能逼迫對手轉向。",
   },
   sandworm: {
     big: "按大招鍵或點「大招」會依 Y 鍵選擇的大招目標快速施放；也可在棋盤長按指定突襲格。沙蟲會<strong>潛地延遲突襲</strong>，正中頭部會直接擊倒，正中身體會麻痺並中斷招式；擦邊仍依一般頭部/身體暈眩率判定。",
-    tip: "長按棋盤可預判敵方頭部下一步；施放後接近命中時會短暫潛地，可用來躲開危險。"
+    tip: "長按棋盤可預判敵方頭部下一步；施放後接近命中時會短暫潛地，可用來躲開危險。",
   },
   quetzal: {
     big: "按大招鍵、點「大招」，或在棋盤長按都會施放；羽蛇會沿自身蛇身留下<strong>持續 3 秒</strong>的<strong>藤沼區域</strong>，不需要指定落點，蛋白（紅色）庫存越高外擴傷害越完整，藤沼傷害不會造成暈眩。",
-    tip: "適合在敵方靠近你身體或追逐時施放，用身體路徑封鎖空間。"
+    tip: "適合在敵方靠近你身體或追逐時施放，用身體路徑封鎖空間。",
   },
   moray: {
     big: "在棋盤拖曳可指定電擊起點與方向，放開施放；按大招鍵或點「大招」則依 Y 鍵選擇的大招方向施放。電鰻會打出貫穿棋盤的<strong>8 段直線電擊</strong>，頭部與身體受到相同傷害，頭部命中的暈眩率較高且多段可堆疊。",
-    tip: "棋盤拖曳時，拖曳方向比落點更重要；沿敵方身體長軸掃線最容易命中多段。"
+    tip: "棋盤拖曳時，拖曳方向比落點更重要；沿敵方身體長軸掃線最容易命中多段。",
   },
   lobster: {
     big: "在棋盤拖曳可指定出拳方向，放開施放；按大招鍵或點「大招」則依 Y 鍵選擇的大招方向施放。智蝦會從頭部打出<strong>兩波追蹤連拳</strong>，第二波會從當下頭部重新出拳並重新追蹤轉折；拳路遇到第一個敵方蛇身會<strong>停下並爆發</strong>，小拳命中可能附加易傷，使下一次受到的傷害加倍。",
-    tip: "拖曳方向從自己頭部出拳；對準敵方頭部或彎折蛇身，兩波連拳更容易打滿。"
+    tip: "拖曳方向從自己頭部出拳；對準敵方頭部或彎折蛇身，兩波連拳更容易打滿。",
   },
   gu_king: {
     big: "按大招鍵或點「大招」會依 Y 鍵選擇的大招目標快速施放；也可在棋盤長按指定毒爆中心。蠱王會連續落下<strong>三段毒爆</strong>，後續每波會往傷害最大的相鄰格推進一格。",
-    tip: "長按棋盤可瞄準敵方必經格或被迫轉向的位置，讓三段毒爆覆蓋逃跑路線。"
-  }
+    tip: "長按棋盤可瞄準敵方必經格或被迫轉向的位置，讓三段毒爆覆蓋逃跑路線。",
+  },
 };
 
 function moveGuideFor(character) {
-  return characterMoveGuides[character.id] || {
-    big: "按大招鍵或點「大招」會依 Y 鍵選擇的大招目標快速施放；也可在棋盤長按或拖曳觸發<strong>角色大招</strong>。",
-    tip: "觀察敵方路線後再決定快速施放或手動指定，命中率會更高。"
-  };
+  return (
+    characterMoveGuides[character.id] || {
+      big: "按大招鍵或點「大招」會依 Y 鍵選擇的大招目標快速施放；也可在棋盤長按或拖曳觸發<strong>角色大招</strong>。",
+      tip: "觀察敵方路線後再決定快速施放或手動指定，命中率會更高。",
+    }
+  );
 }
 
 function characterStoryMarkup(character) {
-  const motto = character.motto ? `<p class="portrait-motto">「${character.motto}」</p>` : "";
-  const moves = character.smallMove && character.bigMove
-    ? `<div class="portrait-moves" aria-label="${character.name}招式與食補效果"><span>小招：${character.smallMove}</span><span>大招：${character.bigMove}</span><span>食補效果：${formatRichText(character.detail)}</span></div>`
+  const motto = character.motto
+    ? `<p class="portrait-motto">「${character.motto}」</p>`
     : "";
-  const story = (character.story || []).map(paragraph => `<p>${paragraph}</p>`).join("");
+  const moves =
+    character.smallMove && character.bigMove
+      ? `<div class="portrait-moves" aria-label="${character.name}招式與食補效果"><span>小招：${character.smallMove}</span><span>大招：${character.bigMove}</span><span>食補效果：${formatRichText(character.detail)}</span></div>`
+      : "";
+  const story = (character.story || [])
+    .map((paragraph) => `<p>${paragraph}</p>`)
+    .join("");
   return `${motto}${moves}${story}`;
 }
 
 function formatIntroMotto(motto) {
-  const lines = String(motto || "")
+  const text = String(motto || "")
     .trim()
-    .replace(/([，。！？；：、,.!?;:])\s*/g, "$1\n")
-    .split(/\n+/)
-    .map(line => line.trim())
-    .filter(Boolean);
-  return lines.map((line, index) => {
-    const prefix = index === 0 ? "「" : "　";
-    const suffix = index === lines.length - 1 ? "」" : "　";
-    return `${prefix}${line}${suffix}`;
-  }).join("<br>");
+    .replace(/\r\n?/g, "\n")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\s*\n+\s*/g, "\n");
+  const punctuation = /[，。！？；：、,.!?;:]/u;
+  const segments = [];
+  let segment = "";
+  for (const char of text) {
+    if (char === "\n") {
+      if (segment.trim()) segments.push(segment.trim());
+      segment = "";
+      continue;
+    }
+    segment += char;
+    if (punctuation.test(char)) {
+      segments.push(segment.trim());
+      segment = "";
+    }
+  }
+  if (segment.trim()) segments.push(segment.trim());
+  const units = segments.length ? segments : [text];
+  const measure = (value) => [...String(value || "").replace(/\s+/g, "")]
+    .length;
+  const splitUnit = (unit) => {
+    const chars = [...String(unit || "").trim()];
+    if (chars.length <= 1) return [chars.join(""), ""];
+    const center = Math.ceil(chars.length / 2);
+    let splitAt = center;
+    while (splitAt < chars.length && punctuation.test(chars[splitAt])) {
+      splitAt += 1;
+    }
+    if (splitAt >= chars.length) splitAt = center;
+    return [
+      chars.slice(0, splitAt).join("").trim(),
+      chars.slice(splitAt).join("").trim(),
+    ];
+  };
+  const lines =
+    units.length <= 1
+      ? splitUnit(units[0] || "")
+      : (() => {
+          let bestIndex = 1;
+          let bestScore = Infinity;
+          for (let index = 1; index < units.length; index += 1) {
+            const first = units.slice(0, index).join("");
+            const second = units.slice(index).join("");
+            const score = Math.abs(measure(first) - measure(second));
+            if (score < bestScore) {
+              bestScore = score;
+              bestIndex = index;
+            }
+          }
+          return [
+            units.slice(0, bestIndex).join(""),
+            units.slice(bestIndex).join(""),
+          ];
+        })();
+  return lines
+    .map((line, index) => {
+      const prefix = index === 0 ? "「" : "　";
+      const suffix = index === lines.length - 1 ? "」" : "　";
+      return `<span class="intro-avatar-motto-line">${prefix}${line}${suffix}</span>`;
+    })
+    .join("");
 }
 
 function logoTransitionClassNames() {
@@ -741,7 +925,10 @@ function clearLogoTransition() {
 }
 
 function isLogoTransitionActive() {
-  return overlay.classList.contains("logo-transition") || Boolean(logoTransitionTimer);
+  return (
+    overlay.classList.contains("logo-transition") ||
+    Boolean(logoTransitionTimer)
+  );
 }
 
 function logoTransitionDirection() {
@@ -750,10 +937,10 @@ function logoTransitionDirection() {
 }
 
 function logoPoint(radius, degrees) {
-  const radians = (degrees - 90) * Math.PI / 180;
+  const radians = ((degrees - 90) * Math.PI) / 180;
   return {
     x: 50 + Math.cos(radians) * radius,
-    y: 50 + Math.sin(radians) * radius
+    y: 50 + Math.sin(radians) * radius,
   };
 }
 
@@ -768,7 +955,7 @@ function logoSectorPath(innerRadius, outerRadius, startDegrees, endDegrees) {
       `M 50 50`,
       `L ${outerStart.x.toFixed(3)} ${outerStart.y.toFixed(3)}`,
       `A ${outerRadius} ${outerRadius} 0 ${largeArc} 1 ${outerEnd.x.toFixed(3)} ${outerEnd.y.toFixed(3)}`,
-      "Z"
+      "Z",
     ].join(" ");
   }
   return [
@@ -776,7 +963,7 @@ function logoSectorPath(innerRadius, outerRadius, startDegrees, endDegrees) {
     `A ${outerRadius} ${outerRadius} 0 ${largeArc} 1 ${outerEnd.x.toFixed(3)} ${outerEnd.y.toFixed(3)}`,
     `L ${innerEnd.x.toFixed(3)} ${innerEnd.y.toFixed(3)}`,
     `A ${innerRadius} ${innerRadius} 0 ${largeArc} 0 ${innerStart.x.toFixed(3)} ${innerStart.y.toFixed(3)}`,
-    "Z"
+    "Z",
   ].join(" ");
 }
 
@@ -784,22 +971,33 @@ function logoSpiralMarkup(direction = "out") {
   const rings = 4;
   const segments = 14;
   const total = rings * segments;
-  const maxDelay = Math.max(0, logoTransitionDurationMs - logoTransitionPieceMs);
-  const serial = logoTransitionSerial += 1;
+  const maxDelay = Math.max(
+    0,
+    logoTransitionDurationMs - logoTransitionPieceMs,
+  );
+  const serial = (logoTransitionSerial += 1);
   const defs = [];
   const pieces = [];
   for (let ring = 0; ring < rings; ring += 1) {
     const innerRadius = ring === 0 ? 0 : 7 + ring * 11;
     const outerRadius = ring === rings - 1 ? 49 : 7 + (ring + 1) * 11;
     for (let segment = 0; segment < segments; segment += 1) {
-      const start = segment * 360 / segments - 1.2;
-      const end = (segment + 1) * 360 / segments + 1.2;
+      const start = (segment * 360) / segments - 1.2;
+      const end = ((segment + 1) * 360) / segments + 1.2;
       const id = `logoSpiral${serial}-${ring}-${segment}`;
-      const outerFirstOrder = (rings - 1 - ring) * segments + ((segment + (rings - ring) * 2) % segments);
-      const order = direction === "in" ? total - 1 - outerFirstOrder : outerFirstOrder;
-      const delay = total <= 1 ? 0 : Math.round(order * maxDelay / (total - 1));
-      defs.push(`<clipPath id="${id}" clipPathUnits="userSpaceOnUse"><path d="${logoSectorPath(innerRadius, outerRadius, start, end)}"></path></clipPath>`);
-      pieces.push(`<image class="logo-spiral-piece" href="${brandLogoPath}" x="0" y="0" width="100" height="100" preserveAspectRatio="xMidYMid meet" clip-path="url(#${id})" style="--logo-delay:${delay}ms;"></image>`);
+      const outerFirstOrder =
+        (rings - 1 - ring) * segments +
+        ((segment + (rings - ring) * 2) % segments);
+      const order =
+        direction === "in" ? total - 1 - outerFirstOrder : outerFirstOrder;
+      const delay =
+        total <= 1 ? 0 : Math.round((order * maxDelay) / (total - 1));
+      defs.push(
+        `<clipPath id="${id}" clipPathUnits="userSpaceOnUse"><path d="${logoSectorPath(innerRadius, outerRadius, start, end)}"></path></clipPath>`,
+      );
+      pieces.push(
+        `<image class="logo-spiral-piece" href="${brandLogoPath}" x="0" y="0" width="100" height="100" preserveAspectRatio="xMidYMid meet" clip-path="url(#${id})" style="--logo-delay:${delay}ms;"></image>`,
+      );
     }
   }
   return `
@@ -824,21 +1022,39 @@ function logoTransitionMessageMarkup(message = "") {
   if (!text) return "";
   const chars = [...text];
   if (!chars.length) return "";
-  const delayStep = chars.length <= 1
-    ? 0
-    : Math.max(1, Math.floor((logoTransitionMessageDurationMs - 1) / (chars.length - 1)));
-  return `<div class="logo-transition-message" data-logo-message>${chars.map((char, index) => {
-    const displayChar = char === " " ? "\u00A0" : escapeLogoTransitionMessage(char);
-    const delay = Math.round(index * delayStep);
-    return `<span class="logo-transition-message-char" style="--logo-message-delay:${delay}ms">${displayChar}</span>`;
-  }).join("")}</div>`;
+  const delayStep =
+    chars.length <= 1
+      ? 0
+      : Math.max(
+          1,
+          Math.floor(
+            (logoTransitionMessageDurationMs - 1) / (chars.length - 1),
+          ),
+        );
+  return `<div class="logo-transition-message" data-logo-message>${chars
+    .map((char, index) => {
+      const displayChar =
+        char === " " ? "\u00A0" : escapeLogoTransitionMessage(char);
+      const delay = Math.round(index * delayStep);
+      return `<span class="logo-transition-message-char" style="--logo-message-delay:${delay}ms">${displayChar}</span>`;
+    })
+    .join("")}</div>`;
 }
 
 function showLogoTransition(direction = "out", options = {}) {
   clearLogoTransitionTimers();
   const safeDirection = direction === "in" ? "in" : "out";
-  overlay.classList.remove("intro-details", "tutorial-open", ...logoTransitionClassNames());
-  overlay.classList.add("show", "is-session-modal", "logo-transition", `logo-transition-${safeDirection}`);
+  overlay.classList.remove(
+    "intro-details",
+    "tutorial-open",
+    ...logoTransitionClassNames(),
+  );
+  overlay.classList.add(
+    "show",
+    "is-session-modal",
+    "logo-transition",
+    `logo-transition-${safeDirection}`,
+  );
   overlayTitle.hidden = true;
   overlayText.hidden = true;
   startButton.hidden = true;
@@ -846,8 +1062,6 @@ function showLogoTransition(direction = "out", options = {}) {
   replayArchiveButton.hidden = true;
   introCloseButton.hidden = true;
   winnerPortrait.hidden = false;
-  characterStage.hidden = true;
-  characterStage.innerHTML = "";
   winnerPortrait.innerHTML = `
         <div class="logo-transition-card" data-logo-transition="${safeDirection}" aria-live="polite">
           <div class="logo-spiral-shell" aria-hidden="true">
@@ -868,10 +1082,15 @@ function playStartLogoCountdown() {
   const countdownEl = winnerPortrait.querySelector("[data-logo-countdown]");
   const startedAt = performance.now();
   logoCountdownTimer = setInterval(() => {
-    const remaining = Math.max(1, Math.ceil((logoTransitionDurationMs - (performance.now() - startedAt)) / 1000));
+    const remaining = Math.max(
+      1,
+      Math.ceil(
+        (logoTransitionDurationMs - (performance.now() - startedAt)) / 1000,
+      ),
+    );
     if (countdownEl) countdownEl.textContent = String(remaining);
   }, 120);
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     logoTransitionTimer = setTimeout(() => {
       clearLogoTransition();
       resolve(true);
@@ -880,14 +1099,15 @@ function playStartLogoCountdown() {
 }
 
 function foodIconMarkup(typeOrId, extraClass = "") {
-  const type = typeof typeOrId === "string" ? foodTypeById.get(typeOrId) : typeOrId;
+  const type =
+    typeof typeOrId === "string" ? foodTypeById.get(typeOrId) : typeOrId;
   if (!type) return "";
   return `<span class="food-icon is-${type.id} ${extraClass}" style="--food-color:${type.color};--food-line:${type.line};" aria-hidden="true"></span>`;
 }
 
 function foodIconGroupMarkup(typeIds, label) {
   const ids = Array.isArray(typeIds) ? typeIds : [typeIds];
-  const icons = ids.map(id => foodIconMarkup(id)).join("");
+  const icons = ids.map((id) => foodIconMarkup(id)).join("");
   return `<span class="food-icon-group" aria-label="${label}">${icons}</span>`;
 }
 
@@ -907,21 +1127,21 @@ function buildTutorialSlides() {
       sections: [
         {
           title: "移動方式",
-          text: `用<strong>虛擬搖桿區</strong>或 <strong>${directionKeyText}</strong> 選六角方向；蒐集食物，逐步累積出招資源。`
+          text: `用<strong>虛擬搖桿區</strong>或 <strong>${directionKeyText}</strong> 選六角方向；蒐集食物，逐步累積出招資源。`,
         },
         {
           title: "進食策略",
-          text: `食物以簡稱搭配棋盤顏色標示；先看資源圖表判斷缺哪種庫存、能量或炸彈。HP 上限為（蛇長 + 1）× ${hpPerSnakeUnit}；吃到食物會增加 1 段蛇身並回復 ${foodHealAmount()} 點 HP；${dualFoodName}會補棋盤上顯示的兩種庫存。食物庫存與炸彈決定能不能放招式；兩邊都要顧。`
+          text: `食物以簡稱搭配棋盤顏色標示；先看資源圖表判斷缺哪種庫存、能量或炸彈。HP 上限為（蛇長 + 1）× ${hpPerSnakeUnit}；吃到食物會增加 1 段蛇身並回復 ${foodHealAmount()} 點 HP；${dualFoodName}會補棋盤上顯示的兩種庫存。食物庫存與炸彈決定能不能放招式；兩邊都要顧。`,
         },
         {
           title: "控制效果",
-          text: `攻擊命中身體時有 ${formatRulePercent(bodyHitStunChance)} 基礎機率暈眩，命中頭部時有 ${formatRulePercent(headHitStunChance)} 基礎機率暈眩，碳水（藍色）庫存會提高暈眩率；暈眩與麻痺會讓對手短時間無法順利走位，並中斷尚未命中的招式。`
+          text: `攻擊命中身體時有 ${formatRulePercent(bodyHitStunChance)} 基礎機率暈眩，命中頭部時有 ${formatRulePercent(headHitStunChance)} 基礎機率暈眩，碳水（藍色）庫存會提高暈眩率；暈眩與麻痺會讓對手短時間無法順利走位，並中斷尚未命中的招式。`,
         },
         {
           title: "撞擊懲罰",
-          text: `撞到另一方會停止 ${formatRuleSeconds(collisionStunMs)}，再減速 ${formatRuleSeconds(collisionSlowMs)}；撞到自己懲罰加倍，累積停止時間超過 ${formatRuleSeconds(maxCollisionParalysisMs)} 會落敗。`
-        }
-      ]
+          text: `撞到另一方會停止 ${formatRuleSeconds(collisionStunMs)}，再減速 ${formatRuleSeconds(collisionSlowMs)}；撞到自己懲罰加倍，累積停止時間超過 ${formatRuleSeconds(maxCollisionParalysisMs)} 會落敗。`,
+        },
+      ],
     },
     {
       title: "資源總覽",
@@ -931,8 +1151,8 @@ function buildTutorialSlides() {
       lead: "四種自然食物與特殊食物的效果列在這裡；庫存上限已併在食物效果區塊最後面。",
       points: [
         "蛋白拉大爆炸半徑、脂肪增加傷害、纖維提高移動並縮短冷卻、碳水加快施展並提高暈眩。",
-        `能量滿 ${attackNeedTotal} 點轉成炸彈，炸彈最多 ${maxAmmo} 枚，是招式的主要消耗。`
-      ]
+        `能量滿 ${attackNeedTotal} 點轉成炸彈，炸彈最多 ${maxAmmo} 枚，是招式的主要消耗。`,
+      ],
     },
     {
       title: "招式操作",
@@ -943,25 +1163,28 @@ function buildTutorialSlides() {
         {
           title: "小招操作",
           text: `按<strong>${smallKey}</strong> 或<strong>小招</strong>按鈕施放；短按棋盤也可施展小招。`,
-          cost: `成本：目前最高的食物庫存 ${smallAttackFoodCost} 點，並消耗 ${smallAttackBombCost} 枚炸彈。`
+          cost: `成本：目前最高的食物庫存 ${smallAttackFoodCost} 點，並消耗 ${smallAttackBombCost} 枚炸彈。`,
         },
         {
           title: "大招操作",
           text: `按<strong>${bigKey}</strong> 或<strong>大招</strong>按鈕施放；長按或拖曳棋盤也可施展大招。`,
-          cost: `成本：${bigAttackBombCost} 枚炸彈，且蛋白、脂肪、纖維、碳水四種庫存各 ${bigFoodCost} 點。`
+          cost: `成本：${bigAttackBombCost} 枚炸彈，且蛋白、脂肪、纖維、碳水四種庫存各 ${bigFoodCost} 點。`,
         },
         {
           title: "瞄準細節",
-          text: "<strong>X</strong> 控制小招目標，<strong>Y</strong> 控制大招目標，可在敵方頭部、敵方中心、離敵方最近的食物之間循環；方向型大招會改為切換施放方向，或朝拖曳方向施展。"
-        }
-      ]
-    }
+          text: "<strong>X</strong> 控制小招目標，<strong>Y</strong> 控制大招目標，可在敵方頭部、敵方中心、離敵方最近的食物之間循環；方向型大招會改為切換施放方向，或朝拖曳方向施展。",
+        },
+      ],
+    },
   ];
 }
 
 function refreshTutorialSlides() {
   tutorialSlides = buildTutorialSlides();
-  tutorialStepIndex = Math.max(0, Math.min(tutorialSlides.length - 1, tutorialStepIndex));
+  tutorialStepIndex = Math.max(
+    0,
+    Math.min(tutorialSlides.length - 1, tutorialStepIndex),
+  );
 }
 
 refreshTutorialSlides();
@@ -976,7 +1199,7 @@ function tutorialCaptureCrop(type) {
       x: Math.max(0, width * 0.5 - shortSide * 0.34),
       y: Math.max(0, height * 0.5 - shortSide * 0.34),
       w: Math.min(width, shortSide * 0.68),
-      h: Math.min(height, shortSide * 0.68)
+      h: Math.min(height, shortSide * 0.68),
     };
   }
   if (type === "food") {
@@ -984,14 +1207,14 @@ function tutorialCaptureCrop(type) {
       x: Math.max(0, width * 0.5 - shortSide * 0.43),
       y: Math.max(0, height * 0.5 - shortSide * 0.36),
       w: Math.min(width, shortSide * 0.86),
-      h: Math.min(height, shortSide * 0.62)
+      h: Math.min(height, shortSide * 0.62),
     };
   }
   return {
     x: Math.max(0, width * 0.5 - shortSide * 0.38),
     y: Math.max(0, height * 0.5 - shortSide * 0.38),
     w: Math.min(width, shortSide * 0.76),
-    h: Math.min(height, shortSide * 0.76)
+    h: Math.min(height, shortSide * 0.76),
   };
 }
 
@@ -1003,11 +1226,11 @@ function tutorialCropPoint(cell, type) {
   const scaleY = rect.height ? canvas.height / rect.height : 1;
   const canvasPoint = {
     x: point.x * scaleX,
-    y: point.y * scaleY
+    y: point.y * scaleY,
   };
   return {
     x: ((canvasPoint.x - crop.x) / crop.w) * 100,
-    y: ((canvasPoint.y - crop.y) / crop.h) * 100
+    y: ((canvasPoint.y - crop.y) / crop.h) * 100,
   };
 }
 
@@ -1021,11 +1244,11 @@ function tutorialMoveArrowMarkup(cue) {
   const { from, to } = tutorialPathPoints("move", cue.head, cue.food);
   const start = {
     x: from.x + (to.x - from.x) * 0.42,
-    y: from.y + (to.y - from.y) * 0.42
+    y: from.y + (to.y - from.y) * 0.42,
   };
   const end = {
     x: from.x + (to.x - from.x) * 0.88,
-    y: from.y + (to.y - from.y) * 0.88
+    y: from.y + (to.y - from.y) * 0.88,
   };
   return `
         <svg class="tutorial-path-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
@@ -1058,8 +1281,12 @@ function tutorialCaptureUrl(type) {
   try {
     if (type === "move" && snake?.[0]) {
       dir = 1;
-      snake = createStartingSnake({ q: 0, r: 0 }, dir, Math.max(3, defaultSettings.initialLength));
-      lastVisiblePlayerSnake = snake.map(segment => ({ ...segment }));
+      snake = createStartingSnake(
+        { q: 0, r: 0 },
+        dir,
+        Math.max(3, defaultSettings.initialLength),
+      );
+      lastVisiblePlayerSnake = snake.map((segment) => ({ ...segment }));
       computerSnake = [];
       lastVisibleComputerSnake = [];
       blasts = [];
@@ -1072,10 +1299,20 @@ function tutorialCaptureUrl(type) {
     if (type === "small" && computerSnake?.[0]) {
       const hitHead = { q: 0, r: 0 };
       computerDir = 2;
-      computerSnake = createStartingSnake(hitHead, computerDir, Math.max(4, defaultSettings.initialLength + 1));
-      lastVisibleComputerSnake = computerSnake.map(segment => ({ ...segment }));
-      snake = createStartingSnake({ q: -2, r: 1 }, 1, Math.max(3, defaultSettings.initialLength));
-      lastVisiblePlayerSnake = snake.map(segment => ({ ...segment }));
+      computerSnake = createStartingSnake(
+        hitHead,
+        computerDir,
+        Math.max(4, defaultSettings.initialLength + 1),
+      );
+      lastVisibleComputerSnake = computerSnake.map((segment) => ({
+        ...segment,
+      }));
+      snake = createStartingSnake(
+        { q: -2, r: 1 },
+        1,
+        Math.max(3, defaultSettings.initialLength),
+      );
+      lastVisiblePlayerSnake = snake.map((segment) => ({ ...segment }));
       foods = [];
       blasts = [
         ...blasts,
@@ -1086,8 +1323,8 @@ function tutorialCaptureUrl(type) {
           radius: Math.max(3.1, blastRadius(playerStock || initialStock) + 1.1),
           visualType: attackVisualType("player", "small"),
           startedAt: now - blastDurationMs * 0.02,
-          endAt: now + blastDurationMs * 0.98
-        }
+          endAt: now + blastDurationMs * 0.98,
+        },
       ];
     }
     draw();
@@ -1102,7 +1339,17 @@ function tutorialCaptureUrl(type) {
     outCtx.imageSmoothingQuality = "high";
     outCtx.fillStyle = "#111720";
     outCtx.fillRect(0, 0, targetWidth, targetHeight);
-    outCtx.drawImage(canvas, crop.x, crop.y, crop.w, crop.h, 0, 0, targetWidth, targetHeight);
+    outCtx.drawImage(
+      canvas,
+      crop.x,
+      crop.y,
+      crop.w,
+      crop.h,
+      0,
+      0,
+      targetWidth,
+      targetHeight,
+    );
     if (type === "small") {
       const hitPoint = axialToPixel({ q: 0, r: 0 });
       const x = hitPoint.x - crop.x;
@@ -1110,7 +1357,14 @@ function tutorialCaptureUrl(type) {
       const radiusPx = cellSize * 3.35;
       outCtx.save();
       outCtx.globalCompositeOperation = "screen";
-      const gradient = outCtx.createRadialGradient(x, y, cellSize * 0.35, x, y, radiusPx);
+      const gradient = outCtx.createRadialGradient(
+        x,
+        y,
+        cellSize * 0.35,
+        x,
+        y,
+        radiusPx,
+      );
       gradient.addColorStop(0, "rgba(255,255,255,0.95)");
       gradient.addColorStop(0.24, "rgba(251,191,36,0.82)");
       gradient.addColorStop(0.58, "rgba(249,115,22,0.44)");
@@ -1122,7 +1376,7 @@ function tutorialCaptureUrl(type) {
       outCtx.globalCompositeOperation = "source-over";
       outCtx.strokeStyle = "rgba(255,255,255,0.9)";
       outCtx.lineWidth = Math.max(3, cellSize * 0.08);
-      [0.54, 0.78, 1].forEach(scale => {
+      [0.54, 0.78, 1].forEach((scale) => {
         outCtx.beginPath();
         outCtx.arc(x, y, radiusPx * scale, 0, Math.PI * 2);
         outCtx.stroke();
@@ -1130,10 +1384,16 @@ function tutorialCaptureUrl(type) {
       outCtx.strokeStyle = "rgba(251,191,36,0.95)";
       outCtx.lineWidth = Math.max(2, cellSize * 0.06);
       for (let i = 0; i < 12; i += 1) {
-        const angle = i * Math.PI * 2 / 12;
+        const angle = (i * Math.PI * 2) / 12;
         outCtx.beginPath();
-        outCtx.moveTo(x + Math.cos(angle) * radiusPx * 0.35, y + Math.sin(angle) * radiusPx * 0.35);
-        outCtx.lineTo(x + Math.cos(angle) * radiusPx * 1.12, y + Math.sin(angle) * radiusPx * 1.12);
+        outCtx.moveTo(
+          x + Math.cos(angle) * radiusPx * 0.35,
+          y + Math.sin(angle) * radiusPx * 0.35,
+        );
+        outCtx.lineTo(
+          x + Math.cos(angle) * radiusPx * 1.12,
+          y + Math.sin(angle) * radiusPx * 1.12,
+        );
         outCtx.stroke();
       }
       outCtx.restore();
@@ -1184,9 +1444,9 @@ function sanitizedTutorialClone(selector) {
   const source = document.querySelector(selector);
   if (!source) return "";
   const clone = source.cloneNode(true);
-  clone.querySelectorAll("[id]").forEach(node => node.removeAttribute("id"));
+  clone.querySelectorAll("[id]").forEach((node) => node.removeAttribute("id"));
   clone.removeAttribute("id");
-  clone.querySelectorAll("button, input, select, textarea").forEach(node => {
+  clone.querySelectorAll("button, input, select, textarea").forEach((node) => {
     node.setAttribute("tabindex", "-1");
     node.setAttribute("aria-hidden", "true");
   });
@@ -1219,17 +1479,24 @@ function tutorialSnapshotMarkup(type) {
 }
 
 function tutorialFoodDetailListMarkup() {
-  const naturalFoodItems = foodTypes.map(type => `
+  const naturalFoodItems = foodTypes
+    .map(
+      (type) => `
             <li>
               ${foodIconGroupMarkup(type.id, `自然產出${foodNameWithColor(type)}`)}
               <span>${foodTermMarkup(type.id, foodNameWithColor(type))}：${formatRichText(foodEffectDescription(type))}</span>
             </li>
-          `).join("");
+          `,
+    )
+    .join("");
   return `
           <ul class="tutorial-food-detail-list" aria-label="食物效果細節">
             ${naturalFoodItems}
             <li>
-              ${foodIconGroupMarkup(foodTypes.map(type => type.id), dualFoodName)}
+              ${foodIconGroupMarkup(
+                foodTypes.map((type) => type.id),
+                dualFoodName,
+              )}
               <span>${foodTermMarkup("dual", dualFoodName)}：${formatRichText(`補棋盤上顯示的兩種庫存各 ${dualColorStockGain} 點，並獲得 ${foodEnergy} 點能量。`)}</span>
             </li>
             <li>
@@ -1288,22 +1555,34 @@ function renderTutorialSlide() {
         <div class="tutorial-card" role="group" tabindex="0" aria-label="新手教學 ${tutorialStepIndex + 1} / ${tutorialSlides.length}">
             <div class="tutorial-progress">${tutorialSlides.map((_, index) => `<span class="${index === tutorialStepIndex ? "is-active" : ""}"></span>`).join("")}</div>
           ${tutorialVisualMarkup(slide)}
-          ${slide.hideCopy ? "" : `<div class="tutorial-copy">
+          ${
+            slide.hideCopy
+              ? ""
+              : `<div class="tutorial-copy">
             <strong class="tutorial-title">${formatRichText(slide.title)}</strong>
             <p class="tutorial-lead">${formatRichText(slide.lead)}</p>
-            ${slide.sections ? `
-              ${slide.sections.map(section => `
+            ${
+              slide.sections
+                ? `
+              ${slide.sections
+                .map(
+                  (section) => `
                 <p class="tutorial-line">
                   <b>${formatRichText(section.title)}</b>
                   <span>${formatRichText(section.text)}</span>
                   ${section.cost ? `<small>${formatRichText(section.cost)}</small>` : ""}
                 </p>
-              `).join("")}
-            ` : `
-              ${slide.points.map(point => `<p class="tutorial-line"><span>${formatRichText(point)}</span></p>`).join("")}
+              `,
+                )
+                .join("")}
+            `
+                : `
+              ${slide.points.map((point) => `<p class="tutorial-line"><span>${formatRichText(point)}</span></p>`).join("")}
               ${slide.note ? `<p class="tutorial-line tutorial-note"><span>${formatRichText(slide.note)}</span></p>` : ""}
-            `}
-          </div>`}
+            `
+            }
+          </div>`
+          }
           <div class="tutorial-actions">
             <button class="secondary" type="button" data-tutorial-action="skip">Skip</button>
             <button class="secondary" type="button" data-tutorial-action="prev" ${tutorialStepIndex === 0 ? "disabled" : ""}>上一頁</button>
@@ -1329,10 +1608,14 @@ function setTutorialChrome() {
 function showTutorial(startIndex = 0) {
   if (!rulesModal.hidden) closeRulesModal();
   refreshTutorialSlides();
-  tutorialStepIndex = Math.max(0, Math.min(tutorialSlides.length - 1, startIndex));
+  tutorialStepIndex = Math.max(
+    0,
+    Math.min(tutorialSlides.length - 1, startIndex),
+  );
   setTutorialChrome();
   overlay.classList.add("show");
   characterStage.hidden = true;
+  setCharacterStageOverlayMode(false);
   renderTutorialSlide();
 }
 
@@ -1348,11 +1631,17 @@ function shouldShowTutorial() {
 }
 
 function isTutorialOpen() {
-  return overlay.classList.contains("show") && overlay.classList.contains("tutorial-open");
+  return (
+    overlay.classList.contains("show") &&
+    overlay.classList.contains("tutorial-open")
+  );
 }
 
 function moveTutorial(delta) {
-  const nextIndex = Math.max(0, Math.min(tutorialSlides.length - 1, tutorialStepIndex + delta));
+  const nextIndex = Math.max(
+    0,
+    Math.min(tutorialSlides.length - 1, tutorialStepIndex + delta),
+  );
   if (nextIndex === tutorialStepIndex) return false;
   tutorialStepIndex = nextIndex;
   renderTutorialSlide();
@@ -1361,26 +1650,40 @@ function moveTutorial(delta) {
 
 function weightedFoodIconMarkup(character) {
   if (character?.specialFood === "black") {
-    return foodIconGroupMarkup("black", `加權產出${foodNameWithColor(blackFoodType)}`);
+    return foodIconGroupMarkup(
+      "black",
+      `加權產出${foodNameWithColor(blackFoodType)}`,
+    );
   }
   if (character?.food === "balanced") {
-    return foodIconGroupMarkup(foodTypes.map(type => type.id), `均衡產出四種食物，並可能補出${dualFoodName}`);
+    return foodIconGroupMarkup(
+      foodTypes.map((type) => type.id),
+      `均衡產出四種食物，並可能補出${dualFoodName}`,
+    );
   }
   const type = foodTypeById.get(character?.food);
-  return foodIconGroupMarkup(character?.food, `加權產出${type ? foodNameWithColor(type) : character.foodLabel}`);
+  return foodIconGroupMarkup(
+    character?.food,
+    `加權產出${type ? foodNameWithColor(type) : character.foodLabel}`,
+  );
 }
 
 function characterFoodLabelForRules(character) {
-  if (character?.specialFood === "black") return foodNameWithColor(blackFoodType);
-  if (character?.food === "balanced") return `${foodLabels.balanced}／${dualFoodName}`;
+  if (character?.specialFood === "black")
+    return foodNameWithColor(blackFoodType);
+  if (character?.food === "balanced")
+    return `${foodLabels.balanced}／${dualFoodName}`;
   const type = foodTypeById.get(character?.food);
-  return type ? foodNameWithColor(type) : character?.foodLabel || foodLabels.balanced;
+  return type
+    ? foodNameWithColor(type)
+    : character?.foodLabel || foodLabels.balanced;
 }
 
 function buildRulesContent() {
-  const characterLegend = characters.map(character => {
-    const guide = moveGuideFor(character);
-    return `
+  const characterLegend = characters
+    .map((character) => {
+      const guide = moveGuideFor(character);
+      return `
           <li style="${characterStyle(character)}">
             <span class="rules-character-avatar" aria-hidden="true">
               <img
@@ -1405,7 +1708,8 @@ function buildRulesContent() {
             </span>
           </li>
         `;
-  }).join("");
+    })
+    .join("");
   rulesContent.innerHTML = `
         <section class="rules-block rules-tutorial-callout" data-open-tutorial role="button" tabindex="0" aria-label="開啟基礎規則教學">
           <h3>基礎規則教學</h3>
@@ -1470,7 +1774,12 @@ function closeRulesModal() {
 }
 
 function setOverlayChromeVisible(visible) {
-  overlay.classList.remove("intro-details", "tutorial-open", "is-session-modal", ...logoTransitionClassNames());
+  overlay.classList.remove(
+    "intro-details",
+    "tutorial-open",
+    "is-session-modal",
+    ...logoTransitionClassNames(),
+  );
   overlayTitle.hidden = !visible;
   overlayText.hidden = !visible;
   startButton.hidden = !visible;
@@ -1480,7 +1789,11 @@ function setOverlayChromeVisible(visible) {
 }
 
 function setIntroLobbyChrome() {
-  overlay.classList.remove("intro-details", "tutorial-open", ...logoTransitionClassNames());
+  overlay.classList.remove(
+    "intro-details",
+    "tutorial-open",
+    ...logoTransitionClassNames(),
+  );
   overlay.classList.add("is-session-modal");
   overlayTitle.hidden = true;
   overlayText.hidden = true;
@@ -1493,7 +1806,11 @@ function setIntroLobbyChrome() {
 
 function setIntroDetailsChrome() {
   overlay.classList.add("intro-details");
-  overlay.classList.remove("tutorial-open", "is-session-modal", ...logoTransitionClassNames());
+  overlay.classList.remove(
+    "tutorial-open",
+    "is-session-modal",
+    ...logoTransitionClassNames(),
+  );
   overlayTitle.hidden = true;
   overlayText.hidden = true;
   startButton.hidden = true;
@@ -1502,11 +1819,18 @@ function setIntroDetailsChrome() {
   introCloseButton.hidden = false;
 }
 
-function buildCharacterStage() {
-  characterStage.innerHTML = ["player", "computer"].map(owner => {
-    const character = characterFor(owner);
-    const holdHint = owner === "player" ? " title=\"長按施放攻擊\"" : "";
-    return `
+function setCharacterStageOverlayMode(active) {
+  characterStage.classList.toggle("is-overlay-visible", Boolean(active));
+}
+
+function buildCharacterStage(options = {}) {
+  characterStage.innerHTML = ["player", "computer"]
+    .map((owner) => {
+      const character = options.startLogoCharacters
+        ? startLogoCharacterFor(owner)
+        : characterFor(owner);
+      const holdHint = owner === "player" ? ' title="長按施放攻擊"' : "";
+      return `
           <div class="fighter-card" data-owner="${owner}" style="${characterStyle(character, owner)}">
             <div class="fighter-module ${owner === "player" ? "is-actionable" : ""}" data-module="${owner}" data-owner-mark="${ownerMeta(owner).mark}"${holdHint}>
               <div class="fighter-module-clip">
@@ -1516,7 +1840,21 @@ function buildCharacterStage() {
             <div class="attack-callout" data-attack-callout="${owner}" aria-live="polite"></div>
           </div>
         `;
-  }).join("");
+    })
+    .join("");
+}
+
+function showCharacterStage(options = {}) {
+  if (options.rebuild !== false || !characterStage.innerHTML) {
+    buildCharacterStage(options);
+  }
+  characterStage.hidden = false;
+  setCharacterStageOverlayMode(options.overlay);
+}
+
+function hideCharacterStage() {
+  characterStage.hidden = true;
+  setCharacterStageOverlayMode(false);
 }
 
 function renderWinnerPortrait(owner, playerLost = false, computerLost = false) {
@@ -1525,28 +1863,40 @@ function renderWinnerPortrait(owner, playerLost = false, computerLost = false) {
     winnerPortrait.hidden = true;
     winnerPortrait.innerHTML = "";
     characterStage.hidden = false;
+    setCharacterStageOverlayMode(false);
     return;
   }
   const playerPose = owner === "player" ? "victory" : "defeat";
   const computerPose = owner === "computer" ? "victory" : "defeat";
   const playerCharacter = characterFor("player");
   const computerCharacter = characterFor("computer");
-  const playerResult = owner ? (owner === "player" ? "P1 勝利" : "P1 敗北") : "P1 平手";
-  const computerResult = owner ? (owner === "computer" ? "P2 勝利" : "P2 敗北") : "P2 平手";
+  const playerResult = owner
+    ? owner === "player"
+      ? "P1 勝利"
+      : "P1 敗北"
+    : "P1 平手";
+  const computerResult = owner
+    ? owner === "computer"
+      ? "P2 勝利"
+      : "P2 敗北"
+    : "P2 平手";
   overlay.classList.add("is-session-modal");
   winnerPortrait.hidden = false;
-  characterStage.hidden = true;
-  characterStage.innerHTML = "";
+  hideCharacterStage();
   winnerPortrait.innerHTML = `
-        <div class="portrait-pair">
-          <div class="fighter-portrait result-portrait ${owner === "player" ? "is-winner" : ""} ${playerPose === "defeat" ? "is-defeated" : ""}" data-owner="player" data-result-owner="player" data-owner-mark="${ownerMeta("player").mark}" title="選擇 P1 角色" style="${characterStyle(playerCharacter, "player")}">
-            <span class="result-badge">${playerResult}</span>
-            ${fighterArt(playerCharacter, playerPose, true)}
+        <div class="portrait-pair result-pair">
+          <div class="result-entry ${owner === "player" ? "is-winner" : ""} ${playerPose === "defeat" ? "is-defeated" : ""}" data-owner="player" data-result-owner="player" title="選擇 P1 角色" style="${characterStyle(playerCharacter, "player")}">
+            <div class="fighter-portrait result-portrait ${owner === "player" ? "is-winner" : ""} ${playerPose === "defeat" ? "is-defeated" : ""}" data-owner="player" data-owner-mark="${ownerMeta("player").mark}">
+              <span class="result-badge">${playerResult}</span>
+              ${fighterArt(playerCharacter, playerPose, true)}
+            </div>
             <span class="result-quote">「${resultLineForCharacter(playerCharacter, playerPose)}」</span>
           </div>
-          <div class="fighter-portrait result-portrait ${owner === "computer" ? "is-winner" : ""} ${computerPose === "defeat" ? "is-defeated" : ""}" data-owner="computer" data-result-owner="computer" data-owner-mark="${ownerMeta("computer").mark}" title="選擇 P2 角色" style="${characterStyle(computerCharacter, "computer")}">
-            <span class="result-badge">${computerResult}</span>
-            ${fighterArt(computerCharacter, computerPose, true)}
+          <div class="result-entry ${owner === "computer" ? "is-winner" : ""} ${computerPose === "defeat" ? "is-defeated" : ""}" data-owner="computer" data-result-owner="computer" title="選擇 P2 角色" style="${characterStyle(computerCharacter, "computer")}">
+            <div class="fighter-portrait result-portrait ${owner === "computer" ? "is-winner" : ""} ${computerPose === "defeat" ? "is-defeated" : ""}" data-owner="computer" data-owner-mark="${ownerMeta("computer").mark}">
+              <span class="result-badge">${computerResult}</span>
+              ${fighterArt(computerCharacter, computerPose, true)}
+            </div>
             <span class="result-quote">「${resultLineForCharacter(computerCharacter, computerPose)}」</span>
           </div>
         </div>
@@ -1559,21 +1909,29 @@ function renderIntroPortraits(showDetails = introDetailsOpen) {
   else setIntroLobbyChrome();
   const selectedCharacter = selectedCharacterFor(selectedPortraitOwner);
   winnerPortrait.hidden = false;
-  characterStage.hidden = true;
+  hideCharacterStage();
   characterStage.innerHTML = "";
   if (!showDetails) {
     winnerPortrait.innerHTML = `
           <div class="intro-avatar-gate">
-            ${["player", "computer"].map(owner => {
-      const character = selectedCharacterFor(owner);
-      const label = owner === "player" ? "P1" : "P2";
-      const motto = character?.motto || "開局抽選後揭曉座右銘";
-      return `
-                <div class="intro-avatar-button" role="button" tabindex="0" data-owner="${owner}" data-open-intro="${owner}" style="${characterStyle(character || {
-        color: ownerMeta(owner).color,
-        line: ownerMeta(owner).line,
-        accent: "#fbbf24"
-      }, owner)}" aria-label="開啟${label}角色選擇">
+            ${["player", "computer"]
+              .map((owner) => {
+                const character = selectedCharacterFor(owner);
+                const isRandomChoice = isRandomCharacterChoice(owner);
+                const logoCharacter = isRandomChoice
+                  ? null
+                  : startLogoCharacterFor(owner);
+                const label = owner === "player" ? "P1" : "P2";
+                const motto = character?.motto || "機緣一轉，百人角色待君擇。\n心念既定，千道關卡隨我闖。";
+                return `
+                <div class="intro-avatar-button" role="button" tabindex="0" data-owner="${owner}" data-open-intro="${owner}" style="${characterStyle(
+                  character || {
+                    color: ownerMeta(owner).color,
+                    line: ownerMeta(owner).line,
+                    accent: "#fbbf24",
+                  },
+                  owner,
+                )}" aria-label="開啟${label}角色選擇">
                   <div class="portrait-card-controls" data-portrait-swipe-owner="${owner}">
                     ${character ? `<div class="fighter-portrait" data-owner="${owner}" data-owner-mark="${ownerMeta(owner).mark}">${fighterArt(character, "intro", true, "small")}</div>` : randomPortraitMarkup(owner)}
                   </div>
@@ -1583,10 +1941,15 @@ function renderIntroPortraits(showDetails = introDetailsOpen) {
                     <button class="secondary portrait-arrow portrait-label-arrow" type="button" data-portrait-owner="${owner}" data-portrait-shift="1" aria-label="${ownerMeta(owner).label} 下一位">›</button>
                   </div>
                   <p class="intro-avatar-motto ${character ? "" : "is-placeholder"}">${formatIntroMotto(motto)}</p>
-                  <span class="intro-avatar-logo" aria-hidden="true"><img src="${brandLogoPath}" alt="" decoding="async" loading="lazy"></span>
+                  ${
+                    isRandomChoice
+                      ? `<span class="intro-avatar-logo" aria-hidden="true"><span class="random-portrait-mark intro-avatar-logo-mark">?</span></span>`
+                      : `<span class="intro-avatar-logo" aria-hidden="true"><img src="${avatarUrl(logoCharacter, "sm")}" srcset="${avatarSrcset(logoCharacter)}" sizes="52px" alt="${logoCharacter.name} 頭像" decoding="async" loading="lazy"></span>`
+                  }
                 </div>
               `;
-    }).join("")}
+              })
+              .join("")}
           </div>
         `;
     return;
@@ -1594,15 +1957,19 @@ function renderIntroPortraits(showDetails = introDetailsOpen) {
   winnerPortrait.innerHTML = `
         <div class="portrait-select" data-portrait-select>
           <div class="portrait-pair">
-          ${["player", "computer"].map(owner => {
-    const character = selectedCharacterFor(owner);
-    const label = owner === "player" ? "P1" : "P2";
-    return `
-                <div class="portrait-option ${owner === selectedPortraitOwner ? "is-selected" : ""}" role="button" tabindex="0" data-owner="${owner}" data-portrait-owner="${owner}" style="${characterStyle(character || {
-      color: ownerMeta(owner).color,
-      line: ownerMeta(owner).line,
-      accent: "#fbbf24"
-    }, owner)}">
+          ${["player", "computer"]
+            .map((owner) => {
+              const character = selectedCharacterFor(owner);
+              const label = owner === "player" ? "P1" : "P2";
+              return `
+                <div class="portrait-option ${owner === selectedPortraitOwner ? "is-selected" : ""}" role="button" tabindex="0" data-owner="${owner}" data-portrait-owner="${owner}" style="${characterStyle(
+                  character || {
+                    color: ownerMeta(owner).color,
+                    line: ownerMeta(owner).line,
+                    accent: "#fbbf24",
+                  },
+                  owner,
+                )}">
                 <div class="portrait-card-controls" data-portrait-swipe-owner="${owner}">
                   ${character ? `<div class="fighter-portrait" data-owner="${owner}" data-owner-mark="${ownerMeta(owner).mark}" data-full-portrait="${owner}">${fighterArt(character, "intro", true, "small")}</div>` : randomPortraitMarkup(owner)}
                 </div>
@@ -1613,15 +1980,19 @@ function renderIntroPortraits(showDetails = introDetailsOpen) {
                 </div>
               </div>
             `;
-  }).join("")}
+            })
+            .join("")}
           </div>
           <div class="portrait-controls">
             <button class="secondary portrait-arrow" type="button" data-portrait-shift="-1" aria-label="上一位" onclick="applySelectedPortraitCharacter(-1)">‹</button>
-            <div class="portrait-copy" style="${characterStyle(selectedCharacter || {
-    color: ownerMeta(selectedPortraitOwner).color,
-    line: ownerMeta(selectedPortraitOwner).line,
-    accent: "#fbbf24"
-  }, selectedPortraitOwner)}">
+            <div class="portrait-copy" style="${characterStyle(
+              selectedCharacter || {
+                color: ownerMeta(selectedPortraitOwner).color,
+                line: ownerMeta(selectedPortraitOwner).line,
+                accent: "#fbbf24",
+              },
+              selectedPortraitOwner,
+            )}">
               <small><span class="owner-name ${selectedPortraitOwner === "player" ? "is-p1" : "is-p2"}">${selectedPortraitOwner === "player" ? "P1" : "P2"}</span> 角色</small>
               <strong>${selectedCharacter ? selectedCharacter.name : "隨機選擇"}</strong>
               <span>${selectedCharacter ? `${selectedCharacter.foodLabel}專精` : "開始遊戲時抽選角色"}</span>
@@ -1640,23 +2011,45 @@ function selectPortraitOwner(owner) {
   renderIntroPortraits(true);
 }
 
-function setPortraitCharacterForOwner(owner, characterId, showDetails = introDetailsOpen) {
-  if (characterId !== randomCharacterChoiceId && !characterById.has(characterId)) return;
+function setPortraitCharacterForOwner(
+  owner,
+  characterId,
+  showDetails = introDetailsOpen,
+) {
+  if (
+    characterId !== randomCharacterChoiceId &&
+    !characterById.has(characterId)
+  )
+    return;
   selectedPortraitOwner = owner === "computer" ? "computer" : "player";
   if (selectedPortraitOwner === "player") {
     playerCharacterChoice = characterId;
-    if (characterId !== randomCharacterChoiceId) playerCharacterId = characterId;
+    if (characterId === randomCharacterChoiceId) {
+      ensureStartLogoRandomCharacterId(selectedPortraitOwner);
+    } else {
+      playerCharacterId = characterId;
+      clearStartLogoRandomCharacterId(selectedPortraitOwner);
+    }
   } else {
     computerCharacterChoice = characterId;
-    if (characterId !== randomCharacterChoiceId) computerCharacterId = characterId;
+    if (characterId === randomCharacterChoiceId) {
+      ensureStartLogoRandomCharacterId(selectedPortraitOwner);
+    } else {
+      computerCharacterId = characterId;
+      clearStartLogoRandomCharacterId(selectedPortraitOwner);
+    }
   }
   syncCharacterInputs();
   saveCharacterChoices();
-  if (characterId !== randomCharacterChoiceId) preloadPortraitsFor(selectedPortraitOwner);
+  if (characterId !== randomCharacterChoiceId)
+    preloadPortraitsFor(selectedPortraitOwner);
   renderIntroPortraits(showDetails);
   resize();
   if (characterId !== randomCharacterChoiceId) {
-    HexSnakeAudio.playCharacter(owner, "select", { character: characterById.get(characterId), unlock: true });
+    HexSnakeAudio.playCharacter(owner, "select", {
+      character: characterById.get(characterId),
+      unlock: true,
+    });
   }
 }
 
@@ -1667,9 +2060,13 @@ function setSelectedPortraitCharacter(characterId) {
 function applyPortraitCharacter(owner, delta, showDetails = introDetailsOpen) {
   const safeOwner = owner === "computer" ? "computer" : "player";
   const currentId = characterChoiceFor(safeOwner);
-  const choices = [randomCharacterChoiceId, ...characters.map(character => character.id)];
+  const choices = [
+    randomCharacterChoiceId,
+    ...characters.map((character) => character.id),
+  ];
   const currentIndex = Math.max(0, choices.indexOf(currentId));
-  const nextChoice = choices[(currentIndex + delta + choices.length) % choices.length];
+  const nextChoice =
+    choices[(currentIndex + delta + choices.length) % choices.length];
   setPortraitCharacterForOwner(safeOwner, nextChoice, showDetails);
 }
 
@@ -1691,11 +2088,18 @@ function renderPortraitLightbox() {
 
 function updatePortraitVariantButtons() {
   const currentIndex = portraitVariantModes.indexOf(portraitVariantMode);
-  portraitLightboxVariantButtons.forEach(button => {
+  portraitLightboxVariantButtons.forEach((button) => {
     const delta = button.dataset.portraitLightboxDirection === "up" ? -1 : 1;
-    const nextMode = portraitVariantModes[(currentIndex + delta + portraitVariantModes.length) % portraitVariantModes.length];
+    const nextMode =
+      portraitVariantModes[
+        (currentIndex + delta + portraitVariantModes.length) %
+          portraitVariantModes.length
+      ];
     button.textContent = `${delta < 0 ? "↑" : "↓"} ${portraitVariantLabels[nextMode] || nextMode}`;
-    button.setAttribute("aria-label", `${delta < 0 ? "Previous" : "Next"} portrait version: ${portraitVariantLabels[nextMode] || nextMode}`);
+    button.setAttribute(
+      "aria-label",
+      `${delta < 0 ? "Previous" : "Next"} portrait version: ${portraitVariantLabels[nextMode] || nextMode}`,
+    );
   });
 }
 
@@ -1704,12 +2108,24 @@ function rerenderPortraitSurfaces() {
   if (!characterStage.hidden) buildCharacterStage();
   if (!portraitLightbox.hidden) renderPortraitLightbox();
   if (overlay.classList.contains("show") && !winnerPortrait.hidden) {
-    const resultPortraits = winnerPortrait.querySelectorAll("[data-result-owner]");
+    const resultPortraits = winnerPortrait.querySelectorAll(
+      "[data-result-owner]",
+    );
     if (resultPortraits.length) {
-      const playerResult = winnerPortrait.querySelector('[data-result-owner="player"]');
-      const computerResult = winnerPortrait.querySelector('[data-result-owner="computer"]');
-      const winner = winnerPortrait.querySelector(".result-portrait.is-winner")?.dataset.resultOwner || null;
-      renderWinnerPortrait(winner, playerResult?.classList.contains("is-defeated"), computerResult?.classList.contains("is-defeated"));
+      const playerResult = winnerPortrait.querySelector(
+        '[data-result-owner="player"]',
+      );
+      const computerResult = winnerPortrait.querySelector(
+        '[data-result-owner="computer"]',
+      );
+      const winner =
+        winnerPortrait.querySelector(".result-entry.is-winner")?.dataset
+          .resultOwner || null;
+      renderWinnerPortrait(
+        winner,
+        playerResult?.classList.contains("is-defeated"),
+        computerResult?.classList.contains("is-defeated"),
+      );
     } else {
       renderIntroPortraits(introDetailsOpen);
     }
@@ -1717,7 +2133,12 @@ function rerenderPortraitSurfaces() {
 }
 
 function setPortraitVariantMode(mode) {
-  const nextMode = mode === "full" ? "human" : portraitVariantModes.includes(mode) ? mode : defaultPortraitVariantMode;
+  const nextMode =
+    mode === "full"
+      ? "human"
+      : portraitVariantModes.includes(mode)
+        ? mode
+        : defaultPortraitVariantMode;
   if (portraitVariantMode === nextMode) return;
   portraitVariantMode = nextMode;
   localStorage.setItem("hexSnakePortraitVariant", portraitVariantMode);
@@ -1731,8 +2152,16 @@ function togglePortraitVariantMode() {
 }
 
 function shiftPortraitVariantMode(delta) {
-  const currentIndex = Math.max(0, portraitVariantModes.indexOf(portraitVariantMode));
-  setPortraitVariantMode(portraitVariantModes[(currentIndex + delta + portraitVariantModes.length) % portraitVariantModes.length]);
+  const currentIndex = Math.max(
+    0,
+    portraitVariantModes.indexOf(portraitVariantMode),
+  );
+  setPortraitVariantMode(
+    portraitVariantModes[
+      (currentIndex + delta + portraitVariantModes.length) %
+        portraitVariantModes.length
+    ],
+  );
 }
 
 function openPortraitLightbox(owner) {
@@ -1744,10 +2173,11 @@ function openPortraitLightbox(owner) {
 
 function shiftPortraitLightbox(delta) {
   selectedPortraitOwner = portraitLightboxOwner;
-  const choices = characters.map(character => character.id);
+  const choices = characters.map((character) => character.id);
   const currentId = characterFor(selectedPortraitOwner).id;
   const currentIndex = Math.max(0, choices.indexOf(currentId));
-  const nextChoice = choices[(currentIndex + delta + choices.length) % choices.length];
+  const nextChoice =
+    choices[(currentIndex + delta + choices.length) % choices.length];
   setSelectedPortraitCharacter(nextChoice);
   renderPortraitLightbox();
 }
@@ -1764,7 +2194,9 @@ function closePortraitLightbox() {
 }
 
 function resultLineForCharacter(character, pose) {
-  return character?.resultLines?.[pose] || (pose === "victory" ? "輕鬆~" : "不可能!");
+  return (
+    character?.resultLines?.[pose] || (pose === "victory" ? "輕鬆~" : "不可能!")
+  );
 }
 
 function setFighterPose(owner, pose, duration = 0) {
@@ -1781,14 +2213,22 @@ function setFighterPose(owner, pose, duration = 0) {
 }
 
 function showFighterCallout(owner, text, options = {}) {
-  const callout = characterStage.querySelector(`[data-attack-callout="${owner}"]`);
+  const callout = characterStage.querySelector(
+    `[data-attack-callout="${owner}"]`,
+  );
   if (!callout || !text) return;
   const kind = options.kind || "attack";
   const duration = options.duration ?? 1200;
   const locked = options.locked || duration === null;
   if (lockedFighterCallouts.has(owner) && !locked && !options.force) return;
   callout.textContent = text;
-  callout.classList.remove("is-attack", "is-status", "is-interrupt", "is-victory", "is-defeat");
+  callout.classList.remove(
+    "is-attack",
+    "is-status",
+    "is-interrupt",
+    "is-victory",
+    "is-defeat",
+  );
   callout.classList.add(`is-${kind}`);
   callout.classList.add("is-visible");
   clearTimeout(attackCalloutTimers[owner]);
@@ -1799,28 +2239,40 @@ function showFighterCallout(owner, text, options = {}) {
   lockedFighterCallouts.delete(owner);
   attackCalloutTimers[owner] = setTimeout(() => {
     if (lockedFighterCallouts.has(owner)) return;
-    callout.classList.remove("is-visible", "is-attack", "is-status", "is-interrupt", "is-victory", "is-defeat");
+    callout.classList.remove(
+      "is-visible",
+      "is-attack",
+      "is-status",
+      "is-interrupt",
+      "is-victory",
+      "is-defeat",
+    );
   }, duration);
 }
 
 function showAttackCallout(owner, profile) {
   const character = characterFor(owner);
-  showFighterCallout(owner, profile === "small" ? character.smallMove : character.bigMove);
+  showFighterCallout(
+    owner,
+    profile === "small" ? character.smallMove : character.bigMove,
+  );
 }
 
 function statusCalloutText(text) {
   return String(text || "")
     .split(/[！!]+/)
-    .map(item => item.trim())
+    .map((item) => item.trim())
     .filter(Boolean)
-    .map(item => item.startsWith("(") && item.endsWith(")") ? item : `(${item})`)
+    .map((item) =>
+      item.startsWith("(") && item.endsWith(")") ? item : `(${item})`,
+    )
     .join("");
 }
 
 function showStatusCallout(owner, text, options = {}) {
   showFighterCallout(owner, statusCalloutText(text), {
     kind: options.interrupted ? "interrupt" : "status",
-    duration: options.duration ?? 1350
+    duration: options.duration ?? 1350,
   });
 }
 
@@ -1828,7 +2280,7 @@ function showResultCallout(owner, pose) {
   showFighterCallout(owner, resultLineForCharacter(characterFor(owner), pose), {
     kind: pose === "victory" ? "victory" : "defeat",
     duration: null,
-    locked: true
+    locked: true,
   });
 }
 
@@ -1837,8 +2289,8 @@ function buildResourceHud() {
   resourceEls = new Map();
   [
     { owner: "player", title: "P1", color: colors.head },
-    { owner: "computer", title: "P2", color: colors.computerHead }
-  ].forEach(group => {
+    { owner: "computer", title: "P2", color: colors.computerHead },
+  ].forEach((group) => {
     const panel = document.createElement("div");
     panel.className = "resource-panel";
     panel.dataset.owner = group.owner;
@@ -1863,7 +2315,7 @@ function buildResourceHud() {
             </span>
           </div>
         `;
-    foodTypes.forEach(type => {
+    foodTypes.forEach((type) => {
       const row = document.createElement("div");
       row.className = "resource-row";
       row.style.setProperty("--food-color", type.color);
@@ -1877,33 +2329,46 @@ function buildResourceHud() {
     });
     resourceBoard.append(panel);
   });
-  resourceBoard.querySelectorAll("[data-count], [data-fill]").forEach(el => {
+  resourceBoard.querySelectorAll("[data-count], [data-fill]").forEach((el) => {
     if (el.dataset.count) resourceEls.set(`${el.dataset.count}-count`, el);
     if (el.dataset.fill) resourceEls.set(`${el.dataset.fill}-fill`, el);
   });
-  resourceBoard.querySelectorAll("[data-energy-chip], [data-energy-track], [data-energy-fill], [data-energy-value], [data-bomb-chip], [data-bomb-track], [data-bomb-fill], [data-bomb-value]").forEach(el => {
-    const entry = Object.entries(el.dataset)[0];
-    if (!entry) return;
-    const [key, owner] = entry;
-    resourceEls.set(`${owner}-${key}`, el);
-  });
+  resourceBoard
+    .querySelectorAll(
+      "[data-energy-chip], [data-energy-track], [data-energy-fill], [data-energy-value], [data-bomb-chip], [data-bomb-track], [data-bomb-fill], [data-bomb-value]",
+    )
+    .forEach((el) => {
+      const entry = Object.entries(el.dataset)[0];
+      if (!entry) return;
+      const [key, owner] = entry;
+      resourceEls.set(`${owner}-${key}`, el);
+    });
 }
 
 function emptyStock() {
-  return Object.fromEntries(foodTypes.map(type => [type.id, 0]));
+  return Object.fromEntries(foodTypes.map((type) => [type.id, 0]));
 }
 
 function startingStock() {
   if (!gmMode) return emptyStock();
-  return Object.fromEntries(foodTypes.map(type => [type.id, clampInitialStock(initialStock[type.id])]));
+  return Object.fromEntries(
+    foodTypes.map((type) => [
+      type.id,
+      clampInitialStock(initialStock[type.id]),
+    ]),
+  );
 }
 
 function startingEnergy() {
-  return gmMode ? clampInitialEnergy(initialEnergy) : defaultSettings.initialEnergy;
+  return gmMode
+    ? clampInitialEnergy(initialEnergy)
+    : defaultSettings.initialEnergy;
 }
 
 function startingBombs() {
-  return gmMode ? clampInitialBombs(initialBombs) : defaultSettings.initialBombs;
+  return gmMode
+    ? clampInitialBombs(initialBombs)
+    : defaultSettings.initialBombs;
 }
 
 function foodBonus(stock, typeId, perPoint, maxBonus) {
@@ -1916,7 +2381,9 @@ function moveMultiplier(stock) {
 
 function movementSpeed(stock) {
   const foodSpeedBonus = moveMultiplier(stock) - 1;
-  return gmMode ? initialSpeed + foodSpeedBonus : initialSpeed * moveMultiplier(stock);
+  return gmMode
+    ? initialSpeed + foodSpeedBonus
+    : initialSpeed * moveMultiplier(stock);
 }
 
 function damageMultiplier(stock) {
@@ -1924,7 +2391,9 @@ function damageMultiplier(stock) {
 }
 
 function attackDamageMultiplier(profile = "big") {
-  return profile === "small" ? smallAttackDamageMultiplier : bigAttackDamageMultiplier;
+  return profile === "small"
+    ? smallAttackDamageMultiplier
+    : bigAttackDamageMultiplier;
 }
 
 function attackDamage(stock, profile = "big") {
@@ -1936,15 +2405,28 @@ function areaMultiplier(stock) {
 }
 
 function attackSpeedMultiplier(stock) {
-  return 1 + foodBonus(stock, "carb", attackSpeedBonusPerPoint, maxAttackSpeedBonus);
+  return (
+    1 + foodBonus(stock, "carb", attackSpeedBonusPerPoint, maxAttackSpeedBonus)
+  );
 }
 
 function attackCooldownMultiplier(stock) {
-  return 1 + foodBonus(stock, "fiber", attackSpeedBonusPerPoint, maxAttackSpeedBonus);
+  return (
+    1 + foodBonus(stock, "fiber", attackSpeedBonusPerPoint, maxAttackSpeedBonus)
+  );
 }
 
 function attackStunChance(stock, baseChance = baseAttackStunChance) {
-  return Math.min(1, baseChance + foodBonus(stock, "carb", attackStunChanceBonusPerPoint, maxAttackStunChanceBonus));
+  return Math.min(
+    1,
+    baseChance +
+      foodBonus(
+        stock,
+        "carb",
+        attackStunChanceBonusPerPoint,
+        maxAttackStunChanceBonus,
+      ),
+  );
 }
 
 function moveInterval(stock) {
@@ -1955,7 +2437,7 @@ function moveIntervalFor(owner, now) {
   const stock = owner === "player" ? playerStock : computerStock;
   const slowUntil = owner === "player" ? playerSlowUntil : computerSlowUntil;
   const speedScale = isPlayerAutoControlActive() ? computerBattleSpeed : 1;
-  return moveInterval(stock) * (now < slowUntil ? 2 : 1) / speedScale;
+  return (moveInterval(stock) * (now < slowUntil ? 2 : 1)) / speedScale;
 }
 
 function isMovementStunned(owner, now) {
@@ -1967,14 +2449,19 @@ function attackDelay(stock) {
 }
 
 function attackCooldown(stock, profile = "big", characterId = null) {
-  const baseCooldown = profile === "big" && characterId
-    ? attackUltimateBalance?.[characterId]?.bigCooldownMs ?? baseAttackCooldownMs
-    : baseAttackCooldownMs;
+  const baseCooldown =
+    profile === "big" && characterId
+      ? (attackUltimateBalance?.[characterId]?.bigCooldownMs ??
+        baseAttackCooldownMs)
+      : baseAttackCooldownMs;
   return baseCooldown / attackCooldownMultiplier(stock);
 }
 
 function attackProfileCooldown(stock, profile = "big", characterId = null) {
-  return attackCooldown(stock, profile, characterId) * (profile === "small" ? smallAttackCooldownScale : 1);
+  return (
+    attackCooldown(stock, profile, characterId) *
+    (profile === "small" ? smallAttackCooldownScale : 1)
+  );
 }
 
 function resetAttackCooldownTracker() {
@@ -1999,15 +2486,21 @@ function lastAttackMsFor(owner, profile = "big") {
 function setLastAttackMsFor(owner, profile = "big", value = performance.now()) {
   const key = normalizedAttackProfile(profile);
   if (owner === "player") {
-    if (!lastPlayerAttackMs || typeof lastPlayerAttackMs !== "object") lastPlayerAttackMs = resetAttackCooldownTracker();
+    if (!lastPlayerAttackMs || typeof lastPlayerAttackMs !== "object")
+      lastPlayerAttackMs = resetAttackCooldownTracker();
     lastPlayerAttackMs[key] = value;
     return;
   }
-  if (!lastComputerAttackMs || typeof lastComputerAttackMs !== "object") lastComputerAttackMs = resetAttackCooldownTracker();
+  if (!lastComputerAttackMs || typeof lastComputerAttackMs !== "object")
+    lastComputerAttackMs = resetAttackCooldownTracker();
   lastComputerAttackMs[key] = value;
 }
 
-function attackCooldownRemainingMs(owner, profile = "big", now = performance.now()) {
+function attackCooldownRemainingMs(
+  owner,
+  profile = "big",
+  now = performance.now(),
+) {
   const stock = owner === "player" ? playerStock : computerStock;
   const character = characterFor(owner);
   const cooldownMs = attackProfileCooldown(stock, profile, character?.id);
@@ -2037,7 +2530,7 @@ function attackBombCost(profile = "big") {
 function highestStockFoodType(stock) {
   return foodTypes.reduce((best, type) => {
     const currentCount = stock[type.id] || 0;
-    const bestCount = best ? (stock[best.id] || 0) : -Infinity;
+    const bestCount = best ? stock[best.id] || 0 : -Infinity;
     return currentCount > bestCount ? type : best;
   }, null);
 }
@@ -2048,7 +2541,7 @@ function hasAttackFoodCost(stock, profile = "big") {
     const highestType = highestStockFoodType(stock);
     return Boolean(highestType) && (stock[highestType.id] || 0) >= cost;
   }
-  return foodTypes.every(type => stock[type.id] >= cost);
+  return foodTypes.every((type) => stock[type.id] >= cost);
 }
 
 function ammoFor(owner) {
@@ -2061,11 +2554,15 @@ function ammoChargeFor(owner) {
 
 function canAttack(owner, profile = "big") {
   const stock = owner === "player" ? playerStock : computerStock;
-  return ammoFor(owner) >= attackBombCost(profile) && hasAttackFoodCost(stock, profile);
+  return (
+    ammoFor(owner) >= attackBombCost(profile) &&
+    hasAttackFoodCost(stock, profile)
+  );
 }
 
 function convertFullEnergyToAmmo(owner) {
-  if (ammoChargeFor(owner) < attackNeedTotal || ammoFor(owner) >= maxAmmo) return false;
+  if (ammoChargeFor(owner) < attackNeedTotal || ammoFor(owner) >= maxAmmo)
+    return false;
   const now = performance.now();
   if (owner === "player") {
     playerAmmo += 1;
@@ -2088,9 +2585,10 @@ function consumeAttackCost(owner, stock, profile = "big") {
   const hadFullBombs = ammoFor(owner) >= maxAmmo;
   if (profile === "small") {
     const highestType = highestStockFoodType(stock);
-    if (highestType) stock[highestType.id] = Math.max(0, (stock[highestType.id] || 0) - cost);
+    if (highestType)
+      stock[highestType.id] = Math.max(0, (stock[highestType.id] || 0) - cost);
   } else {
-    foodTypes.forEach(type => {
+    foodTypes.forEach((type) => {
       stock[type.id] = Math.max(0, stock[type.id] - cost);
     });
   }
@@ -2139,7 +2637,9 @@ function foodTypeIds(food) {
 }
 
 function randomStockFoodTypeId(candidates = stockFoodTypeIds) {
-  const available = candidates.filter(typeId => stockFoodTypeIds.includes(typeId));
+  const available = candidates.filter((typeId) =>
+    stockFoodTypeIds.includes(typeId),
+  );
   if (!available.length) return null;
   return available[Math.floor(Math.random() * available.length)];
 }
@@ -2152,7 +2652,9 @@ function addRandomStock(stock, candidates = stockFoodTypeIds, amount = 1) {
 function applyCharacterFoodStockBonus(owner, stock, types) {
   const character = characterFor(owner);
   const hasBlackFood = types.includes("black");
-  const stockTypes = types.filter(typeId => stockFoodTypeIds.includes(typeId));
+  const stockTypes = types.filter((typeId) =>
+    stockFoodTypeIds.includes(typeId),
+  );
   if (character?.specialFood === "black") {
     if (!hasBlackFood) return;
     const roll = Math.random();
@@ -2170,7 +2672,11 @@ function applyCharacterFoodStockBonus(owner, stock, types) {
     }
     return;
   }
-  if (stockTypes.length === 1 && stockTypes[0] === character?.food && Math.random() < favoriteFoodBonusChance) {
+  if (
+    stockTypes.length === 1 &&
+    stockTypes[0] === character?.food &&
+    Math.random() < favoriteFoodBonusChance
+  ) {
     addStock(stock, stockTypes[0], 1);
   }
 }
@@ -2185,8 +2691,9 @@ function collectFood(owner, food) {
     applyCharacterFoodStockBonus(owner, stock, types);
     return;
   }
-  const stockGain = types.length > 1 ? dualColorStockGain : singleColorStockGain;
-  types.forEach(typeId => addStock(stock, typeId, stockGain));
+  const stockGain =
+    types.length > 1 ? dualColorStockGain : singleColorStockGain;
+  types.forEach((typeId) => addStock(stock, typeId, stockGain));
   applyCharacterFoodStockBonus(owner, stock, types);
   addAmmoCharge(owner, foodEnergy);
 }

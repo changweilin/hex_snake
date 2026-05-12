@@ -50,7 +50,7 @@
 
     function resolveCharacterChoice(owner, choice) {
       const fallback = owner === "player" ? characters[0] : characters[Math.min(1, characters.length - 1)];
-      if (choice === randomCharacterChoiceId) return randomCharacter().id;
+      if (choice === randomCharacterChoiceId) return consumeStartLogoRandomCharacterId(owner) || randomCharacter().id;
       return characterById.has(choice) ? choice : fallback.id;
     }
 
@@ -624,6 +624,7 @@
         if (!canRestartAfterGameOver()) return false;
         returnToStartScreen();
       }
+      showCharacterStage({ startLogoCharacters: true, overlay: true });
       startLogoCountdownPending = true;
       setSettingsLocked(true);
       setStatus("開局倒數中：3 秒後開始。");
@@ -674,7 +675,7 @@
       setSettingsLocked(true);
       setStatus("對戰中：吃食物累積能量，集滿可獲得炸彈。");
       overlay.classList.remove("show");
-      characterStage.hidden = false;
+      showCharacterStage({ rebuild: false, overlay: false });
       updateAutoBattleControls();
       lastPlayerStep = performance.now();
       lastComputerStep = lastPlayerStep;
@@ -2250,6 +2251,7 @@
       gameOverSettlementPending = false;
       gameOverLogoTransitionEndsAt = 0;
       if (!gameOver || running || HexSnakeReplay.isPlaybackMode()) return;
+      hideCharacterStage();
       clearLogoTransition();
       renderWinnerPortrait(gameOverResultOwner, gameOverPlayerLost, gameOverComputerLost);
       overlay.classList.add("show");
@@ -2493,6 +2495,8 @@
       playerAutoMode = false;
       computerBattleManualOverride = false;
       gameOver = true;
+      if (shouldUseGameOverLogo) showCharacterStage({ rebuild: false, overlay: true });
+      else hideCharacterStage();
       gameOverContinuousVisualDeadlineAt = gameOverAt + gameOverContinuousVisualMaxWaitMs;
       gameOverLogoTransitionEndsAt = shouldUseGameOverLogo ? gameOverAt + logoTransitionDurationMs : 0;
       updateAutoBattleControls();
@@ -3921,13 +3925,24 @@
       overlay.classList.add("show");
     });
 
+    const tutorialActionButtonFromEvent = (event) => {
+      const path = event.composedPath?.() || [];
+      for (const node of path) {
+        if (node instanceof Element && typeof node.closest === "function") {
+          const button = node.closest("[data-tutorial-action]");
+          if (button) return button;
+        }
+      }
+      return event.target?.closest?.("[data-tutorial-action]") || null;
+    };
+
     winnerPortrait.addEventListener("click", event => {
       if (tutorialSwipeDidMove) {
         tutorialSwipeDidMove = false;
         event.preventDefault();
         return;
       }
-      const button = event.target.closest("[data-tutorial-action]");
+      const button = tutorialActionButtonFromEvent(event);
       if (!button) return;
       const action = button.dataset.tutorialAction;
       if (action === "next") {
@@ -3941,6 +3956,7 @@
 
     overlay.addEventListener("pointerdown", event => {
       if (!isTutorialOpen() || event.button > 0) return;
+      if (tutorialActionButtonFromEvent(event)) return;
       tutorialSwipeStartX = event.clientX;
       tutorialSwipeStartY = event.clientY;
       tutorialSwipePointerId = event.pointerId;
@@ -3995,7 +4011,7 @@
         paused = false;
         setStatus("對戰中：吃食物累積能量，集滿可獲得炸彈。");
         overlay.classList.remove("show");
-        characterStage.hidden = false;
+        showCharacterStage({ rebuild: false, overlay: false });
         lastPlayerStep = performance.now();
         lastComputerStep = lastPlayerStep;
         lastTimerFrame = lastPlayerStep;
@@ -4615,6 +4631,7 @@
       if (isEffectComparisonMode()) {
         overlay.classList.remove("show");
         characterStage.hidden = true;
+        setCharacterStageOverlayMode(false);
         setStatus("Skill effect comparison mode.");
         cancelAnimationFrame(rafId);
         rafId = requestAnimationFrame(comparisonLoop);

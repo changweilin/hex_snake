@@ -421,6 +421,7 @@
         startText: startButton.textContent,
         winnerPortraitHidden: winnerPortrait.hidden,
         winnerPortraitHtml: winnerPortrait.innerHTML,
+        characterStageClassName: characterStage.className,
         characterStageHidden: characterStage.hidden,
         characterStageHtml: characterStage.innerHTML,
         statusText: statusEl.textContent,
@@ -471,6 +472,7 @@
       startButton.textContent = state.startText;
       winnerPortrait.hidden = state.winnerPortraitHidden;
       winnerPortrait.innerHTML = state.winnerPortraitHtml;
+      characterStage.className = state.characterStageClassName || "character-stage";
       characterStage.hidden = state.characterStageHidden;
       characterStage.innerHTML = state.characterStageHtml;
       setStatus(state.statusText);
@@ -551,6 +553,7 @@
       setSettingsLocked(true);
       setOverlayChromeVisible(false);
       overlay.classList.remove("show");
+      setCharacterStageOverlayMode(false);
       replayControls.hidden = false;
       prepareReplayPlaylist(record);
       loadReplayPlaybackRecord(record);
