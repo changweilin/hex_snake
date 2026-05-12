@@ -11,10 +11,25 @@
 </head>
 <body>
   <div class="page-loading-progress" id="pageLoadingProgress" role="progressbar" aria-label="Page loading progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-    <div class="page-loading-track" aria-hidden="true">
-      <span class="page-loading-bar"></span>
+    <div class="page-loading-card">
+      <div class="page-loading-copy">
+        <span class="page-loading-kicker">HEX SNAKE</span>
+        <strong class="page-loading-title">Loading arena</strong>
+      </div>
+      <figure class="page-loading-portrait" id="pageLoadingPortrait" hidden>
+        <img id="pageLoadingPortraitImage" alt="" decoding="async">
+        <figcaption class="page-loading-portrait-caption">
+          <span id="pageLoadingPortraitName">Character</span>
+          <span id="pageLoadingPortraitVariant">Human portrait</span>
+        </figcaption>
+      </figure>
+      <div class="page-loading-status">
+        <div class="page-loading-track" aria-hidden="true">
+          <span class="page-loading-bar"></span>
+        </div>
+        <span class="page-loading-label" id="pageLoadingLabel">Loading...</span>
+      </div>
     </div>
-    <span class="page-loading-label" id="pageLoadingLabel">Loading...</span>
   </div>
   <main class="app" aria-label="六角貪食蛇對戰">
     <section class="stage">
