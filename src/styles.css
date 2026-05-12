@@ -3705,16 +3705,16 @@
       display: grid;
       place-items: center;
       width: 100%;
-      min-height: 2.7em;
+      min-height: 3.05em;
       box-sizing: border-box;
-      padding: 7px 9px;
+      padding: 8px 10px;
       border-radius: 8px;
       border: 1px solid rgba(255, 255, 255, 0.18);
       background: rgba(15, 23, 36, 0.74);
       color: #f8fafc;
-      font-size: 0.78rem;
+      font-size: 0.86rem;
       font-weight: 850;
-      line-height: 1.25;
+      line-height: 1.28;
       text-align: center;
       text-wrap: balance;
       text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
@@ -3726,6 +3726,22 @@
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 10px;
       margin-bottom: 12px;
+    }
+
+    .result-pair {
+      margin-bottom: 20px;
+    }
+
+    .dialog:has(.result-pair) h2 {
+      margin-bottom: 4px;
+      font-size: 1.46rem;
+      line-height: 1.16;
+    }
+
+    .dialog:has(.result-pair) p {
+      margin-bottom: 12px;
+      font-size: 0.92rem;
+      line-height: 1.22;
     }
 
     .portrait-pair .fighter-portrait {
@@ -5927,6 +5943,22 @@
         margin-bottom: 0;
       }
 
+      .overlay.is-session-modal .result-pair {
+        margin-bottom: 14px;
+      }
+
+      .overlay.is-session-modal .dialog:has(.result-pair) h2 {
+        margin-bottom: 2px;
+        font-size: 1.08rem;
+        line-height: 1.12;
+      }
+
+      .overlay.is-session-modal .dialog:has(.result-pair) p {
+        margin-bottom: 8px;
+        font-size: 0.76rem;
+        line-height: 1.18;
+      }
+
       .overlay.is-session-modal .intro-avatar-button {
         min-height: 0;
         gap: 4px;
@@ -5944,10 +5976,10 @@
       }
 
       .overlay.is-session-modal .result-quote {
-        min-height: 2.35em;
-        padding: 5px 6px;
-        font-size: 0.62rem;
-        line-height: 1.18;
+        min-height: 2.78em;
+        padding: 6px 7px;
+        font-size: 0.72rem;
+        line-height: 1.2;
       }
 
       .overlay.is-session-modal .intro-avatar-label-controls {
