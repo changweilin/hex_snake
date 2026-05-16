@@ -226,6 +226,17 @@
       replayMessage.textContent = text;
     }
 
+    function createReplayActionButton(label, dataset, className = "") {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = label;
+      if (className) button.className = className;
+      Object.entries(dataset).forEach(([key, value]) => {
+        button.dataset[key] = value;
+      });
+      return button;
+    }
+
     function renderReplayList(container, records, favoriteSection = false) {
       container.innerHTML = "";
       if (!records.length) {
@@ -238,17 +249,28 @@
       records.forEach(record => {
         const row = document.createElement("div");
         row.className = "replay-row";
-        row.innerHTML = `
-          <div>
-            <span class="replay-title">${record.title || replayTitleFor(record)}</span>
-            <div class="replay-meta">${replayMetaFor(record)}</div>
-          </div>
-          <div class="replay-actions">
-            <button type="button" data-replay-play="${record.id}">播放</button>
-            <button class="secondary" type="button" data-replay-favorite="${record.id}">${isReplayFavorite(record.id) ? "取消最愛" : "加入最愛"}</button>
-            <button class="secondary" type="button" data-replay-delete="${record.id}" data-replay-section="${favoriteSection ? "favorite" : "recent"}">刪除</button>
-          </div>
-        `;
+
+        const details = document.createElement("div");
+        const title = document.createElement("span");
+        title.className = "replay-title";
+        title.textContent = record.title || replayTitleFor(record);
+        const meta = document.createElement("div");
+        meta.className = "replay-meta";
+        meta.textContent = replayMetaFor(record);
+        details.append(title, meta);
+
+        const actions = document.createElement("div");
+        actions.className = "replay-actions";
+        actions.append(
+          createReplayActionButton("播放", { replayPlay: record.id }),
+          createReplayActionButton(isReplayFavorite(record.id) ? "取消最愛" : "加入最愛", { replayFavorite: record.id }, "secondary"),
+          createReplayActionButton("刪除", {
+            replayDelete: record.id,
+            replaySection: favoriteSection ? "favorite" : "recent"
+          }, "secondary")
+        );
+
+        row.append(details, actions);
         container.append(row);
       });
     }

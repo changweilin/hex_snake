@@ -81,10 +81,10 @@
 ## P2 - Architecture
 
 - 轉真正 ES modules
-  - 範圍：逐步移除 `src/main.js` 的 `eval` loader，改成 `import/export`。
+  - 範圍：逐步移除 `src/main.js` 的 legacy concatenated module loader，改成 `import/export`。
   - 目標：讓模組邊界由語言層級保護，而不是只靠載入順序。
   - 驗收：`<script type="module" src="src/main.js">` 直接 import 各模組，無 global scope 隱性依賴。
-  - 狀態：已建立 `npm run audit:globals` 與 `doc/legacy-global-dependencies.md`，可盤點目前 legacy eval 載入順序下的跨檔 global 讀取。
+  - 狀態：已建立 `npm run audit:globals` 與 `doc/legacy-global-dependencies.md`，可盤點目前 legacy concatenated loader 載入順序下的跨檔 global 讀取；直接 `eval` 已先移除。
   - 下一步：先從 `characters.js`、`audio.js`、`replay.js` 這類邊界較清楚的檔案開始，把盤點結果轉成 import/export 切分清單。
 
 - 拆分 `render.js`

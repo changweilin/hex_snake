@@ -64,9 +64,9 @@ let maxMatchMs = 240000;
 let hpPerSnakeUnit = 10;
 let gameOverRestartDelayMs = 700;
 const gameOverContinuousVisualMaxWaitMs = 1000;
-const smallAttackDelayScale = 0.31;
-const smallAttackCooldownScale = 0.29;
-const sandwormRevealBeforeImpactMs = 200;
+let smallAttackDelayScale = 0.31;
+let smallAttackCooldownScale = 0.29;
+let sandwormRevealBeforeImpactMs = 200;
 const sandwormUndergroundWindowMs = 500;
 let defaultSettings = {
   gridSize: 10,
@@ -139,6 +139,12 @@ function applyBalanceConfig(config) {
     config.attack?.smallAttackFoodCost ?? smallAttackFoodCost;
   smallAttackBombCost =
     config.attack?.smallAttackBombCost ?? smallAttackBombCost;
+  smallAttackDelayScale =
+    config.attack?.smallAttackDelayScale ?? smallAttackDelayScale;
+  smallAttackCooldownScale =
+    config.attack?.smallAttackCooldownScale ?? smallAttackCooldownScale;
+  sandwormRevealBeforeImpactMs =
+    config.attack?.sandwormRevealBeforeImpactMs ?? sandwormRevealBeforeImpactMs;
   bigAttackBombCost = config.attack?.bigAttackBombCost ?? bigAttackBombCost;
   smallAttackDamageMultiplier =
     config.attack?.smallAttackDamageMultiplier ?? smallAttackDamageMultiplier;

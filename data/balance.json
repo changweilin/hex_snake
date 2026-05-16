@@ -48,6 +48,9 @@
   "attack": {
     "smallAttackFoodCost": 2,
     "smallAttackBombCost": 1,
+    "smallAttackDelayScale": 0.31,
+    "smallAttackCooldownScale": 0.29,
+    "sandwormRevealBeforeImpactMs": 200,
     "smallAttackDamageMultiplier": 2.5,
     "bigAttackDamageMultiplier": 5,
     "bigAttackBombCost": 2,

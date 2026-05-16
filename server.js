@@ -17,7 +17,8 @@ const types = {
   ".jpg": "image/jpeg",
   ".jpeg": "image/jpeg",
   ".ico": "image/x-icon",
-  ".svg": "image/svg+xml; charset=utf-8"
+  ".svg": "image/svg+xml; charset=utf-8",
+  ".wav": "audio/wav"
 };
 
 function send(res, status, body, type = "text/plain; charset=utf-8") {
@@ -29,24 +30,33 @@ function send(res, status, body, type = "text/plain; charset=utf-8") {
 }
 
 function resolveRequest(urlPath) {
-  const decoded = decodeURIComponent(urlPath.split("?")[0]);
+  let decoded;
+  try {
+    decoded = decodeURIComponent(urlPath.split("?")[0]);
+  } catch {
+    return { status: 400, message: "Bad request" };
+  }
+
   const requested = decoded === "/" ? "/index.html" : decoded;
   const filePath = path.resolve(root, `.${requested}`);
+  const relativePath = path.relative(root, filePath);
 
-  if (!filePath.startsWith(root)) {
-    return null;
+  if (relativePath.startsWith("..") || path.isAbsolute(relativePath)) {
+    return { status: 403, message: "Forbidden" };
   }
 
-  return filePath;
+  return { filePath };
 }
 
-const server = http.createServer((req, res) => {
-  const filePath = resolveRequest(req.url || "/");
+function handleRequest(req, res) {
+  const resolved = resolveRequest(req.url || "/");
 
-  if (!filePath) {
-    send(res, 403, "Forbidden");
+  if (!resolved.filePath) {
+    send(res, resolved.status, resolved.message);
     return;
   }
+
+  const { filePath } = resolved;
 
   fs.readFile(filePath, (error, data) => {
     if (error) {
@@ -57,7 +67,11 @@ const server = http.createServer((req, res) => {
     const type = types[path.extname(filePath).toLowerCase()] || "application/octet-stream";
     send(res, 200, data, type);
   });
-});
+}
+
+function createServer() {
+  return http.createServer(handleRequest);
+}
 
 function getNetworkUrls() {
   const urls = [`http://localhost:${port}`];
@@ -73,9 +87,23 @@ function getNetworkUrls() {
   return [...new Set(urls)];
 }
 
-server.listen(port, host, () => {
-  console.log("Hex Snake dev server running:");
-  getNetworkUrls().forEach(url => console.log(`  ${url}`));
-  console.log(`Serving ${root}`);
-  console.log(`Listening on ${host}:${port}`);
-});
+function startServer() {
+  const server = createServer();
+  server.listen(port, host, () => {
+    console.log("Hex Snake dev server running:");
+    getNetworkUrls().forEach(url => console.log(`  ${url}`));
+    console.log(`Serving ${root}`);
+    console.log(`Listening on ${host}:${port}`);
+  });
+  return server;
+}
+
+if (require.main === module) {
+  startServer();
+}
+
+module.exports = {
+  createServer,
+  resolveRequest,
+  startServer
+};

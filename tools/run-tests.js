@@ -82,6 +82,10 @@ const {
   updateIndex
 } = require("./apply-ai-strategy");
 
+const {
+  resolveRequest
+} = require("../server");
+
 const root = path.resolve(__dirname, "..");
 const balance = loadBalance(root);
 const characters = loadCharacters(root);
@@ -96,6 +100,7 @@ const slowTestPatterns = [
   /balance tuner/,
   /AI strategy tuner/,
   /AI strategy gate/,
+  /strategy optimizer/,
   /high difficulty applies character-specific/,
   /simulate-balance strategy files/,
   /apply-ai-strategy/
@@ -131,6 +136,13 @@ function balanceWithResourceOverrides(overrides) {
     }
   };
 }
+
+test("dev server rejects malformed and escaped paths", () => {
+  assert.equal(resolveRequest("/").filePath, path.join(root, "index.html"));
+  assert.equal(resolveRequest("/%E0%A4%A").status, 400);
+  assert.equal(resolveRequest("/../hex_snake_evil/secret.txt").status, 403);
+  assert.equal(resolveRequest("/..%5Chex_snake_evil%5Csecret.txt").status, 403);
+});
 
 test("hex distance and wrapped movement are deterministic", () => {
   const board = createBoard(6);
@@ -535,7 +547,7 @@ test("sandworm underground perception uses last visible snake instead of true po
 
 test("small attack delay is doubled in speed while big attack delay is unchanged", () => {
   const stock = Object.fromEntries(FOOD_TYPES.map(type => [type, 0]));
-  assert.equal(attackStats(stock, "small", balance).delay, balance.attack.baseAttackDelayMs * 0.31);
+  assert.equal(attackStats(stock, "small", balance).delay, balance.attack.baseAttackDelayMs * balance.attack.smallAttackDelayScale);
   assert.equal(attackStats(stock, "big", balance).delay, balance.attack.baseAttackDelayMs);
 });
 
@@ -1241,7 +1253,7 @@ test("moray big attack creates a speed-scaled continuous line hazard", () => {
   const normalSmallStats = attackStats(normal.attacker.stock, "small", balance);
   assert.ok(Math.abs(normal.setup.damage - normalBigStats.damage * balance.attack.ultimates.moray.damageMultiplier) < 1e-9);
   assert.ok(Math.abs(normal.setup.tickMs - normalSmallStats.delay) < 1e-9);
-  assert.ok(Math.abs(normal.setup.fieldEndAt - normal.setup.fieldStartedAt - balance.attack.baseAttackDelayMs * 0.31 * balance.attack.ultimates.moray.durationBaseTicks) < 1e-9);
+  assert.ok(Math.abs(normal.setup.fieldEndAt - normal.setup.fieldStartedAt - balance.attack.baseAttackDelayMs * balance.attack.smallAttackDelayScale * balance.attack.ultimates.moray.durationBaseTicks) < 1e-9);
   assert.equal(normal.setup.stackStun, true);
   assert.ok(Math.abs(normal.setup.stunChance - 0.17) < 1e-9);
   assert.ok(Math.abs(normal.setup.headStunChance - 0.34) < 1e-9);

@@ -143,7 +143,7 @@ const pageLoadingProgress = (() => {
 })();
 
 async function loadLegacyModules() {
-  // Keep the legacy script in one evaluated scope while the source is split into smaller files.
+  // Keep the legacy code in one module scope while the source is split into smaller files.
   const sources = ["src/state.js", "src/dom.js", "src/ui.js", "src/characters.js", "src/audio.js", "src/replay.js", "src/ai.js", "src/render.js", "src/game.js"];
   let loaded = 0;
 
@@ -158,7 +158,12 @@ async function loadLegacyModules() {
   }));
 
   pageLoadingProgress.set(96, "Starting");
-  eval(parts.join("\n"));
+  const bundleUrl = URL.createObjectURL(new Blob([parts.join("\n")], { type: "text/javascript" }));
+  try {
+    await import(bundleUrl);
+  } finally {
+    URL.revokeObjectURL(bundleUrl);
+  }
 }
 
 function showBootError(error) {
