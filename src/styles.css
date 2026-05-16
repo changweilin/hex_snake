@@ -696,6 +696,11 @@
       opacity: 0.78;
     }
 
+    .target-mode-indicator[hidden],
+    .cooldown-indicator[hidden] {
+      display: none;
+    }
+
     @keyframes cooldown-hand-spin {
       to {
         transform: translate(-50%, -100%) rotate(478deg);

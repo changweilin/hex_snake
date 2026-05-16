@@ -882,8 +882,22 @@
       updateCooldownIndicator("big", cooldownBigIndicator, cooldownBigValue, now);
     }
 
+    function updateSkillPrepVisibility() {
+      const visible = !HexSnakeReplay.isPlaybackMode() && !isPlayerAutoControlActive();
+      const skillPrepHud = [
+        targetModeSmallIndicator,
+        targetModeBigIndicator,
+        cooldownSmallIndicator,
+        cooldownBigIndicator
+      ];
+      skillPrepHud.forEach(element => {
+        if (element) element.hidden = !visible;
+      });
+    }
+
     function updateHud() {
       lastHudFrameAt = performance.now();
+      updateSkillPrepVisibility();
       const playerMaxHp = maxHpForSnake(snake);
       const computerMaxHp = maxHpForSnake(computerSnake);
       scoreEl.textContent = `HP ${Math.max(0, Math.ceil(playerHp))}/${playerMaxHp}`;
@@ -1044,6 +1058,7 @@
       autoPauseButton.setAttribute("aria-label", paused ? "播放" : "暫停");
       autoPauseButton.title = paused ? "播放" : "暫停";
       updateRelayControls();
+      updateSkillPrepVisibility();
     }
 
     function setPlayerAutoMode(active, announce = true) {
