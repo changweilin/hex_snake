@@ -6,6 +6,11 @@
   <link rel="icon" href="assets/logos/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" sizes="32x32" href="assets/logos/white-dragon-favicon-32.png">
   <link rel="apple-touch-icon" sizes="180x180" href="assets/logos/white-dragon-apple-touch.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#111720">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Hex Snake">
   <title>六角貪食蛇對戰</title>
   <link rel="stylesheet" href="src/styles.css">
 </head>
@@ -364,6 +369,11 @@
       </div>
       <div id="favoriteReplayList"></div>
     </div>
+  </div>
+  <div class="pwa-update-prompt" id="pwaUpdatePrompt" hidden role="status" aria-live="polite">
+    <span>新版本已準備好。</span>
+    <button type="button" data-pwa-update-reload>重新啟動</button>
+    <button class="secondary" type="button" data-pwa-update-dismiss aria-label="稍後再說">稍後</button>
   </div>
 
   <script type="module" src="src/main.js"></script>

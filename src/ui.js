@@ -582,8 +582,8 @@ let playerEnergyFlashUntil = 0;
 let computerEnergyFlashUntil = 0;
 let playerBombFlashUntil = 0;
 let computerBombFlashUntil = 0;
-let best = Number(localStorage.getItem("hexSnakeBest") || 0);
-let bestTotalMs = Number(localStorage.getItem("hexSnakeBestTotalMs") || 0);
+let best = Number(HexSnakeStorage.get("hexSnakeBest") || 0);
+let bestTotalMs = Number(HexSnakeStorage.get("hexSnakeBestTotalMs") || 0);
 let totalElapsedMs = 0;
 let lastFeedElapsedMs = 0;
 let running = false;
@@ -592,9 +592,9 @@ let computerBattleMode = false;
 let playerAutoMode = false;
 let computerBattleManualOverride = false;
 let computerBattleSpeed = normalizeAutoBattleSpeed(
-  localStorage.getItem("hexSnakeAutoBattleSpeed"),
+  HexSnakeStorage.get("hexSnakeAutoBattleSpeed"),
 );
-let relayModePreference = localStorage.getItem("hexSnakeRelayMode") === "1";
+let relayModePreference = HexSnakeStorage.get("hexSnakeRelayMode") === "1";
 let relayMode = false;
 let relayPlayerWins = 0;
 let relayComputerWins = 0;
@@ -693,7 +693,7 @@ const portraitVariantLabels = {
   beast: "幻獸版",
   chibi: "Q獸版",
 };
-const storedPortraitVariant = localStorage.getItem("hexSnakePortraitVariant");
+const storedPortraitVariant = HexSnakeStorage.get("hexSnakePortraitVariant");
 let portraitVariantMode = portraitVariantModes.includes(storedPortraitVariant)
   ? storedPortraitVariant
   : storedPortraitVariant === "full"
@@ -1626,14 +1626,14 @@ function showTutorial(startIndex = 0) {
 }
 
 function finishTutorial(markSeen = true) {
-  if (markSeen) localStorage.setItem(tutorialSeenKey, "1");
+  if (markSeen) HexSnakeStorage.set(tutorialSeenKey, "1");
   overlay.classList.remove("tutorial-open");
   renderIntroPortraits(false);
   overlay.classList.add("show");
 }
 
 function shouldShowTutorial() {
-  return localStorage.getItem(tutorialSeenKey) !== "1";
+  return HexSnakeStorage.get(tutorialSeenKey) !== "1";
 }
 
 function isTutorialOpen() {
@@ -2147,7 +2147,7 @@ function setPortraitVariantMode(mode) {
         : defaultPortraitVariantMode;
   if (portraitVariantMode === nextMode) return;
   portraitVariantMode = nextMode;
-  localStorage.setItem("hexSnakePortraitVariant", portraitVariantMode);
+  HexSnakeStorage.set("hexSnakePortraitVariant", portraitVariantMode);
   rerenderPortraitSurfaces();
   preloadPortraitsFor("player");
   preloadPortraitsFor("computer");

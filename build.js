@@ -5,6 +5,22 @@ const root = __dirname;
 const outDir = path.join(root, "dist");
 const characterDataPath = path.join(root, "data", "characters.json");
 const audioManifestPath = path.join(root, "assets", "audio", "characters", "manifest.json");
+const legacySources = [
+  "src/platform/web.js",
+  "src/state.js",
+  "src/dom.js",
+  "src/ui.js",
+  "src/characters.js",
+  "src/audio.js",
+  "src/replay.js",
+  "src/ai.js",
+  "src/render.js",
+  "src/game.js"
+];
+const bundlePath = "assets/app.bundle.js";
+const bundleMapPath = `${bundlePath}.map`;
+const buildVersion = (process.env.HEX_SNAKE_BUILD_VERSION || new Date().toISOString())
+  .replace(/[^a-zA-Z0-9_.-]/g, "-");
 const portraitVariants = ["human", "beast", "chibi"];
 const deployedPortraitSizes = ["sm", "md"];
 const staticUiAssets = [
@@ -15,6 +31,8 @@ const staticUiAssets = [
   "assets/logos/white-dragon-favicon-48.png",
   "assets/logos/white-dragon-favicon-64.png",
   "assets/logos/white-dragon-favicon-128.png",
+  "assets/logos/white-dragon-icon-192.png",
+  "assets/logos/white-dragon-icon-512.png",
   "assets/logos/white-dragon-apple-touch.png"
 ];
 const defaultDistBudgetMb = 200;
@@ -46,6 +64,11 @@ function relativeFromRoot(filePath) {
   return toPosixPath(path.relative(root, filePath));
 }
 
+function addManifestEntry(relativePath, bytes, manifest) {
+  manifest.files.push({ path: relativePath, bytes });
+  manifest.totalBytes += bytes;
+}
+
 function copyFile(relativePath, manifest, { required = true } = {}) {
   const source = path.join(root, relativePath);
   const target = path.join(outDir, relativePath);
@@ -56,9 +79,15 @@ function copyFile(relativePath, manifest, { required = true } = {}) {
   fs.mkdirSync(path.dirname(target), { recursive: true });
   fs.copyFileSync(source, target);
   const bytes = fs.statSync(source).size;
-  manifest.files.push({ path: relativePath, bytes });
-  manifest.totalBytes += bytes;
+  addManifestEntry(relativePath, bytes, manifest);
   return true;
+}
+
+function writeTextFile(relativePath, text, manifest) {
+  const target = path.join(outDir, relativePath);
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.writeFileSync(target, text, "utf8");
+  addManifestEntry(relativePath, Buffer.byteLength(text, "utf8"), manifest);
 }
 
 function copyDirectory(relativePath, manifest) {
@@ -108,6 +137,89 @@ function addRuntimeAsset(assets, relativePath) {
 function loadJson(filePath, fallback) {
   if (!fs.existsSync(filePath)) return fallback;
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
+}
+
+function productionServiceWorkerRegistration() {
+  return `  <script>
+    (() => {
+      if (!("serviceWorker" in navigator)) return;
+      let refreshing = false;
+      const prompt = () => document.getElementById("pwaUpdatePrompt");
+      const showUpdatePrompt = worker => {
+        const root = prompt();
+        if (!root || !worker) return;
+        root.hidden = false;
+        root.querySelector("[data-pwa-update-reload]")?.addEventListener("click", () => {
+          worker.postMessage({ type: "SKIP_WAITING" });
+        }, { once: true });
+        root.querySelector("[data-pwa-update-dismiss]")?.addEventListener("click", () => {
+          root.hidden = true;
+        }, { once: true });
+      };
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("service-worker.js").then(registration => {
+          if (registration.waiting) showUpdatePrompt(registration.waiting);
+          registration.addEventListener("updatefound", () => {
+            const worker = registration.installing;
+            worker?.addEventListener("statechange", () => {
+              if (worker.state === "installed" && navigator.serviceWorker.controller) showUpdatePrompt(worker);
+            });
+          });
+        }).catch(error => console.warn("Service worker registration failed:", error));
+      });
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (refreshing) return;
+        refreshing = true;
+        window.location.reload();
+      });
+    })();
+  </script>`;
+}
+
+function buildIndexHtml() {
+  const source = fs.readFileSync(path.join(root, "index.html"), "utf8");
+  const scriptTag = '  <script type="module" src="src/main.js"></script>';
+  const replacement = `${productionServiceWorkerRegistration()}\n  <script type="module" src="${bundlePath}"></script>`;
+  if (!source.includes(scriptTag)) {
+    throw new Error("Could not find src/main.js script tag in index.html.");
+  }
+  return source.replace(scriptTag, replacement);
+}
+
+function createLegacyBundle() {
+  const bundleSources = ["src/main.js", ...legacySources];
+  const chunks = [
+    "window.__HEX_SNAKE_BUNDLED_LEGACY__ = true;",
+    `window.__HEX_SNAKE_BUILD_VERSION__ = ${JSON.stringify(buildVersion)};`
+  ];
+
+  bundleSources.forEach(source => {
+    const code = fs.readFileSync(path.join(root, source), "utf8");
+    chunks.push(`\n/* ${source} */\n${code}`);
+  });
+
+  chunks.push(`\n//# sourceMappingURL=${path.basename(bundleMapPath)}`);
+
+  const map = {
+    version: 3,
+    file: path.basename(bundlePath),
+    sources: bundleSources,
+    sourcesContent: bundleSources.map(source => fs.readFileSync(path.join(root, source), "utf8")),
+    names: [],
+    mappings: ""
+  };
+
+  return {
+    code: `${chunks.join("\n")}\n`,
+    map: `${JSON.stringify(map, null, 2)}\n`
+  };
+}
+
+function buildServiceWorker(precacheUrls) {
+  const template = fs.readFileSync(path.join(root, "service-worker.js"), "utf8");
+  return template
+    .replace("__HEX_SNAKE_CACHE_VERSION__", `hex-snake-${buildVersion}`)
+    .replace("__HEX_SNAKE_PRECACHE_URLS__", JSON.stringify(precacheUrls, null, 2));
 }
 
 function collectRuntimeAssets() {
@@ -180,7 +292,17 @@ function findForbiddenDistEntries(manifest) {
 
 const manifest = {
   generatedAt: new Date().toISOString(),
-  strategy: "copy runtime files plus referenced assets",
+  buildVersion,
+  strategy: "single production bundle plus referenced runtime assets",
+  entrypoints: {
+    html: "index.html",
+    script: bundlePath,
+    styles: "src/styles.css"
+  },
+  sourceMap: {
+    path: bundleMapPath,
+    mode: "sourcesContent without generated-line mappings"
+  },
   files: [],
   missing: [],
   totalBytes: 0,
@@ -190,11 +312,26 @@ const manifest = {
 fs.rmSync(outDir, { recursive: true, force: true });
 fs.mkdirSync(outDir, { recursive: true });
 
-copyFile("index.html", manifest);
+writeTextFile("index.html", buildIndexHtml(), manifest);
 copyDirectory("data", manifest);
-copyDirectory("src", manifest);
+copyFile("src/styles.css", manifest);
 staticUiAssets.forEach(relativePath => copyFile(relativePath, manifest));
 collectRuntimeAssets().forEach(relativePath => copyFile(relativePath, manifest));
+copyFile("manifest.webmanifest", manifest);
+copyFile("offline.html", manifest);
+
+const legacyBundle = createLegacyBundle();
+writeTextFile(bundlePath, legacyBundle.code, manifest);
+writeTextFile(bundleMapPath, legacyBundle.map, manifest);
+
+const precacheUrls = [
+  "index.html",
+  "offline.html",
+  "manifest.webmanifest",
+  "build-asset-manifest.json",
+  ...manifest.files.map(file => file.path)
+].filter((value, index, all) => all.indexOf(value) === index);
+writeTextFile("service-worker.js", buildServiceWorker(precacheUrls), manifest);
 
 const manifestPath = path.join(outDir, "build-asset-manifest.json");
 refreshSummaries(manifest);

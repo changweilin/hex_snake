@@ -23,7 +23,7 @@
 
     function replayLoadList(key) {
       try {
-        const parsed = JSON.parse(localStorage.getItem(key) || "[]");
+        const parsed = HexSnakeStorage.getJson(key, []);
         return Array.isArray(parsed) ? parsed : [];
       } catch {
         return [];
@@ -31,7 +31,7 @@
     }
 
     function replaySaveList(key, list) {
-      localStorage.setItem(key, JSON.stringify(list));
+      HexSnakeStorage.setJson(key, list);
     }
 
     function replayCharacterName(id) {
@@ -63,7 +63,7 @@
     }
 
     function storedReplaySpeed() {
-      return normalizeReplaySpeed(localStorage.getItem(replaySpeedKey));
+      return normalizeReplaySpeed(HexSnakeStorage.get(replaySpeedKey));
     }
 
     function allReplayRecords() {
@@ -593,6 +593,7 @@
     function exitReplayPlayback() {
       if (!replayMode) return;
       cancelAnimationFrame(replayRafId);
+      replayRafId = 0;
       replayMode = false;
       replayPlayback = null;
       replayPlaylist = [];
@@ -605,6 +606,19 @@
       restoreReplayReturnState(replayReturnState);
       replayReturnState = null;
     }
+
+    HexSnakePlatform.lifecycle.onPause(() => {
+      if (!replayRafId) return;
+      cancelAnimationFrame(replayRafId);
+      replayRafId = 0;
+      if (replayPlayback) replayPlayback.lastFrameAt = performance.now();
+    });
+
+    HexSnakePlatform.lifecycle.onResume(() => {
+      if (!replayPlayback || replayRafId) return;
+      replayPlayback.lastFrameAt = performance.now();
+      replayRafId = requestAnimationFrame(renderReplayFrame);
+    });
 
     const HexSnakeReplay = Object.freeze({
       get playback() {
@@ -654,7 +668,7 @@
       setPlaybackSpeed(value) {
         if (!replayPlayback) return false;
         replayPlayback.speed = normalizeReplaySpeed(value);
-        localStorage.setItem(replaySpeedKey, String(replayPlayback.speed));
+        HexSnakeStorage.set(replaySpeedKey, String(replayPlayback.speed));
         replayPlayback.lastFrameAt = performance.now();
         updateReplayControls();
         return true;

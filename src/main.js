@@ -144,10 +144,15 @@ const pageLoadingProgress = (() => {
 
 async function loadLegacyModules() {
   // Keep the legacy code in one module scope while the source is split into smaller files.
-  const sources = ["src/state.js", "src/dom.js", "src/ui.js", "src/characters.js", "src/audio.js", "src/replay.js", "src/ai.js", "src/render.js", "src/game.js"];
+  const sources = ["src/platform/web.js", "src/state.js", "src/dom.js", "src/ui.js", "src/characters.js", "src/audio.js", "src/replay.js", "src/ai.js", "src/render.js", "src/game.js"];
   let loaded = 0;
 
   pageLoadingProgress.set(8, "Preparing");
+  if (window.__HEX_SNAKE_BUNDLED_LEGACY__) {
+    pageLoadingProgress.set(96, "Starting");
+    return;
+  }
+
   const parts = await Promise.all(sources.map(async source => {
     const response = await fetch(source);
     if (!response.ok) throw new Error(`Failed to load ${source}: ${response.status}`);

@@ -6,7 +6,7 @@
     function isAiPerfEnabled() {
       if (aiPerfEnabledCache !== null) return aiPerfEnabledCache;
       try {
-        aiPerfEnabledCache = localStorage.getItem("hexSnakeAiPerf") === "1";
+        aiPerfEnabledCache = HexSnakeStorage.get("hexSnakeAiPerf") === "1";
       } catch {
         aiPerfEnabledCache = false;
       }

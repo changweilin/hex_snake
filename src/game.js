@@ -11,7 +11,7 @@
 
     function loadKeybinds() {
       try {
-        const saved = JSON.parse(localStorage.getItem("hexSnakeKeybinds") || "null");
+        const saved = HexSnakeStorage.getJson("hexSnakeKeybinds", null);
         if (!saved || !Array.isArray(saved.directions)) return structuredClone(defaultKeybinds);
         return {
           smallAttack: normalizeKey(saved.smallAttack, defaultKeybinds.smallAttack),
@@ -26,12 +26,12 @@
     }
 
     function saveKeybinds() {
-      localStorage.setItem("hexSnakeKeybinds", JSON.stringify(keybinds));
+      HexSnakeStorage.setJson("hexSnakeKeybinds", keybinds);
     }
 
     function loadSavedCharacterChoices() {
-      const savedPlayer = localStorage.getItem("hexSnakePlayerCharacterId");
-      const savedComputer = localStorage.getItem("hexSnakeComputerCharacterId");
+      const savedPlayer = HexSnakeStorage.get("hexSnakePlayerCharacterId");
+      const savedComputer = HexSnakeStorage.get("hexSnakeComputerCharacterId");
       if (savedPlayer === randomCharacterChoiceId || characterById.has(savedPlayer)) playerCharacterChoice = savedPlayer;
       if (savedComputer === randomCharacterChoiceId || characterById.has(savedComputer)) computerCharacterChoice = savedComputer;
       playerCharacterId = characterById.has(playerCharacterChoice) ? playerCharacterChoice : characters[0].id;
@@ -39,8 +39,8 @@
     }
 
     function saveCharacterChoices() {
-      localStorage.setItem("hexSnakePlayerCharacterId", playerCharacterChoice);
-      localStorage.setItem("hexSnakeComputerCharacterId", computerCharacterChoice);
+      HexSnakeStorage.set("hexSnakePlayerCharacterId", playerCharacterChoice);
+      HexSnakeStorage.set("hexSnakeComputerCharacterId", computerCharacterChoice);
     }
 
     function syncCharacterInputs() {
@@ -115,8 +115,7 @@
 
     function triggerTouchFeedback(event, strength = 8) {
       if (event?.pointerType === "mouse") return;
-      if (!navigator.vibrate) return;
-      navigator.vibrate(strength);
+      HexSnakePlatform.haptics.vibrate(strength);
     }
 
     function setAttackButtonHighlight(profile = null) {
@@ -165,7 +164,7 @@
       const active = Boolean(enabled);
       controlRow.classList.toggle("left-handed", active);
       leftHandModeInput.checked = active;
-      localStorage.setItem("hexSnakeLeftHandMode", active ? "1" : "0");
+      HexSnakeStorage.set("hexSnakeLeftHandMode", active ? "1" : "0");
     }
 
     function clampGridSize(value) {
@@ -274,7 +273,7 @@
     }
 
     function saveGmSettings() {
-      localStorage.setItem("hexSnakeGmSettings", JSON.stringify({
+      HexSnakeStorage.setJson("hexSnakeGmSettings", {
         gridSize,
         foodCount,
         computerDifficulty,
@@ -285,7 +284,7 @@
         initialBombs,
         initialStock,
         gmPresetMode
-      }));
+      });
     }
 
     function applyGmSettingsChanged(options = {}) {
@@ -296,7 +295,7 @@
 
     function loadSavedGmSettings() {
       try {
-        const saved = JSON.parse(localStorage.getItem("hexSnakeGmSettings") || "null");
+        const saved = HexSnakeStorage.getJson("hexSnakeGmSettings", null);
         if (!saved || typeof saved !== "object") {
           updateGmPresetHighlight();
           return;
@@ -494,7 +493,7 @@
 
     function resize() {
       const rect = playArea.getBoundingClientRect();
-      const dpr = Math.max(1, window.devicePixelRatio || 1);
+      const dpr = HexSnakePlatform.display.devicePixelRatio();
       canvas.width = Math.floor(rect.width * dpr);
       canvas.height = Math.floor(rect.height * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -656,7 +655,7 @@
       computerBattleManualOverride = false;
       if (computerBattleMode || playerAutoMode) setRelayMode(relayModePreference, Boolean(options.resetRelayScore), false);
       if (!computerBattleMode && !playerAutoMode) setRelayMode(false, false, false);
-      if (computerBattleMode || playerAutoMode) setComputerBattleSpeed(localStorage.getItem("hexSnakeAutoBattleSpeed"), false);
+      if (computerBattleMode || playerAutoMode) setComputerBattleSpeed(HexSnakeStorage.get("hexSnakeAutoBattleSpeed"), false);
       setFoodCount(foodCountInput.value);
       setComputerDifficulty(computerDifficultyInput.value);
       setInitialSpeed(initialSpeedInput.value);
@@ -987,7 +986,7 @@
       autoBattleSpeedSelect.setAttribute("aria-valuetext", autoBattleSpeedLabel(computerBattleSpeed));
       renderAutoSpeedMenu();
       if (persist) {
-        localStorage.setItem("hexSnakeAutoBattleSpeed", String(computerBattleSpeed));
+        HexSnakeStorage.set("hexSnakeAutoBattleSpeed", String(computerBattleSpeed));
       }
     }
 
@@ -1033,7 +1032,7 @@
       const requestedRelayMode = persist ? relayModePreference : Boolean(enabled);
       relayMode = requestedRelayMode && isRelayModeAvailable();
       relayModeInput.checked = relayMode;
-      if (persist) localStorage.setItem("hexSnakeRelayMode", relayModePreference ? "1" : "0");
+      if (persist) HexSnakeStorage.set("hexSnakeRelayMode", relayModePreference ? "1" : "0");
       if (resetScore) resetRelayScore();
       if (!relayMode) clearRelayRestartTimer();
       updateRelayControls();
@@ -1066,7 +1065,7 @@
       if (playerAutoMode === nextActive) return;
       playerAutoMode = nextActive;
       if (playerAutoMode) {
-        setComputerBattleSpeed(localStorage.getItem("hexSnakeAutoBattleSpeed"), false);
+        setComputerBattleSpeed(HexSnakeStorage.get("hexSnakeAutoBattleSpeed"), false);
         setRelayMode(relayModePreference, false, false);
         resetAutoBattleStepTimers();
         if (announce) setStatus("Auto 已開啟，電腦接手 P1 操作。");
@@ -1084,7 +1083,7 @@
       if (!computerBattleMode || !running || gameOver || HexSnakeReplay.isPlaybackMode()) return;
       computerBattleManualOverride = Boolean(active);
       if (!computerBattleManualOverride) {
-        setComputerBattleSpeed(localStorage.getItem("hexSnakeAutoBattleSpeed"), false);
+        setComputerBattleSpeed(HexSnakeStorage.get("hexSnakeAutoBattleSpeed"), false);
         setRelayMode(relayModePreference, false, false);
         resetAutoBattleStepTimers();
         setStatus("Auto 已開啟，電腦接手 P1 操作。");
@@ -2345,7 +2344,7 @@
         score += 1;
         collectFood("player", eatenFood);
         best = Math.max(best, score);
-        localStorage.setItem("hexSnakeBest", String(best));
+        HexSnakeStorage.set("hexSnakeBest", String(best));
         lastFeedElapsedMs = 0;
         lastPlayerFoodAt = performance.now();
         playerFoodTargetKey = null;
@@ -2519,7 +2518,7 @@
       setSettingsLocked(false);
       if (totalElapsedMs > bestTotalMs) {
         bestTotalMs = totalElapsedMs;
-        localStorage.setItem("hexSnakeBestTotalMs", String(Math.floor(bestTotalMs)));
+        HexSnakeStorage.set("hexSnakeBestTotalMs", String(Math.floor(bestTotalMs)));
       }
       updateHud();
       const winnerOwner = (!playerLost && computerLost) || (playerLost && computerLost && score > computerScore)
@@ -2578,6 +2577,11 @@
     }
 
     function loop(now) {
+      if (HexSnakePlatform.lifecycle.isPaused()) {
+        rafId = 0;
+        return;
+      }
+      HexSnakePlatform.display.recordFrame(now || performance.now());
       if (!running) {
         const frameNow = now || performance.now();
         const visualsActive = gameOverSettlementPending && advanceGameOverVisuals(frameNow);
@@ -3683,7 +3687,7 @@
 
     resetBestTimeButton.addEventListener("click", () => {
       bestTotalMs = 0;
-      localStorage.setItem("hexSnakeBestTotalMs", "0");
+      HexSnakeStorage.set("hexSnakeBestTotalMs", "0");
       updateHud();
     });
 
@@ -4601,8 +4605,26 @@
       }
     });
     window.addEventListener("blur", clearKeyboardAimKeyLocks);
-    document.addEventListener("visibilitychange", () => {
-      if (document.hidden) clearKeyboardAimKeyLocks();
+    HexSnakePlatform.lifecycle.onPause(() => {
+      clearKeyboardAimKeyLocks();
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+        rafId = 0;
+      }
+    });
+    HexSnakePlatform.lifecycle.onResume(() => {
+      if (rafId) return;
+      const now = performance.now();
+      if (running && !gameOver) {
+        lastPlayerStep = now;
+        lastComputerStep = now;
+        lastTimerFrame = now;
+      }
+      if (running || gameOverSettlementPending) {
+        rafId = requestAnimationFrame(loop);
+      } else if (isEffectComparisonMode()) {
+        rafId = requestAnimationFrame(comparisonLoop);
+      }
     });
 
     window.addEventListener("resize", resize);
@@ -4633,7 +4655,7 @@
       updateGmPresetHighlight();
       setSettingsLocked(false);
       applyKeybinds();
-      setLeftHandMode(localStorage.getItem("hexSnakeLeftHandMode") === "1");
+      setLeftHandMode(HexSnakeStorage.get("hexSnakeLeftHandMode") === "1");
       sfxMuteToggle.checked = HexSnakeAudio.muted;
       updateAttackButtons();
       resetGame();

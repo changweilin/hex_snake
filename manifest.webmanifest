@@ -1,0 +1,31 @@
+{
+  "name": "六角貪食蛇對戰",
+  "short_name": "Hex Snake",
+  "description": "A hex-grid snake battle game with character skills, replays, and mobile controls.",
+  "lang": "zh-Hant",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#111720",
+  "theme_color": "#111720",
+  "icons": [
+    {
+      "src": "assets/logos/white-dragon-favicon-128.png",
+      "sizes": "128x128",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/logos/white-dragon-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/logos/white-dragon-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -18,7 +18,12 @@ const types = {
   ".jpeg": "image/jpeg",
   ".ico": "image/x-icon",
   ".svg": "image/svg+xml; charset=utf-8",
-  ".wav": "audio/wav"
+  ".webmanifest": "application/manifest+json; charset=utf-8",
+  ".webp": "image/webp",
+  ".avif": "image/avif",
+  ".wav": "audio/wav",
+  ".m4a": "audio/mp4",
+  ".ogg": "audio/ogg"
 };
 
 function send(res, status, body, type = "text/plain; charset=utf-8") {

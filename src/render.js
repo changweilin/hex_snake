@@ -1,4 +1,9 @@
     function comparisonLoop(now) {
+      if (HexSnakePlatform.lifecycle.isPaused()) {
+        rafId = 0;
+        return;
+      }
+      HexSnakePlatform.display.recordFrame(now || performance.now());
       drawEffectComparisonBoard(now);
       rafId = requestAnimationFrame(comparisonLoop);
     }
@@ -186,7 +191,7 @@
     function visualLoadScale() {
       const mobileScale = mobileInputQuery.matches ? 0.72 : 1;
       const boardScale = cells.length > 240 ? 0.82 : 1;
-      return mobileScale * boardScale;
+      return mobileScale * boardScale * HexSnakePlatform.display.visualLoadScale();
     }
 
     function effectVisualPlanFor(visualType = "", phase = "impact", character = null) {
