@@ -1,0 +1,602 @@
+# Hex Snake App 部署計畫書
+
+更新日期：2026-05-19
+
+## 1. 目標
+
+將目前的 Hex Snake Web 遊戲擴充為可安裝、可離線、可上架的 App 版本，同時維持 Web 版與 App 版共用同一套遊戲核心、角色資料、平衡參數與素材流程，避免後續維護分裂。
+
+短期目標：
+
+- 建立 PWA 基礎，讓 Web 版具備安裝與離線啟動能力。
+- 使用 Capacitor 將既有 Web build 包成 Android / iOS App。
+- 先完成可測機版本，再處理商店上架細節。
+
+中期目標：
+
+- 壓縮首包體積與改善低階手機效能。
+- 加入 App 專屬體驗，例如返回鍵、背景暫停、震動回饋、方向鎖定。
+- 建立 Web 與 App 共用的發布流程。
+
+長期目標：
+
+- 支援穩定的離線資料、戰績、重播與版本遷移。
+- 視產品方向擴充每日挑戰、角色熟練度、雲端同步、商店功能或平台服務。
+
+## 2. 目前專案現況
+
+目前專案是單頁 Web 遊戲，核心檔案包含：
+
+- `index.html`
+- `src/main.js`
+- `src/game.js`
+- `src/render.js`
+- `src/ui.js`
+- `src/audio.js`
+- `data/*.json`
+- `assets/`
+
+既有流程：
+
+- `npm run dev`：啟動本機開發伺服器。
+- `npm run build`：輸出 `dist/`。
+- `npm start`：以 `dist/` 啟動靜態伺服器。
+- `npm run test` / `npm run test:quick` / `npm run test:smoke`：測試與煙霧檢查。
+
+目前 `dist/build-asset-manifest.json` 顯示：
+
+- `dist` 約 153.77 MB。
+- `assets` 約 152.89 MB。
+- `src` 約 0.79 MB。
+- `data` 約 0.05 MB。
+- 目前 build budget 為 200 MB，尚未超出。
+
+主要觀察：
+
+- 專案已具備行動 viewport、pointer/touch 控制、虛擬搖桿與 safe-area CSS。
+- 尚未看到 PWA manifest / service worker。
+- `src/main.js` 目前會 fetch 多個 `src/*.js`，組成 Blob 後再動態 import；這在 Web 可行，但 App WebView、CSP、離線快取與版本更新會較難控管。
+- 素材是 App 化最大風險點，尤其圖片與音效體積。
+
+## 3. 建議技術路線
+
+建議採用「PWA 先行，Capacitor 包裝」。
+
+### 3.1 第一階段：PWA
+
+PWA 是 Web 與 App 之間的橋。先完成 PWA 可以讓 Web 版也受益：
+
+- 可加入主畫面。
+- 可離線啟動。
+- 可使用 service worker 管理快取。
+- 可建立版本更新策略。
+- 可先在瀏覽器驗證行動體驗，再進入原生包裝。
+
+需要新增：
+
+- `manifest.webmanifest`
+- PWA icon：至少 192x192、512x512。
+- `service-worker.js`
+- app 啟動畫面 / theme color / display mode。
+- 安裝提示或安裝說明。
+
+### 3.2 第二階段：Capacitor App
+
+Capacitor 適合這個專案，因為它能把現有 Web 專案包成 iOS / Android App，同時保留 Web-first 開發流程。
+
+需要新增：
+
+- `capacitor.config.*`
+- `android/`
+- `ios/`
+- App icon / splash assets。
+- Android package id。
+- iOS bundle id。
+- App lifecycle adapter。
+- Native platform adapter。
+
+建議先不做 full native rewrite。除非後續要大量使用原生遊戲引擎、複雜商業化 SDK、重度多人連線或高效能圖形需求，否則目前 Web + Capacitor 的成本效益最高。
+
+## 4. 專案管理方式
+
+建議維持同一 repo，不拆成另一個專案。
+
+理由：
+
+- 遊戲邏輯、角色資料、AI、平衡參數與素材高度共用。
+- Web 與 App 若拆 repo，後續 bugfix、平衡調整與素材更新容易漏同步。
+- 目前 App 版主要是部署與平台適配，不是另一套產品。
+
+建議整理成以下結構：
+
+```text
+hex_snake/
+  index.html
+  build.js
+  package.json
+  src/
+    core/
+    render/
+    ui/
+    platform/
+      web.js
+      mobile.js
+  data/
+  assets/
+  public/
+    manifest.webmanifest
+    service-worker.js
+  capacitor.config.ts
+  android/
+  ios/
+  tools/
+  doc/
+```
+
+短期可以不立刻大搬家，但應逐步把平台差異收斂到 `src/platform/` 類似的 adapter。
+
+## 5. App 版可做的擴充與優化
+
+### 5.1 離線與快取
+
+建議事項：
+
+- 首次載入核心檔案與必要資產。
+- 角色圖片、語音、特殊素材可分批快取。
+- service worker 使用版本化 cache name。
+- 更新時採「下載完成後提示重啟」策略，避免遊戲中途混用新舊資產。
+- App 版啟動時檢查資產版本，必要時清除舊快取。
+
+### 5.2 素材體積
+
+目前 `dist` 約 153.77 MB，仍在可接受範圍，但 App 首包應盡量壓小。
+
+建議事項：
+
+- PNG 轉 WebP 或 AVIF，保留必要透明度。
+- WAV 轉 AAC / M4A / OGG，依平台能力選擇格式。
+- full-size 原始圖不要進入 App 首包。
+- 依裝置 DPR 載入 `sm` / `md`，不要一律載入大圖。
+- 將角色素材分為：
+  - core pack：啟動與預設角色需要的素材。
+  - character pack：選到角色或進入角色頁時才載入。
+  - optional pack：展示、圖鑑或高解析素材。
+
+### 5.3 行動操作
+
+建議事項：
+
+- 提供橫向鎖定，或至少針對直向做專門布局。
+- Android 返回鍵：
+  - 設定面板開啟時返回關閉面板。
+  - 遊戲中返回先暫停。
+  - 暫停狀態再返回才離開或跳出確認。
+- App 背景化時自動暫停。
+- 回到前景時恢復畫面並重新檢查音訊狀態。
+- 虛擬搖桿支援大小、位置、透明度與左手/右手模式。
+- 加入震動回饋：
+  - 攻擊命中。
+  - 受到傷害。
+  - 冷卻完成。
+  - 勝利或失敗。
+
+### 5.4 效能與電量
+
+建議事項：
+
+- 限制 canvas devicePixelRatio，例如最高 2。
+- 提供低耗電模式。
+- 提供低特效模式。
+- 背景或暫停時停止 `requestAnimationFrame`。
+- 減少非必要的圖片同時解碼。
+- 避免一次預載所有角色全尺寸素材。
+- 加入基本效能監測：
+  - FPS。
+  - frame time。
+  - asset load time。
+  - 首次可互動時間。
+
+### 5.5 儲存與資料遷移
+
+目前大量使用 `localStorage`。短期可以維持，但建議抽象成 storage adapter。
+
+建議分層：
+
+- Web：
+  - 設定與小資料：`localStorage`。
+  - 重播與較大資料：IndexedDB。
+- App：
+  - 設定與小資料：Capacitor Preferences。
+  - 重播與較大資料：IndexedDB 或 Capacitor Filesystem。
+
+需要加入：
+
+- save data version。
+- migration function。
+- reset corrupted data 流程。
+- 匯出 / 匯入重播或設定的可能性。
+
+### 5.6 App-like 功能
+
+為了讓 App 版不只是網站包殼，建議逐步加入：
+
+- 每日挑戰。
+- 本機戰績統計。
+- 角色熟練度。
+- 重播收藏。
+- 一鍵分享對戰結果。
+- 震動與音效設定。
+- App 專屬設定頁。
+- 離線模式標示。
+- 版本資訊與更新紀錄。
+
+這些功能可以提高 App Store 審核時的產品完整度，也能提高留存。
+
+## 6. Web 與 App 同步維護策略
+
+核心原則：同一套核心，多個平台殼。
+
+### 6.1 共用部分
+
+以下內容應維持共用：
+
+- 遊戲規則。
+- AI。
+- 角色資料。
+- 平衡參數。
+- Canvas render。
+- 音效播放邏輯的高層 API。
+- 重播資料格式。
+- 測試工具。
+- 素材 manifest。
+
+### 6.2 平台差異
+
+以下內容應透過 adapter 分開：
+
+- 儲存 API。
+- 震動。
+- 狀態列與 safe area。
+- Android 返回鍵。
+- App lifecycle。
+- 檔案系統。
+- 分享功能。
+- 商店評分。
+- 推播。
+- 內購或廣告。
+
+建議建立類似介面：
+
+```js
+const platform = {
+  kind: "web",
+  storage: {},
+  haptics: {},
+  lifecycle: {},
+  share: {},
+  appInfo: {}
+};
+```
+
+Web 與 App 只替換平台實作，不改遊戲核心。
+
+### 6.3 Build scripts
+
+建議新增 scripts：
+
+```json
+{
+  "build:web": "node build.js",
+  "build:pwa": "node build.js --pwa",
+  "build:mobile": "node build.js --mobile",
+  "cap:sync": "npx cap sync",
+  "cap:android": "npx cap open android",
+  "cap:ios": "npx cap open ios"
+}
+```
+
+實際指令可依導入 Capacitor 後調整。
+
+### 6.4 發布節奏
+
+建議流程：
+
+1. 先合併到 Web 版。
+2. Web 版部署後觀察 1 到 3 天。
+3. 若沒有嚴重問題，建立 App release candidate。
+4. Android 進 internal testing。
+5. iOS 進 TestFlight。
+6. 收斂問題後送正式商店。
+
+Web 適合作為快速驗證場，App 適合作為穩定發布版。
+
+### 6.5 版本號
+
+建議使用一致版本號：
+
+- Web：`1.2.0`
+- Android：`versionName 1.2.0`，`versionCode` 遞增。
+- iOS：`CFBundleShortVersionString 1.2.0`，`CFBundleVersion` 遞增。
+
+若只有 App shell 修正，可使用：
+
+- Web core：`1.2.0`
+- App shell：`1.2.0+android.3` 或內部 build number 表示。
+
+## 7. 階段計畫
+
+### Phase 0：整理與基準測試
+
+目標：確認目前 Web build 可穩定作為 App 基底。
+
+任務：
+
+- 跑 `npm run build`。
+- 跑 `npm run test:quick`。
+- 跑 `npm run test:smoke`。
+- 記錄 dist 大小。
+- 記錄桌機與手機瀏覽器 FPS。
+- 檢查 UTF-8 文字是否有亂碼。
+- 確認 `dist/` 不含 source、backup、debug 素材。
+
+完成標準：
+
+- Web build 成功。
+- smoke test 成功。
+- dist asset manifest 無 missing / forbidden。
+- 文字顯示正常。
+
+### Phase 1：Build 正規化
+
+目標：降低 App WebView 與離線快取的不確定性。
+
+任務：
+
+- 將目前 Blob dynamic import 流程改為正式 bundle 或 ESM。
+- 評估導入 Vite / esbuild / Rollup。
+- 產出 hash 檔名或版本化 manifest。
+- 讓 `dist/` 成為唯一部署輸出來源。
+
+完成標準：
+
+- Web 啟動不依賴動態組 Blob。
+- build output 可被 service worker 穩定快取。
+- 測試指令通過。
+
+### Phase 2：PWA
+
+目標：讓 Web 版可安裝、可離線啟動。
+
+任務：
+
+- 新增 `manifest.webmanifest`。
+- 新增 PWA icons。
+- 新增 service worker。
+- 建立 cache strategy。
+- 加入離線 fallback。
+- 加入更新提示。
+- 以手機 Chrome / Safari 測試加入主畫面。
+
+完成標準：
+
+- PWA 可安裝。
+- 離線可開啟。
+- 已快取資產可正常進入遊戲。
+- 新版本部署後能提示更新。
+
+### Phase 3：Capacitor Shell
+
+目標：建立 Android / iOS 可測機版本。
+
+任務：
+
+- 安裝 Capacitor。
+- 新增 `capacitor.config.*`。
+- 設定 `webDir` 指向 `dist`。
+- 新增 Android / iOS 專案。
+- 設定 app id、app name、icon、splash。
+- 實作 App lifecycle 暫停 / 恢復。
+- 實作 Android 返回鍵。
+- 實作基本 haptics。
+
+完成標準：
+
+- Android 可安裝測機。
+- iOS 可透過 Xcode / TestFlight 測試。
+- Web 與 App 使用同一份 `dist`。
+- App 背景化與恢復不破壞遊戲狀態。
+
+### Phase 4：資產與效能優化
+
+目標：降低下載體積、載入時間與低階手機負擔。
+
+任務：
+
+- 建立圖片轉檔流程。
+- 建立音效轉檔流程。
+- 拆分 core assets / optional assets。
+- 設定 canvas DPR 上限。
+- 加入低耗電模式。
+- 加入簡單效能監測。
+
+完成標準：
+
+- App 首包體積下降。
+- 首次可互動時間下降。
+- 低階 Android 可穩定遊玩。
+- 長時間遊玩不明顯過熱或嚴重掉幀。
+
+### Phase 5：上架準備
+
+目標：達到商店送審基本條件。
+
+任務：
+
+- 製作 App Store / Google Play 截圖。
+- 準備商店描述。
+- 準備隱私政策。
+- 確認素材授權。
+- 設定內容分級。
+- 設定 Android signing。
+- 設定 iOS signing。
+- 建立 release checklist。
+
+完成標準：
+
+- Android internal testing 可發布。
+- iOS TestFlight 可發布。
+- 上架資料完整。
+- 無明顯 placeholder、測試文字或亂碼。
+
+## 8. 主要風險與對策
+
+### 8.1 App 體積過大
+
+風險：
+
+- 影響下載率。
+- 低儲存空間裝置容易放棄安裝。
+- Google Play 對大型 App 會有下載提醒與限制。
+
+對策：
+
+- 壓縮圖片與音效。
+- 不把 full-size source assets 放進 App。
+- 採分批下載與 lazy loading。
+- Android 若變成大型素材遊戲，可評估 Play Asset Delivery。
+
+### 8.2 iOS / Android WebView 差異
+
+風險：
+
+- 音效 unlock 行為不同。
+- pointer capture 行為不同。
+- canvas 效能不同。
+- 背景恢復後音訊或 RAF 狀態異常。
+
+對策：
+
+- 建立實機測試矩陣。
+- 把 platform behavior 收斂到 adapter。
+- 背景恢復後重新檢查音訊、RAF、快取與畫布尺寸。
+
+### 8.3 PWA 快取混版
+
+風險：
+
+- HTML 是新版，但 JS / 圖片仍是舊版。
+- 玩家看到錯誤畫面或載入失敗。
+
+對策：
+
+- 使用版本化 cache。
+- build manifest 記錄所有資產。
+- 更新採「下載完成後提示重啟」。
+- 啟動時檢查 app version。
+
+### 8.4 Web 與 App 分支維護成本上升
+
+風險：
+
+- App 修一份，Web 忘記修。
+- 平衡參數不同步。
+- 素材 manifest 不一致。
+
+對策：
+
+- 同一 repo。
+- 同一核心。
+- 同一資料來源。
+- 平台差異只放 adapter。
+- CI 同時跑 web 與 mobile build 檢查。
+
+### 8.5 商店審核問題
+
+風險：
+
+- Apple 認為只是網站包殼。
+- 隱私政策或素材授權不足。
+- 送審 build 有 placeholder 或測試內容。
+
+對策：
+
+- 加入 App 專屬功能：離線、震動、返回鍵、戰績、重播、每日挑戰。
+- 清楚提供隱私政策。
+- 確認全部素材可商用。
+- 送審前跑完整 checklist。
+
+## 9. 驗收清單
+
+### Web / PWA
+
+- `npm run build` 成功。
+- `npm run test:quick` 成功。
+- `npm run test:smoke` 成功。
+- PWA 可安裝。
+- 離線可啟動。
+- 新版本可提示更新。
+- 手機 Chrome / Safari 可正常遊玩。
+
+### Android
+
+- Debug build 可安裝。
+- Release build 可簽章。
+- 返回鍵行為正確。
+- 背景暫停與恢復正確。
+- 音效正常。
+- 震動正常。
+- 低階 Android 可接受。
+
+### iOS
+
+- Xcode build 成功。
+- TestFlight build 成功。
+- 安全區與瀏海顯示正常。
+- 背景暫停與恢復正確。
+- 音效 unlock 正常。
+- 觸控操作正常。
+
+### 上架
+
+- App icon 完整。
+- Splash / launch screen 完整。
+- 截圖完整。
+- 描述完整。
+- 隱私政策完整。
+- 內容分級完成。
+- 素材授權確認。
+- 無亂碼、placeholder、debug UI。
+
+## 10. 建議優先順序
+
+最高優先：
+
+1. 修正或替換 Blob dynamic import build 流程。
+2. 新增 PWA manifest 與 service worker。
+3. 建立 Capacitor shell。
+4. 壓縮圖片與音效。
+5. 實機測試 Android / iOS。
+
+第二優先：
+
+1. storage adapter。
+2. App lifecycle adapter。
+3. Android 返回鍵。
+4. haptics。
+5. 低耗電模式。
+
+第三優先：
+
+1. 每日挑戰。
+2. 角色熟練度。
+3. 重播分享。
+4. 雲端同步。
+5. 商業化功能。
+
+## 11. 參考資料
+
+- Capacitor 官方文件：https://capacitorjs.com/docs/
+- MDN PWA installability：https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Guides/Making_PWAs_installable
+- Apple App Review Guidelines：https://developer.apple.com/app-store/review/guidelines/
+- Google Play App Size Limits：https://support.google.com/googleplay/android-developer/answer/9859372
+- Android App Bundle / Play Asset Delivery：https://developer.android.com/guide/app-bundle
