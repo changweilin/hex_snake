@@ -138,6 +138,15 @@ Build 正規化
 - 低階手機載入時不明顯卡頓。
 - build manifest 能清楚列出進入部署包的素材。
 
+進度（2026-05-19）：
+
+- 已完成：production build 會將部署用角色 PNG 轉為 WebP，原始 PNG 不進 `dist`。
+- 已完成：production build 會將角色 WAV 音效轉為 M4A/AAC，原始 WAV 不進 `dist`。
+- 已完成：`dist/data/characters.json` 與角色音效 manifest 會改寫為部署格式路徑。
+- 已完成：`check:assets` 會檢查 WebP / M4A 轉檔數量、節省容量與禁止部署 PNG / WAV。
+- 結果：`dist` 約 26.64 MB，build manifest 可列出 WebP 圖片與 M4A 音效統計。
+- 待後續：若要更細，仍可再做 optional character pack 或按角色延遲下載策略。
+
 ### 3.4 Storage Adapter
 
 現況：

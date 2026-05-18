@@ -10,6 +10,29 @@
       full: 1024
     };
 
+    function usesOptimizedPortraitImages() {
+      return window.__HEX_SNAKE_IMAGE_FORMAT__ === "webp";
+    }
+
+    function deployPortraitSize(size) {
+      return usesOptimizedPortraitImages() && size === "full" ? "md" : size;
+    }
+
+    function deployPortraitSizes(sizes) {
+      return usesOptimizedPortraitImages() ? sizes.filter(size => size !== "full") : sizes;
+    }
+
+    function deployPortraitImageUrl(url) {
+      if (
+        usesOptimizedPortraitImages()
+        && typeof url === "string"
+        && /^assets\/portraits\/.+\.png$/i.test(url)
+      ) {
+        return url.replace(/\.png$/i, ".webp");
+      }
+      return url;
+    }
+
     bestEl.textContent = best;
 
     function normalizeCharacter(entry) {
@@ -158,24 +181,25 @@
     function portraitUrl(character, pose, size = "full") {
       const safePose = portraitPoses.has(pose) ? pose : "idle";
       const semanticPose = portraitVariantMode === "beast" ? "opening" : poseAliases[safePose] || "intro";
+      const deploySize = deployPortraitSize(size);
       const library = portraitLibrary(character);
       const portrait = library?.[semanticPose] || library?.intro || library?.opening;
       if (portrait) {
-        if (typeof portrait === "string") return portrait;
-        return portrait[size] || portrait.full || portrait.md || portrait.sm || character.avatar || "";
+        if (typeof portrait === "string") return deployPortraitImageUrl(portrait);
+        return deployPortraitImageUrl(portrait[deploySize] || portrait.md || portrait.sm || portrait.full || character.avatar || "");
       }
       const slug = character.slug || character.id;
       const legacyPose = safePose === "idle" ? "idle" : safePose === "attack" ? "attack" : semanticPose === "opening" ? "intro" : semanticPose;
-      if (size === "sm" || size === "md") {
-        return `assets/portraits/${size}/${slug}_${legacyPose}.png`;
+      if (deploySize === "sm" || deploySize === "md") {
+        return deployPortraitImageUrl(`assets/portraits/${deploySize}/${slug}_${legacyPose}.png`);
       }
-      return `assets/portraits/${slug}_${legacyPose}.png`;
+      return deployPortraitImageUrl(`assets/portraits/${slug}_${legacyPose}.png`);
     }
 
     const preloadedPortraits = new Set();
 
     function portraitSrcset(character, pose, includeFull = false) {
-      const sizes = includeFull ? ["sm", "md", "full"] : ["sm", "md"];
+      const sizes = deployPortraitSizes(includeFull ? ["sm", "md", "full"] : ["sm", "md"]);
       return sizes.map(size => `${portraitUrl(character, pose, size)} ${portraitSizeWidths[size]}w`).join(", ");
     }
 
@@ -211,8 +235,9 @@
 
     function duelAvatarUrl(character, size = "sm") {
       const slug = character.slug || character.id;
+      const deploySize = deployPortraitSize(size);
       const variant = portraitVariantModes.includes(portraitVariantMode) ? portraitVariantMode : defaultPortraitVariantMode;
-      return `assets/portraits/avatars/${variant}/${size}/${slug}_duel.png`;
+      return deployPortraitImageUrl(`assets/portraits/avatars/${variant}/${deploySize}/${slug}_duel.png`);
     }
 
     function avatarUrl(character, size = "sm") {
@@ -220,6 +245,6 @@
     }
 
     function avatarSrcset(character, includeFull = false) {
-      const sizes = includeFull ? ["sm", "md", "full"] : ["sm", "md"];
+      const sizes = deployPortraitSizes(includeFull ? ["sm", "md", "full"] : ["sm", "md"]);
       return sizes.map(size => `${avatarUrl(character, size)} ${avatarSizeWidths[size]}w`).join(", ");
     }

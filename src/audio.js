@@ -75,9 +75,20 @@
       return portraitVariantMode === "human" ? "human" : "beast";
     }
 
+    function deployAudioUrl(url) {
+      if (
+        window.__HEX_SNAKE_AUDIO_FORMAT__ === "m4a"
+        && typeof url === "string"
+        && /^assets\/audio\/characters\/.+\.wav$/i.test(url)
+      ) {
+        return url.replace(/\.wav$/i, ".m4a");
+      }
+      return url;
+    }
+
     function sfxAssetUrl(character, eventName) {
       const characterId = character?.id || "dragon";
-      return `assets/audio/characters/${sfxAssetMode()}/${characterId}_${eventName}.wav`;
+      return deployAudioUrl(`assets/audio/characters/${sfxAssetMode()}/${characterId}_${eventName}.wav`);
     }
 
     function getSfxAssetBuffer(url) {

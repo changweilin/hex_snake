@@ -48,15 +48,31 @@ const pageLoadingProgress = (() => {
     root.classList.add("is-error");
   }
 
+  function usesOptimizedPortraitImages() {
+    return window.__HEX_SNAKE_IMAGE_FORMAT__ === "webp";
+  }
+
+  function loadingAssetUrl(src) {
+    if (
+      usesOptimizedPortraitImages()
+      && typeof src === "string"
+      && /^assets\/portraits\/.+\.png$/i.test(src)
+    ) {
+      return src.replace(/\.png$/i, ".webp");
+    }
+    return src;
+  }
+
   function portraitSource(portraitSet) {
     if (!portraitSet) return null;
-    const src = portraitSet.md || portraitSet.sm || portraitSet.full;
+    const sizes = usesOptimizedPortraitImages() ? ["sm", "md"] : ["sm", "md", "full"];
+    const src = portraitSet.md || portraitSet.sm || (!usesOptimizedPortraitImages() ? portraitSet.full : "");
     if (!src) return null;
-    const srcset = ["sm", "md", "full"]
+    const srcset = sizes
       .filter(size => portraitSet[size])
-      .map(size => `${portraitSet[size]} ${loadingPortraitWidths[size]}w`)
+      .map(size => `${loadingAssetUrl(portraitSet[size])} ${loadingPortraitWidths[size]}w`)
       .join(", ");
-    return { src, srcset };
+    return { src: loadingAssetUrl(src), srcset };
   }
 
   function buildPortraitSlides(characters) {
