@@ -12,6 +12,7 @@ const checks = [
   { script: "check:size", reason: "enforce dist size budget" },
   { script: "test:quick", reason: "run fast gameplay and data unit checks" },
   { script: "test:mobile", reason: "verify mobile controls, layout, and screenshot capture" },
+  { script: "test:mobile-platform", reason: "verify mobile app platform adapter behavior" },
   { script: "test:smoke", reason: "verify desktop and mobile browser startup" },
   { script: "test:offline", reason: "verify offline shell and service worker basics" },
   { script: "app:check", reason: "verify App shell readiness prerequisites" }

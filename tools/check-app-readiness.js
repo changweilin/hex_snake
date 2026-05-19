@@ -13,12 +13,14 @@ const requiredScripts = [
   "start",
   "test:quick",
   "test:mobile",
+  "test:mobile-platform",
   "test:smoke",
   "test:offline",
   "cap:copy",
   "cap:sync",
   "cap:android",
   "cap:ios",
+  "android:build:debug",
   "release:check"
 ];
 const requiredDistFiles = [
@@ -87,6 +89,11 @@ function checkPackageDependency(packageInfo, section, dependencyName) {
   }
 }
 
+function assertTextIncludes(relativePath, expected, label = expected) {
+  const text = readText(relativePath);
+  if (!text.includes(expected)) fail(`${relativePath} is missing ${label}.`);
+}
+
 function checkCapacitorShell(packageInfo) {
   const config = readJson("capacitor.config.json");
   if (!config.appId || !/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/i.test(config.appId)) {
@@ -110,11 +117,25 @@ function checkCapacitorShell(packageInfo) {
     "@capacitor/ios"
   ].forEach(dependency => checkPackageDependency(packageInfo, "devDependencies", dependency));
 
+  [
+    "android/app/build.gradle",
+    "android/app/src/main/AndroidManifest.xml",
+    "android/app/src/main/java/com/whitedragon/hexsnake/MainActivity.java",
+    "ios/App/App.xcodeproj/project.pbxproj",
+    "ios/App/App/Info.plist"
+  ].forEach(assertFile);
+
+  assertTextIncludes("android/app/build.gradle", `applicationId "${config.appId}"`, "the Capacitor app id");
+  assertTextIncludes("android/app/build.gradle", `versionName "${packageInfo.version}"`, "package versionName");
+  assertTextIncludes("ios/App/App.xcodeproj/project.pbxproj", `PRODUCT_BUNDLE_IDENTIFIER = ${config.appId};`, "the Capacitor bundle id");
+  assertTextIncludes("ios/App/App.xcodeproj/project.pbxproj", `MARKETING_VERSION = ${packageInfo.version};`, "package marketing version");
+
   const mobileAdapter = readText("src/platform/mobile.js");
   [
     'kind: "mobile"',
     "onBackButton",
     "Haptics",
+    "Preferences",
     "appStateChange",
     "backButton"
   ].forEach(marker => {

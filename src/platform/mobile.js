@@ -16,6 +16,39 @@ const HexSnakeStorage = (() => {
 
   const store = localStore();
 
+  function nativePreferences() {
+    return window.Capacitor?.Plugins?.Preferences || null;
+  }
+
+  function storageKind() {
+    const base = store ? "localStorage" : "memory";
+    return nativePreferences()?.set ? `${base}+preferences` : base;
+  }
+
+  function mirrorPreferenceSet(key, value) {
+    const preferences = nativePreferences();
+    if (!preferences?.set) return;
+    try {
+      preferences.set({ key, value }).catch(error => {
+        console.warn(`Unable to mirror ${key} to native preferences:`, error);
+      });
+    } catch (error) {
+      console.warn(`Unable to mirror ${key} to native preferences:`, error);
+    }
+  }
+
+  function mirrorPreferenceRemove(key) {
+    const preferences = nativePreferences();
+    if (!preferences?.remove) return;
+    try {
+      preferences.remove({ key }).catch(error => {
+        console.warn(`Unable to remove ${key} from native preferences:`, error);
+      });
+    } catch (error) {
+      console.warn(`Unable to remove ${key} from native preferences:`, error);
+    }
+  }
+
   function get(key) {
     if (store) return store.getItem(key);
     return memory.has(key) ? memory.get(key) : null;
@@ -25,17 +58,21 @@ const HexSnakeStorage = (() => {
     const nextValue = String(value);
     if (store) {
       store.setItem(key, nextValue);
+      mirrorPreferenceSet(key, nextValue);
       return;
     }
     memory.set(key, nextValue);
+    mirrorPreferenceSet(key, nextValue);
   }
 
   function remove(key) {
     if (store) {
       store.removeItem(key);
+      mirrorPreferenceRemove(key);
       return;
     }
     memory.delete(key);
+    mirrorPreferenceRemove(key);
   }
 
   function getJson(key, fallback) {
@@ -64,7 +101,7 @@ const HexSnakeStorage = (() => {
 
   return Object.freeze({
     version: currentVersion,
-    kind: store ? "localStorage" : "memory",
+    kind: storageKind(),
     get,
     set,
     remove,
