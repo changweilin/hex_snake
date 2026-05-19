@@ -16,11 +16,14 @@ const requiredScripts = [
   "test:mobile-platform",
   "test:smoke",
   "test:offline",
+  "store:check",
   "cap:copy",
   "cap:sync",
   "cap:android",
   "cap:ios",
   "android:build:debug",
+  "android:bundle:debug",
+  "android:bundle:release",
   "release:check"
 ];
 const requiredDistFiles = [
@@ -122,7 +125,8 @@ function checkCapacitorShell(packageInfo) {
     "android/app/src/main/AndroidManifest.xml",
     "android/app/src/main/java/com/whitedragon/hexsnake/MainActivity.java",
     "ios/App/App.xcodeproj/project.pbxproj",
-    "ios/App/App/Info.plist"
+    "ios/App/App/Info.plist",
+    "tools/build-android-artifact.js"
   ].forEach(assertFile);
 
   assertTextIncludes("android/app/build.gradle", `applicationId "${config.appId}"`, "the Capacitor app id");

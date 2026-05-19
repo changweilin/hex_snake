@@ -429,7 +429,7 @@ Web 適合作為快速驗證場，App 適合作為穩定發布版。
 - 已完成：新增 Android 與 iOS 原生專案，Android / iOS 版本號與 `package.json` 的 `1.0.0` 對齊。
 - 已完成：實作 mobile platform adapter，支援 Capacitor App lifecycle、Android 返回鍵與 Haptics，並保留原手機 web 版的觸控、搖桿與攻擊操作邏輯。
 - 已完成：新增 `test:mobile-platform`，以 mock Capacitor bridge 驗證 App lifecycle、Android 返回鍵、Haptics 與 Preferences mirror。
-- 已完成：新增 `android:build:debug` 與 `tools/build-android-debug.js`，自動選用 Android Studio JBR / SDK、寫入 `android/local.properties` 並產出 debug APK。
+- 已完成：新增 `android:build:debug`、`android:bundle:debug`、`android:bundle:release` 與 `tools/build-android-artifact.js`，自動選用 Android Studio JBR / SDK、寫入 `android/local.properties` 並產出 APK / AAB。
 - 已驗證：`npm run build:mobile`、`npm run app:check`、`npm run test:quick`、`npm run test:mobile`、`npm run test:mobile-platform`、`npm run test:offline` 通過。
 - 已驗證：Android debug APK 建置成功，產物為 `android/app/build/outputs/apk/debug/app-debug.apk`。
 - 待後續：在 Android 實機確認返回鍵、背景恢復、震動與音效 unlock；在 macOS/Xcode 環境執行 iOS build 與 TestFlight 測試。
@@ -480,6 +480,16 @@ Web 適合作為快速驗證場，App 適合作為穩定發布版。
 - iOS TestFlight 可發布。
 - 上架資料完整。
 - 無明顯 placeholder、測試文字或亂碼。
+
+進度（2026-05-19）：
+
+- 已完成：建立 Android release AAB 本地產出流程，`android:bundle:release` 可在 Capacitor sync 後執行 Gradle `bundleRelease`。
+- 已完成：新增 `store/listing-draft.md`、`store/privacy-policy-draft.md`、`store/release-checklist.md`，先整理商店描述、隱私政策草稿、截圖資產與待辦。
+- 已完成：新增 `store:check` / `tools/check-store-readiness.js`，檢查商店草稿文件與本地截圖資產。
+- 已完成：`app:check` 會檢查 Android artifact scripts、`store:check` 與 `tools/build-android-artifact.js`，避免 release bundle 與商店檢查流程遺漏。
+- 已驗證：`android:bundle:debug` 產出 `android/app/build/outputs/bundle/debug/app-debug.aab`，`android:bundle:release` 產出 `android/app/build/outputs/bundle/release/app-release.aab`。
+- 已驗證：`store:check` 通過，目前仍有 16 個上架前 checklist 項目需要實機、簽章或商店後台環境完成。
+- 待後續：設定正式 Android signing keystore / Play App Signing、建立 Google Play internal testing 版本；iOS signing 與 TestFlight 仍需 macOS / Xcode 環境。
 
 ## 8. 主要風險與對策
 
