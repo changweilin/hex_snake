@@ -109,6 +109,16 @@
           </svg>
           <span class="replay-toggle-label">重播紀錄</span>
         </button>
+        <button class="stats-toggle" id="statsButton" type="button" aria-haspopup="dialog" aria-controls="statsModal" title="戰績" aria-label="戰績">
+          <svg class="settings-action-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 19V5"/>
+            <path d="M4 19h16"/>
+            <path d="M8 16v-5"/>
+            <path d="M12 16V8"/>
+            <path d="M16 16v-9"/>
+          </svg>
+          <span class="stats-toggle-label">戰績</span>
+        </button>
         <button class="settings-toggle" id="settingsToggle" type="button" aria-expanded="false" aria-controls="settingsContent" title="開局設定">
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -386,6 +396,28 @@
         <span id="favoriteReplayCount">0 / 5</span>
       </div>
       <div id="favoriteReplayList"></div>
+    </div>
+  </div>
+  <div class="replay-modal app-stats-modal" id="statsModal" hidden aria-modal="true" role="dialog" aria-labelledby="statsTitle">
+    <div class="replay-dialog app-stats-dialog">
+      <div class="replay-header">
+        <h2 id="statsTitle">戰績</h2>
+        <button id="statsModalClose" class="secondary replay-close" type="button" aria-label="關閉戰績">&times;</button>
+      </div>
+      <div id="statsSummary" class="app-stats-summary" aria-label="戰績摘要"></div>
+      <div class="replay-list-header">
+        <h3>最近 10 場</h3>
+        <span id="statsRecentCount">0 / 10</span>
+      </div>
+      <div id="statsRecentList"></div>
+      <div class="replay-list-header">
+        <h3>P1 角色熟練度</h3>
+        <span id="statsCharacterCount">0</span>
+      </div>
+      <div id="statsCharacterList"></div>
+      <div class="app-stats-actions">
+        <button id="statsClearButton" class="secondary" type="button">清除戰績</button>
+      </div>
     </div>
   </div>
   <div class="pwa-update-prompt" id="pwaUpdatePrompt" hidden role="status" aria-live="polite">

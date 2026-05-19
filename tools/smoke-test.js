@@ -110,6 +110,62 @@ function createReplayFixture(options = {}) {
   };
 }
 
+function createStatsFixture() {
+  return {
+    version: 1,
+    totals: {
+      matches: 2,
+      playerWins: 1,
+      computerWins: 1,
+      draws: 0,
+      playerScore: 5,
+      computerScore: 5,
+      totalDurationMs: 108000,
+      bestPlayerScore: 4
+    },
+    recent: [
+      {
+        id: "stats-smoke-1",
+        createdAt: "2026-05-09T00:02:00.000Z",
+        winnerOwner: "player",
+        playerScore: 4,
+        computerScore: 2,
+        durationMs: 65000,
+        playerCharacterId: "dragon",
+        computerCharacterId: "sandworm",
+        mode: "player",
+        difficulty: "medium",
+        surrendered: false
+      },
+      {
+        id: "stats-smoke-2",
+        createdAt: "2026-05-09T00:01:00.000Z",
+        winnerOwner: "computer",
+        playerScore: 1,
+        computerScore: 3,
+        durationMs: 43000,
+        playerCharacterId: "dragon",
+        computerCharacterId: "moray",
+        mode: "autoBattle",
+        difficulty: "high",
+        surrendered: true
+      }
+    ],
+    characters: {
+      dragon: {
+        played: 2,
+        wins: 1,
+        losses: 1,
+        draws: 0,
+        score: 5,
+        bestScore: 4,
+        durationMs: 108000,
+        lastPlayedAt: "2026-05-09T00:02:00.000Z"
+      }
+    }
+  };
+}
+
 function requestOk(url) {
   return new Promise(resolve => {
     const request = http.get(url, response => {
@@ -276,6 +332,23 @@ async function exerciseSettingsModal(page) {
   await expectVisible(page, "#settingsContent", "settings panel reopens");
   await clickModalBackdrop(page, "#settingsContent");
   await expectHidden(page, "#settingsContent", "settings panel closes from backdrop");
+}
+
+async function exerciseStatsModal(page) {
+  await page.locator("#statsButton").click({ timeout: actionTimeoutMs });
+  await expectVisible(page, "#statsModal", "stats modal opens");
+  await expectText(page, "#statsTotalMatches", "2", "stats total matches come from storage");
+  await expectText(page, "#statsWinRate", "50%", "stats win rate is calculated");
+  await expectText(page, "#statsRecentCount", "2 / 10", "stats recent matches are listed");
+  await expectVisible(page, '[data-stats-record-id="stats-smoke-1"]', "stats recent row is visible");
+  await expectVisible(page, '[data-stats-character-id="dragon"]', "stats character mastery row is visible");
+  await page.keyboard.press("Escape");
+  await expectHidden(page, "#statsModal", "stats modal closes with Escape");
+
+  await page.locator("#statsButton").click({ timeout: actionTimeoutMs });
+  await expectVisible(page, "#statsModal", "stats modal reopens");
+  await clickModalBackdrop(page, "#statsModal");
+  await expectHidden(page, "#statsModal", "stats modal closes from backdrop");
 }
 
 async function openFirstPortraitLightbox(page) {
@@ -446,22 +519,26 @@ async function runViewportSmoke(browser, url, profile) {
     hasTouch: Boolean(profile.hasTouch)
   });
 
-  await context.addInitScript(replayFixture => {
+  await context.addInitScript(fixtures => {
     localStorage.setItem("hexSnakeSfxMuted", "1");
     localStorage.setItem("hexSnakeTutorialSeen", "1");
     localStorage.removeItem("hexSnakeReplaySpeed");
-    localStorage.setItem("hexSnakeReplayRecent", JSON.stringify(replayFixture));
+    localStorage.setItem("hexSnakeReplayRecent", JSON.stringify(fixtures.replays));
     localStorage.setItem("hexSnakeReplayFavorites", "[]");
-  }, [
-    createReplayFixture(),
-    createReplayFixture({
-      id: replayFixtureNextId,
-      createdAt: "2026-05-09T00:01:00.000Z",
-      computerCharacterId: "moray",
-      durationMs: 7000,
-      title: "Smoke replay fixture next"
-    })
-  ]);
+    localStorage.setItem("hexSnakeMatchStatsV1", JSON.stringify(fixtures.stats));
+  }, {
+    stats: createStatsFixture(),
+    replays: [
+      createReplayFixture(),
+      createReplayFixture({
+        id: replayFixtureNextId,
+        createdAt: "2026-05-09T00:01:00.000Z",
+        computerCharacterId: "moray",
+        durationMs: 7000,
+        title: "Smoke replay fixture next"
+      })
+    ]
+  });
 
   const page = await context.newPage();
   const consoleErrors = [];
@@ -490,6 +567,7 @@ async function runViewportSmoke(browser, url, profile) {
 
   await exerciseRulesModal(page);
   await exerciseSettingsModal(page);
+  await exerciseStatsModal(page);
 
   await exerciseReplayRegression(page);
 

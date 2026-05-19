@@ -454,6 +454,7 @@
       }
       settingsToggle.disabled = locked;
       settingsReplayButton.disabled = locked;
+      statsButton.disabled = locked;
       computerDifficultyInput.disabled = locked;
       playerCharacterInput.disabled = locked;
       computerCharacterInput.disabled = locked;
@@ -2563,6 +2564,21 @@
           ? "computer"
           : null;
       const plainResultText = winnerOwner === "player" ? "P1 勝利" : winnerOwner === "computer" ? "P2 勝利" : "平手";
+      try {
+        HexSnakeStats.recordMatch({
+          winnerOwner,
+          playerScore: score,
+          computerScore,
+          durationMs: Math.round(totalElapsedMs),
+          playerCharacterId,
+          computerCharacterId,
+          mode: relayMode ? "relay" : computerBattleMode ? "autoBattle" : endedInAutoMode ? "playerAuto" : "player",
+          difficulty: computerDifficulty,
+          surrendered: Boolean(HexSnakeState.replay.surrendered)
+        });
+      } catch (error) {
+        console.warn("Unable to record match stats.", error);
+      }
       const resultTitleHtml = winnerOwner === "player"
         ? `本局結果：<span class="owner-name is-p1">P1</span> 勝利`
         : winnerOwner === "computer"
@@ -3908,6 +3924,13 @@
     });
     replayArchiveButton.addEventListener("click", HexSnakeReplay.openModal);
     settingsReplayButton.addEventListener("click", HexSnakeReplay.openModal);
+    statsButton.addEventListener("click", HexSnakeStats.openModal);
+    statsModalClose.addEventListener("click", HexSnakeStats.closeModal);
+    statsClearButton.addEventListener("click", HexSnakeStats.clear);
+    statsModal.addEventListener("pointerdown", event => {
+      if (event.target === statsModal) HexSnakeStats.closeModal();
+    });
+    statsModal.querySelector(".app-stats-dialog").addEventListener("pointerdown", event => event.stopPropagation());
     replayModalClose.addEventListener("click", HexSnakeReplay.closeModal);
     replayModal.addEventListener("pointerdown", event => {
       if (event.target === replayModal) HexSnakeReplay.closeModal();
@@ -4525,6 +4548,10 @@
       }
       if (!replayModal.hidden) {
         if (event.key === "Escape" || event.key === "Esc") HexSnakeReplay.closeModal();
+        return;
+      }
+      if (!statsModal.hidden) {
+        if (event.key === "Escape" || event.key === "Esc") HexSnakeStats.closeModal();
         return;
       }
       if (isLogoTransitionActive()) {

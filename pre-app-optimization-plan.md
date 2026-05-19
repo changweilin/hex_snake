@@ -383,6 +383,14 @@ const platform = {
 - App 版不需要重寫。
 - 功能資料經 storage adapter 保存。
 
+進度（2026-05-19）：
+
+- 已完成：新增戰績入口與戰績 modal，提供總對戰、P1 勝率、最佳分數、總時長、最近 10 場與 P1 角色熟練度摘要。
+- 已完成：新增 `HexSnakeStats`，對戰結算時以 storage adapter 寫入 `hexSnakeMatchStatsV1`，並保護儲存失敗不影響既有結算流程。
+- 已完成：戰績 UI 已納入 desktop/mobile smoke，並檢查資料可由 storage fixture 載入、Esc / backdrop 可關閉。
+- 已驗證：build、text、data、asset、size、quick、mobile、desktop smoke 與瀏覽器實測通過；`dist` 約 26.67 MB。
+- 待後續：每日挑戰、版本資訊、分享與控制配置檔仍可在下一輪以同樣模式補齊。
+
 ## 4. 建議 Milestones
 
 ### Milestone A：可被穩定打包的 Web

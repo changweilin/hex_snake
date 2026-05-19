@@ -2292,6 +2292,90 @@
       font-size: 0.86rem;
     }
 
+    .app-stats-summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      padding: 1rem;
+    }
+
+    .app-stats-card {
+      display: grid;
+      gap: 3px;
+      min-width: 0;
+      padding: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      background: rgba(17, 23, 32, 0.64);
+    }
+
+    .app-stats-card strong {
+      color: var(--ink);
+      font-size: 1.18rem;
+      line-height: 1.1;
+    }
+
+    .app-stats-card span {
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 800;
+    }
+
+    .app-stats-badge {
+      justify-self: end;
+      display: inline-grid;
+      place-items: center;
+      min-width: 54px;
+      min-height: 28px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(148, 163, 184, 0.12);
+      color: var(--ink);
+      font-size: 0.78rem;
+      font-weight: 850;
+      white-space: nowrap;
+    }
+
+    .app-stats-badge.is-win {
+      border-color: rgba(34, 197, 94, 0.36);
+      color: #bbf7d0;
+      background: rgba(34, 197, 94, 0.12);
+    }
+
+    .app-stats-badge.is-loss {
+      border-color: rgba(248, 113, 113, 0.36);
+      color: #fecaca;
+      background: rgba(248, 113, 113, 0.12);
+    }
+
+    .app-stats-badge.is-draw {
+      border-color: rgba(250, 204, 21, 0.34);
+      color: #fef3c7;
+      background: rgba(250, 204, 21, 0.11);
+    }
+
+    .app-stats-actions {
+      display: flex;
+      justify-content: flex-end;
+      padding: 0.85rem 1rem 1rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    @media (max-width: 520px) {
+      .app-stats-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .app-stats-row {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .app-stats-badge {
+        justify-self: start;
+      }
+    }
+
     .auto-battle-panel label {
       color: var(--muted);
       font-size: 0.78rem;
@@ -2913,7 +2997,7 @@
 
     .settings-actions {
       display: grid;
-      grid-template-columns: repeat(4, minmax(42px, 1fr));
+      grid-template-columns: repeat(5, minmax(42px, 1fr));
       justify-self: end;
       align-items: stretch;
       gap: 6px;
@@ -2922,6 +3006,7 @@
 
     .settings-toggle,
     .replay-toggle,
+    .stats-toggle,
     .rules-toggle,
     .gm-toggle,
     .surrender-button {
@@ -2969,6 +3054,8 @@
     .settings-toggle:focus-visible,
     .replay-toggle:hover,
     .replay-toggle:focus-visible,
+    .stats-toggle:hover,
+    .stats-toggle:focus-visible,
     .gm-toggle:hover,
     .gm-toggle:focus-visible,
     .rules-toggle:hover,
@@ -2982,6 +3069,7 @@
 
     .settings-toggle svg,
     .replay-toggle svg,
+    .stats-toggle svg,
     .settings-action-icon {
       width: 22px;
       height: 22px;
@@ -3003,6 +3091,7 @@
 
     .settings-title,
     .settings-action-label,
+    .stats-toggle-label,
     .replay-toggle-label {
       position: absolute;
       width: 1px;
@@ -5508,7 +5597,7 @@
 
       .side .settings-section .settings-actions {
         display: grid;
-        grid-template-columns: repeat(4, minmax(34px, 1fr));
+        grid-template-columns: repeat(5, minmax(34px, 1fr));
         gap: 4px;
         justify-self: stretch;
         width: 100%;
@@ -5520,6 +5609,7 @@
       .side .settings-section .rules-toggle,
       .side .settings-section .gm-toggle,
       .side .settings-section .replay-toggle,
+      .side .settings-section .stats-toggle,
       .side .settings-section .settings-toggle {
         width: 100%;
         min-width: 0;

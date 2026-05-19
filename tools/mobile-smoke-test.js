@@ -131,6 +131,7 @@ async function assertCriticalControls(page, profile) {
     ["#settingsToggle", "settings button", 34],
     ["#rulesButton", "rules button", 34],
     ["#settingsReplayButton", "replay button", 34],
+    ["#statsButton", "stats button", 34],
     ["#gmToggle", "GM button", 34]
   ];
 

@@ -19,6 +19,7 @@
     const computerBattleButton = document.querySelector("#computerBattleButton");
     const replayArchiveButton = document.querySelector("#replayArchiveButton");
     const settingsReplayButton = document.querySelector("#settingsReplayButton");
+    const statsButton = document.querySelector("#statsButton");
     const replayControls = document.querySelector("#replayControls");
     const replayReverseButton = document.querySelector("#replayReverseButton");
     const replayPlayButton = document.querySelector("#replayPlayButton");
@@ -36,6 +37,14 @@
     const favoriteReplayList = document.querySelector("#favoriteReplayList");
     const recentReplayCount = document.querySelector("#recentReplayCount");
     const favoriteReplayCount = document.querySelector("#favoriteReplayCount");
+    const statsModal = document.querySelector("#statsModal");
+    const statsModalClose = document.querySelector("#statsModalClose");
+    const statsSummary = document.querySelector("#statsSummary");
+    const statsRecentCount = document.querySelector("#statsRecentCount");
+    const statsRecentList = document.querySelector("#statsRecentList");
+    const statsCharacterCount = document.querySelector("#statsCharacterCount");
+    const statsCharacterList = document.querySelector("#statsCharacterList");
+    const statsClearButton = document.querySelector("#statsClearButton");
     const autoBattlePanel = document.querySelector("#autoBattlePanel");
     const autoBattleSpeedSelect = document.querySelector("#autoBattleSpeedSelect");
     const autoSpeedMenu = document.querySelector("#autoSpeedMenu");
