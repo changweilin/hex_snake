@@ -79,6 +79,12 @@ Build 正規化
 - `dist/` 檔案清楚、可被 service worker 快取。
 - `npm run test:quick` 與 `npm run test:smoke` 通過。
 
+進度（2026-05-19）：
+
+- 已完成：production build 會輸出單一 `assets/app.bundle.js`，`dist/index.html` 不再載入 `src/main.js`。
+- 已完成：build manifest 會記錄部署檔案、版本、體積、WebP 圖片與 M4A 音效統計。
+- 已完成：`app:check` 會驗證 dist entry 不回退到 source modules 或 Blob dynamic import 路徑。
+
 ### 3.2 PWA / 離線基礎
 
 現況：
@@ -107,6 +113,12 @@ Build 正規化
 - 離線可開啟首頁與核心遊戲。
 - 已快取素材可正常載入。
 - 新版本部署後可提示重新啟動套用。
+
+進度（2026-05-19）：
+
+- 已完成：新增 PWA manifest、192x192 / 512x512 icons、service worker、offline fallback 與更新提示 UI。
+- 已完成：`test:offline` 驗證離線 shell 與 service worker 基礎。
+- 已完成：`app:check` 驗證 dist manifest、icons、service worker precache、cache version 與核心離線檔案。
 
 ### 3.3 素材壓縮與資產分層
 
@@ -144,7 +156,7 @@ Build 正規化
 - 已完成：production build 會將角色 WAV 音效轉為 M4A/AAC，原始 WAV 不進 `dist`。
 - 已完成：`dist/data/characters.json` 與角色音效 manifest 會改寫為部署格式路徑。
 - 已完成：`check:assets` 會檢查 WebP / M4A 轉檔數量、節省容量與禁止部署 PNG / WAV。
-- 結果：`dist` 約 26.64 MB，build manifest 可列出 WebP 圖片與 M4A 音效統計。
+- 結果：`dist` 約 26.71 MB，build manifest 可列出 WebP 圖片與 M4A 音效統計。
 - 待後續：若要更細，仍可再做 optional character pack 或按角色延遲下載策略。
 
 ### 3.4 Storage Adapter
@@ -354,10 +366,11 @@ const platform = {
 
 進度（2026-05-19）：
 
-- 已完成：新增 `release:check` 作為 release 前固定 gate，依序執行 build、text、data、asset、size、quick、mobile、desktop smoke 與 offline smoke。
+- 已完成：新增 `release:check` 作為 release 前固定 gate，依序執行 build、text、data、asset、size、quick、mobile、desktop smoke、offline smoke 與 app readiness。
 - 已完成：`release:check -- --list` 可列出完整 checklist，方便 release 前快速確認流程。
 - 已完成：runner 會在任一檢查失敗時停止，並輸出失敗步驟與耗時。
-- 已驗證：`npm run release:check` 全流程通過，`dist` 約 26.64 MB，120 WebP portraits、72 M4A sounds 均符合 manifest。
+- 已完成：新增 `app:check`，集中檢查 PWA、service worker、bundle entry、app version / build version、build manifest 與部署素材。
+- 已驗證：`npm run release:check` 全流程通過，`dist` 約 26.71 MB，120 WebP portraits、72 M4A sounds 均符合 manifest。
 
 ### 3.10 App-like 功能雛形
 
@@ -393,11 +406,38 @@ const platform = {
 - 已完成：新增對戰結果複製，結算後可直接點擊結果文字複製，不再顯示額外分享按鈕。
 - 已完成：複製文字包含勝負、比分、角色、時間、模式、難度與目前網址；複製失敗只更新狀態提示，不影響重新開始或重播。
 - 已完成：desktop/mobile smoke 會以自動對弈投降產生結算，驗證結果文字可點擊、剪貼簿 fallback 與複製文字內容。
-- 已調整：每日挑戰自 3.10 候選與待辦移除，避免本階段擴張到新規則與排程系統。
 - 已完成：新增控制配置檔，可保存、套用與刪除目前鍵位、方向鍵、左手模式與按鍵攻擊目標設定，資料保存於 storage adapter。
 - 已完成：desktop/mobile smoke 會保存控制配置、改動小招鍵、套用恢復、刪除配置，確認既有操作設定可回復。
-- 已驗證：build、text、data、asset、size、quick、mobile、desktop smoke、offline smoke 與瀏覽器實測通過；`dist` 約 26.71 MB。
-- 待後續：3.10 目前規劃範圍已完成，後續可轉入 Milestone B 或 App shell 封裝前檢查。
+- 已驗證：build、text、data、asset、size、quick、mobile、desktop smoke、offline smoke、app readiness 與瀏覽器實測通過；`dist` 約 26.71 MB。
+- 待後續：3.10 目前規劃範圍已完成，後續可轉入 App shell 封裝。
+
+### 3.11 App shell 封裝前檢查
+
+建議：
+
+- 在導入 Capacitor 之前，先把 PWA、service worker、bundle、版本資訊與部署素材變成固定 gate。
+- 這個檢查只驗證封裝前條件，不改遊戲操作與既有結算流程。
+
+任務：
+
+- 新增 App readiness 檢查腳本。
+- 檢查 package scripts 是否包含必要 build、測試、離線與 release 指令。
+- 檢查 `dist/index.html` 不載入 source module，且 service worker 註冊仍存在。
+- 檢查 manifest、icons、offline fallback、service worker precache 與 cache version。
+- 檢查 production bundle 有注入 app version / build version。
+- 檢查部署素材維持 WebP / M4A 並符合 size budget。
+
+驗收標準：
+
+- `npm run app:check` 通過。
+- `npm run release:check` 會包含 `app:check`。
+- App shell 導入前可快速確認 `dist/` 仍是可封裝的部署包。
+
+進度（2026-05-19）：
+
+- 已完成：新增 `tools/check-app-readiness.js` 與 `app:check` script。
+- 已完成：`release:check` 已把 `app:check` 加入最後一關。
+- 已驗證：`npm run app:check` 與 `npm run release:check` 通過。
 
 ## 4. 建議 Milestones
 
@@ -468,6 +508,7 @@ const platform = {
   "build:pwa": "node build.js --pwa",
   "check:assets": "node tools/check-assets.js",
   "check:size": "node tools/check-dist-size.js",
+  "app:check": "node tools/check-app-readiness.js",
   "test:mobile": "node tools/mobile-smoke-test.js",
   "test:offline": "node tools/offline-smoke-test.js"
 }

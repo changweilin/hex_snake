@@ -21,7 +21,7 @@
 長期目標：
 
 - 支援穩定的離線資料、戰績、重播與版本遷移。
-- 視產品方向擴充每日挑戰、角色熟練度、雲端同步、商店功能或平台服務。
+- 視產品方向擴充角色熟練度、雲端同步、商店功能或平台服務。
 
 ## 2. 目前專案現況
 
@@ -42,21 +42,24 @@
 - `npm run build`：輸出 `dist/`。
 - `npm start`：以 `dist/` 啟動靜態伺服器。
 - `npm run test` / `npm run test:quick` / `npm run test:smoke`：測試與煙霧檢查。
+- `npm run app:check`：檢查 App shell 前置條件，包含 PWA、service worker、bundle entry、版本資訊與部署素材。
+- `npm run release:check`：依序執行 build、文字、資料、素材、體積、遊戲邏輯、手機、煙霧、離線與 App readiness 檢查。
 
 目前 `dist/build-asset-manifest.json` 顯示：
 
-- `dist` 約 153.77 MB。
-- `assets` 約 152.89 MB。
-- `src` 約 0.79 MB。
-- `data` 約 0.05 MB。
+- `dist` 約 26.71 MB。
+- `assets` 約 26.43 MB。
+- runtime files 214 個，其中 runtime assets 205 個。
+- 角色圖片為 120 個 WebP。
+- 角色音效為 72 個 M4A。
 - 目前 build budget 為 200 MB，尚未超出。
 
 主要觀察：
 
 - 專案已具備行動 viewport、pointer/touch 控制、虛擬搖桿與 safe-area CSS。
-- 尚未看到 PWA manifest / service worker。
-- `src/main.js` 目前會 fetch 多個 `src/*.js`，組成 Blob 後再動態 import；這在 Web 可行，但 App WebView、CSP、離線快取與版本更新會較難控管。
-- 素材是 App 化最大風險點，尤其圖片與音效體積。
+- 已具備 PWA manifest、service worker、offline fallback 與更新提示，並由 `test:offline` 與 `app:check` 驗證。
+- production `dist/index.html` 載入單一 `assets/app.bundle.js`，不再依賴 `src/main.js` 的 Blob dynamic import。
+- 素材已完成部署格式壓縮，圖片與音效仍是後續 App 首包與分包策略的主要觀察點。
 
 ## 3. 建議技術路線
 
@@ -74,11 +77,9 @@ PWA 是 Web 與 App 之間的橋。先完成 PWA 可以讓 Web 版也受益：
 
 需要新增：
 
-- `manifest.webmanifest`
-- PWA icon：至少 192x192、512x512。
-- `service-worker.js`
-- app 啟動畫面 / theme color / display mode。
-- 安裝提示或安裝說明。
+- 已完成：`manifest.webmanifest`、192x192 / 512x512 icons、`service-worker.js`、offline fallback 與更新提示。
+- 已驗證：`test:offline` 會檢查離線 shell 與 service worker 基礎；`app:check` 會檢查 dist PWA manifest、SW precache、bundle entry、版本注入與部署素材。
+- 待後續：以實機 Chrome / Safari 驗證加入主畫面、圖示、啟動畫面與更新提示體驗。
 
 ### 3.2 第二階段：Capacitor App
 
@@ -149,12 +150,12 @@ hex_snake/
 
 ### 5.2 素材體積
 
-目前 `dist` 約 153.77 MB，仍在可接受範圍，但 App 首包應盡量壓小。
+目前 `dist` 約 26.71 MB，已低於 200 MB build budget；App 首包仍應持續盡量壓小，並保留後續分包空間。
 
 建議事項：
 
-- PNG 轉 WebP 或 AVIF，保留必要透明度。
-- WAV 轉 AAC / M4A / OGG，依平台能力選擇格式。
+- 已完成：production build 會將角色圖片轉為 WebP，角色音效轉為 M4A/AAC，原始 PNG / WAV 不進入 `dist`。
+- 已完成：`check:assets` 與 `app:check` 會檢查部署素材格式、manifest、budget 與 forbidden assets。
 - full-size 原始圖不要進入 App 首包。
 - 依裝置 DPR 載入 `sm` / `md`，不要一律載入大圖。
 - 將角色素材分為：
@@ -220,11 +221,11 @@ hex_snake/
 
 為了讓 App 版不只是網站包殼，建議逐步加入：
 
-- 每日挑戰。
 - 本機戰績統計。
 - 角色熟練度。
 - 重播收藏。
-- 一鍵分享對戰結果。
+- 點擊結果文字複製對戰結果。
+- 控制配置檔。
 - 震動與音效設定。
 - App 專屬設定頁。
 - 離線模式標示。
@@ -289,6 +290,7 @@ Web 與 App 只替換平台實作，不改遊戲核心。
   "build:web": "node build.js",
   "build:pwa": "node build.js --pwa",
   "build:mobile": "node build.js --mobile",
+  "app:check": "node tools/check-app-readiness.js",
   "cap:sync": "npx cap sync",
   "cap:android": "npx cap open android",
   "cap:ios": "npx cap open ios"
@@ -331,13 +333,12 @@ Web 適合作為快速驗證場，App 適合作為穩定發布版。
 
 任務：
 
-- 跑 `npm run build`。
-- 跑 `npm run test:quick`。
-- 跑 `npm run test:smoke`。
+- 跑 `npm run release:check`。
 - 記錄 dist 大小。
 - 記錄桌機與手機瀏覽器 FPS。
 - 檢查 UTF-8 文字是否有亂碼。
 - 確認 `dist/` 不含 source、backup、debug 素材。
+- 確認 `app:check` 通過，避免 App shell 導入前 PWA、SW、bundle 或版本資訊退化。
 
 完成標準：
 
@@ -345,6 +346,13 @@ Web 適合作為快速驗證場，App 適合作為穩定發布版。
 - smoke test 成功。
 - dist asset manifest 無 missing / forbidden。
 - 文字顯示正常。
+- App readiness 檢查通過。
+
+進度（2026-05-19）：
+
+- 已完成：`release:check` 目前涵蓋 build、text、data、assets、size、quick、mobile、desktop/mobile smoke、offline 與 `app:check`。
+- 已完成：`app:check` 會驗證 PWA manifest、service worker precache、dist bundle entry、app version / build version、build manifest 與最佳化素材。
+- 已驗證：`npm run release:check` 全流程通過，`dist` 約 26.71 MB。
 
 ### Phase 1：Build 正規化
 
@@ -352,8 +360,8 @@ Web 適合作為快速驗證場，App 適合作為穩定發布版。
 
 任務：
 
-- 將目前 Blob dynamic import 流程改為正式 bundle 或 ESM。
-- 評估導入 Vite / esbuild / Rollup。
+- 已完成：production build 輸出單一 `assets/app.bundle.js`，`dist/index.html` 不再載入 `src/main.js`。
+- 待後續：評估是否導入 Vite / esbuild / Rollup。
 - 產出 hash 檔名或版本化 manifest。
 - 讓 `dist/` 成為唯一部署輸出來源。
 
@@ -363,18 +371,22 @@ Web 適合作為快速驗證場，App 適合作為穩定發布版。
 - build output 可被 service worker 穩定快取。
 - 測試指令通過。
 
+進度（2026-05-19）：
+
+- 已完成：部署版已由 build script 產生 bundle、source map 與 build manifest，並由 `app:check` 驗證 dist entry 不回退到 source modules。
+
 ### Phase 2：PWA
 
 目標：讓 Web 版可安裝、可離線啟動。
 
 任務：
 
-- 新增 `manifest.webmanifest`。
-- 新增 PWA icons。
-- 新增 service worker。
-- 建立 cache strategy。
-- 加入離線 fallback。
-- 加入更新提示。
+- 已完成：新增 `manifest.webmanifest`。
+- 已完成：新增 PWA icons。
+- 已完成：新增 service worker。
+- 已完成：建立 cache strategy。
+- 已完成：加入離線 fallback。
+- 已完成：加入更新提示。
 - 以手機 Chrome / Safari 測試加入主畫面。
 
 完成標準：
@@ -383,6 +395,10 @@ Web 適合作為快速驗證場，App 適合作為穩定發布版。
 - 離線可開啟。
 - 已快取資產可正常進入遊戲。
 - 新版本部署後能提示更新。
+
+進度（2026-05-19）：
+
+- 已完成：`test:offline` 驗證離線 shell 與 service worker 基礎，`app:check` 驗證 dist manifest、icons、service worker placeholder 已替換與核心 precache。
 
 ### Phase 3：Capacitor Shell
 
@@ -520,7 +536,7 @@ Web 適合作為快速驗證場，App 適合作為穩定發布版。
 
 對策：
 
-- 加入 App 專屬功能：離線、震動、返回鍵、戰績、重播、每日挑戰。
+- 加入 App 專屬功能：離線、震動、返回鍵、戰績、重播、控制配置檔與版本資訊。
 - 清楚提供隱私政策。
 - 確認全部素材可商用。
 - 送審前跑完整 checklist。
@@ -571,11 +587,11 @@ Web 適合作為快速驗證場，App 適合作為穩定發布版。
 
 最高優先：
 
-1. 修正或替換 Blob dynamic import build 流程。
-2. 新增 PWA manifest 與 service worker。
-3. 建立 Capacitor shell。
-4. 壓縮圖片與音效。
-5. 實機測試 Android / iOS。
+1. 建立 Capacitor shell。
+2. 實機測試 Android / iOS。
+3. 補 Android 返回鍵、震動與 App lifecycle。
+4. 驗證 PWA 安裝、離線與更新提示在實機瀏覽器的體驗。
+5. 評估是否導入正式 bundler 與更細的資產分包。
 
 第二優先：
 
@@ -587,11 +603,10 @@ Web 適合作為快速驗證場，App 適合作為穩定發布版。
 
 第三優先：
 
-1. 每日挑戰。
-2. 角色熟練度。
-3. 重播分享。
-4. 雲端同步。
-5. 商業化功能。
+1. 角色熟練度。
+2. 重播分享。
+3. 雲端同步。
+4. 商業化功能。
 
 ## 11. 參考資料
 
