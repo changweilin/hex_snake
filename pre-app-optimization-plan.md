@@ -320,6 +320,14 @@ const platform = {
 - JSON 可被嚴格 UTF-8 解碼。
 - 商店文案可直接使用。
 
+進度（2026-05-19）：
+
+- 已完成：新增 `text:check`，以嚴格 UTF-8 掃描 README、HTML、JS、JSON、文件、工具與 `dist` 文字檔。
+- 已完成：`text:check` 會拒絕 UTF-8 BOM、replacement character、private-use glyph 與常見 mojibake 模式。
+- 已修正：遊戲內資源 HUD 的能量 / 炸彈標籤亂碼，並移除 `src/ui.js` 的 UTF-8 BOM。
+- 已驗證：build、text、data、asset、size、quick、mobile、desktop smoke、offline smoke 與瀏覽器實測通過。
+- 待後續：商店文案若由外部平台維護，正式上架前需匯出後納入 release checklist。
+
 ### 3.9 測試與驗收流程
 
 建議：

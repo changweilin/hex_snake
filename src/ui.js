@@ -1,4 +1,4 @@
-﻿let minGridSize = 6;
+let minGridSize = 6;
 let maxGridSize = 12;
 let minFoodCount = 1;
 let maxFoodCount = 4;
@@ -2306,16 +2306,16 @@ function buildResourceHud() {
           <div class="resource-title">
             <span class="resource-owner"><span class="owner-name ${group.owner === "player" ? "is-p1" : "is-p2"}">${group.title}</span></span>
             <span class="resource-counters" data-total="${group.owner}">
-              <span class="resource-chip" data-resource="energy" data-energy-chip="${group.owner}" title="?賡?">
+              <span class="resource-chip" data-resource="energy" data-energy-chip="${group.owner}" title="能量">
                 <span class="resource-icon energy-icon" aria-hidden="true"></span>
-                <span class="resource-chip-track" data-energy-track="${group.owner}" role="meter" aria-label="?賡?" aria-valuemin="0">
+                <span class="resource-chip-track" data-energy-track="${group.owner}" role="meter" aria-label="能量" aria-valuemin="0">
                   <span class="resource-chip-fill" data-energy-fill="${group.owner}"></span>
                 </span>
                 <span class="resource-chip-value" data-energy-value="${group.owner}">0/0</span>
               </span>
-              <span class="resource-chip" data-resource="bomb" data-bomb-chip="${group.owner}" title="?詨?">
+              <span class="resource-chip" data-resource="bomb" data-bomb-chip="${group.owner}" title="炸彈">
                 <span class="resource-icon missile-icon" aria-hidden="true"></span>
-                <span class="resource-chip-track" data-bomb-track="${group.owner}" role="meter" aria-label="?詨?" aria-valuemin="0">
+                <span class="resource-chip-track" data-bomb-track="${group.owner}" role="meter" aria-label="炸彈" aria-valuemin="0">
                   <span class="resource-chip-fill" data-bomb-fill="${group.owner}"></span>
                 </span>
                 <span class="resource-chip-value" data-bomb-value="${group.owner}">0/0</span>

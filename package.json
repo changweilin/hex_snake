@@ -32,6 +32,7 @@
     "generate:sfx": "node tools/generate-character-sfx.js",
     "characters:show": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/show-characters.ps1",
     "data:check": "node tools/check-utf8-json.js",
+    "text:check": "node tools/check-text-encoding.js",
     "test": "node tools/run-tests.js",
     "test:quick": "node tools/run-tests.js --quick"
   },
