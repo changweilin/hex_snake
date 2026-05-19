@@ -630,7 +630,7 @@
 
     function setGmMode(active) {
       gmMode = Boolean(active);
-      gmToggle.classList.toggle("is-active", gmMode);
+      settingsToggle.classList.toggle("is-gm-active", gmMode);
       updateSettingsActionMode();
       updateGmControlState();
     }
@@ -700,7 +700,7 @@
       initialStockInputs.forEach(input => {
         input.disabled = locked;
       });
-      gmToggle.disabled = locked;
+      networkToggle.disabled = locked;
       realModeButton.disabled = locked;
       midGameModeButton.disabled = locked;
       ultimateModeButton.disabled = locked;
@@ -709,23 +709,28 @@
 
     function updateSettingsActionMode() {
       const showSurrender = running && !gameOver && !HexSnakeReplay.isPlaybackMode();
-      if (showSurrender) setSettingsOpen(false);
+      if (showSurrender) {
+        setSettingsOpen(false);
+        setGmOpen(false);
+        setNetworkOpen(false);
+      }
       settingsToggle.hidden = showSurrender;
       surrenderButton.hidden = !showSurrender;
       surrenderButton.disabled = !showSurrender;
-      gmToggle.classList.toggle("is-auto", showSurrender);
-      gmToggle.classList.toggle("is-active", showSurrender ? isPlayerAutoControlActive() : gmMode);
-      gmLetter.textContent = showSurrender ? "Auto" : "G";
-      gmToggle.title = showSurrender ? "Auto 操作" : "GM 設定";
-      gmToggle.setAttribute("aria-label", showSurrender ? "Auto 操作" : "GM 設定");
-      gmToggle.setAttribute("aria-expanded", showSurrender ? "false" : gmToggle.getAttribute("aria-expanded"));
-      gmToggle.disabled = showSurrender ? false : gmToggle.disabled;
+      networkToggle.classList.toggle("is-auto", showSurrender);
+      networkToggle.classList.toggle("is-active", showSurrender ? isPlayerAutoControlActive() : !networkContent.hidden);
+      gmLetter.textContent = showSurrender ? "Auto" : "LAN";
+      networkToggle.title = showSurrender ? "Auto 操作" : "LAN / Wi-Fi";
+      networkToggle.setAttribute("aria-label", showSurrender ? "Auto 操作" : "LAN / Wi-Fi");
+      networkToggle.setAttribute("aria-expanded", showSurrender ? "false" : networkToggle.getAttribute("aria-expanded"));
+      networkToggle.disabled = showSurrender ? false : networkToggle.disabled;
     }
 
     function setSettingsLocked(locked) {
       if (locked) {
         setSettingsOpen(false);
         setGmOpen(false);
+        setNetworkOpen(false);
       }
       settingsToggle.disabled = locked;
       settingsReplayButton.disabled = locked;
@@ -994,6 +999,10 @@
     }
 
     function beginStartLogoCountdown() {
+      if (isNetworkGuestActive()) {
+        setStatus("LAN guest is waiting for Host to start.");
+        return false;
+      }
       if (HexSnakeReplay.isPlaybackMode() || running || startLogoCountdownPending || isLogoTransitionActive()) return false;
       if (gameOver) {
         if (!canRestartAfterGameOver()) return false;
@@ -1022,6 +1031,10 @@
     }
 
     function startGame(options = {}) {
+      if (isNetworkGuestActive()) {
+        setStatus("LAN guest cannot start the host simulation.");
+        return false;
+      }
       if (HexSnakeReplay.isPlaybackMode()) return false;
       if (gameOver && !canRestartAfterGameOver()) return false;
       clearGameOverSettlementTimer();
@@ -1056,6 +1069,7 @@
       lastComputerStep = lastPlayerStep;
       lastTimerFrame = lastPlayerStep;
       HexSnakeReplay.startRecording();
+      broadcastNetworkStart(lastPlayerStep);
       cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(loop);
       return true;
@@ -1473,6 +1487,150 @@
       updateHud();
     }
 
+    const networkSnapshotIntervalMs = 100;
+    let lastNetworkSnapshotAt = -Infinity;
+
+    function networkAdapter() {
+      return window.HexSnakeNet || null;
+    }
+
+    function isNetworkHostActive() {
+      const net = networkAdapter();
+      return Boolean(net?.isHost?.() && net?.hasPeer?.());
+    }
+
+    function isNetworkGuestActive() {
+      return Boolean(networkAdapter()?.isGuest?.());
+    }
+
+    function safeNetworkCell(value) {
+      const q = Number(value?.q);
+      const r = Number(value?.r);
+      if (!Number.isFinite(q) || !Number.isFinite(r)) return null;
+      return nearestInsideCell({ q, r });
+    }
+
+    function safeNetworkDirection(value) {
+      const direction = Number(value);
+      return Number.isInteger(direction) && direction >= 0 && direction < directions.length ? direction : null;
+    }
+
+    function safeNetworkAttackOptions(options = {}) {
+      const nextOptions = {};
+      const aimDirection = safeNetworkDirection(options.aimDirection);
+      const aimOrigin = safeNetworkCell(options.aimOrigin);
+      if (aimDirection !== null) nextOptions.aimDirection = aimDirection;
+      if (aimOrigin) nextOptions.aimOrigin = aimOrigin;
+      return nextOptions;
+    }
+
+    function sendNetworkInput(input) {
+      const net = networkAdapter();
+      if (!net?.isGuest?.()) return false;
+      net.setInGame?.(true);
+      return net.sendInput(input);
+    }
+
+    function broadcastNetworkGameMessage(payload) {
+      const net = networkAdapter();
+      if (!net?.isHost?.()) return false;
+      return net.sendGameMessage(payload);
+    }
+
+    function broadcastNetworkSnapshot(now = performance.now(), force = false, final = false) {
+      if (!isNetworkHostActive() || !snake || !computerSnake) return;
+      if (!force && now - lastNetworkSnapshotAt < networkSnapshotIntervalMs) return;
+      lastNetworkSnapshotAt = now;
+      networkAdapter()?.setInGame?.(!final);
+      broadcastNetworkGameMessage({
+        type: final ? "end" : "snapshot",
+        snapshot: HexSnakeReplay.createSnapshot(now, final)
+      });
+    }
+
+    function broadcastNetworkStart(now = performance.now()) {
+      if (!isNetworkHostActive()) return;
+      lastNetworkSnapshotAt = now;
+      networkAdapter()?.setInGame?.(true);
+      broadcastNetworkGameMessage({
+        type: "start",
+        snapshot: HexSnakeReplay.createSnapshot(now, true)
+      });
+      setStatus("LAN match started. Host controls P1; guest controls P2.");
+    }
+
+    function applyNetworkDirectionInput(direction) {
+      const nextDirection = safeNetworkDirection(direction);
+      if (nextDirection === null || !computerSnake?.length) return false;
+      if (!canComputerTurn(nextDirection)) return false;
+      computerDir = nextDirection;
+      updateHud();
+      return true;
+    }
+
+    function applyNetworkAttackInput(input = {}) {
+      if (!running || paused || gameOver || !computerSnake?.length || !snake?.length) return false;
+      const profile = input.profile === "small" ? "small" : "big";
+      const direction = safeNetworkDirection(input.direction);
+      const options = safeNetworkAttackOptions(input.options);
+      if (direction !== null) {
+        options.aimDirection = direction;
+        options.aimOrigin = { ...computerSnake[0] };
+      }
+      const target = safeNetworkCell(input.target) || snake[0];
+      const launched = launchAttack("computer", target, performance.now(), profile, options);
+      if (launched) {
+        setStatus(profile === "small" ? "P2 LAN attack fired." : "P2 LAN big attack fired.");
+        broadcastNetworkSnapshot(performance.now(), true);
+      }
+      return launched;
+    }
+
+    function applyNetworkInput(input = {}) {
+      if (!isNetworkHostActive()) return;
+      if (input.kind === "direction") {
+        applyNetworkDirectionInput(input.direction);
+        return;
+      }
+      if (input.kind === "attack" || input.kind === "attack-direction") {
+        applyNetworkAttackInput(input);
+      }
+    }
+
+    function applyNetworkSnapshotMessage(message = {}) {
+      if (!isNetworkGuestActive() || !message.snapshot) return;
+      const final = message.type === "end";
+      running = false;
+      paused = false;
+      gameOver = final;
+      computerBattleMode = false;
+      playerAutoMode = false;
+      computerBattleManualOverride = false;
+      relayMode = false;
+      setSettingsLocked(!final);
+      overlay.classList.remove("show");
+      showCharacterStage({ rebuild: false, overlay: false });
+      HexSnakeReplay.applySnapshot(message.snapshot, {
+        playerCharacterId: message.snapshot.playerCharacterId,
+        computerCharacterId: message.snapshot.computerCharacterId,
+        settings: { gridSize: message.snapshot.gridSize }
+      });
+      networkAdapter()?.setInGame?.(!final);
+      setStatus(final ? "LAN match ended." : "LAN match: you control P2.");
+    }
+
+    function handleNetworkGameMessage(message = {}) {
+      if (message.type === "input") {
+        applyNetworkInput(message.input);
+        return;
+      }
+      if (message.type === "start" || message.type === "snapshot" || message.type === "end") {
+        applyNetworkSnapshotMessage(message);
+      }
+    }
+
+    networkAdapter()?.onGameMessage?.(handleNetworkGameMessage);
+
     function sandwormUndergroundAlpha(owner, now) {
       if (characterFor(owner).id !== "sandworm") return 1;
       const armorFrom = owner === "player" ? playerSandwormArmorFrom : computerSandwormArmorFrom;
@@ -1581,6 +1739,13 @@
 
     function setDirection(newDir, options = {}) {
       if (!Number.isInteger(newDir) || newDir < 0 || newDir > 5) return;
+      if (isNetworkGuestActive()) {
+        if (!computerSnake?.length || !canComputerTurn(newDir)) return;
+        setDirectionButtonHighlight(newDir);
+        sendNetworkInput({ kind: "direction", direction: newDir });
+        if (options.feedbackEvent) triggerTouchFeedback(options.feedbackEvent, options.feedbackStrength ?? 6);
+        return;
+      }
       if (canTurn(newDir)) {
         const changed = nextDir !== newDir;
         nextDir = newDir;
@@ -2756,7 +2921,7 @@
         setDirectionButtonHighlight(nextDir);
       }
       dir = nextDir;
-      computerDir = chooseComputerDirection();
+      if (!isNetworkHostActive()) computerDir = chooseComputerDirection();
 
       const next = nextWrappedCell(snake[0], dir);
       const computerNext = nextWrappedCell(computerSnake[0], computerDir);
@@ -2812,7 +2977,7 @@
       replaceConsumedFoods([playerConsumedFood, computerConsumedFood], eating || computerEating);
 
       if (!playerCollision && running && !paused) maybeAutoBattlePlayerAttack(now);
-      if (!computerCollision && running && !paused) maybeComputerAttack(now);
+      if (!computerCollision && running && !paused && !isNetworkHostActive()) maybeComputerAttack(now);
       updateHud();
     }
 
@@ -2846,7 +3011,7 @@
     }
 
     function stepComputerOnly(now = performance.now()) {
-      computerDir = chooseComputerDirection();
+      if (!isNetworkHostActive()) computerDir = chooseComputerDirection();
       const computerNext = nextWrappedCell(computerSnake[0], computerDir);
       const computerNextKey = keyOf(computerNext);
       const computerEatenFood = foods.find(food => computerNext.q === food.q && computerNext.r === food.r);
@@ -2866,7 +3031,7 @@
 
       const consumedFood = advanceOwnerMovement("computer", computerNext, computerEatenFood);
       replaceConsumedFoods([consumedFood], computerEating);
-      if (running && !paused) maybeComputerAttack(now);
+      if (running && !paused && !isNetworkHostActive()) maybeComputerAttack(now);
       updateHud();
     }
 
@@ -2897,6 +3062,7 @@
         HexSnakeStorage.set("hexSnakeBestTotalMs", String(Math.floor(bestTotalMs)));
       }
       updateHud();
+      broadcastNetworkSnapshot(gameOverAt, true, true);
       const winnerOwner = (!playerLost && computerLost) || (playerLost && computerLost && score > computerScore)
         ? "player"
         : (playerLost && !computerLost) || (playerLost && computerLost && computerScore > score)
@@ -3042,6 +3208,7 @@
       hazards = hazards.filter(hazard => now <= hazard.endAt);
       updateHudThrottled(now);
       recordReplaySnapshotThrottled(now);
+      broadcastNetworkSnapshot(now);
       updateAutoBattleControls();
       draw();
       rafId = requestAnimationFrame(loop);
@@ -3559,6 +3726,25 @@
         setStatus(playerAttackFailureReason(target, profile));
         return false;
       }
+      if (isNetworkGuestActive()) {
+        const safeProfile = profile === "small" ? "small" : "big";
+        const ownHeadKey = computerSnake?.[0] ? keyOf(computerSnake[0]) : "";
+        const targetIsOwnHead = target && keyOf(target) === ownHeadKey;
+        const networkTarget = target && !targetIsOwnHead ? target : snake?.[0];
+        const networkOptions = { ...options };
+        if (networkOptions.aimOrigin && snake?.[0] && keyOf(networkOptions.aimOrigin) === keyOf(snake[0])) {
+          networkOptions.aimOrigin = computerSnake?.[0] ? { ...computerSnake[0] } : networkOptions.aimOrigin;
+        }
+        sendNetworkInput({
+          kind: "attack",
+          profile: safeProfile,
+          target: networkTarget ? { q: networkTarget.q, r: networkTarget.r } : null,
+          options: networkOptions
+        });
+        flashAttackButton(safeProfile);
+        setStatus(safeProfile === "small" ? "Sent P2 LAN attack." : "Sent P2 LAN big attack.");
+        return true;
+      }
       if (!running || gameOver) {
         if (!autoStartGame()) {
           setStatus(playerAttackFailureReason(target, profile));
@@ -3590,6 +3776,14 @@
     }
 
     function launchPlayerAttackDirection(direction, profile = selectedAttackProfile) {
+      if (isNetworkGuestActive()) {
+        const safeDirection = safeNetworkDirection(direction);
+        if (safeDirection === null) return false;
+        const safeProfile = profile === "small" ? "small" : "big";
+        sendNetworkInput({ kind: "attack-direction", profile: safeProfile, direction: safeDirection });
+        flashAttackButton(safeProfile);
+        return true;
+      }
       if (!running || gameOver) {
         if (!autoStartGame()) return false;
       }
@@ -3721,48 +3915,109 @@
       requestPreviewDraw();
     }
 
+    function updateSettingsPanelState() {
+      const settingsPagesOpen = !settingsContent.hidden || !gmContent.hidden;
+      settingsToggle.setAttribute("aria-expanded", String(settingsPagesOpen));
+      networkToggle.setAttribute("aria-expanded", String(!networkContent.hidden));
+      settingsToggle.closest(".settings-section").classList.toggle("open", settingsPagesOpen || !networkContent.hidden);
+      if (!running || gameOver || HexSnakeReplay.isPlaybackMode()) {
+        networkToggle.classList.toggle("is-active", !networkContent.hidden);
+      }
+    }
+
+    function closeRulesPanelForOverlay() {
+      if (rulesModal.hidden) return;
+      rulesModal.hidden = true;
+      rulesButton.setAttribute("aria-expanded", "false");
+    }
+
     function setSettingsOpen(open) {
-      settingsToggle.setAttribute("aria-expanded", String(open));
       settingsContent.hidden = !open;
       if (!open) setPendingDirectionKeybind(null);
-      if (open && !rulesModal.hidden) {
-        rulesModal.hidden = true;
-        rulesButton.setAttribute("aria-expanded", "false");
+      if (open) {
+        closeRulesPanelForOverlay();
+        gmContent.hidden = true;
+        networkContent.hidden = true;
+        settingsCloseButton.focus();
       }
-      if (open) setGmOpen(false);
-      if (open) settingsCloseButton.focus();
-      settingsToggle.closest(".settings-section").classList.toggle("open", open || !gmContent.hidden);
+      updateSettingsPanelState();
     }
 
     function toggleSettings() {
       if (settingsToggle.disabled || running) return;
-      setSettingsOpen(settingsToggle.getAttribute("aria-expanded") !== "true");
+      const settingsPagesOpen = !settingsContent.hidden || !gmContent.hidden;
+      if (settingsPagesOpen) {
+        setSettingsOpen(false);
+        setGmOpen(false);
+        return;
+      }
+      setSettingsOpen(true);
     }
 
     function setGmOpen(open) {
-      gmToggle.setAttribute("aria-expanded", String(open));
       gmContent.hidden = !open;
       if (open && !running) {
-        if (!rulesModal.hidden) {
-          rulesModal.hidden = true;
-          rulesButton.setAttribute("aria-expanded", "false");
-        }
+        closeRulesPanelForOverlay();
+        settingsContent.hidden = true;
+        networkContent.hidden = true;
+        setPendingDirectionKeybind(null);
         setGmMode(true);
         saveGmSettings();
+        gmCloseButton.focus();
       }
-      if (open) setSettingsOpen(false);
-      if (open) gmCloseButton.focus();
-      gmToggle.closest(".settings-section").classList.toggle("open", open || !settingsContent.hidden);
+      updateSettingsPanelState();
     }
 
-    function toggleGmSettings() {
+    function setNetworkOpen(open) {
+      networkContent.hidden = !open;
+      if (open) {
+        closeRulesPanelForOverlay();
+        settingsContent.hidden = true;
+        gmContent.hidden = true;
+        setPendingDirectionKeybind(null);
+        networkCloseButton.focus();
+      }
+      updateSettingsPanelState();
+    }
+
+    function toggleNetworkSettings() {
       if (running && !gameOver && !HexSnakeReplay.isPlaybackMode()) {
         if (computerBattleMode) setComputerBattleManualOverride(!computerBattleManualOverride);
         else setPlayerAutoMode(!playerAutoMode);
         return;
       }
-      if (gmToggle.disabled || running) return;
-      setGmOpen(gmToggle.getAttribute("aria-expanded") !== "true");
+      if (networkToggle.disabled || running) return;
+      setNetworkOpen(networkToggle.getAttribute("aria-expanded") !== "true");
+    }
+
+    let settingsPageSwipe = null;
+    const settingsPageSwipeDistance = 64;
+
+    function beginSettingsPageSwipe(event, page) {
+      if (event.button !== undefined && event.button !== 0) return;
+      if (event.target.closest("button, input, select, textarea, a")) return;
+      settingsPageSwipe = {
+        pointerId: event.pointerId,
+        page,
+        x: event.clientX,
+        y: event.clientY
+      };
+    }
+
+    function finishSettingsPageSwipe(event) {
+      if (!settingsPageSwipe || event.pointerId !== settingsPageSwipe.pointerId) return;
+      const swipe = settingsPageSwipe;
+      settingsPageSwipe = null;
+      const dx = event.clientX - swipe.x;
+      const dy = event.clientY - swipe.y;
+      if (Math.abs(dx) < settingsPageSwipeDistance || Math.abs(dx) < Math.abs(dy) * 1.25) return;
+      if (swipe.page === "settings" && dx < 0) setGmOpen(true);
+      if (swipe.page === "gm" && dx > 0) setSettingsOpen(true);
+    }
+
+    function cancelSettingsPageSwipe(event) {
+      if (!settingsPageSwipe || event.pointerId !== settingsPageSwipe.pointerId) return;
+      settingsPageSwipe = null;
     }
 
     function handlePlatformBackButton() {
@@ -3790,9 +4045,10 @@
         closePortraitLightbox();
         return true;
       }
-      if (!settingsContent.hidden || !gmContent.hidden) {
+      if (!settingsContent.hidden || !gmContent.hidden || !networkContent.hidden) {
         setSettingsOpen(false);
         setGmOpen(false);
+        setNetworkOpen(false);
         return true;
       }
       if (isLogoTransitionActive()) {
@@ -3816,15 +4072,16 @@
     document.addEventListener("keydown", HexSnakeAudio.unlock, { once: true });
 
     settingsToggle.addEventListener("click", toggleSettings);
-    gmToggle.addEventListener("click", toggleGmSettings);
+    networkToggle.addEventListener("click", toggleNetworkSettings);
     settingsCloseButton.addEventListener("click", () => setSettingsOpen(false));
     gmCloseButton.addEventListener("click", () => setGmOpen(false));
+    networkCloseButton.addEventListener("click", () => setNetworkOpen(false));
 
     settingsToggle.addEventListener("pointerdown", event => {
       event.stopPropagation();
     });
 
-    gmToggle.addEventListener("pointerdown", event => {
+    networkToggle.addEventListener("pointerdown", event => {
       event.stopPropagation();
     });
 
@@ -3834,11 +4091,25 @@
         return;
       }
       event.stopPropagation();
+      beginSettingsPageSwipe(event, "settings");
     });
+    settingsContent.addEventListener("pointerup", finishSettingsPageSwipe);
+    settingsContent.addEventListener("pointercancel", cancelSettingsPageSwipe);
 
     gmContent.addEventListener("pointerdown", event => {
       if (event.target === gmContent) {
         setGmOpen(false);
+        return;
+      }
+      event.stopPropagation();
+      beginSettingsPageSwipe(event, "gm");
+    });
+    gmContent.addEventListener("pointerup", finishSettingsPageSwipe);
+    gmContent.addEventListener("pointercancel", cancelSettingsPageSwipe);
+
+    networkContent.addEventListener("pointerdown", event => {
+      if (event.target === networkContent) {
+        setNetworkOpen(false);
         return;
       }
       event.stopPropagation();
@@ -4947,6 +5218,22 @@
         }
         return;
       }
+      if (!settingsContent.hidden || !gmContent.hidden || !networkContent.hidden) {
+        if (event.key === "Escape" || event.key === "Esc") {
+          setSettingsOpen(false);
+          setGmOpen(false);
+          setNetworkOpen(false);
+        }
+        if (!settingsContent.hidden && event.key === "ArrowRight") {
+          event.preventDefault();
+          setGmOpen(true);
+        }
+        if (!gmContent.hidden && event.key === "ArrowLeft") {
+          event.preventDefault();
+          setSettingsOpen(true);
+        }
+        return;
+      }
       if (!rulesModal.hidden) {
         if (event.key === "Escape" || event.key === "Esc") closeRulesModal();
         return;
@@ -4988,13 +5275,6 @@
         }
         event.preventDefault();
         event.stopPropagation();
-        return;
-      }
-      if (!settingsContent.hidden || !gmContent.hidden) {
-        if (event.key === "Escape" || event.key === "Esc") {
-          setSettingsOpen(false);
-          setGmOpen(false);
-        }
         return;
       }
       if (!portraitLightbox.hidden) {

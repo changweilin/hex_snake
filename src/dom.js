@@ -126,10 +126,12 @@
       mid: midGameModeButton,
       late: lateGameModeButton
     };
-    const gmToggle = document.querySelector("#gmToggle");
-    const gmLetter = gmToggle.querySelector(".gm-letter");
+    const networkToggle = document.querySelector("#networkToggle");
+    const gmLetter = networkToggle.querySelector(".gm-letter");
     const gmContent = document.querySelector("#gmContent");
     const gmCloseButton = document.querySelector("#gmCloseButton");
+    const networkContent = document.querySelector("#networkContent");
+    const networkCloseButton = document.querySelector("#networkCloseButton");
     const settingsToggle = document.querySelector("#settingsToggle");
     const settingsContent = document.querySelector("#settingsContent");
     const settingsCloseButton = document.querySelector("#settingsCloseButton");
@@ -138,4 +140,4 @@
     const keyEls = [...document.querySelectorAll(".key")];
     const mobileInputQuery = window.matchMedia("(hover: none), (pointer: coarse), (max-width: 900px)");
 
-    document.body.append(settingsContent, gmContent);
+    document.body.append(settingsContent, gmContent, networkContent);

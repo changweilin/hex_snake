@@ -641,6 +641,12 @@
       startRecording: startReplayRecording,
       recordSnapshot: recordReplaySnapshot,
       finishRecording: finishReplayRecording,
+      createSnapshot(now = performance.now(), final = false) {
+        return createReplaySnapshot(now, final);
+      },
+      applySnapshot(snapshot, record = {}) {
+        applyReplaySnapshot(snapshot, record);
+      },
       openModal: openReplayModal,
       closeModal: closeReplayModal,
       findRecord: findReplayRecord,

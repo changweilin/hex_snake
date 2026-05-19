@@ -133,9 +133,9 @@
           <svg class="settings-action-icon surrender-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h2v18H5V3Z"/><path d="M8 4h11l-2.2 4 2.2 4H8V4Z"/></svg>
           <span class="settings-action-label">投降</span>
         </button>
-        <button class="gm-toggle" id="gmToggle" type="button" aria-expanded="false" aria-controls="gmContent" title="GM 設定" aria-label="GM 設定">
-          <span class="gm-letter" aria-hidden="true">G</span>
-          <span class="settings-action-label">GM</span>
+        <button class="network-toggle" id="networkToggle" type="button" aria-expanded="false" aria-controls="networkContent" title="LAN / Wi-Fi" aria-label="LAN / Wi-Fi">
+          <span class="gm-letter" aria-hidden="true">LAN</span>
+          <span class="settings-action-label">LAN</span>
         </button>
         </div>
         <div class="settings-content" id="settingsContent" hidden aria-modal="true" role="dialog" aria-label="開局設定">
@@ -312,6 +312,30 @@
             <button id="lateGameModeButton" class="secondary" type="button">後期模式</button>
           </div>
         </div>
+        </div>
+        </div>
+        </div>
+        <div class="settings-content" id="networkContent" hidden aria-modal="true" role="dialog" aria-label="LAN Wi-Fi multiplayer">
+        <div class="settings-dialog">
+        <div class="settings-panel-header">
+          <strong>LAN / Wi-Fi</strong>
+          <button class="secondary settings-panel-close" id="networkCloseButton" type="button" aria-label="Close LAN Wi-Fi">&times;</button>
+        </div>
+        <div class="settings-modal-body">
+          <section class="network-section" id="networkPanel" aria-label="LAN Wi-Fi multiplayer">
+            <h2>LAN / Wi-Fi</h2>
+            <div class="network-room-row">
+              <button id="networkCreateButton" type="button">Host</button>
+              <input id="networkRoomCodeInput" type="text" maxlength="4" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="CODE" aria-label="Room code">
+              <button id="networkJoinButton" class="secondary" type="button">Join</button>
+              <button id="networkLeaveButton" class="secondary" type="button" hidden>Leave</button>
+            </div>
+            <div class="network-room-meta">
+              <span>Room</span>
+              <strong id="networkRoomCode">----</strong>
+            </div>
+            <div id="networkStatus" class="network-status" role="status" aria-live="polite">LAN mode ready.</div>
+          </section>
         </div>
         </div>
         </div>

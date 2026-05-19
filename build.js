@@ -16,6 +16,7 @@ const legacySources = [
   "src/state.js",
   "src/dom.js",
   "src/ui.js",
+  "src/network.js",
   "src/characters.js",
   "src/audio.js",
   "src/replay.js",

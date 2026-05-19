@@ -1,4 +1,5 @@
 const http = require("http");
+const crypto = require("crypto");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
@@ -7,6 +8,9 @@ const useDist = process.argv.includes("--dist");
 const root = path.resolve(__dirname, useDist ? "dist" : ".");
 const port = Number(process.env.PORT || 6287);
 const host = process.env.HOST || "0.0.0.0";
+const websocketGuid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+const wsClients = new Set();
+const rooms = new Map();
 
 const types = {
   ".html": "text/html; charset=utf-8",
@@ -75,7 +79,286 @@ function handleRequest(req, res) {
 }
 
 function createServer() {
-  return http.createServer(handleRequest);
+  const server = http.createServer(handleRequest);
+  server.on("upgrade", handleWebSocketUpgrade);
+  return server;
+}
+
+function createRoomCode() {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+  for (let index = 0; index < 4; index += 1) {
+    code += alphabet[Math.floor(Math.random() * alphabet.length)];
+  }
+  return rooms.has(code) ? createRoomCode() : code;
+}
+
+function acceptWebSocketKey(key) {
+  return crypto
+    .createHash("sha1")
+    .update(`${key}${websocketGuid}`)
+    .digest("base64");
+}
+
+function encodeWebSocketMessage(data) {
+  const payload = Buffer.from(JSON.stringify(data), "utf8");
+  const headerLength = payload.length < 126 ? 2 : payload.length <= 65535 ? 4 : 10;
+  const frame = Buffer.alloc(headerLength + payload.length);
+  frame[0] = 0x81;
+  if (payload.length < 126) {
+    frame[1] = payload.length;
+  } else if (payload.length <= 65535) {
+    frame[1] = 126;
+    frame.writeUInt16BE(payload.length, 2);
+  } else {
+    frame[1] = 127;
+    frame.writeBigUInt64BE(BigInt(payload.length), 2);
+  }
+  payload.copy(frame, headerLength);
+  return frame;
+}
+
+function sendWebSocket(client, data) {
+  if (!client || client.socket.destroyed) return false;
+  try {
+    client.socket.write(encodeWebSocketMessage(data));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function sendRoomState(room) {
+  if (!room) return;
+  const peerCount = room.clients.size;
+  const roles = [...room.clients].map(client => client.role).filter(Boolean);
+  room.clients.forEach(client => sendWebSocket(client, {
+    type: "peer-state",
+    roomCode: room.code,
+    role: client.role,
+    peerCount,
+    roles
+  }));
+}
+
+function leaveRoom(client, reason = "left") {
+  if (!client?.roomCode) return;
+  const room = rooms.get(client.roomCode);
+  if (!room) {
+    client.roomCode = null;
+    client.role = null;
+    return;
+  }
+
+  room.clients.delete(client);
+  const previousRole = client.role;
+  client.roomCode = null;
+  client.role = null;
+
+  if (previousRole === "host") {
+    room.clients.forEach(peer => {
+      peer.roomCode = null;
+      peer.role = null;
+      sendWebSocket(peer, { type: "room-closed", roomCode: room.code, reason });
+    });
+    rooms.delete(room.code);
+    return;
+  }
+
+  if (room.clients.size === 0) {
+    rooms.delete(room.code);
+    return;
+  }
+
+  room.clients.forEach(peer => sendWebSocket(peer, {
+    type: "peer-left",
+    roomCode: room.code,
+    role: previousRole,
+    reason
+  }));
+  sendRoomState(room);
+}
+
+function joinRoom(client, code) {
+  const roomCode = String(code || "").trim().toUpperCase();
+  const room = rooms.get(roomCode);
+  if (!room) {
+    sendWebSocket(client, { type: "error", message: "Room not found." });
+    return;
+  }
+  if (room.clients.size >= 2) {
+    sendWebSocket(client, { type: "error", message: "Room is full." });
+    return;
+  }
+  leaveRoom(client, "switch-room");
+  room.clients.add(client);
+  client.roomCode = room.code;
+  client.role = "guest";
+  sendWebSocket(client, { type: "room-joined", roomCode: room.code, role: client.role });
+  room.clients.forEach(peer => {
+    if (peer !== client) sendWebSocket(peer, { type: "peer-joined", roomCode: room.code, role: client.role });
+  });
+  sendRoomState(room);
+}
+
+function createRoom(client) {
+  leaveRoom(client, "switch-room");
+  const code = createRoomCode();
+  const room = {
+    code,
+    clients: new Set([client]),
+    createdAt: Date.now()
+  };
+  rooms.set(code, room);
+  client.roomCode = code;
+  client.role = "host";
+  sendWebSocket(client, { type: "room-created", roomCode: code, role: client.role });
+  sendRoomState(room);
+}
+
+function relayToRoomPeer(client, payload) {
+  const room = rooms.get(client.roomCode);
+  if (!room || !room.clients.has(client)) {
+    sendWebSocket(client, { type: "error", message: "Not in a room." });
+    return;
+  }
+  room.clients.forEach(peer => {
+    if (peer === client) return;
+    sendWebSocket(peer, {
+      type: "peer-message",
+      roomCode: room.code,
+      fromRole: client.role,
+      payload
+    });
+  });
+}
+
+function handleWebSocketMessage(client, text) {
+  let message;
+  try {
+    message = JSON.parse(text);
+  } catch {
+    sendWebSocket(client, { type: "error", message: "Invalid JSON." });
+    return;
+  }
+
+  if (message.type === "create-room") {
+    createRoom(client);
+    return;
+  }
+  if (message.type === "join-room") {
+    joinRoom(client, message.roomCode);
+    return;
+  }
+  if (message.type === "leave-room") {
+    leaveRoom(client);
+    sendWebSocket(client, { type: "room-left" });
+    return;
+  }
+  if (message.type === "relay") {
+    relayToRoomPeer(client, message.payload);
+    return;
+  }
+  if (message.type === "ping") {
+    sendWebSocket(client, { type: "pong", t: message.t || Date.now() });
+  }
+}
+
+function decodeWebSocketFrames(client, chunk) {
+  client.buffer = client.buffer.length ? Buffer.concat([client.buffer, chunk]) : chunk;
+
+  while (client.buffer.length >= 2) {
+    const firstByte = client.buffer[0];
+    const secondByte = client.buffer[1];
+    const fin = Boolean(firstByte & 0x80);
+    const opcode = firstByte & 0x0f;
+    const masked = Boolean(secondByte & 0x80);
+    let payloadLength = secondByte & 0x7f;
+    let offset = 2;
+
+    if (payloadLength === 126) {
+      if (client.buffer.length < offset + 2) return;
+      payloadLength = client.buffer.readUInt16BE(offset);
+      offset += 2;
+    } else if (payloadLength === 127) {
+      if (client.buffer.length < offset + 8) return;
+      const bigLength = client.buffer.readBigUInt64BE(offset);
+      if (bigLength > BigInt(Number.MAX_SAFE_INTEGER)) {
+        client.socket.destroy();
+        return;
+      }
+      payloadLength = Number(bigLength);
+      offset += 8;
+    }
+
+    const maskLength = masked ? 4 : 0;
+    const frameLength = offset + maskLength + payloadLength;
+    if (client.buffer.length < frameLength) return;
+
+    let payload = client.buffer.subarray(offset + maskLength, frameLength);
+    if (masked) {
+      const mask = client.buffer.subarray(offset, offset + 4);
+      payload = Buffer.from(payload.map((byte, index) => byte ^ mask[index % 4]));
+    }
+    client.buffer = client.buffer.subarray(frameLength);
+
+    if (opcode === 0x8) {
+      client.socket.end();
+      return;
+    }
+    if (opcode === 0x9) {
+      client.socket.write(Buffer.from([0x8a, 0x00]));
+      continue;
+    }
+    if (opcode !== 0x1 || !fin) {
+      client.socket.destroy();
+      return;
+    }
+
+    handleWebSocketMessage(client, payload.toString("utf8"));
+  }
+}
+
+function handleWebSocketUpgrade(req, socket) {
+  if ((req.url || "").split("?")[0] !== "/ws") {
+    socket.destroy();
+    return;
+  }
+
+  const key = req.headers["sec-websocket-key"];
+  if (!key) {
+    socket.destroy();
+    return;
+  }
+
+  socket.write([
+    "HTTP/1.1 101 Switching Protocols",
+    "Upgrade: websocket",
+    "Connection: Upgrade",
+    `Sec-WebSocket-Accept: ${acceptWebSocketKey(key)}`,
+    "",
+    ""
+  ].join("\r\n"));
+
+  const client = {
+    id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
+    socket,
+    buffer: Buffer.alloc(0),
+    roomCode: null,
+    role: null
+  };
+  wsClients.add(client);
+  sendWebSocket(client, { type: "hello", id: client.id });
+
+  socket.on("data", chunk => decodeWebSocketFrames(client, chunk));
+  socket.on("close", () => {
+    leaveRoom(client, "disconnect");
+    wsClients.delete(client);
+  });
+  socket.on("error", () => {
+    leaveRoom(client, "error");
+    wsClients.delete(client);
+  });
 }
 
 function getNetworkUrls() {
