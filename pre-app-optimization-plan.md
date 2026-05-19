@@ -352,6 +352,13 @@ const platform = {
 - dist 變大時能看出原因。
 - 缺素材或錯素材能在 build 階段發現。
 
+進度（2026-05-19）：
+
+- 已完成：新增 `release:check` 作為 release 前固定 gate，依序執行 build、text、data、asset、size、quick、mobile、desktop smoke 與 offline smoke。
+- 已完成：`release:check -- --list` 可列出完整 checklist，方便 release 前快速確認流程。
+- 已完成：runner 會在任一檢查失敗時停止，並輸出失敗步驟與耗時。
+- 已驗證：`npm run release:check` 全流程通過，`dist` 約 26.64 MB，120 WebP portraits、72 M4A sounds 均符合 manifest。
+
 ### 3.10 App-like 功能雛形
 
 建議：

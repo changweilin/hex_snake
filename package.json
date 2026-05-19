@@ -27,6 +27,7 @@
     "audit:globals": "node tools/audit-legacy-globals.js",
     "check:assets": "node tools/check-assets.js",
     "check:size": "node tools/check-dist-size.js",
+    "release:check": "node tools/run-release-check.js",
     "reports:dashboard": "node tools/build-report-dashboard.js",
     "reports:dashboard:serve": "node tools/report-dashboard-server.js",
     "generate:sfx": "node tools/generate-character-sfx.js",
