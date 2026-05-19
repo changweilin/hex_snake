@@ -22,7 +22,7 @@
     "simulate:ai-cross": "node tools/run-ai-cross-play.js",
     "optimize:strategy": "node tools/run-strategy-optimization.js",
     "test:smoke": "node tools/smoke-test.js",
-    "test:mobile": "node tools/smoke-test.js",
+    "test:mobile": "node tools/mobile-smoke-test.js",
     "test:offline": "node tools/offline-smoke-test.js",
     "audit:globals": "node tools/audit-legacy-globals.js",
     "check:assets": "node tools/check-assets.js",

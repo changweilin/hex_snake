@@ -4674,21 +4674,21 @@
       grid-template-rows: 1fr;
       gap: 6px;
       width: 100%;
-      min-height: 118px;
+      min-height: 128px;
     }
 
     .attack-actions {
       position: relative;
-      width: 118px;
-      height: 118px;
+      width: 128px;
+      height: 128px;
       justify-self: center;
     }
 
     .attack-actions .attack-button {
       position: absolute;
       box-sizing: border-box;
-      width: 38px;
-      height: 38px;
+      width: 44px;
+      height: 44px;
       min-width: 0;
       min-height: 0;
       padding: 0;
@@ -4697,12 +4697,12 @@
       place-items: center;
       line-height: 1.1;
       border-radius: 50%;
-      font-size: 0.66rem;
+      font-size: 0.7rem;
       white-space: nowrap;
     }
 
     .attack-actions .attack-button.secondary {
-      width: 38px;
+      width: 44px;
     }
 
     .attack-actions .attack-button[data-pad-pos="top"] {
@@ -5880,19 +5880,19 @@
       }
 
       .action-panel {
-        min-height: 108px;
+        min-height: 116px;
       }
 
       .attack-actions {
-        width: 108px;
-        height: 108px;
+        width: 116px;
+        height: 116px;
       }
 
       .attack-actions .attack-button,
       .attack-actions .attack-button.secondary {
-        width: 34px;
-        height: 34px;
-        font-size: 0.6rem;
+        width: 44px;
+        height: 44px;
+        font-size: 0.62rem;
       }
 
       .joystick {

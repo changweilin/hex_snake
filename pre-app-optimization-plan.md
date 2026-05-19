@@ -248,6 +248,15 @@ const platform = {
 - 長時間操作不誤觸。
 - pointer cancel 不會造成卡住或連續攻擊。
 
+進度（2026-05-19）：
+
+- 已完成：新增 `test:mobile` 專用 QA，覆蓋手機直向與橫向 viewport。
+- 已完成：mobile QA 會檢查主要控制元件在 viewport 內、無水平 overflow、可截圖。
+- 已完成：mobile QA 會驗證左手模式、低耗電、FPS 顯示等設定切換。
+- 已完成：mobile QA 會模擬搖桿 pointer cancel，確認不會殘留 locked 狀態。
+- 已修正：手機版小招 / 大招按鈕由 34px 提升到 44px 點按尺寸。
+- 已驗證：build、asset、size、mobile、quick、desktop/mobile smoke、offline smoke 與瀏覽器實測通過。
+
 ### 3.7 效能與電量保護
 
 現況：
