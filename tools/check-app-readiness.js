@@ -9,11 +9,16 @@ const requiredScripts = [
   "build",
   "build:web",
   "build:pwa",
+  "build:mobile",
   "start",
   "test:quick",
   "test:mobile",
   "test:smoke",
   "test:offline",
+  "cap:copy",
+  "cap:sync",
+  "cap:android",
+  "cap:ios",
   "release:check"
 ];
 const requiredDistFiles = [
@@ -74,6 +79,47 @@ function checkPackageScripts() {
     if (!packageInfo.scripts?.[script]) fail(`package.json is missing npm script "${script}".`);
   });
   return packageInfo;
+}
+
+function checkPackageDependency(packageInfo, section, dependencyName) {
+  if (!packageInfo[section]?.[dependencyName]) {
+    fail(`package.json is missing ${section} dependency "${dependencyName}".`);
+  }
+}
+
+function checkCapacitorShell(packageInfo) {
+  const config = readJson("capacitor.config.json");
+  if (!config.appId || !/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/i.test(config.appId)) {
+    fail("capacitor.config.json must define a reverse-DNS appId.");
+  }
+  if (!config.appName) fail("capacitor.config.json is missing appName.");
+  if (config.webDir !== "dist") fail('capacitor.config.json webDir must be "dist".');
+  if (config.bundledWebRuntime !== false) fail("capacitor.config.json should keep bundledWebRuntime false.");
+
+  [
+    "@capacitor/core",
+    "@capacitor/app",
+    "@capacitor/haptics",
+    "@capacitor/preferences",
+    "@capacitor/splash-screen"
+  ].forEach(dependency => checkPackageDependency(packageInfo, "dependencies", dependency));
+
+  [
+    "@capacitor/cli",
+    "@capacitor/android",
+    "@capacitor/ios"
+  ].forEach(dependency => checkPackageDependency(packageInfo, "devDependencies", dependency));
+
+  const mobileAdapter = readText("src/platform/mobile.js");
+  [
+    'kind: "mobile"',
+    "onBackButton",
+    "Haptics",
+    "appStateChange",
+    "backButton"
+  ].forEach(marker => {
+    if (!mobileAdapter.includes(marker)) fail(`src/platform/mobile.js is missing ${marker}.`);
+  });
 }
 
 function checkSourcePwa() {
@@ -142,9 +188,12 @@ function checkDistBuild(packageInfo) {
   });
 
   const bundle = readText("dist/assets/app.bundle.js");
-  ["__HEX_SNAKE_BUNDLED_LEGACY__", "__HEX_SNAKE_APP_VERSION__", "__HEX_SNAKE_BUILD_VERSION__"].forEach(marker => {
+  ["__HEX_SNAKE_BUNDLED_LEGACY__", "__HEX_SNAKE_APP_VERSION__", "__HEX_SNAKE_BUILD_VERSION__", "__HEX_SNAKE_BUILD_TARGET__"].forEach(marker => {
     if (!bundle.includes(marker)) fail(`dist/assets/app.bundle.js is missing ${marker}.`);
   });
+  if (!["web", "mobile"].includes(manifest.buildTarget)) {
+    fail(`dist build manifest has invalid buildTarget ${manifest.buildTarget}.`);
+  }
 
   return manifest;
 }
@@ -155,10 +204,12 @@ function formatMb(bytes) {
 
 function main() {
   const packageInfo = checkPackageScripts();
+  checkCapacitorShell(packageInfo);
   checkSourcePwa();
   const manifest = checkDistBuild(packageInfo);
   console.log([
     "App readiness check passed:",
+    `target ${manifest.buildTarget}`,
     `dist ${formatMb(manifest.budget.distBytes)} / budget ${manifest.budget.distMaxMb} MB`,
     `build ${manifest.buildVersion}`,
     `${manifest.optimization.images.converted} WebP portraits`,

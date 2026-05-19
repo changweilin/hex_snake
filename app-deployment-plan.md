@@ -422,6 +422,16 @@ Web 適合作為快速驗證場，App 適合作為穩定發布版。
 - Web 與 App 使用同一份 `dist`。
 - App 背景化與恢復不破壞遊戲狀態。
 
+進度（2026-05-19）：
+
+- 已完成：安裝 Capacitor 8，新增 `capacitor.config.json`，`webDir` 指向 `dist`，app id 為 `com.whitedragon.hexsnake`。
+- 已完成：新增 `build:mobile`、`cap:copy`、`cap:sync`、`cap:android`、`cap:ios` scripts；mobile build 會以 `src/platform/mobile.js` 包裝同一套遊戲核心。
+- 已完成：新增 Android 與 iOS 原生專案，Android / iOS 版本號與 `package.json` 的 `1.0.0` 對齊。
+- 已完成：實作 mobile platform adapter，支援 Capacitor App lifecycle、Android 返回鍵與 Haptics，並保留原手機 web 版的觸控、搖桿與攻擊操作邏輯。
+- 已驗證：`npm run build:mobile`、`npm run app:check`、`npm run test:quick`、`npm run test:mobile`、`npm run test:offline` 通過。
+- 已驗證：Android debug APK 建置成功，產物為 `android/app/build/outputs/apk/debug/app-debug.apk`。
+- 待後續：在 Android 實機確認返回鍵、背景恢復、震動與音效 unlock；在 macOS/Xcode 環境執行 iOS build 與 TestFlight 測試。
+
 ### Phase 4：資產與效能優化
 
 目標：降低下載體積、載入時間與低階手機負擔。

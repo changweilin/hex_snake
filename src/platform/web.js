@@ -78,6 +78,7 @@ const HexSnakePlatform = (() => {
   const lowPowerPreferenceKey = "hexSnakeLowPowerMode";
   const pauseCallbacks = new Set();
   const resumeCallbacks = new Set();
+  const backButtonCallbacks = new Set();
   const frameStats = {
     fps: 0,
     frameMs: 0,
@@ -176,6 +177,10 @@ const HexSnakePlatform = (() => {
       onResume(callback) {
         resumeCallbacks.add(callback);
         return () => resumeCallbacks.delete(callback);
+      },
+      onBackButton(callback) {
+        backButtonCallbacks.add(callback);
+        return () => backButtonCallbacks.delete(callback);
       }
     }),
     share: Object.freeze({
@@ -193,6 +198,7 @@ const HexSnakePlatform = (() => {
       name: "Hex Snake",
       version: window.__HEX_SNAKE_APP_VERSION__ || "dev",
       buildVersion: window.__HEX_SNAKE_BUILD_VERSION__ || "dev",
+      buildTarget: window.__HEX_SNAKE_BUILD_TARGET__ || "web",
       platform: "web",
       storageKind: HexSnakeStorage.kind,
       imageFormat: window.__HEX_SNAKE_IMAGE_FORMAT__ || "png",

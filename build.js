@@ -8,8 +8,11 @@ const outDir = path.join(root, "dist");
 const packageInfo = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
 const characterDataPath = path.join(root, "data", "characters.json");
 const audioManifestPath = path.join(root, "assets", "audio", "characters", "manifest.json");
+const buildArgs = new Set(process.argv.slice(2));
+const buildTarget = buildArgs.has("--mobile") ? "mobile" : "web";
+const platformSource = buildTarget === "mobile" ? "src/platform/mobile.js" : "src/platform/web.js";
 const legacySources = [
-  "src/platform/web.js",
+  platformSource,
   "src/state.js",
   "src/dom.js",
   "src/ui.js",
@@ -441,6 +444,7 @@ function createLegacyBundle() {
     "window.__HEX_SNAKE_BUNDLED_LEGACY__ = true;",
     `window.__HEX_SNAKE_APP_VERSION__ = ${JSON.stringify(appVersion)};`,
     `window.__HEX_SNAKE_BUILD_VERSION__ = ${JSON.stringify(buildVersion)};`,
+    `window.__HEX_SNAKE_BUILD_TARGET__ = ${JSON.stringify(buildTarget)};`,
     `window.__HEX_SNAKE_IMAGE_FORMAT__ = ${JSON.stringify(deployImageFormat)};`,
     `window.__HEX_SNAKE_AUDIO_FORMAT__ = ${JSON.stringify(deployAudioFormat)};`
   ];
@@ -546,6 +550,7 @@ const manifest = {
   generatedAt: new Date().toISOString(),
   appVersion,
   buildVersion,
+  buildTarget,
   strategy: "single production bundle plus referenced runtime assets",
   entrypoints: {
     html: "index.html",

@@ -8,6 +8,7 @@
     "build": "node build.js",
     "build:web": "node build.js",
     "build:pwa": "node build.js --pwa",
+    "build:mobile": "node build.js --mobile",
     "start": "node server.js --dist",
     "simulate": "node tools/simulate-balance.js",
     "simulate:scheduled": "node tools/sim-scheduler.js start",
@@ -28,6 +29,10 @@
     "check:assets": "node tools/check-assets.js",
     "check:size": "node tools/check-dist-size.js",
     "app:check": "node tools/check-app-readiness.js",
+    "cap:copy": "npm run build:mobile && npx cap copy",
+    "cap:sync": "npm run build:mobile && npx cap sync",
+    "cap:android": "npm run cap:sync && npx cap open android",
+    "cap:ios": "npm run cap:sync && npx cap open ios",
     "release:check": "node tools/run-release-check.js",
     "reports:dashboard": "node tools/build-report-dashboard.js",
     "reports:dashboard:serve": "node tools/report-dashboard-server.js",
@@ -39,7 +44,17 @@
     "test:quick": "node tools/run-tests.js --quick"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.3.4",
+    "@capacitor/cli": "^8.3.4",
+    "@capacitor/ios": "^8.3.4",
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "playwright": "^1.44.0"
+  },
+  "dependencies": {
+    "@capacitor/app": "^8.1.0",
+    "@capacitor/core": "^8.3.4",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/preferences": "^8.0.1",
+    "@capacitor/splash-screen": "^8.0.1"
   }
 }

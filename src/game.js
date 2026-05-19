@@ -3765,6 +3765,53 @@
       setGmOpen(gmToggle.getAttribute("aria-expanded") !== "true");
     }
 
+    function handlePlatformBackButton() {
+      if (!rulesModal.hidden) {
+        closeRulesModal();
+        return true;
+      }
+      if (isTutorialOpen()) {
+        finishTutorial(true);
+        return true;
+      }
+      if (!replayModal.hidden) {
+        HexSnakeReplay.closeModal();
+        return true;
+      }
+      if (!statsModal.hidden) {
+        HexSnakeStats.closeModal();
+        return true;
+      }
+      if (!versionModal.hidden) {
+        HexSnakeAbout.closeModal();
+        return true;
+      }
+      if (!portraitLightbox.hidden) {
+        closePortraitLightbox();
+        return true;
+      }
+      if (!settingsContent.hidden || !gmContent.hidden) {
+        setSettingsOpen(false);
+        setGmOpen(false);
+        return true;
+      }
+      if (isLogoTransitionActive()) {
+        return Boolean(skipLogoTransition());
+      }
+      if (HexSnakeReplay.isPlaybackMode()) {
+        HexSnakeReplay.exitPlayback();
+        return true;
+      }
+      if (running && !gameOver) {
+        if (!paused) {
+          togglePause();
+          return true;
+        }
+        return false;
+      }
+      return false;
+    }
+
     document.addEventListener("pointerdown", HexSnakeAudio.unlock, { once: true, passive: true });
     document.addEventListener("keydown", HexSnakeAudio.unlock, { once: true });
 
@@ -5073,6 +5120,7 @@
         rafId = requestAnimationFrame(comparisonLoop);
       }
     });
+    HexSnakePlatform.lifecycle.onBackButton?.(handlePlatformBackButton);
 
     window.addEventListener("resize", resize);
 
