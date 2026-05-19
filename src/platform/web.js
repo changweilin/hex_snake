@@ -128,6 +128,33 @@ const HexSnakePlatform = (() => {
     return lowPowerMode();
   }
 
+  async function copyText(text) {
+    const value = String(text || "");
+    if (!value) return false;
+    const field = document.createElement("textarea");
+    field.value = value;
+    field.setAttribute("readonly", "");
+    field.style.cssText = "position:fixed;left:-9999px;top:0;opacity:0";
+    document.body.append(field);
+    field.select();
+    let copied = false;
+    try {
+      copied = Boolean(document.execCommand?.("copy"));
+    } finally {
+      field.remove();
+    }
+    if (copied) return true;
+    if (navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(value);
+        return true;
+      } catch {
+        return false;
+      }
+    }
+    return false;
+  }
+
   return Object.freeze({
     kind: "web",
     storage: HexSnakeStorage,
@@ -159,11 +186,17 @@ const HexSnakePlatform = (() => {
         if (!navigator.share) return false;
         await navigator.share(data);
         return true;
-      }
+      },
+      copyText
     }),
     appInfo: Object.freeze({
       name: "Hex Snake",
-      version: window.__HEX_SNAKE_BUILD_VERSION__ || "dev"
+      version: window.__HEX_SNAKE_APP_VERSION__ || "dev",
+      buildVersion: window.__HEX_SNAKE_BUILD_VERSION__ || "dev",
+      platform: "web",
+      storageKind: HexSnakeStorage.kind,
+      imageFormat: window.__HEX_SNAKE_IMAGE_FORMAT__ || "png",
+      audioFormat: window.__HEX_SNAKE_AUDIO_FORMAT__ || "wav"
     }),
     display: Object.freeze({
       maxDpr: 2,

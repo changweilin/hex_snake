@@ -351,6 +351,50 @@ async function exerciseStatsModal(page) {
   await expectHidden(page, "#statsModal", "stats modal closes from backdrop");
 }
 
+async function exerciseVersionModal(page) {
+  await page.locator("#settingsToggle").click({ timeout: actionTimeoutMs });
+  await expectVisible(page, "#settingsContent", "settings panel opens for version info");
+  await page.locator("#versionInfoButton").click({ timeout: actionTimeoutMs });
+  await expectVisible(page, "#versionModal", "version modal opens");
+  await expectText(page, "#versionAppName", "Hex Snake", "version modal shows app name");
+  await expectText(page, "#versionPlatform", "web", "version modal shows platform adapter");
+  await expectVisible(page, "#versionBuildVersion", "version modal shows build id");
+  await page.keyboard.press("Escape");
+  await expectHidden(page, "#versionModal", "version modal closes with Escape");
+  await clickModalBackdrop(page, "#settingsContent");
+  await expectHidden(page, "#settingsContent", "settings panel closes after version check");
+}
+
+async function exerciseControlProfiles(page) {
+  await page.locator("#settingsToggle").click({ timeout: actionTimeoutMs });
+  await expectVisible(page, "#settingsContent", "settings panel opens for control profiles");
+  await page.locator("#controlProfileName").fill("Smoke Controls", { timeout: actionTimeoutMs });
+  await page.locator("#controlProfileSaveButton").click({ timeout: actionTimeoutMs });
+  await expectText(page, "#controlProfileStatus", "配置檔已儲存。", "control profile saves current controls");
+
+  await page.locator("#smallAttackKey").click({ timeout: actionTimeoutMs });
+  await page.keyboard.press("U");
+  await expectControlValue(page, "#smallAttackKey", "U", "small attack key can change before profile apply");
+
+  await page.locator("#controlProfileApplyButton").click({ timeout: actionTimeoutMs });
+  await expectText(page, "#controlProfileStatus", "配置檔已套用。", "control profile applies saved controls");
+  await expectControlValue(page, "#smallAttackKey", "Q", "control profile restores saved keybind");
+
+  await page.locator("#controlProfileDeleteButton").click({ timeout: actionTimeoutMs });
+  await expectText(page, "#controlProfileStatus", "配置檔已刪除。", "control profile deletes saved controls");
+  await page.waitForFunction(
+    () => {
+      const select = document.querySelector("#controlProfileSelect");
+      return select?.disabled && select.options.length === 1 && select.options[0].textContent === "尚無配置";
+    },
+    null,
+    { timeout: actionTimeoutMs }
+  );
+  console.log("ok - control profile list returns to empty");
+  await clickModalBackdrop(page, "#settingsContent");
+  await expectHidden(page, "#settingsContent", "settings panel closes after control profile check");
+}
+
 async function openFirstPortraitLightbox(page) {
   const portraitEntrypoints = page.locator("[data-full-portrait]");
   if (!(await portraitEntrypoints.count())) return false;
@@ -511,6 +555,30 @@ async function exerciseAutoBattleControls(page) {
   console.log("ok - auto battle pause toggles");
 }
 
+async function exerciseResultShare(page) {
+  await expectVisible(page, "#surrenderButton", "surrender button remains available before share");
+  await page.locator("#surrenderButton").click({ timeout: actionTimeoutMs });
+  await expectVisible(page, "#overlayText", "result text appears after match end");
+  const shareButtonCount = await page.locator("#shareResultButton").count();
+  if (shareButtonCount) throw new Error("result share button should be removed");
+  await page.waitForFunction(
+    () => document.querySelector("#overlayText")?.classList.contains("is-copyable-result"),
+    null,
+    { timeout: actionTimeoutMs }
+  );
+  console.log("ok - result text is copyable");
+  await page.locator("#overlayText").click({ timeout: actionTimeoutMs });
+  await expectText(page, "#shareResultStatus", "結果已複製。", "result text copies to clipboard");
+  await page.waitForFunction(
+    () => window.__hexSnakeSmokeShareText?.includes("Hex Snake 對戰結果")
+      && window.__hexSnakeSmokeShareText?.includes("比分：P1")
+      && window.__hexSnakeSmokeShareText?.includes("模式：自動對弈"),
+    null,
+    { timeout: actionTimeoutMs }
+  );
+  console.log("ok - result share text is copied");
+}
+
 async function runViewportSmoke(browser, url, profile) {
   const context = await browser.newContext({
     viewport: profile.viewport,
@@ -520,9 +588,29 @@ async function runViewportSmoke(browser, url, profile) {
   });
 
   await context.addInitScript(fixtures => {
+    try {
+      Object.defineProperty(navigator, "share", { configurable: true, value: undefined });
+      Object.defineProperty(navigator, "canShare", { configurable: true, value: undefined });
+      const originalExecCommand = document.execCommand?.bind(document);
+      Object.defineProperty(document, "execCommand", {
+        configurable: true,
+        value: command => String(command).toLowerCase() === "copy" ? false : Boolean(originalExecCommand?.(command))
+      });
+      Object.defineProperty(navigator, "clipboard", {
+        configurable: true,
+        value: {
+          writeText: async text => {
+            window.__hexSnakeSmokeShareText = String(text);
+          }
+        }
+      });
+    } catch {
+      window.__hexSnakeSmokeShareText = "";
+    }
     localStorage.setItem("hexSnakeSfxMuted", "1");
     localStorage.setItem("hexSnakeTutorialSeen", "1");
     localStorage.removeItem("hexSnakeReplaySpeed");
+    localStorage.removeItem("hexSnakeControlProfilesV1");
     localStorage.setItem("hexSnakeReplayRecent", JSON.stringify(fixtures.replays));
     localStorage.setItem("hexSnakeReplayFavorites", "[]");
     localStorage.setItem("hexSnakeMatchStatsV1", JSON.stringify(fixtures.stats));
@@ -567,11 +655,14 @@ async function runViewportSmoke(browser, url, profile) {
 
   await exerciseRulesModal(page);
   await exerciseSettingsModal(page);
+  await exerciseControlProfiles(page);
+  await exerciseVersionModal(page);
   await exerciseStatsModal(page);
 
   await exerciseReplayRegression(page);
 
   await exerciseAutoBattleControls(page);
+  await exerciseResultShare(page);
 
   if (consoleErrors.length || pageErrors.length) {
     throw new Error([

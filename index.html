@@ -88,6 +88,9 @@
               <button id="computerBattleButton" class="secondary" type="button">自動對弈</button>
               <button id="replayArchiveButton" class="secondary" type="button">重播紀錄</button>
             </div>
+            <div class="result-share-panel" id="resultSharePanel" hidden>
+              <div id="shareResultStatus" class="result-share-status" role="status" aria-live="polite" hidden></div>
+            </div>
             <button id="introCloseButton" class="secondary intro-close-button" type="button" hidden>關閉</button>
           </div>
         </div>
@@ -228,8 +231,27 @@
           <input id="dirKey4" data-keybind-dir="4" type="hidden" value="Z">
           <input id="dirKey5" data-keybind-dir="5" type="hidden" value="A">
         </div>
-        <button id="resetBestTimeButton" class="secondary" type="button">重設最久存活</button>
-        <button id="resetSettingsButton" class="secondary" type="button">回到預設值</button>
+        <div class="control-profile-panel" aria-label="控制配置檔">
+          <div class="field">
+            <label for="controlProfileName">配置檔名稱</label>
+            <input id="controlProfileName" type="text" maxlength="16" inputmode="text" placeholder="我的配置">
+          </div>
+          <div class="field">
+            <label for="controlProfileSelect">已存配置</label>
+            <select id="controlProfileSelect"></select>
+          </div>
+          <div class="control-profile-actions">
+            <button id="controlProfileSaveButton" class="secondary" type="button">保存</button>
+            <button id="controlProfileApplyButton" class="secondary" type="button">套用</button>
+            <button id="controlProfileDeleteButton" class="secondary" type="button">刪除</button>
+          </div>
+          <div id="controlProfileStatus" class="control-profile-status" role="status" aria-live="polite" hidden></div>
+        </div>
+        <div class="settings-utility-actions">
+          <button id="versionInfoButton" class="secondary" type="button">版本資訊</button>
+          <button id="resetBestTimeButton" class="secondary" type="button">重設最久存活</button>
+          <button id="resetSettingsButton" class="secondary" type="button">回到預設值</button>
+        </div>
         </div>
         </div>
         </div>
@@ -418,6 +440,15 @@
       <div class="app-stats-actions">
         <button id="statsClearButton" class="secondary" type="button">清除戰績</button>
       </div>
+    </div>
+  </div>
+  <div class="replay-modal app-version-modal" id="versionModal" hidden aria-modal="true" role="dialog" aria-labelledby="versionTitle">
+    <div class="replay-dialog app-version-dialog">
+      <div class="replay-header">
+        <h2 id="versionTitle">版本資訊</h2>
+        <button id="versionModalClose" class="secondary replay-close" type="button" aria-label="關閉版本資訊">&times;</button>
+      </div>
+      <div id="versionInfoList" class="app-version-list" aria-label="版本資訊清單"></div>
     </div>
   </div>
   <div class="pwa-update-prompt" id="pwaUpdatePrompt" hidden role="status" aria-live="polite">

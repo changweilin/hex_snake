@@ -5,6 +5,7 @@ const { spawn } = require("child_process");
 
 const root = __dirname;
 const outDir = path.join(root, "dist");
+const packageInfo = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
 const characterDataPath = path.join(root, "data", "characters.json");
 const audioManifestPath = path.join(root, "assets", "audio", "characters", "manifest.json");
 const legacySources = [
@@ -16,6 +17,7 @@ const legacySources = [
   "src/audio.js",
   "src/replay.js",
   "src/stats.js",
+  "src/about.js",
   "src/ai.js",
   "src/render.js",
   "src/game.js"
@@ -24,6 +26,7 @@ const bundlePath = "assets/app.bundle.js";
 const bundleMapPath = `${bundlePath}.map`;
 const buildVersion = (process.env.HEX_SNAKE_BUILD_VERSION || new Date().toISOString())
   .replace(/[^a-zA-Z0-9_.-]/g, "-");
+const appVersion = packageInfo.version || "0.0.0";
 const deployImageFormat = process.env.HEX_SNAKE_IMAGE_FORMAT === "png" ? "png" : "webp";
 const optimizePortraitImages = deployImageFormat === "webp";
 const deployAudioFormat = process.env.HEX_SNAKE_AUDIO_FORMAT === "wav" ? "wav" : "m4a";
@@ -436,6 +439,7 @@ function createLegacyBundle() {
   const bundleSources = ["src/main.js", ...legacySources];
   const chunks = [
     "window.__HEX_SNAKE_BUNDLED_LEGACY__ = true;",
+    `window.__HEX_SNAKE_APP_VERSION__ = ${JSON.stringify(appVersion)};`,
     `window.__HEX_SNAKE_BUILD_VERSION__ = ${JSON.stringify(buildVersion)};`,
     `window.__HEX_SNAKE_IMAGE_FORMAT__ = ${JSON.stringify(deployImageFormat)};`,
     `window.__HEX_SNAKE_AUDIO_FORMAT__ = ${JSON.stringify(deployAudioFormat)};`
@@ -540,6 +544,7 @@ function findForbiddenDistEntries(manifest) {
 
 const manifest = {
   generatedAt: new Date().toISOString(),
+  appVersion,
   buildVersion,
   strategy: "single production bundle plus referenced runtime assets",
   entrypoints: {

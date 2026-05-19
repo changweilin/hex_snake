@@ -608,6 +608,8 @@ let gameOverResultOwner = null;
 let gameOverPlayerLost = false;
 let gameOverComputerLost = false;
 let gameOver = false;
+let lastResultShareData = null;
+let resultShareInProgress = false;
 let lastPlayerStep = 0;
 let lastComputerStep = 0;
 let playerStunUntil = 0;
@@ -1781,6 +1783,39 @@ function closeRulesModal() {
   rulesButton.focus();
 }
 
+function setResultShareStatus(text = "", state = "") {
+  shareResultStatus.textContent = text;
+  shareResultStatus.hidden = !text;
+  resultSharePanel.hidden = !text;
+  if (state) shareResultStatus.dataset.state = state;
+  else delete shareResultStatus.dataset.state;
+}
+
+function updateResultSharePanel() {
+  const replayMode = typeof HexSnakeReplay !== "undefined" && HexSnakeReplay.isPlaybackMode();
+  const visible = Boolean(lastResultShareData) && gameOver && !replayMode && !overlayTitle.hidden;
+  overlayText.classList.toggle("is-copyable-result", visible && !resultShareInProgress);
+  if (visible) {
+    overlayText.setAttribute("role", "button");
+    overlayText.setAttribute("tabindex", "0");
+    overlayText.setAttribute("title", "點擊複製對戰結果");
+    overlayText.setAttribute("aria-label", `${overlayText.textContent.trim()}。點擊複製對戰結果。`);
+  } else {
+    overlayText.classList.remove("is-copyable-result");
+    overlayText.removeAttribute("role");
+    overlayText.removeAttribute("tabindex");
+    overlayText.removeAttribute("title");
+    overlayText.removeAttribute("aria-label");
+    setResultShareStatus("");
+  }
+}
+
+function setLastResultShareData(data) {
+  lastResultShareData = data || null;
+  if (!lastResultShareData) setResultShareStatus("");
+  updateResultSharePanel();
+}
+
 function setOverlayChromeVisible(visible) {
   overlay.classList.remove(
     "intro-details",
@@ -1794,6 +1829,7 @@ function setOverlayChromeVisible(visible) {
   computerBattleButton.hidden = !visible || (running && !gameOver);
   replayArchiveButton.hidden = !visible;
   introCloseButton.hidden = true;
+  updateResultSharePanel();
 }
 
 function setIntroLobbyChrome() {
@@ -1810,6 +1846,7 @@ function setIntroLobbyChrome() {
   replayArchiveButton.hidden = false;
   introCloseButton.hidden = true;
   startButton.textContent = "開始";
+  updateResultSharePanel();
 }
 
 function setIntroDetailsChrome() {
@@ -1825,6 +1862,7 @@ function setIntroDetailsChrome() {
   computerBattleButton.hidden = true;
   replayArchiveButton.hidden = true;
   introCloseButton.hidden = false;
+  updateResultSharePanel();
 }
 
 function setCharacterStageOverlayMode(active) {

@@ -18,6 +18,8 @@
     const startButton = document.querySelector("#startButton");
     const computerBattleButton = document.querySelector("#computerBattleButton");
     const replayArchiveButton = document.querySelector("#replayArchiveButton");
+    const resultSharePanel = document.querySelector("#resultSharePanel");
+    const shareResultStatus = document.querySelector("#shareResultStatus");
     const settingsReplayButton = document.querySelector("#settingsReplayButton");
     const statsButton = document.querySelector("#statsButton");
     const replayControls = document.querySelector("#replayControls");
@@ -102,8 +104,18 @@
     const playerCharacterInput = document.querySelector("#playerCharacter");
     const computerCharacterInput = document.querySelector("#computerCharacter");
     const keybindInputs = [...document.querySelectorAll("[id$='AttackKey'], #pauseKey, #surrenderKey, [data-keybind-dir]")];
+    const controlProfileNameInput = document.querySelector("#controlProfileName");
+    const controlProfileSelect = document.querySelector("#controlProfileSelect");
+    const controlProfileSaveButton = document.querySelector("#controlProfileSaveButton");
+    const controlProfileApplyButton = document.querySelector("#controlProfileApplyButton");
+    const controlProfileDeleteButton = document.querySelector("#controlProfileDeleteButton");
+    const controlProfileStatus = document.querySelector("#controlProfileStatus");
     const resetBestTimeButton = document.querySelector("#resetBestTimeButton");
     const resetSettingsButton = document.querySelector("#resetSettingsButton");
+    const versionInfoButton = document.querySelector("#versionInfoButton");
+    const versionModal = document.querySelector("#versionModal");
+    const versionModalClose = document.querySelector("#versionModalClose");
+    const versionInfoList = document.querySelector("#versionInfoList");
     const realModeButton = document.querySelector("#realModeButton");
     const midGameModeButton = document.querySelector("#midGameModeButton");
     const ultimateModeButton = document.querySelector("#ultimateModeButton");

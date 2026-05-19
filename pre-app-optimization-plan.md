@@ -369,7 +369,6 @@ const platform = {
 候選功能：
 
 - 戰績頁。
-- 每日挑戰。
 - 角色熟練度。
 - 重播收藏。
 - 版本資訊。
@@ -388,8 +387,17 @@ const platform = {
 - 已完成：新增戰績入口與戰績 modal，提供總對戰、P1 勝率、最佳分數、總時長、最近 10 場與 P1 角色熟練度摘要。
 - 已完成：新增 `HexSnakeStats`，對戰結算時以 storage adapter 寫入 `hexSnakeMatchStatsV1`，並保護儲存失敗不影響既有結算流程。
 - 已完成：戰績 UI 已納入 desktop/mobile smoke，並檢查資料可由 storage fixture 載入、Esc / backdrop 可關閉。
-- 已驗證：build、text、data、asset、size、quick、mobile、desktop smoke 與瀏覽器實測通過；`dist` 約 26.67 MB。
-- 待後續：每日挑戰、版本資訊、分享與控制配置檔仍可在下一輪以同樣模式補齊。
+- 已完成：新增版本資訊入口與 modal，沿用 platform adapter 的 `appInfo`，顯示 package 版本、build id、平台、儲存、圖片/音效格式、PWA 與 service worker 狀態。
+- 已完成：production build 會注入 `appVersion` 與既有 build version，dev 模式維持 `dev` 標記，不影響既有設定與開局流程。
+- 已完成：版本資訊 UI 已納入 desktop/mobile smoke，並檢查 modal 可開啟、顯示平台資訊、Esc 可關閉。
+- 已完成：新增對戰結果複製，結算後可直接點擊結果文字複製，不再顯示額外分享按鈕。
+- 已完成：複製文字包含勝負、比分、角色、時間、模式、難度與目前網址；複製失敗只更新狀態提示，不影響重新開始或重播。
+- 已完成：desktop/mobile smoke 會以自動對弈投降產生結算，驗證結果文字可點擊、剪貼簿 fallback 與複製文字內容。
+- 已調整：每日挑戰自 3.10 候選與待辦移除，避免本階段擴張到新規則與排程系統。
+- 已完成：新增控制配置檔，可保存、套用與刪除目前鍵位、方向鍵、左手模式與按鍵攻擊目標設定，資料保存於 storage adapter。
+- 已完成：desktop/mobile smoke 會保存控制配置、改動小招鍵、套用恢復、刪除配置，確認既有操作設定可回復。
+- 已驗證：build、text、data、asset、size、quick、mobile、desktop smoke、offline smoke 與瀏覽器實測通過；`dist` 約 26.71 MB。
+- 待後續：3.10 目前規劃範圍已完成，後續可轉入 Milestone B 或 App shell 封裝前檢查。
 
 ## 4. 建議 Milestones
 

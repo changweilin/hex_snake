@@ -29,6 +29,161 @@
       HexSnakeStorage.setJson("hexSnakeKeybinds", keybinds);
     }
 
+    const controlProfilesKey = "hexSnakeControlProfilesV1";
+    const controlProfileLimit = 8;
+    let controlProfiles = loadControlProfiles();
+    let selectedControlProfileId = "";
+
+    function cloneKeybinds(value = keybinds) {
+      return {
+        smallAttack: normalizeKey(value.smallAttack, defaultKeybinds.smallAttack),
+        bigAttack: normalizeKey(value.bigAttack, defaultKeybinds.bigAttack),
+        pause: normalizeKey(value.pause, defaultKeybinds.pause),
+        surrender: normalizeKey(value.surrender, defaultKeybinds.surrender),
+        directions: defaultKeybinds.directions.map((fallback, index) => normalizeKey(value.directions?.[index], fallback))
+      };
+    }
+
+    function cloneKeyboardAttackAim(value = keyboardAttackAim) {
+      return {
+        small: {
+          targetModeIndex: Math.max(0, Number(value.small?.targetModeIndex) || 0) % keyboardTargetModes.length,
+          direction: Math.max(0, Number(value.small?.direction) || 0) % directions.length
+        },
+        big: {
+          targetModeIndex: Math.max(0, Number(value.big?.targetModeIndex) || 0) % keyboardTargetModes.length,
+          direction: Math.max(0, Number(value.big?.direction) || 0) % directions.length
+        }
+      };
+    }
+
+    function controlProfileConfig() {
+      return {
+        keybinds: cloneKeybinds(),
+        leftHandMode: Boolean(leftHandModeInput.checked),
+        keyboardAttackAim: cloneKeyboardAttackAim()
+      };
+    }
+
+    function normalizeControlProfile(profile, index = 0) {
+      if (!profile || typeof profile !== "object") return null;
+      const name = String(profile.name || "").trim().slice(0, 16);
+      if (!name) return null;
+      return {
+        id: String(profile.id || `control-${Date.now().toString(36)}-${index}`).slice(0, 48),
+        name,
+        updatedAt: String(profile.updatedAt || new Date().toISOString()),
+        config: {
+          keybinds: cloneKeybinds(profile.config?.keybinds),
+          leftHandMode: Boolean(profile.config?.leftHandMode),
+          keyboardAttackAim: cloneKeyboardAttackAim(profile.config?.keyboardAttackAim)
+        }
+      };
+    }
+
+    function loadControlProfiles() {
+      const saved = HexSnakeStorage.getJson(controlProfilesKey, []);
+      if (!Array.isArray(saved)) return [];
+      return saved
+        .map(normalizeControlProfile)
+        .filter(Boolean)
+        .slice(0, controlProfileLimit);
+    }
+
+    function saveControlProfiles() {
+      HexSnakeStorage.setJson(controlProfilesKey, controlProfiles);
+    }
+
+    function selectedControlProfile() {
+      return controlProfiles.find(profile => profile.id === selectedControlProfileId) || null;
+    }
+
+    function setControlProfileStatus(text = "", state = "") {
+      controlProfileStatus.textContent = text;
+      controlProfileStatus.hidden = !text;
+      if (state) controlProfileStatus.dataset.state = state;
+      else delete controlProfileStatus.dataset.state;
+    }
+
+    function renderControlProfiles(message = "", state = "") {
+      const previousId = selectedControlProfileId;
+      controlProfileSelect.innerHTML = "";
+      const empty = document.createElement("option");
+      empty.value = "";
+      empty.textContent = controlProfiles.length ? "選擇配置" : "尚無配置";
+      controlProfileSelect.append(empty);
+      controlProfiles.forEach(profile => {
+        const option = document.createElement("option");
+        option.value = profile.id;
+        option.textContent = profile.name;
+        controlProfileSelect.append(option);
+      });
+      selectedControlProfileId = controlProfiles.some(profile => profile.id === previousId) ? previousId : "";
+      controlProfileSelect.value = selectedControlProfileId;
+      const selected = selectedControlProfile();
+      if (selected && !controlProfileNameInput.value.trim()) controlProfileNameInput.value = selected.name;
+      controlProfileApplyButton.disabled = !selectedControlProfileId || running;
+      controlProfileDeleteButton.disabled = !selectedControlProfileId || running;
+      controlProfileSaveButton.disabled = running;
+      controlProfileNameInput.disabled = running;
+      controlProfileSelect.disabled = running || !controlProfiles.length;
+      setControlProfileStatus(message, state);
+    }
+
+    function uniqueControlProfileName() {
+      let index = controlProfiles.length + 1;
+      let name = `配置 ${index}`;
+      while (controlProfiles.some(profile => profile.name === name)) {
+        index += 1;
+        name = `配置 ${index}`;
+      }
+      return name;
+    }
+
+    function saveCurrentControlProfile() {
+      if (running) return;
+      const name = (controlProfileNameInput.value.trim() || selectedControlProfile()?.name || uniqueControlProfileName()).slice(0, 16);
+      const now = new Date().toISOString();
+      const existingIndex = controlProfiles.findIndex(profile => profile.id === selectedControlProfileId);
+      const nextProfile = {
+        id: existingIndex >= 0 ? controlProfiles[existingIndex].id : `control-${Date.now().toString(36)}`,
+        name,
+        updatedAt: now,
+        config: controlProfileConfig()
+      };
+      if (existingIndex >= 0) controlProfiles[existingIndex] = nextProfile;
+      else controlProfiles.unshift(nextProfile);
+      controlProfiles = controlProfiles.slice(0, controlProfileLimit);
+      selectedControlProfileId = nextProfile.id;
+      controlProfileNameInput.value = name;
+      saveControlProfiles();
+      renderControlProfiles("配置檔已儲存。", "success");
+    }
+
+    function applySelectedControlProfile() {
+      if (running) return;
+      const profile = selectedControlProfile();
+      if (!profile) return renderControlProfiles("請先選擇配置檔。", "error");
+      keybinds = cloneKeybinds(profile.config.keybinds);
+      saveKeybinds();
+      applyKeybinds();
+      setLeftHandMode(profile.config.leftHandMode);
+      keyboardAttackAim = cloneKeyboardAttackAim(profile.config.keyboardAttackAim);
+      updateTargetModeIndicator();
+      controlProfileNameInput.value = profile.name;
+      renderControlProfiles("配置檔已套用。", "success");
+    }
+
+    function deleteSelectedControlProfile() {
+      if (running) return;
+      if (!selectedControlProfileId) return;
+      controlProfiles = controlProfiles.filter(profile => profile.id !== selectedControlProfileId);
+      selectedControlProfileId = "";
+      saveControlProfiles();
+      controlProfileNameInput.value = "";
+      renderControlProfiles("配置檔已刪除。", "success");
+    }
+
     function loadSavedCharacterChoices() {
       const savedPlayer = HexSnakeStorage.get("hexSnakePlayerCharacterId");
       const savedComputer = HexSnakeStorage.get("hexSnakeComputerCharacterId");
@@ -455,6 +610,12 @@
       settingsToggle.disabled = locked;
       settingsReplayButton.disabled = locked;
       statsButton.disabled = locked;
+      versionInfoButton.disabled = locked;
+      controlProfileNameInput.disabled = locked;
+      controlProfileSelect.disabled = locked || !controlProfiles.length;
+      controlProfileSaveButton.disabled = locked;
+      controlProfileApplyButton.disabled = locked || !selectedControlProfileId;
+      controlProfileDeleteButton.disabled = locked || !selectedControlProfileId;
       computerDifficultyInput.disabled = locked;
       playerCharacterInput.disabled = locked;
       computerCharacterInput.disabled = locked;
@@ -644,6 +805,7 @@
       lastComputerAttackMs = resetAttackCooldownTracker();
       HexSnakeReplay.resetSurrendered();
       gameOver = false;
+      setLastResultShareData(null);
       paused = false;
       placeFoods();
       updateHud();
@@ -652,6 +814,63 @@
 
     function canRestartAfterGameOver() {
       return !gameOverSettlementPending && performance.now() >= restartUnlockAt;
+    }
+
+    function resultCopyText(data) {
+      return [data?.text, data?.url].filter(Boolean).join("\n");
+    }
+
+    function currentModeLabel(endedInAutoMode = false) {
+      if (relayMode) return "接力賽";
+      if (computerBattleMode) return "自動對弈";
+      if (endedInAutoMode) return "Auto 操作";
+      return "玩家操作";
+    }
+
+    function currentDifficultyLabel() {
+      return computerDifficultyInput.selectedOptions[0]?.textContent?.trim() || computerDifficulty;
+    }
+
+    function buildResultShareData({ winnerOwner, plainResultText, scoreText, resultReason, endedInAutoMode }) {
+      const playerCharacter = characterFor("player");
+      const computerCharacter = characterFor("computer");
+      const url = window.location.href.split("#")[0];
+      const lines = [
+        "Hex Snake 對戰結果",
+        plainResultText,
+        scoreText,
+        `角色：P1 ${playerCharacter?.name || "隨機選擇"} vs P2 ${computerCharacter?.name || "隨機選擇"}`,
+        `時間：${formatTime(totalElapsedMs)}`,
+        `模式：${currentModeLabel(endedInAutoMode)}`,
+        `難度：${currentDifficultyLabel()}`,
+        resultReason,
+        winnerOwner ? `勝者：${winnerOwner === "player" ? "P1" : "P2"}` : "勝者：平手"
+      ];
+      return {
+        title: "Hex Snake 對戰結果",
+        text: lines.join("\n"),
+        url
+      };
+    }
+
+    async function copyCurrentResult() {
+      if (!lastResultShareData || resultShareInProgress) return;
+      resultShareInProgress = true;
+      updateResultSharePanel();
+      setResultShareStatus("正在複製結果...");
+      try {
+        if (await HexSnakePlatform.share.copyText(resultCopyText(lastResultShareData))) {
+          setResultShareStatus("結果已複製。", "success");
+          return;
+        }
+        setResultShareStatus("此瀏覽器無法複製結果。", "error");
+      } catch (error) {
+        console.warn("Unable to copy result.", error);
+        setResultShareStatus("複製失敗，請稍後再試。", "error");
+      } finally {
+        resultShareInProgress = false;
+        updateResultSharePanel();
+      }
     }
 
     function beginStartLogoCountdown() {
@@ -2594,6 +2813,13 @@
           : winnerOwner === "computer"
             ? "P1 淘汰，P2 獲勝。"
             : "雙方分數相同。";
+      setLastResultShareData(buildResultShareData({
+        winnerOwner,
+        plainResultText,
+        scoreText,
+        resultReason,
+        endedInAutoMode
+      }));
       setStatus(`對戰結束：${plainResultText}`);
       overlayTitle.innerHTML = resultTitleHtml;
       HexSnakeAudio.playCharacter("player", winnerOwner === "player" ? "victory" : "defeat", { gainScale: winnerOwner ? 1 : 0.82 });
@@ -3788,6 +4014,7 @@
       saveKeybinds();
       applyKeybinds();
       setLeftHandMode(false);
+      renderControlProfiles();
       HexSnakeAudio.setMuted(false);
       HexSnakePlatform.display.clearLowPowerModePreference();
       syncLowPowerMode();
@@ -3924,6 +4151,27 @@
     });
     replayArchiveButton.addEventListener("click", HexSnakeReplay.openModal);
     settingsReplayButton.addEventListener("click", HexSnakeReplay.openModal);
+    overlayText.addEventListener("click", event => {
+      if (!overlayText.classList.contains("is-copyable-result")) return;
+      event.preventDefault();
+      copyCurrentResult();
+    });
+    overlayText.addEventListener("keydown", event => {
+      if (!overlayText.classList.contains("is-copyable-result")) return;
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      copyCurrentResult();
+    });
+    controlProfileSelect.addEventListener("change", () => {
+      selectedControlProfileId = controlProfileSelect.value;
+      const profile = selectedControlProfile();
+      if (profile) controlProfileNameInput.value = profile.name;
+      renderControlProfiles();
+    });
+    controlProfileNameInput.addEventListener("input", () => setControlProfileStatus(""));
+    controlProfileSaveButton.addEventListener("click", saveCurrentControlProfile);
+    controlProfileApplyButton.addEventListener("click", applySelectedControlProfile);
+    controlProfileDeleteButton.addEventListener("click", deleteSelectedControlProfile);
     statsButton.addEventListener("click", HexSnakeStats.openModal);
     statsModalClose.addEventListener("click", HexSnakeStats.closeModal);
     statsClearButton.addEventListener("click", HexSnakeStats.clear);
@@ -3931,6 +4179,12 @@
       if (event.target === statsModal) HexSnakeStats.closeModal();
     });
     statsModal.querySelector(".app-stats-dialog").addEventListener("pointerdown", event => event.stopPropagation());
+    versionInfoButton.addEventListener("click", HexSnakeAbout.openModal);
+    versionModalClose.addEventListener("click", HexSnakeAbout.closeModal);
+    versionModal.addEventListener("pointerdown", event => {
+      if (event.target === versionModal) HexSnakeAbout.closeModal();
+    });
+    versionModal.querySelector(".app-version-dialog").addEventListener("pointerdown", event => event.stopPropagation());
     replayModalClose.addEventListener("click", HexSnakeReplay.closeModal);
     replayModal.addEventListener("pointerdown", event => {
       if (event.target === replayModal) HexSnakeReplay.closeModal();
@@ -4554,6 +4808,10 @@
         if (event.key === "Escape" || event.key === "Esc") HexSnakeStats.closeModal();
         return;
       }
+      if (!versionModal.hidden) {
+        if (event.key === "Escape" || event.key === "Esc") HexSnakeAbout.closeModal();
+        return;
+      }
       if (isLogoTransitionActive()) {
         if ((event.key === "Enter" || event.key === " ") && skipLogoTransition()) {
           event.preventDefault();
@@ -4724,6 +4982,7 @@
       setSettingsLocked(false);
       applyKeybinds();
       setLeftHandMode(HexSnakeStorage.get("hexSnakeLeftHandMode") === "1");
+      renderControlProfiles();
       sfxMuteToggle.checked = HexSnakeAudio.muted;
       syncLowPowerMode();
       setPerfStatsVisible(perfStatsVisible);
