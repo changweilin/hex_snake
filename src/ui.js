@@ -674,6 +674,8 @@ let moveStickReboundTimer = null;
 let introDetailsOpen = false;
 let tutorialStepIndex = 0;
 const tutorialSeenKey = "hexSnakeTutorialSeen";
+const perfStatsKey = "hexSnakePerfStats";
+let perfStatsVisible = HexSnakeStorage.get(perfStatsKey) === "1";
 let tutorialSwipeStartX = null;
 let tutorialSwipeStartY = null;
 let tutorialSwipePointerId = null;

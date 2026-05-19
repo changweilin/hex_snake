@@ -1,6 +1,9 @@
     const canvas = document.querySelector("#game");
     const ctx = canvas.getContext("2d");
     const playArea = document.querySelector("#playArea");
+    const perfOverlay = document.querySelector("#perfOverlay");
+    const perfFps = document.querySelector("#perfFps");
+    const perfFrameMs = document.querySelector("#perfFrameMs");
     const targetModeSmallIndicator = document.querySelector("#targetModeSmallIndicator");
     const targetModeBigIndicator = document.querySelector("#targetModeBigIndicator");
     const targetModeSmallIcon = document.querySelector("#targetModeSmallIcon");
@@ -67,6 +70,8 @@
     const keyboardBigAimButton = document.querySelector("#keyboardBigAimButton");
     const leftHandModeInput = document.querySelector("#leftHandMode");
     const sfxMuteToggle = document.querySelector("#sfxMuteToggle");
+    const lowPowerModeInput = document.querySelector("#lowPowerMode");
+    const perfStatsToggle = document.querySelector("#perfStatsToggle");
     const surrenderButton = document.querySelector("#surrenderButton");
     const joyZone = document.querySelector("#joyZone");
     const rulesButton = document.querySelector("#rulesButton");

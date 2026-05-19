@@ -75,6 +75,7 @@ const HexSnakeStorage = (() => {
 })();
 
 const HexSnakePlatform = (() => {
+  const lowPowerPreferenceKey = "hexSnakeLowPowerMode";
   const pauseCallbacks = new Set();
   const resumeCallbacks = new Set();
   const frameStats = {
@@ -105,10 +106,26 @@ const HexSnakePlatform = (() => {
   window.addEventListener("pagehide", () => setPaused(true));
   window.addEventListener("pageshow", () => setPaused(document.hidden));
 
-  function lowPowerMode() {
-    if (HexSnakeStorage.get("hexSnakeLowPowerMode") === "1") return true;
+  function autoLowPowerMode() {
     if (window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) return true;
     return Number(navigator.hardwareConcurrency || 8) <= 4;
+  }
+
+  function lowPowerMode() {
+    const preference = HexSnakeStorage.get(lowPowerPreferenceKey);
+    if (preference === "1") return true;
+    if (preference === "0") return false;
+    return autoLowPowerMode();
+  }
+
+  function setLowPowerMode(enabled) {
+    HexSnakeStorage.set(lowPowerPreferenceKey, enabled ? "1" : "0");
+    return lowPowerMode();
+  }
+
+  function clearLowPowerModePreference() {
+    HexSnakeStorage.remove(lowPowerPreferenceKey);
+    return lowPowerMode();
   }
 
   return Object.freeze({
@@ -151,9 +168,13 @@ const HexSnakePlatform = (() => {
     display: Object.freeze({
       maxDpr: 2,
       devicePixelRatio(max = 2) {
-        return Math.max(1, Math.min(max, window.devicePixelRatio || 1));
+        const maxDpr = lowPowerMode() ? Math.min(max, 1.5) : max;
+        return Math.max(1, Math.min(maxDpr, window.devicePixelRatio || 1));
       },
       lowPowerMode,
+      setLowPowerMode,
+      clearLowPowerModePreference,
+      autoLowPowerMode,
       visualLoadScale() {
         return lowPowerMode() ? 0.68 : 1;
       },

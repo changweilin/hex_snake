@@ -167,6 +167,42 @@
       HexSnakeStorage.set("hexSnakeLeftHandMode", active ? "1" : "0");
     }
 
+    function syncLowPowerMode() {
+      const active = HexSnakePlatform.display.lowPowerMode();
+      lowPowerModeInput.checked = active;
+      document.body.classList.toggle("is-low-power", active);
+      updatePerfOverlay();
+      return active;
+    }
+
+    function setLowPowerPreference(enabled) {
+      HexSnakePlatform.display.setLowPowerMode(enabled);
+      syncLowPowerMode();
+      resize();
+    }
+
+    function setPerfStatsVisible(enabled) {
+      perfStatsVisible = Boolean(enabled);
+      perfStatsToggle.checked = perfStatsVisible;
+      perfOverlay.hidden = !perfStatsVisible;
+      HexSnakeStorage.set(perfStatsKey, perfStatsVisible ? "1" : "0");
+      updatePerfOverlay();
+    }
+
+    function updatePerfOverlay(stats = HexSnakePlatform.display.frameStats) {
+      if (!perfOverlay) return;
+      if (!perfStatsVisible) {
+        perfOverlay.hidden = true;
+        return;
+      }
+      perfOverlay.hidden = false;
+      perfOverlay.classList.toggle("is-low-power", HexSnakePlatform.display.lowPowerMode());
+      const fps = Number.isFinite(stats.fps) ? Math.round(stats.fps) : 0;
+      const frameMs = Number.isFinite(stats.frameMs) ? stats.frameMs.toFixed(1) : "0.0";
+      perfFps.textContent = `${fps} FPS`;
+      perfFrameMs.textContent = `${frameMs} ms`;
+    }
+
     function clampGridSize(value) {
       const parsed = Number.parseInt(value, 10);
       if (!Number.isFinite(parsed)) return gridSize;
@@ -2581,7 +2617,7 @@
         rafId = 0;
         return;
       }
-      HexSnakePlatform.display.recordFrame(now || performance.now());
+      updatePerfOverlay(HexSnakePlatform.display.recordFrame(now || performance.now()));
       if (!running) {
         const frameNow = now || performance.now();
         const visualsActive = gameOverSettlementPending && advanceGameOverVisuals(frameNow);
@@ -3737,6 +3773,9 @@
       applyKeybinds();
       setLeftHandMode(false);
       HexSnakeAudio.setMuted(false);
+      HexSnakePlatform.display.clearLowPowerModePreference();
+      syncLowPowerMode();
+      setPerfStatsVisible(false);
       resetGame();
       resize();
       overlayTitle.textContent = "已回到預設值";
@@ -3853,6 +3892,8 @@
     });
     leftHandModeInput.addEventListener("change", () => setLeftHandMode(leftHandModeInput.checked));
     sfxMuteToggle.addEventListener("change", () => HexSnakeAudio.setMuted(sfxMuteToggle.checked));
+    lowPowerModeInput.addEventListener("change", () => setLowPowerPreference(lowPowerModeInput.checked));
+    perfStatsToggle.addEventListener("change", () => setPerfStatsVisible(perfStatsToggle.checked));
     surrenderButton.addEventListener("click", surrenderGame);
     rulesButton.addEventListener("click", openRulesModal);
     rulesCloseButton.addEventListener("click", closeRulesModal);
@@ -4657,6 +4698,8 @@
       applyKeybinds();
       setLeftHandMode(HexSnakeStorage.get("hexSnakeLeftHandMode") === "1");
       sfxMuteToggle.checked = HexSnakeAudio.muted;
+      syncLowPowerMode();
+      setPerfStatsVisible(perfStatsVisible);
       updateAttackButtons();
       resetGame();
       resize();

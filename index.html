@@ -57,8 +57,12 @@
         </div>
       </header>
 
-      <div class="canvas-wrap" id="playArea">
+        <div class="canvas-wrap" id="playArea">
         <canvas id="game" aria-label="六角貪食蛇棋盤"></canvas>
+        <div class="perf-overlay" id="perfOverlay" aria-live="off" hidden>
+          <span id="perfFps">0 FPS</span>
+          <span id="perfFrameMs">0 ms</span>
+        </div>
         <button class="target-mode-indicator" id="targetModeSmallIndicator" type="button" data-profile-label="小" aria-label="顯示小招目標提示" title="小招目標">
           <span class="target-mode-icon" id="targetModeSmallIcon" aria-hidden="true"></span>
         </button>
@@ -151,6 +155,20 @@
             <span class="settings-toggle-control">
               <input id="sfxMuteToggle" type="checkbox">
               <span>靜音</span>
+            </span>
+          </label>
+          <label class="field settings-toggle-field">
+            <span>低耗電</span>
+            <span class="settings-toggle-control">
+              <input id="lowPowerMode" type="checkbox">
+              <span>啟用</span>
+            </span>
+          </label>
+          <label class="field settings-toggle-field">
+            <span>FPS</span>
+            <span class="settings-toggle-control">
+              <input id="perfStatsToggle" type="checkbox">
+              <span>顯示</span>
             </span>
           </label>
         </div>

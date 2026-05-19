@@ -553,6 +553,39 @@
       min-height: 360px;
     }
 
+    .perf-overlay {
+      position: absolute;
+      top: max(10px, env(safe-area-inset-top));
+      left: max(10px, env(safe-area-inset-left));
+      z-index: 22;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      max-width: calc(100% - 20px);
+      padding: 6px 8px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      background: rgba(15, 23, 42, 0.84);
+      color: #e5e7eb;
+      font-size: 0.72rem;
+      font-weight: 900;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+      backdrop-filter: blur(8px);
+      pointer-events: none;
+    }
+
+    .perf-overlay[hidden] {
+      display: none;
+    }
+
+    .perf-overlay.is-low-power {
+      border-color: rgba(52, 211, 153, 0.34);
+      color: #bbf7d0;
+    }
+
     .target-mode-indicator {
       position: absolute;
       right: max(10px, env(safe-area-inset-right));

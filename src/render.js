@@ -3,7 +3,8 @@
         rafId = 0;
         return;
       }
-      HexSnakePlatform.display.recordFrame(now || performance.now());
+      const frameStats = HexSnakePlatform.display.recordFrame(now || performance.now());
+      if (typeof updatePerfOverlay === "function") updatePerfOverlay(frameStats);
       drawEffectComparisonBoard(now);
       rafId = requestAnimationFrame(comparisonLoop);
     }

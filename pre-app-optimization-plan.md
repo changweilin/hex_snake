@@ -276,6 +276,14 @@ const platform = {
 - 高解析手機不因 DPR 過高造成明顯掉幀。
 - 效能問題可被量測，不只靠感覺。
 
+進度（2026-05-19）：
+
+- 已完成：canvas DPR 由 platform display adapter 限制，低耗電時會進一步降低上限。
+- 已完成：背景化 / pagehide 會透過 lifecycle hook 停止 RAF，回前景後才恢復。
+- 已完成：新增低耗電設定，會降低視覺負載並記錄使用者偏好。
+- 已完成：新增 FPS / frame time overlay，可從設定面板開啟，供手機 QA 量測。
+- 已驗證：build、asset、size、quick、desktop/mobile smoke、offline smoke 與瀏覽器實測通過。
+
 ### 3.8 文字與編碼清理
 
 現況：
