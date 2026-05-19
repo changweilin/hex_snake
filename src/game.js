@@ -3915,11 +3915,44 @@
       requestPreviewDraw();
     }
 
+    function currentSettingsPage() {
+      if (!settingsContent.hidden) return "settings";
+      if (!gmContent.hidden) return "gm";
+      return "";
+    }
+
+    function setSettingsPageTransition(content, direction = "") {
+      delete content.dataset.pageTransition;
+      if (!direction) return;
+      content.dataset.pageTransition = direction;
+      window.setTimeout(() => {
+        if (content.dataset.pageTransition === direction) delete content.dataset.pageTransition;
+      }, 260);
+    }
+
+    function updateSettingsPageBars(activePage = currentSettingsPage()) {
+      settingsPageButtons.forEach(button => {
+        const active = button.dataset.settingsPageButton === activePage;
+        button.classList.toggle("is-active", active);
+        button.setAttribute("aria-selected", String(active));
+      });
+    }
+
+    function openSettingsPage(page) {
+      const previousPage = currentSettingsPage();
+      if (page === "gm") {
+        setGmOpen(true, { direction: previousPage === "settings" ? "next" : "", focus: false });
+        return;
+      }
+      setSettingsOpen(true, { direction: previousPage === "gm" ? "prev" : "", focus: false });
+    }
+
     function updateSettingsPanelState() {
       const settingsPagesOpen = !settingsContent.hidden || !gmContent.hidden;
       settingsToggle.setAttribute("aria-expanded", String(settingsPagesOpen));
       networkToggle.setAttribute("aria-expanded", String(!networkContent.hidden));
       settingsToggle.closest(".settings-section").classList.toggle("open", settingsPagesOpen || !networkContent.hidden);
+      updateSettingsPageBars();
       if (!running || gameOver || HexSnakeReplay.isPlaybackMode()) {
         networkToggle.classList.toggle("is-active", !networkContent.hidden);
       }
@@ -3931,14 +3964,16 @@
       rulesButton.setAttribute("aria-expanded", "false");
     }
 
-    function setSettingsOpen(open) {
+    function setSettingsOpen(open, options = {}) {
+      const previousPage = currentSettingsPage();
       settingsContent.hidden = !open;
       if (!open) setPendingDirectionKeybind(null);
       if (open) {
         closeRulesPanelForOverlay();
         gmContent.hidden = true;
         networkContent.hidden = true;
-        settingsCloseButton.focus();
+        setSettingsPageTransition(settingsContent, options.direction || (previousPage === "gm" ? "prev" : ""));
+        if (options.focus !== false) settingsCloseButton.focus();
       }
       updateSettingsPanelState();
     }
@@ -3954,7 +3989,8 @@
       setSettingsOpen(true);
     }
 
-    function setGmOpen(open) {
+    function setGmOpen(open, options = {}) {
+      const previousPage = currentSettingsPage();
       gmContent.hidden = !open;
       if (open && !running) {
         closeRulesPanelForOverlay();
@@ -3963,7 +3999,8 @@
         setPendingDirectionKeybind(null);
         setGmMode(true);
         saveGmSettings();
-        gmCloseButton.focus();
+        setSettingsPageTransition(gmContent, options.direction || (previousPage === "settings" ? "next" : ""));
+        if (options.focus !== false) gmCloseButton.focus();
       }
       updateSettingsPanelState();
     }
@@ -3995,7 +4032,7 @@
 
     function beginSettingsPageSwipe(event, page) {
       if (event.button !== undefined && event.button !== 0) return;
-      if (event.target.closest("button, input, select, textarea, a")) return;
+      if (!event.target.closest(".settings-page-bar") && event.target.closest("button, input, select, textarea, a")) return;
       settingsPageSwipe = {
         pointerId: event.pointerId,
         page,
@@ -4011,8 +4048,8 @@
       const dx = event.clientX - swipe.x;
       const dy = event.clientY - swipe.y;
       if (Math.abs(dx) < settingsPageSwipeDistance || Math.abs(dx) < Math.abs(dy) * 1.25) return;
-      if (swipe.page === "settings" && dx < 0) setGmOpen(true);
-      if (swipe.page === "gm" && dx > 0) setSettingsOpen(true);
+      if (swipe.page === "settings" && dx < 0) setGmOpen(true, { direction: "next", focus: false });
+      if (swipe.page === "gm" && dx > 0) setSettingsOpen(true, { direction: "prev", focus: false });
     }
 
     function cancelSettingsPageSwipe(event) {
@@ -4076,6 +4113,9 @@
     settingsCloseButton.addEventListener("click", () => setSettingsOpen(false));
     gmCloseButton.addEventListener("click", () => setGmOpen(false));
     networkCloseButton.addEventListener("click", () => setNetworkOpen(false));
+    settingsPageButtons.forEach(button => {
+      button.addEventListener("click", () => openSettingsPage(button.dataset.settingsPageButton));
+    });
 
     settingsToggle.addEventListener("pointerdown", event => {
       event.stopPropagation();
@@ -5226,11 +5266,11 @@
         }
         if (!settingsContent.hidden && event.key === "ArrowRight") {
           event.preventDefault();
-          setGmOpen(true);
+          setGmOpen(true, { direction: "next", focus: false });
         }
         if (!gmContent.hidden && event.key === "ArrowLeft") {
           event.preventDefault();
-          setSettingsOpen(true);
+          setSettingsOpen(true, { direction: "prev", focus: false });
         }
         return;
       }

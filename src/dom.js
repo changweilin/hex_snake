@@ -130,6 +130,7 @@
     const gmLetter = networkToggle.querySelector(".gm-letter");
     const gmContent = document.querySelector("#gmContent");
     const gmCloseButton = document.querySelector("#gmCloseButton");
+    const settingsPageButtons = [...document.querySelectorAll("[data-settings-page-button]")];
     const networkContent = document.querySelector("#networkContent");
     const networkCloseButton = document.querySelector("#networkCloseButton");
     const settingsToggle = document.querySelector("#settingsToggle");
