@@ -30,9 +30,10 @@
     }
 
     const controlProfilesKey = "hexSnakeControlProfilesV1";
+    const selectedControlProfileKey = "hexSnakeSelectedControlProfileV1";
     const controlProfileLimit = 8;
     let controlProfiles = loadControlProfiles();
-    let selectedControlProfileId = "";
+    let selectedControlProfileId = String(HexSnakeStorage.get(selectedControlProfileKey) || "").slice(0, 48);
 
     function cloneKeybinds(value = keybinds) {
       return {
@@ -57,11 +58,58 @@
       };
     }
 
+    function cloneInitialStock(value = initialStock) {
+      return foodTypes.reduce((stock, type) => {
+        stock[type.id] = clampInitialStock(value?.[type.id] ?? defaultSettings.initialStock[type.id] ?? 0);
+        return stock;
+      }, {});
+    }
+
+    function normalizeCharacterChoice(owner, value) {
+      const fallback = owner === "computer" ? defaultSettings.computerCharacterId : defaultSettings.playerCharacterId;
+      const choice = String(value || fallback).slice(0, 64);
+      if (choice === randomCharacterChoiceId) return choice;
+      if (!characterById.size) return choice || fallback;
+      return characterById.has(choice) ? choice : fallback;
+    }
+
+    function normalizeGmPresetMode(value) {
+      return Object.prototype.hasOwnProperty.call(gmPresetButtons, value) ? value : null;
+    }
+
+    function cloneGameSettings(value = {}) {
+      const presetMode = Object.prototype.hasOwnProperty.call(value, "gmPresetMode") ? value.gmPresetMode : gmPresetMode;
+      return {
+        computerDifficulty: ["novice", "low", "medium", "high", "extreme"].includes(value.computerDifficulty) ? value.computerDifficulty : computerDifficulty,
+        playerCharacterChoice: normalizeCharacterChoice("player", value.playerCharacterChoice ?? playerCharacterChoice),
+        computerCharacterChoice: normalizeCharacterChoice("computer", value.computerCharacterChoice ?? computerCharacterChoice),
+        gmMode: Boolean(value.gmMode ?? gmMode),
+        gmPresetMode: normalizeGmPresetMode(presetMode),
+        gridSize: clampGridSize(value.gridSize ?? gridSize),
+        foodCount: clampFoodCount(value.foodCount ?? foodCount),
+        initialSpeed: clampInitialSpeed(value.initialSpeed ?? initialSpeed),
+        initialLength: clampInitialLength(value.initialLength ?? initialLength),
+        initialEnergy: clampInitialEnergy(value.initialEnergy ?? initialEnergy),
+        initialBombs: clampInitialBombs(value.initialBombs ?? initialBombs),
+        initialStock: cloneInitialStock(value.initialStock ?? initialStock)
+      };
+    }
+
+    function cloneProfilePreferences(value = {}) {
+      return {
+        sfxMuted: Boolean(value.sfxMuted ?? HexSnakeAudio.muted),
+        lowPowerMode: Boolean(value.lowPowerMode ?? HexSnakePlatform.display.lowPowerMode()),
+        perfStatsVisible: Boolean(value.perfStatsVisible ?? perfStatsVisible)
+      };
+    }
+
     function controlProfileConfig() {
       return {
         keybinds: cloneKeybinds(),
         leftHandMode: Boolean(leftHandModeInput.checked),
-        keyboardAttackAim: cloneKeyboardAttackAim()
+        keyboardAttackAim: cloneKeyboardAttackAim(),
+        gameSettings: cloneGameSettings(),
+        preferences: cloneProfilePreferences()
       };
     }
 
@@ -76,7 +124,9 @@
         config: {
           keybinds: cloneKeybinds(profile.config?.keybinds),
           leftHandMode: Boolean(profile.config?.leftHandMode),
-          keyboardAttackAim: cloneKeyboardAttackAim(profile.config?.keyboardAttackAim)
+          keyboardAttackAim: cloneKeyboardAttackAim(profile.config?.keyboardAttackAim),
+          gameSettings: profile.config?.gameSettings ? cloneGameSettings(profile.config.gameSettings) : null,
+          preferences: profile.config?.preferences ? cloneProfilePreferences(profile.config.preferences) : null
         }
       };
     }
@@ -94,8 +144,18 @@
       HexSnakeStorage.setJson(controlProfilesKey, controlProfiles);
     }
 
+    function saveSelectedControlProfileId() {
+      if (selectedControlProfileId) HexSnakeStorage.set(selectedControlProfileKey, selectedControlProfileId);
+      else HexSnakeStorage.remove(selectedControlProfileKey);
+    }
+
     function selectedControlProfile() {
       return controlProfiles.find(profile => profile.id === selectedControlProfileId) || null;
+    }
+
+    function resolvedControlProfileId(preferredId = selectedControlProfileId, fallbackToFirst = false) {
+      if (controlProfiles.some(profile => profile.id === preferredId)) return preferredId;
+      return fallbackToFirst ? controlProfiles[0]?.id || "" : "";
     }
 
     function setControlProfileStatus(text = "", state = "") {
@@ -118,7 +178,8 @@
         option.textContent = profile.name;
         controlProfileSelect.append(option);
       });
-      selectedControlProfileId = controlProfiles.some(profile => profile.id === previousId) ? previousId : "";
+      selectedControlProfileId = resolvedControlProfileId(previousId);
+      if (selectedControlProfileId !== previousId) saveSelectedControlProfileId();
       controlProfileSelect.value = selectedControlProfileId;
       const selected = selectedControlProfile();
       if (selected && !controlProfileNameInput.value.trim()) controlProfileNameInput.value = selected.name;
@@ -140,6 +201,54 @@
       return name;
     }
 
+    function applyProfileCharacterChoices(settings) {
+      playerCharacterChoice = normalizeCharacterChoice("player", settings.playerCharacterChoice);
+      computerCharacterChoice = normalizeCharacterChoice("computer", settings.computerCharacterChoice);
+      if (playerCharacterChoice === randomCharacterChoiceId) {
+        ensureStartLogoRandomCharacterId("player");
+      } else {
+        playerCharacterId = characterById.has(playerCharacterChoice) ? playerCharacterChoice : defaultSettings.playerCharacterId;
+        clearStartLogoRandomCharacterId("player");
+      }
+      if (computerCharacterChoice === randomCharacterChoiceId) {
+        ensureStartLogoRandomCharacterId("computer");
+      } else {
+        computerCharacterId = characterById.has(computerCharacterChoice) ? computerCharacterChoice : defaultSettings.computerCharacterId;
+        clearStartLogoRandomCharacterId("computer");
+      }
+      syncCharacterInputs();
+      saveCharacterChoices();
+      preloadPortraitsFor("player");
+      preloadPortraitsFor("computer");
+      buildCharacterStage();
+    }
+
+    function applyProfileGameSettings(settings) {
+      if (!settings) return;
+      const nextSettings = cloneGameSettings(settings);
+      setComputerDifficulty(nextSettings.computerDifficulty);
+      applyProfileCharacterChoices(nextSettings);
+      setGmMode(nextSettings.gmMode);
+      setGridSize(nextSettings.gridSize);
+      setFoodCount(nextSettings.foodCount);
+      setInitialSpeed(nextSettings.initialSpeed);
+      setInitialLength(nextSettings.initialLength);
+      setInitialEnergy(nextSettings.initialEnergy);
+      setInitialBombs(nextSettings.initialBombs);
+      foodTypes.forEach(type => setInitialStock(type.id, nextSettings.initialStock[type.id]));
+      gmPresetMode = normalizeGmPresetMode(nextSettings.gmPresetMode);
+      updateGmPresetHighlight();
+      saveGmSettings();
+    }
+
+    function applyProfilePreferences(preferences) {
+      if (!preferences) return;
+      const nextPreferences = cloneProfilePreferences(preferences);
+      HexSnakeAudio.setMuted(nextPreferences.sfxMuted);
+      setLowPowerPreference(nextPreferences.lowPowerMode);
+      setPerfStatsVisible(nextPreferences.perfStatsVisible);
+    }
+
     function saveCurrentControlProfile() {
       if (running) return;
       const name = (controlProfileNameInput.value.trim() || selectedControlProfile()?.name || uniqueControlProfileName()).slice(0, 16);
@@ -157,6 +266,7 @@
       selectedControlProfileId = nextProfile.id;
       controlProfileNameInput.value = name;
       saveControlProfiles();
+      saveSelectedControlProfileId();
       renderControlProfiles("配置檔已儲存。", "success");
     }
 
@@ -170,7 +280,16 @@
       setLeftHandMode(profile.config.leftHandMode);
       keyboardAttackAim = cloneKeyboardAttackAim(profile.config.keyboardAttackAim);
       updateTargetModeIndicator();
+      const appliesGameSettings = Boolean(profile.config.gameSettings);
+      applyProfileGameSettings(profile.config.gameSettings);
+      applyProfilePreferences(profile.config.preferences);
       controlProfileNameInput.value = profile.name;
+      saveSelectedControlProfileId();
+      if (appliesGameSettings) {
+        resetGame();
+        resize();
+        renderIntroPortraits(true);
+      }
       renderControlProfiles("配置檔已套用。", "success");
     }
 
@@ -178,8 +297,9 @@
       if (running) return;
       if (!selectedControlProfileId) return;
       controlProfiles = controlProfiles.filter(profile => profile.id !== selectedControlProfileId);
-      selectedControlProfileId = "";
+      selectedControlProfileId = resolvedControlProfileId("", true);
       saveControlProfiles();
+      saveSelectedControlProfileId();
       controlProfileNameInput.value = "";
       renderControlProfiles("配置檔已刪除。", "success");
     }
@@ -4164,6 +4284,7 @@
     });
     controlProfileSelect.addEventListener("change", () => {
       selectedControlProfileId = controlProfileSelect.value;
+      saveSelectedControlProfileId();
       const profile = selectedControlProfile();
       if (profile) controlProfileNameInput.value = profile.name;
       renderControlProfiles();
