@@ -11,6 +11,7 @@
 - 進階控制設定（方向鍵綁定、特殊技能按鍵、左手模式）
 - 食物／資源系統、攻擊蓄力與冷卻機制、生命值與回合統計
 - 回放系統、重播封存、設定與戰績快取（`localStorage`）
+- LAN / Wi-Fi 房間連線、Host / Guest 對戰與本機 WebSocket relay
 - AI 策略資料與模擬調參工作流（`tools/`）
 
 前端入口為 `index.html`，遊戲初始化於 `src/main.js`，並透過載入器動態注入 `src/` 目錄中的模組化腳本（`state`, `dom`, `ui`, `characters`, `audio`, `replay`, `ai`, `render`, `game`）。
@@ -36,7 +37,7 @@
 
 - `tools/` 提供策略優化、模擬、對戰、回放與 QA 的腳本
 - 支援快速測試：`npm run test:quick`、`npm run test:smoke`
-- 支援完整模擬與策略實驗：`npm run simulate`、`npm run optimize:strategy`、`npm run simulate:ai-cross`
+- 支援完整模擬與策略實驗：`npm run simulate`、`npm run optimize:strategy`、`npm run simulate:ai-cross`、`npm run evaluate:strategy-gate`
 
 ### 建置與部署
 
@@ -129,6 +130,7 @@ npm run android:bundle:signed
 ```bash
 npm run test
 npm run test:quick
+npm run test:network
 npm run test:smoke
 npm run simulate
 npm run simulate:run

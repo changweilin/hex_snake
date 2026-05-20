@@ -59,15 +59,29 @@ Verification:
 
 ## Phase 2 - Protocol Hardening
 
-Status: pending.
+Status: automated first pass implemented on 2026-05-20.
 
 Tasks:
 
-- Add sequence numbers and latency telemetry.
-- Add reconnect handling.
-- Add snapshot throttling controls.
-- Add clear room lifecycle states for ready/start/end.
-- Add tests for server room routing.
+- Done: add client sequence numbers, server sequence numbers, relay acknowledgements, and stale peer-message dropping.
+- Done: add latency telemetry through ping/pong and status display.
+- Done: add reconnect/rejoin flow for unexpected WebSocket close.
+- Done: add configurable snapshot throttling through the network adapter.
+- Done: add clear room lifecycle states for waiting, ready, running, and ended.
+- Done: add server room routing and protocol metadata coverage in `tools/network-room-routing-test.js`.
+
+Verification:
+
+- `npm run test:network`
+- `npm run test:quick`
+- `npm run test:smoke`
+- `npm run test:mobile`
+- `npm run app:check`
+
+Remaining:
+
+- Run a real two-device long-session reconnect and snapshot stability check before treating LAN multiplayer as fully hardened.
+- After the real-device pass, decide whether Phase 3 should keep WebSocket-only LAN support longer or start WebRTC DataChannel work.
 
 ## Phase 3 - WebRTC DataChannel
 

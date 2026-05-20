@@ -11,6 +11,7 @@ const host = process.env.HOST || "0.0.0.0";
 const websocketGuid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 const wsClients = new Set();
 const rooms = new Map();
+const roomLifecycles = new Set(["waiting", "ready", "running", "ended"]);
 
 const types = {
   ".html": "text/html; charset=utf-8",
@@ -128,8 +129,23 @@ function sendWebSocket(client, data) {
   }
 }
 
+function setRoomLifecycle(room, lifecycle) {
+  if (!room || !roomLifecycles.has(lifecycle) || room.lifecycle === lifecycle) return false;
+  room.lifecycle = lifecycle;
+  room.updatedAt = Date.now();
+  return true;
+}
+
+function refreshRoomLifecycle(room) {
+  if (!room) return false;
+  if (room.clients.size < 2) return setRoomLifecycle(room, "waiting");
+  if (room.lifecycle === "running" || room.lifecycle === "ended") return false;
+  return setRoomLifecycle(room, "ready");
+}
+
 function sendRoomState(room) {
   if (!room) return;
+  refreshRoomLifecycle(room);
   const peerCount = room.clients.size;
   const roles = [...room.clients].map(client => client.role).filter(Boolean);
   room.clients.forEach(client => sendWebSocket(client, {
@@ -137,7 +153,10 @@ function sendRoomState(room) {
     roomCode: room.code,
     role: client.role,
     peerCount,
-    roles
+    roles,
+    lifecycle: room.lifecycle,
+    createdAt: room.createdAt,
+    updatedAt: room.updatedAt
   }));
 }
 
@@ -176,6 +195,7 @@ function leaveRoom(client, reason = "left") {
     role: previousRole,
     reason
   }));
+  refreshRoomLifecycle(room);
   sendRoomState(room);
 }
 
@@ -207,7 +227,10 @@ function createRoom(client) {
   const room = {
     code,
     clients: new Set([client]),
-    createdAt: Date.now()
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    lifecycle: "waiting",
+    messageSeq: 0
   };
   rooms.set(code, room);
   client.roomCode = code;
@@ -222,15 +245,45 @@ function relayToRoomPeer(client, payload) {
     sendWebSocket(client, { type: "error", message: "Not in a room." });
     return;
   }
+  if (!payload || typeof payload !== "object") {
+    sendWebSocket(client, { type: "error", message: "Invalid relay payload." });
+    return;
+  }
+  const receivedAt = Date.now();
+  const serverSeq = room.messageSeq + 1;
+  room.messageSeq = serverSeq;
+  room.updatedAt = receivedAt;
+  let lifecycleChanged = false;
+  if (payload.type === "start" || payload.type === "snapshot") {
+    lifecycleChanged = setRoomLifecycle(room, "running");
+  } else if (payload.type === "end") {
+    lifecycleChanged = setRoomLifecycle(room, "ended");
+  }
+  const clientSeq = Number.isFinite(Number(payload.seq)) ? Number(payload.seq) : null;
+  const sentAt = Number.isFinite(Number(payload.sentAt)) ? Number(payload.sentAt) : null;
   room.clients.forEach(peer => {
     if (peer === client) return;
     sendWebSocket(peer, {
       type: "peer-message",
       roomCode: room.code,
       fromRole: client.role,
+      serverSeq,
+      clientSeq,
+      sentAt,
+      receivedAt,
+      lifecycle: room.lifecycle,
       payload
     });
   });
+  sendWebSocket(client, {
+    type: "relay-ack",
+    roomCode: room.code,
+    serverSeq,
+    clientSeq,
+    receivedAt,
+    lifecycle: room.lifecycle
+  });
+  if (lifecycleChanged) sendRoomState(room);
 }
 
 function handleWebSocketMessage(client, text) {
@@ -256,11 +309,18 @@ function handleWebSocketMessage(client, text) {
     return;
   }
   if (message.type === "relay") {
-    relayToRoomPeer(client, message.payload);
+    const payload = message.payload && typeof message.payload === "object"
+      ? { ...message.payload }
+      : message.payload;
+    if (payload && typeof payload === "object") {
+      if (payload.seq === undefined && message.seq !== undefined) payload.seq = message.seq;
+      if (payload.sentAt === undefined && message.sentAt !== undefined) payload.sentAt = message.sentAt;
+    }
+    relayToRoomPeer(client, payload);
     return;
   }
   if (message.type === "ping") {
-    sendWebSocket(client, { type: "pong", t: message.t || Date.now() });
+    sendWebSocket(client, { type: "pong", t: message.t || Date.now(), serverTime: Date.now() });
   }
 }
 

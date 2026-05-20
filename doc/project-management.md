@@ -29,9 +29,9 @@
 | --- | --- | --- | --- |
 | Android 上架主線 | 進行中 | Play internal testing | `store/release-checklist.md` |
 | iOS 上架主線 | blocked | 取得 macOS / Xcode / Apple signing 環境 | 尚未驗證 |
-| LAN / Wi-Fi 多人 | MVP 已完成 | Phase 2 protocol hardening | `doc/local-multiplayer-progress-plan.md` |
-| AI / 規則一致性 | 待啟動 | 先做 browser / simulator 對齊，再判斷策略套用或效能優化 | `doc/strategy-optimization-sop.md`、`reports/` |
-| 架構整理 | 待啟動 | 先做 facade / ES modules 邊界整理，再抽共用規則核心 | `npm run audit:globals`、`doc/legacy-global-dependencies.md` |
+| LAN / Wi-Fi 多人 | Phase 2 自動化首輪完成 | 雙機長時間 reconnect / snapshot 驗證，之後規劃 WebRTC | `doc/local-multiplayer-progress-plan.md`、`test:network` |
+| AI / 規則一致性 | gate 已檢查，不套用 | 保留現行策略；若再推策略，先針對 dragon 負 delta 與 gu_king qualified 不足做新訓練 | `doc/strategy-optimization-sop.md`、`reports/` |
+| 架構整理 | audit 已刷新 | 先從 `game.js` 對外 API 與 `ui.js` 反向依賴切開，不改行為 | `npm run audit:globals`、`doc/legacy-global-dependencies.md` |
 | 產品延伸 | 暫緩 | 等上架與核心穩定後再推 replay 分享、每日挑戰、觀戰聯賽 | 本文件 P3 |
 
 ## 主控看板
@@ -47,16 +47,16 @@
 
 | 項目 | 狀態 | 下一步 | 完成標準 |
 | --- | --- | --- | --- |
-| LAN protocol hardening | 未開始 | 加 sequence number、latency telemetry、reconnect、snapshot throttling，補 server room routing 測試 | Host / Guest reconnect 與 snapshot 節流可驗證 |
-| AI / simulator 對齊檢查 | 未開始 | 執行 browser auto battle smoke 與 `simulate:ai-cross`，列出 browser / simulator 差異 | 實戰與 simulator 關鍵行為一致或差異有紀錄 |
-| 策略套用判斷 | 等待 AI 對齊 | 檢查最新 `comparison.md` marginal delta 與 SOP apply gate | 符合 gate 才套用 `best-strategies-for-apply.json` |
+| LAN protocol hardening | 自動化首輪完成 | 保留雙機長時間 reconnect / snapshot 驗證；下一個 AI 可直接處理項目改為 AI / simulator 對齊 | `test:network`、`test:smoke`、`test:mobile`、`app:check` |
+| AI / simulator 對齊檢查 | parity preflight 完成 | 若近期再改 `game.js`、UI、replay、ES modules 或 timing，重跑同一組 preflight | `simulate:ai-cross` 小樣本與 browser auto-battle 錄製通過 |
+| 策略套用判斷 | 已檢查，不套用 | 不套用 2026-05-10 overnight 與 2026-05-16 progress-test 輸出；新策略需重新通過 target-vs-field gate | `comparison.md` 與 `evaluate:strategy-gate` 均不能出現不可接受負 delta |
 | AI 效能優化 | 等待 profiling | 只針對有量測證據的熱點評估 bitset / allocation cleanup | 有前後 timing 對比，行為差異可解釋 |
 
 ### P2 - 後續整理：架構與維護性
 
 | 項目 | 狀態 | 下一步 | 完成標準 |
 | --- | --- | --- | --- |
-| 核心 facade / ES modules | 未開始 | 先從 `characters.js`、`audio.js`、`replay.js` 與 `game.js` facade wrapper 開始，不改行為 | build、quick、smoke、audit 通過 |
+| 核心 facade / ES modules | audit 已刷新 | 優先切 `game.js` 被 `ui.js`、`replay.js`、`ai.js`、`render.js` 讀取的對外 API；`network.js` 暫不需拆 | build、quick、smoke、audit 通過 |
 | Browser / simulator 共用規則核心 | 未開始 | 等 AI 對齊差異明確後，先抽純函式與常數，不碰 DOM/UI state | 同 seed 關鍵差異可解釋 |
 | Render / CSS 拆分 | 未開始 | 先列 board/snake/effects 與 layout/settings/portrait/replay/HUD 搬移清單 | 桌機與手機 smoke screenshot 正常 |
 
@@ -75,10 +75,14 @@
 | --- | --- | --- |
 | Build 正規化 | `dist/index.html` 載入 `assets/app.bundle.js`，不再依賴 source module entry | `app:check` |
 | PWA / 離線基礎 | manifest、icons、service worker、offline fallback 已完成 | `test:offline`、`app:check` |
-| 素材壓縮與部署瘦身 | `dist` 約 26.71 MB，WebP / M4A 轉檔與 forbidden asset 檢查已納入 build | `check:assets`、`check:size` |
+| 素材壓縮與部署瘦身 | `dist` 約 26.92 MB，WebP / M4A 轉檔與 forbidden asset 檢查已納入 build | `check:assets`、`check:size` |
 | 文字與編碼檢查 | `text:check` 可掃描 README、HTML、JS、JSON、文件與工具 | `text:check` |
 | Browser / mobile smoke | `tools/smoke-test.js`、`mobile-smoke-test.js` 已覆蓋主要 UI 與 replay | `test:smoke`、`test:mobile` |
-| Release gate | `release:check` 串接 build、text、data、assets、size、quick、mobile、smoke、offline、app readiness | `release:check` |
+| LAN protocol hardening 首輪 | 2026-05-20 加入 room lifecycle、sequence number、latency telemetry、relay ack、reconnect / rejoin、snapshot throttling 與 server room routing test | `test:network`、`test:smoke`、`test:mobile` |
+| AI / simulator parity preflight | 2026-05-20 執行 `simulate:ai-cross -- --runs 5 --jobs 1 --seed sim-game-parity-smoke-20260520`，並以 `record-mobile-auto-battle.js` 錄製 1 段 12 秒 browser auto battle；未發現啟動或 console 阻塞 | 近期改 AI / timing / UI 後重跑；策略套用仍需正式 `comparison.md` gate |
+| AI strategy apply gate 檢查 | 2026-05-20 檢查 2026-05-10 overnight：整體 +1.0% 但 dragon -4.4%，moray/lobster/gu_king qualified 不足；2026-05-16 progress-test 樣本過小且 delta -50%；dragon repair 長跑只到 partial checkpoint，不作 gate；dragon fast gate probe 前 3 候選最佳仍 -1.0% | 不套用；保留 `reports/strategy-gate-dragon-20260520-fast/target-gate.md` 作為證據 |
+| Legacy global audit 刷新 | 2026-05-20 `npm run audit:globals` 產出 13 files / 780 cross-file reads；`network.js` 無 detected consumers，主要風險集中於 `game.js` 與 `ui.js` 的互讀 | 後續 facade / ES modules 先切 API 邊界，不先改規則 |
+| Release gate | `release:check` 串接 build、text、data、assets、size、quick、network、mobile、smoke、offline、app readiness | `release:check` |
 | App shell 基礎封裝 | Capacitor 8、Android / iOS 專案、mobile platform adapter、APK / AAB build scripts 已建立 | `app:check`、Android build scripts |
 | Android 實機驗證 | 2026-05-20 使用者確認 debug APK 實機測試正常，返回鍵、背景暫停 / 恢復、震動、音效 unlock 與長時間效能無問題 | 後續版本若改 platform adapter 或原生設定，再重測 |
 | Android 正式簽章 | 2026-05-20 建立 `android/hex-snake-upload.jks` 與 gitignored `android/signing.properties`，`npm run android:bundle:signed` 成功產出 signed release AAB | 後續正式上傳前保護 upload keystore 與簽章密碼 |
@@ -89,7 +93,7 @@
 舊文件中有幾處狀態已被新進度覆蓋，這裡統一判定：
 
 - `doc/follow-up-execution-list.md` 舊版曾將「PWA 與離線遊玩」列為未開始，但 `pre-app-optimization-plan.md`、`app-deployment-plan.md` 與現有腳本已顯示 PWA / service worker / offline fallback 已完成並納入 `app:check`。主控狀態以「已完成」為準。
-- `pre-app-optimization-plan.md` 的 `dist` 舊基準曾是 153.77 MB；目前主控採最新 App 計畫與 release check 結果，約 26.71 MB。
+- `pre-app-optimization-plan.md` 的 `dist` 舊基準曾是 153.77 MB；目前主控採最新 App 計畫與 release check 結果，約 26.92 MB。
 - `doc/follow-up-execution-list.md` 的 P0 safety nets 已大多完成，剩餘只作為歷史與細節來源；active 待辦以本文件 P0/P1/P2/P3 為準。
 - `reports/` 中的策略輸出只代表當次模擬結果。是否套用策略，以 `doc/strategy-optimization-sop.md` 的 apply gate 與本文件主控判斷為準。
 
@@ -100,7 +104,7 @@
 1. Android 實機驗證與正式簽章已完成，現在可以進入 Play internal testing。
 2. Play internal testing 排在更大範圍產品開發前，因為它會暴露商店後台、資料安全、內容分級與上傳格式等真正上架阻塞。
 3. iOS 目前被環境阻塞，因此不阻擋 Android 主線；取得 macOS / Xcode 後可與 Android Play 後台並行。
-4. LAN protocol hardening 排在上架阻塞後，因為它是產品能力增強，不應卡住目前已接近可測機的 App 發布流程。
+4. LAN protocol hardening 的 AI 可處理首輪已完成；剩餘雙機長時間驗證屬裝置測試，不阻擋下一個 AI 可直接處理項目。
 5. AI / simulator 對齊排在策略套用與共用規則核心之前，因為尚未確認差異前，直接套策略或抽共用核心都容易把錯誤固定下來。
 6. Facade / ES modules 排在共用規則核心之前，因為先清楚模組邊界，再抽共享純函式，回歸風險較低。
 7. Replay 分享、每日挑戰、觀戰聯賽屬產品延伸，等上架、多人協議與核心穩定後再做，避免擴大同時變更面。
@@ -119,6 +123,7 @@ npm.cmd run data:check
 ```bash
 npm.cmd run build
 npm.cmd run test:quick
+npm.cmd run test:network
 ```
 
 涉及 UI、replay、瀏覽器互動、ES modules 或手機操作：
@@ -153,6 +158,7 @@ npm.cmd run store:check
 
 ```bash
 npm.cmd run simulate:ai-cross -- --runs 5 --jobs 1 --seed <purpose>
+npm.cmd run evaluate:strategy-gate -- --character <id> --candidates <candidate-json> --runs 10 --top 3
 ```
 
 需要完整策略訓練或套用時，依 `doc/strategy-optimization-sop.md` 執行。
@@ -161,7 +167,7 @@ npm.cmd run simulate:ai-cross -- --runs 5 --jobs 1 --seed <purpose>
 
 1. 建立 Google Play internal testing，補資料安全、內容分級、截圖與商店欄位，並上傳 signed release AAB。
 2. 找 macOS / Xcode 環境執行 iOS build 與 TestFlight；若環境已備妥，可與第 1 步並行。
-3. 補 LAN 多人 Phase 2：sequence number、latency、reconnect、snapshot throttling、server room routing 測試。
-4. 執行高階 AI v1 browser / simulator 對齊檢查，再決定是否套用最新策略輸出或做 AI 效能優化。
-5. 推進 `game.js` facade / ES modules，再抽 browser / simulator 共用規則核心。
+3. LAN 多人剩餘雙機長時間 reconnect / snapshot 驗證；若通過，再規劃 WebRTC DataChannel。
+4. 推進 `game.js` facade / ES modules：先切對外 API 邊界，再抽 browser / simulator 共用規則核心。
+5. 若之後要繼續 AI 訓練，先以 dragon / gu_king 為目標重跑完整 target-vs-field gate，不直接套用既有輸出。
 6. 最後再做 replay 分享、每日挑戰與觀戰聯賽。

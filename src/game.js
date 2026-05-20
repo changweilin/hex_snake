@@ -1487,7 +1487,6 @@
       updateHud();
     }
 
-    const networkSnapshotIntervalMs = 100;
     let lastNetworkSnapshotAt = -Infinity;
 
     function networkAdapter() {
@@ -1539,11 +1538,13 @@
 
     function broadcastNetworkSnapshot(now = performance.now(), force = false, final = false) {
       if (!isNetworkHostActive() || !snake || !computerSnake) return;
-      if (!force && now - lastNetworkSnapshotAt < networkSnapshotIntervalMs) return;
+      const snapshotIntervalMs = Number(networkAdapter()?.snapshotIntervalMs?.()) || 100;
+      if (!force && now - lastNetworkSnapshotAt < snapshotIntervalMs) return;
       lastNetworkSnapshotAt = now;
       networkAdapter()?.setInGame?.(!final);
       broadcastNetworkGameMessage({
         type: final ? "end" : "snapshot",
+        force: Boolean(force),
         snapshot: HexSnakeReplay.createSnapshot(now, final)
       });
     }

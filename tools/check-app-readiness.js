@@ -12,6 +12,7 @@ const requiredScripts = [
   "build:mobile",
   "start",
   "test:quick",
+  "test:network",
   "test:mobile",
   "test:mobile-platform",
   "test:smoke",

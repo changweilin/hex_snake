@@ -424,6 +424,14 @@ Recommended apply gate:
 - No character should have an unacceptable negative per-character delta.
 - If using `--cycles`, the improvement should repeat across cycles instead of appearing in only one run.
 
+For a single-character candidate pool, verify the candidate back against the full baseline field before spending time on a longer run or applying it:
+
+```powershell
+npm.cmd run evaluate:strategy-gate -- --character dragon --candidates reports\strategy-target-dragon\ga-qualified.json --top 3 --runs 10 --seed dragon-gate-probe
+```
+
+Treat this as a probe unless the run count is high enough for the decision. A positive mirror-gate result alone is not enough, because it can still lose target-vs-field.
+
 To apply the generated strategy file:
 
 ```powershell
