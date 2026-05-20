@@ -1,3 +1,7 @@
+    const AiConfig = HexSnakeState.config;
+    const AiState = HexSnakeState.game;
+    const AiUI = HexSnakeUI;
+
     let wrappedDistanceBoardCache = null;
     let activeAiDecisionCache = null;
     let aiPerfEnabledCache = null;
@@ -80,34 +84,34 @@
     }
 
     function boardCacheSignature() {
-      const first = cells[0] ? HexSnakeGame.keyOf(cells[0]) : "";
-      const last = cells.length ? HexSnakeGame.keyOf(cells[cells.length - 1]) : "";
-      return `${radius}:${cells.length}:${first}:${last}`;
+      const first = AiState.cells[0] ? HexSnakeGame.keyOf(AiState.cells[0]) : "";
+      const last = AiState.cells.length ? HexSnakeGame.keyOf(AiState.cells[AiState.cells.length - 1]) : "";
+      return `${AiState.radius}:${AiState.cells.length}:${first}:${last}`;
     }
 
     function ensureWrappedDistanceBoardCache() {
-      if (!cells.length) return null;
+      if (!AiState.cells.length) return null;
       const signature = boardCacheSignature();
       if (wrappedDistanceBoardCache?.signature === signature) return wrappedDistanceBoardCache;
 
-      const indexByKey = new Map(cells.map((cell, index) => [HexSnakeGame.keyOf(cell), index]));
-      const neighborsByKey = new Map(cells.map(cell => [
+      const indexByKey = new Map(AiState.cells.map((cell, index) => [HexSnakeGame.keyOf(cell), index]));
+      const neighborsByKey = new Map(AiState.cells.map(cell => [
         HexSnakeGame.keyOf(cell),
-        directions.map((_, direction) => HexSnakeGame.nextWrappedCell(cell, direction))
+        AiConfig.directions.map((_, direction) => HexSnakeGame.nextWrappedCell(cell, direction))
       ]));
-      const nearbyOneByKey = new Map(cells.map(cell => [
+      const nearbyOneByKey = new Map(AiState.cells.map(cell => [
         HexSnakeGame.keyOf(cell),
-        cells.filter(candidate => HexSnakeGame.hexDistance(candidate, cell) <= 1)
+        AiState.cells.filter(candidate => HexSnakeGame.hexDistance(candidate, cell) <= 1)
       ]));
-      const distances = cells.map((source, sourceIndex) => {
-        const row = new Uint16Array(cells.length);
+      const distances = AiState.cells.map((source, sourceIndex) => {
+        const row = new Uint16Array(AiState.cells.length);
         row.fill(65535);
         row[sourceIndex] = 0;
         const queue = [source];
         for (let index = 0; index < queue.length; index += 1) {
           const current = queue[index];
           const currentDistance = row[indexByKey.get(HexSnakeGame.keyOf(current))];
-          directions.forEach((_, direction) => {
+          AiConfig.directions.forEach((_, direction) => {
             const next = HexSnakeGame.nextWrappedCell(current, direction);
             const nextIndex = indexByKey.get(HexSnakeGame.keyOf(next));
             if (!Number.isInteger(nextIndex) || row[nextIndex] !== 65535) return;
@@ -134,12 +138,12 @@
 
     function nearbyCellsWithinOne(cell) {
       const cache = ensureWrappedDistanceBoardCache();
-      return cache?.nearbyOneByKey.get(HexSnakeGame.keyOf(cell)) || cells.filter(candidate => HexSnakeGame.hexDistance(candidate, cell) <= 1);
+      return cache?.nearbyOneByKey.get(HexSnakeGame.keyOf(cell)) || AiState.cells.filter(candidate => HexSnakeGame.hexDistance(candidate, cell) <= 1);
     }
 
     function neighborCellsFor(cell) {
       const cache = ensureWrappedDistanceBoardCache();
-      return cache?.neighborsByKey.get(HexSnakeGame.keyOf(cell)) || directions.map((_, direction) => HexSnakeGame.nextWrappedCell(cell, direction));
+      return cache?.neighborsByKey.get(HexSnakeGame.keyOf(cell)) || AiConfig.directions.map((_, direction) => HexSnakeGame.nextWrappedCell(cell, direction));
     }
 
     function nearbyOpenSpace(cell, occupied) {
@@ -147,8 +151,8 @@
     }
 
     function nearestFoodDistance(cell) {
-      if (!foods.length) return Number.POSITIVE_INFINITY;
-      return Math.min(...foods.map(food => wrappedDistance(cell, food)));
+      if (!AiState.foods.length) return Number.POSITIVE_INFINITY;
+      return Math.min(...AiState.foods.map(food => wrappedDistance(cell, food)));
     }
 
     function wrappedDistance(start, target) {
@@ -160,7 +164,7 @@
       const queue = [{ cell: start, distance: 0 }];
       for (let index = 0; index < queue.length; index += 1) {
         const current = queue[index];
-        for (let direction = 0; direction < directions.length; direction += 1) {
+        for (let direction = 0; direction < AiConfig.directions.length; direction += 1) {
           const next = HexSnakeGame.nextWrappedCell(current.cell, direction);
           const nextKey = HexSnakeGame.keyOf(next);
           if (visited.has(nextKey)) continue;
@@ -173,8 +177,8 @@
     }
 
     function nearestFoodFor(cell) {
-      if (!foods.length) return null;
-      return [...foods].sort((a, b) => wrappedDistance(cell, a) - wrappedDistance(cell, b))[0];
+      if (!AiState.foods.length) return null;
+      return [...AiState.foods].sort((a, b) => wrappedDistance(cell, a) - wrappedDistance(cell, b))[0];
     }
 
     function randomItem(items) {
@@ -264,7 +268,7 @@
     }
 
     function isHighAiDifficulty() {
-      return computerDifficulty === "high" || computerDifficulty === "extreme";
+      return AiState.computerDifficulty === "high" || AiState.computerDifficulty === "extreme";
     }
 
     async function loadAiStrategyFile(source, fallbackWeights, label) {
@@ -298,7 +302,7 @@
     const lobsterPalmStepMs = 36;
 
     function ultimateSetting(characterId, key, fallback) {
-      const value = attackUltimateBalance?.[characterId]?.[key];
+      const value = AiConfig.attackUltimateBalance?.[characterId]?.[key];
       return Number.isFinite(value) ? value : fallback;
     }
 
@@ -311,15 +315,15 @@
     }
 
     function shouldUseControlPadAttackDirection() {
-      return selectedAttackProfile === "big" && bigAttackUsesDrawnDirection(characterFor("player").id);
+      return AiState.selectedAttackProfile === "big" && bigAttackUsesDrawnDirection(AiUI.characterFor("player").id);
     }
 
     function defaultAiStrategyWeights() {
       return {
         movement: {
-          safePath: isHighAiDifficulty() ? 1.6 : computerDifficulty === "low" ? 0.9 : 1.2,
+          safePath: isHighAiDifficulty() ? 1.6 : AiState.computerDifficulty === "low" ? 0.9 : 1.2,
           leastDamage: isHighAiDifficulty() ? 1.3 : 1,
-          fastestArrival: computerDifficulty === "low" ? 1.3 : 1
+          fastestArrival: AiState.computerDifficulty === "low" ? 1.3 : 1
         },
         food: {
           fastestArrival: 1,
@@ -329,13 +333,13 @@
           opponentPreferred: isHighAiDifficulty() ? 1.4 : 0.35
         },
         skillAllocation: {
-          preferSmall: computerDifficulty === "low" ? 2.1 : isHighAiDifficulty() ? 0.45 : 1,
-          preferBig: isHighAiDifficulty() ? 2.1 : computerDifficulty === "low" ? 0.45 : 1
+          preferSmall: AiState.computerDifficulty === "low" ? 2.1 : isHighAiDifficulty() ? 0.45 : 1,
+          preferBig: isHighAiDifficulty() ? 2.1 : AiState.computerDifficulty === "low" ? 0.45 : 1
         },
         castTiming: {
           lethal: 3,
           nearFullEnergy: 0.75,
-          opponentDebuffed: computerDifficulty === "low" ? 0.4 : 1.25,
+          opponentDebuffed: AiState.computerDifficulty === "low" ? 0.4 : 1.25,
           opponentAlmostReady: isHighAiDifficulty() ? 1.2 : 0.65,
           nearOpponent: isHighAiDifficulty() ? 1.15 : 0.85,
           farOpponent: isHighAiDifficulty() ? 0.75 : 0.35
@@ -373,24 +377,24 @@
     }
 
     function aiProfileFor(owner) {
-      const character = characterFor(owner);
+      const character = AiUI.characterFor(owner);
       return aiProfiles[character.id] || { preferredFood: character.foodPreference };
     }
 
     function aiStrategyWeightsFor(owner) {
       if (!isHighAiDifficulty()) return defaultAiStrategyWeights();
-      const strategyWeightsByCharacter = computerDifficulty === "extreme"
+      const strategyWeightsByCharacter = AiState.computerDifficulty === "extreme"
         ? extremeAiStrategyWeightsByCharacter
         : highAiStrategyWeightsByCharacter;
-      return normalizeAiStrategyWeights(strategyWeightsByCharacter[characterFor(owner).id]);
+      return normalizeAiStrategyWeights(strategyWeightsByCharacter[AiUI.characterFor(owner).id]);
     }
 
     function ownerSnake(owner) {
-      return owner === "player" ? snake : computerSnake;
+      return owner === "player" ? AiState.snake : AiState.computerSnake;
     }
 
     function ownerStock(owner) {
-      return owner === "player" ? playerStock : computerStock;
+      return owner === "player" ? AiState.playerStock : AiState.computerStock;
     }
 
     function ownerHead(owner) {
@@ -399,21 +403,21 @@
 
     function arrivalTimeForDistance(owner, distance, now) {
       if (!Number.isFinite(distance)) return Number.POSITIVE_INFINITY;
-      const interval = moveIntervalFor(owner, now);
-      const baseInterval = Number.isFinite(baseStepMs) && baseStepMs > 0 ? baseStepMs : 1;
+      const interval = AiUI.moveIntervalFor(owner, now);
+      const baseInterval = Number.isFinite(AiConfig.baseStepMs) && AiConfig.baseStepMs > 0 ? AiConfig.baseStepMs : 1;
       return distance * ((Number.isFinite(interval) ? interval : baseInterval) / baseInterval);
     }
 
     function foodTypeIdsForValue(food) {
       const types = food?.types || [];
-      if (types.includes("black")) return foodTypes.map(type => type.id);
-      return types.filter(type => foodTypes.some(foodType => foodType.id === type));
+      if (types.includes("black")) return AiConfig.foodTypes.map(type => type.id);
+      return types.filter(type => AiConfig.foodTypes.some(foodType => foodType.id === type));
     }
 
     function foodExpectedStockGain(food) {
       const types = food?.types || [];
       if (types.includes("black")) return 1;
-      return types.length > 1 ? dualColorStockGain : singleColorStockGain;
+      return types.length > 1 ? AiConfig.dualColorStockGain : AiConfig.singleColorStockGain;
     }
 
     function foodGainPerType(food, normalizedTypes) {
@@ -423,14 +427,14 @@
     }
 
     function projectedAmmoAfterFood(owner, food) {
-      let ammo = ammoFor(owner);
-      let charge = ammoChargeFor(owner) + ((food?.types || []).includes("black") ? blackFoodEnergy : foodEnergy);
-      if (charge >= attackNeedTotal) {
-        if (ammo < maxAmmo) {
-          ammo = Math.min(maxAmmo, ammo + 1);
+      let ammo = AiUI.ammoFor(owner);
+      let charge = AiUI.ammoChargeFor(owner) + ((food?.types || []).includes("black") ? AiConfig.blackFoodEnergy : AiConfig.foodEnergy);
+      if (charge >= AiConfig.attackNeedTotal) {
+        if (ammo < AiConfig.maxAmmo) {
+          ammo = Math.min(AiConfig.maxAmmo, ammo + 1);
           charge = 0;
         } else {
-          charge = attackNeedTotal;
+          charge = AiConfig.attackNeedTotal;
         }
       }
       return { ammo, charge };
@@ -441,19 +445,19 @@
       const normalizedTypes = foodTypeIdsForValue(food);
       const gain = foodGainPerType(food, normalizedTypes);
       normalizedTypes.forEach(type => {
-        projected[type] = Math.min(maxFoodStock, (projected[type] || 0) + gain);
+        projected[type] = Math.min(AiConfig.maxFoodStock, (projected[type] || 0) + gain);
       });
       return projected;
     }
 
     function canAttackWithResources(stock, ammo, profile = "big") {
-      if (ammo < attackBombCost(profile)) return false;
-      const cost = attackFoodCost(profile);
+      if (ammo < AiUI.attackBombCost(profile)) return false;
+      const cost = AiUI.attackFoodCost(profile);
       if (profile === "small") {
-        const highest = foodTypes.reduce((best, type) => Math.max(best, stock[type.id] || 0), 0);
+        const highest = AiConfig.foodTypes.reduce((best, type) => Math.max(best, stock[type.id] || 0), 0);
         return highest >= cost;
       }
-      return foodTypes.every(type => (stock[type.id] || 0) >= cost);
+      return AiConfig.foodTypes.every(type => (stock[type.id] || 0) >= cost);
     }
 
     function foodResourceValueFor(owner, food) {
@@ -471,19 +475,19 @@
       const stockValue = normalizedTypes.reduce((sum, type) => {
         const before = stock[type] || 0;
         const gained = Math.max(0, (projectedStock[type] || 0) - before);
-        const roomRatio = Math.max(0, maxFoodStock - before) / Math.max(1, maxFoodStock);
-        const bigGap = Math.max(0, attackFoodCost("big") - before);
+        const roomRatio = Math.max(0, AiConfig.maxFoodStock - before) / Math.max(1, AiConfig.maxFoodStock);
+        const bigGap = Math.max(0, AiUI.attackFoodCost("big") - before);
         return sum + gained * (1 + roomRatio + (bigGap > 0 ? 0.85 : 0));
       }, 0);
-      const beforeAmmo = ammoFor(owner);
-      const beforeCharge = ammoChargeFor(owner);
+      const beforeAmmo = AiUI.ammoFor(owner);
+      const beforeCharge = AiUI.ammoChargeFor(owner);
       const bombGain = Math.max(0, projectedAmmo.ammo - beforeAmmo);
-      const chargeGain = Math.max(0, projectedAmmo.charge - beforeCharge) / Math.max(1, attackNeedTotal);
+      const chargeGain = Math.max(0, projectedAmmo.charge - beforeCharge) / Math.max(1, AiConfig.attackNeedTotal);
       const energyValue = bombGain * 2.2 + chargeGain * 1.4;
-      const smallReady = !canAttack(owner, "small") && canAttackWithResources(projectedStock, projectedAmmo.ammo, "small") ? 2.1 : 0;
-      const bigReady = !canAttack(owner, "big") && canAttackWithResources(projectedStock, projectedAmmo.ammo, "big") ? 3.2 : 0;
+      const smallReady = !AiUI.canAttack(owner, "small") && canAttackWithResources(projectedStock, projectedAmmo.ammo, "small") ? 2.1 : 0;
+      const bigReady = !AiUI.canAttack(owner, "big") && canAttackWithResources(projectedStock, projectedAmmo.ammo, "big") ? 3.2 : 0;
       const overflowPenalty = Math.max(0, expectedStockGain - actualStockGain) * 0.45
-        + (beforeAmmo >= maxAmmo && beforeCharge >= attackNeedTotal ? 0.9 : 0);
+        + (beforeAmmo >= AiConfig.maxAmmo && beforeCharge >= AiConfig.attackNeedTotal ? 0.9 : 0);
       const value = Math.max(0, 0.5 + stockValue + energyValue + smallReady + bigReady - overflowPenalty);
       if (cache && cacheKey) cache.foodResourceValues.set(cacheKey, value);
       return value;
@@ -494,11 +498,11 @@
     }
 
     function isNoviceComputer() {
-      return computerDifficulty === "novice";
+      return AiState.computerDifficulty === "novice";
     }
 
     function aiAvoidsOpponentBody() {
-      const ignoreBodyChance = { novice: 0.55, low: 0.35, medium: 0, high: 0, extreme: 0 }[computerDifficulty] ?? 0;
+      const ignoreBodyChance = { novice: 0.55, low: 0.35, medium: 0, high: 0, extreme: 0 }[AiState.computerDifficulty] ?? 0;
       return Math.random() >= ignoreBodyChance;
     }
 
@@ -511,48 +515,48 @@
     }
 
     function ownerStunUntil(owner) {
-      return owner === "player" ? playerStunUntil : computerStunUntil;
+      return owner === "player" ? AiState.playerStunUntil : AiState.computerStunUntil;
     }
 
     function ownerSlowUntil(owner) {
-      return owner === "player" ? playerSlowUntil : computerSlowUntil;
+      return owner === "player" ? AiState.playerSlowUntil : AiState.computerSlowUntil;
     }
 
     function ownerCollisionParalysis(owner) {
-      return owner === "player" ? playerCollisionParalysisMs : computerCollisionParalysisMs;
+      return owner === "player" ? AiState.playerCollisionParalysisMs : AiState.computerCollisionParalysisMs;
     }
 
     function ownerHp(owner) {
-      return owner === "player" ? playerHp : computerHp;
+      return owner === "player" ? AiState.playerHp : AiState.computerHp;
     }
 
     function isOwnerUnderground(owner, now) {
-      if (characterFor(owner).id !== "sandworm") return false;
-      const from = owner === "player" ? playerUndergroundFrom : computerUndergroundFrom;
-      const until = owner === "player" ? playerUndergroundUntil : computerUndergroundUntil;
+      if (AiUI.characterFor(owner).id !== "sandworm") return false;
+      const from = owner === "player" ? AiState.playerUndergroundFrom : AiState.computerUndergroundFrom;
+      const until = owner === "player" ? AiState.playerUndergroundUntil : AiState.computerUndergroundUntil;
       return Boolean(from && now >= from && now <= until);
     }
 
     function updateAiVisibilityMemory(now) {
-      if (snake && !isOwnerUnderground("player", now)) {
-        lastVisiblePlayerSnake = snake.map(segment => ({ ...segment }));
-        lastVisiblePlayerDir = dir;
+      if (AiState.snake && !isOwnerUnderground("player", now)) {
+        AiState.lastVisiblePlayerSnake = AiState.snake.map(segment => ({ ...segment }));
+        AiState.lastVisiblePlayerDir = AiState.dir;
       }
-      if (computerSnake && !isOwnerUnderground("computer", now)) {
-        lastVisibleComputerSnake = computerSnake.map(segment => ({ ...segment }));
-        lastVisibleComputerDir = computerDir;
+      if (AiState.computerSnake && !isOwnerUnderground("computer", now)) {
+        AiState.lastVisibleComputerSnake = AiState.computerSnake.map(segment => ({ ...segment }));
+        AiState.lastVisibleComputerDir = AiState.computerDir;
       }
     }
 
     function perceivedSnakeFor(observer, target, now) {
       if (!isOwnerUnderground(target, now)) return ownerSnake(target);
-      const remembered = target === "player" ? lastVisiblePlayerSnake : lastVisibleComputerSnake;
+      const remembered = target === "player" ? AiState.lastVisiblePlayerSnake : AiState.lastVisibleComputerSnake;
       return remembered.length ? remembered : ownerSnake(target).map(segment => ({ ...segment }));
     }
 
     function perceivedDirectionFor(target, now) {
-      if (!isOwnerUnderground(target, now)) return target === "player" ? nextDir : computerDir;
-      return target === "player" ? lastVisiblePlayerDir : lastVisibleComputerDir;
+      if (!isOwnerUnderground(target, now)) return target === "player" ? AiState.nextDir : AiState.computerDir;
+      return target === "player" ? AiState.lastVisiblePlayerDir : AiState.lastVisibleComputerDir;
     }
 
     function hasOpponentDebuff(owner, now) {
@@ -562,12 +566,12 @@
 
     function hasResourcePressure(owner) {
       const stock = ownerStock(owner);
-      const nearStockCap = foodTypes.some(type => stock[type.id] >= maxFoodStock - 2);
+      const nearStockCap = AiConfig.foodTypes.some(type => stock[type.id] >= AiConfig.maxFoodStock - 2);
       return nearStockCap || hasFullBombsAndNearFullEnergy(owner);
     }
 
     function hasFullBombsAndNearFullEnergy(owner) {
-      return ammoFor(owner) >= maxAmmo && ammoChargeFor(owner) >= attackNeedTotal - 1;
+      return AiUI.ammoFor(owner) >= AiConfig.maxAmmo && AiUI.ammoChargeFor(owner) >= AiConfig.attackNeedTotal - 1;
     }
 
     function strongestVisibleDamage(owner, profile, now) {
@@ -581,12 +585,12 @@
     }
 
     function shouldUseBigAttack(owner, now) {
-      if (!canAttack(owner, "big")) return false;
-      if (computerDifficulty === "low") {
+      if (!AiUI.canAttack(owner, "big")) return false;
+      if (AiState.computerDifficulty === "low") {
         const distance = HexSnakeGame.hexDistance(ownerHead(owner), perceivedSnakeFor(owner, opponentOf(owner), now)[0]);
-        return !canAttack(owner, "small") || hasResourcePressure(owner) || lateGameSkillPhase(owner, now) >= 0.86 || (distance <= 2 && Math.random() < 0.35) || Math.random() < 0.18;
+        return !AiUI.canAttack(owner, "small") || hasResourcePressure(owner) || lateGameSkillPhase(owner, now) >= 0.86 || (distance <= 2 && Math.random() < 0.35) || Math.random() < 0.18;
       }
-      if (computerDifficulty === "medium" || isHighAiDifficulty()) {
+      if (AiState.computerDifficulty === "medium" || isHighAiDifficulty()) {
         const lethal = strongestVisibleDamage(owner, "big", now) >= ownerHp(opponentOf(owner));
         return hasOpponentDebuff(owner, now) || lethal || hasResourcePressure(owner) || lateGameSkillPhase(owner, now) >= 0.78;
       }
@@ -594,12 +598,12 @@
     }
 
     function isLethalAttack(owner, profile, now) {
-      return canAttack(owner, profile) && strongestVisibleDamage(owner, profile, now) >= ownerHp(opponentOf(owner));
+      return AiUI.canAttack(owner, profile) && strongestVisibleDamage(owner, profile, now) >= ownerHp(opponentOf(owner));
     }
 
     function attackResourceCost(profile = "big") {
-      const foodMultiplier = profile === "small" ? 1 : foodTypes.length;
-      return attackFoodCost(profile) * foodMultiplier + attackBombCost(profile) * foodTypes.length;
+      const foodMultiplier = profile === "small" ? 1 : AiConfig.foodTypes.length;
+      return AiUI.attackFoodCost(profile) * foodMultiplier + AiUI.attackBombCost(profile) * AiConfig.foodTypes.length;
     }
 
     function clampAiRatio(value) {
@@ -608,20 +612,20 @@
 
     function lateGameSkillPhase(owner, now) {
       const stock = ownerStock(owner);
-      const bigFoodCost = attackFoodCost("big");
-      const averageStockRatio = foodTypes.reduce((sum, type) => sum + (stock[type.id] || 0), 0)
-        / Math.max(1, foodTypes.length * maxFoodStock);
-      const surplusRatio = foodTypes.reduce((sum, type) => sum + Math.max(0, (stock[type.id] || 0) - bigFoodCost), 0)
-        / Math.max(1, foodTypes.length * (maxFoodStock - bigFoodCost));
-      const bombReserveRatio = Math.max(0, ammoFor(owner) - attackBombCost("big"))
-        / Math.max(1, maxAmmo - attackBombCost("big"));
-      const cappedEnergyRatio = ammoFor(owner) >= maxAmmo
-        ? ammoChargeFor(owner) / Math.max(1, attackNeedTotal)
+      const bigFoodCost = AiUI.attackFoodCost("big");
+      const averageStockRatio = AiConfig.foodTypes.reduce((sum, type) => sum + (stock[type.id] || 0), 0)
+        / Math.max(1, AiConfig.foodTypes.length * AiConfig.maxFoodStock);
+      const surplusRatio = AiConfig.foodTypes.reduce((sum, type) => sum + Math.max(0, (stock[type.id] || 0) - bigFoodCost), 0)
+        / Math.max(1, AiConfig.foodTypes.length * (AiConfig.maxFoodStock - bigFoodCost));
+      const bombReserveRatio = Math.max(0, AiUI.ammoFor(owner) - AiUI.attackBombCost("big"))
+        / Math.max(1, AiConfig.maxAmmo - AiUI.attackBombCost("big"));
+      const cappedEnergyRatio = AiUI.ammoFor(owner) >= AiConfig.maxAmmo
+        ? AiUI.ammoChargeFor(owner) / Math.max(1, AiConfig.attackNeedTotal)
         : 0;
       const timeRatio = clampAiRatio((now - 30000) / 90000);
       const opponent = opponentOf(owner);
       const opponentSnake = perceivedSnakeFor(owner, opponent, now);
-      const opponentMaxHp = Math.max(1, maxHpForSnake(opponentSnake));
+      const opponentMaxHp = Math.max(1, AiUI.maxHpForSnake(opponentSnake));
       const opponentMissingHpRatio = clampAiRatio(1 - ownerHp(opponent) / opponentMaxHp);
       return clampAiRatio(
         averageStockRatio * 0.35
@@ -636,33 +640,33 @@
 
     function bigAttackReadiness(owner) {
       const stock = ownerStock(owner);
-      const bigFoodCost = attackFoodCost("big");
-      const stockReadiness = foodTypes.reduce((sum, type) => {
+      const bigFoodCost = AiUI.attackFoodCost("big");
+      const stockReadiness = AiConfig.foodTypes.reduce((sum, type) => {
         return sum + clampAiRatio((stock[type.id] || 0) / Math.max(1, bigFoodCost));
-      }, 0) / Math.max(1, foodTypes.length);
-      const weakestStockReadiness = foodTypes.reduce((best, type) => {
+      }, 0) / Math.max(1, AiConfig.foodTypes.length);
+      const weakestStockReadiness = AiConfig.foodTypes.reduce((best, type) => {
         return Math.min(best, clampAiRatio((stock[type.id] || 0) / Math.max(1, bigFoodCost)));
       }, 1);
-      const ammoReadiness = clampAiRatio((ammoFor(owner) + ammoChargeFor(owner) / Math.max(1, attackNeedTotal)) / Math.max(1, attackBombCost("big")));
+      const ammoReadiness = clampAiRatio((AiUI.ammoFor(owner) + AiUI.ammoChargeFor(owner) / Math.max(1, AiConfig.attackNeedTotal)) / Math.max(1, AiUI.attackBombCost("big")));
       return Math.min(ammoReadiness, weakestStockReadiness * 0.7 + stockReadiness * 0.3);
     }
 
     function shouldSaveSmallForBig(owner, now) {
-      if (!canAttack(owner, "small") || canAttack(owner, "big")) return false;
+      if (!AiUI.canAttack(owner, "small") || AiUI.canAttack(owner, "big")) return false;
       if (isLethalAttack(owner, "small", now)) return false;
       const stock = ownerStock(owner);
-      const bigFoodCost = attackFoodCost("big");
+      const bigFoodCost = AiUI.attackFoodCost("big");
       const readiness = bigAttackReadiness(owner);
       const preparationTime = clampAiRatio((now - 15000) / 45000);
-      const stockReadyForBig = foodTypes.every(type => (stock[type.id] || 0) >= bigFoodCost);
-      if (stockReadyForBig && ammoFor(owner) >= attackBombCost("small") && preparationTime >= 0.2) return true;
+      const stockReadyForBig = AiConfig.foodTypes.every(type => (stock[type.id] || 0) >= bigFoodCost);
+      if (stockReadyForBig && AiUI.ammoFor(owner) >= AiUI.attackBombCost("small") && preparationTime >= 0.2) return true;
       return readiness >= 0.72 && (preparationTime >= 0.25 || lateGameSkillPhase(owner, now) >= 0.22);
     }
 
     function skillPhaseBias(owner, profile, now) {
       const phase = lateGameSkillPhase(owner, now);
       if (profile === "small") {
-        return (1 - phase) * 1.8 - (canAttack(owner, "big") ? phase * 2.8 : 0);
+        return (1 - phase) * 1.8 - (AiUI.canAttack(owner, "big") ? phase * 2.8 : 0);
       }
       return phase * 5.2 - (1 - phase) * 1.8 + (hasResourcePressure(owner) ? 1 : 0);
     }
@@ -670,10 +674,10 @@
     function opponentAlmostReady(owner) {
       const opponent = opponentOf(owner);
       const stock = ownerStock(opponent);
-      if (canAttack(opponent, "small") || canAttack(opponent, "big")) return true;
-      const highestType = highestStockFoodType(stock);
-      const stockClose = highestType && (stock[highestType.id] || 0) >= Math.max(0, attackFoodCost("small") - 1);
-      const ammoClose = ammoFor(opponent) >= attackBombCost("small") || ammoChargeFor(opponent) >= attackNeedTotal - 1;
+      if (AiUI.canAttack(opponent, "small") || AiUI.canAttack(opponent, "big")) return true;
+      const highestType = AiUI.highestStockFoodType(stock);
+      const stockClose = highestType && (stock[highestType.id] || 0) >= Math.max(0, AiUI.attackFoodCost("small") - 1);
+      const ammoClose = AiUI.ammoFor(opponent) >= AiUI.attackBombCost("small") || AiUI.ammoChargeFor(opponent) >= AiConfig.attackNeedTotal - 1;
       return stockClose || ammoClose;
     }
 
@@ -721,7 +725,7 @@
       const maxDamageTarget = bestBodyClusterTarget(targetSnake, stats) || targetHead;
       const weights = aiStrategyWeightsFor(owner).castTarget;
       const nearestFood = nearestFoodFor(targetHead);
-      if (profile === "big" && characterFor(owner).id === "moray") {
+      if (profile === "big" && AiUI.characterFor(owner).id === "moray") {
         const plan = chooseMorayLineAttackPlan(owner, now);
         const target = plan.target || targetHead;
         const weight = Math.max(weights.targetHead, weights.bodyCluster, nearestFood ? weights.targetNearestFood : 0);
@@ -773,11 +777,11 @@
         ? "big"
         : lethalProfiles.sort((a, b) => attackResourceCost(a) - attackResourceCost(b))[0];
       if (lethal) return lethal;
-      if (computerDifficulty === "low" && shouldUseBigAttack(owner, now)) return "big";
+      if (AiState.computerDifficulty === "low" && shouldUseBigAttack(owner, now)) return "big";
 
       if (isHighAiDifficulty()) {
         const available = ["small", "big"]
-          .filter(profile => canAttack(owner, profile))
+          .filter(profile => AiUI.canAttack(owner, profile))
           .filter(profile => profile !== "small" || !shouldSaveSmallForBig(owner, now));
         if (!available.length) return null;
         const scored = available.map(profile => {
@@ -791,20 +795,20 @@
 
       if (shouldUseBigAttack(owner, now)) return "big";
       if (shouldSaveSmallForBig(owner, now)) return null;
-      if (canAttack(owner, "small")) return "small";
-      if (computerDifficulty === "low" && canAttack(owner, "big")) return "big";
+      if (AiUI.canAttack(owner, "small")) return "small";
+      if (AiState.computerDifficulty === "low" && AiUI.canAttack(owner, "big")) return "big";
       return null;
     }
 
     function cellsWithinDistance(origin, minDistance, maxDistance) {
-      return cells.filter(cell => {
+      return AiState.cells.filter(cell => {
         const distance = HexSnakeGame.hexDistance(cell, origin);
         return distance >= minDistance && distance <= maxDistance;
       });
     }
 
-    function attackTargetDamage(targetSnake, target, radius, damageScale) {
-      return HexSnakeGame.damageSnake(targetSnake, target, radius, damageScale);
+    function attackTargetDamage(targetSnake, target, impactRadius, damageScale) {
+      return HexSnakeGame.damageSnake(targetSnake, target, impactRadius, damageScale);
     }
 
     function bestBodyClusterTarget(targetSnake, stats) {
@@ -817,7 +821,7 @@
           seen.add(key);
           return true;
         });
-      return (candidates.length ? candidates : cells).sort((a, b) => {
+      return (candidates.length ? candidates : AiState.cells).sort((a, b) => {
         const damageDiff = attackTargetDamage(targetSnake, b, stats.radius, stats.damage) - attackTargetDamage(targetSnake, a, stats.radius, stats.damage);
         if (damageDiff) return damageDiff;
         return wrappedDistance(targetSnake[0], a) - wrappedDistance(targetSnake[0], b);
@@ -873,7 +877,7 @@
       const idealDirection = directionForLongestBodyAxis(targetSnake, fallbackDirection);
       let best = null;
       targetSnake.forEach((origin, originIndex) => {
-        directions.forEach((_, direction) => {
+        AiConfig.directions.forEach((_, direction) => {
           const stats = morayLineCandidateStats(targetSnake, HexSnakeGame.boardLineThrough(origin, direction), lineShape);
           const candidate = {
             target: { q: origin.q, r: origin.r },
@@ -893,7 +897,7 @@
     }
 
     function morayFieldDurationMs() {
-      return baseAttackDelayMs * smallAttackDelayScale * Math.max(1, ultimateSetting("moray", "durationBaseTicks", 4));
+      return AiConfig.baseAttackDelayMs * AiConfig.smallAttackDelayScale * Math.max(1, ultimateSetting("moray", "durationBaseTicks", 4));
     }
 
     function morayFieldTickMs(stock) {
@@ -911,7 +915,7 @@
       const lineShape = HexSnakeGame.bandShapeFromTotalWidth(HexSnakeGame.attackStats(ownerStock(owner), "small").radius);
       const stats = morayLineCandidateStats(targetSnake, HexSnakeGame.boardLineThrough(plan.target, plan.direction), lineShape);
       const damageMultiplier = ultimateSetting("moray", "damageMultiplier", 0.24);
-      return stats.damageScore * attackDamage(ownerStock(owner), "big") * damageMultiplier * morayFieldDamageTicks(ownerStock(owner));
+      return stats.damageScore * AiUI.attackDamage(ownerStock(owner), "big") * damageMultiplier * morayFieldDamageTicks(ownerStock(owner));
     }
 
     function chooseAiAttackDirection(owner, target, now) {
@@ -945,7 +949,7 @@
       const targetSnake = perceivedSnakeFor(owner, opponent, now);
       const targetHead = targetSnake[0];
       const stats = HexSnakeGame.attackStats(ownerStock(owner), profile);
-      if (profile === "big" && characterFor(owner).id === "moray") return chooseMorayLineAttackPlan(owner, now).target;
+      if (profile === "big" && AiUI.characterFor(owner).id === "moray") return chooseMorayLineAttackPlan(owner, now).target;
 
       if (isHighAiDifficulty()) {
         const maxDamageTarget = bestBodyClusterTarget(targetSnake, stats) || targetHead;
@@ -954,7 +958,7 @@
         return { ...(best?.target || targetHead) };
       }
 
-      if (computerDifficulty === "medium") {
+      if (AiState.computerDifficulty === "medium") {
         const nearTarget = cellsWithinDistance(targetHead, 0, 1);
         return { ...randomItem(nearTarget.length ? nearTarget : [targetHead]) };
       }
@@ -964,7 +968,7 @@
     }
 
     function shortestFoodDistance(start, occupied) {
-      const foodKeys = new Set(foods.map(HexSnakeGame.keyOf));
+      const foodKeys = new Set(AiState.foods.map(HexSnakeGame.keyOf));
       const visited = new Set([HexSnakeGame.keyOf(start)]);
       const queue = [{ cell: start, distance: 0 }];
 
@@ -1014,7 +1018,7 @@
       if (HexSnakeGame.isOwnerDamageImmune(owner, now)) return 0;
       const opponent = opponentOf(owner);
       let damage = 0;
-      projectiles.forEach(projectile => {
+      AiState.projectiles.forEach(projectile => {
         if (projectile.owner !== opponent) return;
         if (!isProjectileVisibleTo(owner, projectile, now)) return;
         if (projectile.kind === "line" || projectile.kind === "lineHazardSetup") {
@@ -1027,7 +1031,7 @@
         const target = projectile.explosionTarget || projectile.target;
         if (target) damage += (projectile.damage || 0) * HexSnakeGame.circleDamageMultiplier(HexSnakeGame.hexDistance(cell, target), projectile.radius || 0);
       });
-      hazards.forEach(hazard => {
+      AiState.hazards.forEach(hazard => {
         if (hazard.owner !== opponent || now > hazard.endAt) return;
         if (hazard.kind === "radiation") damage += (hazard.damage || 0) * HexSnakeGame.circleDamageMultiplier(HexSnakeGame.hexDistance(cell, hazard.target), hazard.radius || 0);
         if (hazard.kind !== "radiation" && hazard.cells?.length) {
@@ -1045,11 +1049,11 @@
       if (!cache) return null;
       if (cache.damageMaps.has(owner)) return cache.damageMaps.get(owner);
       const opponent = opponentOf(owner);
-      const hasVisibleThreat = projectiles.some(projectile => projectile.owner === opponent && isProjectileVisibleTo(owner, projectile, now))
-        || hazards.some(hazard => hazard.owner === opponent && now <= hazard.endAt);
+      const hasVisibleThreat = AiState.projectiles.some(projectile => projectile.owner === opponent && isProjectileVisibleTo(owner, projectile, now))
+        || AiState.hazards.some(hazard => hazard.owner === opponent && now <= hazard.endAt);
       const damageMap = new Map();
       if (hasVisibleThreat) {
-        cells.forEach(cell => {
+        AiState.cells.forEach(cell => {
           const damage = expectedDamageAtUncached(owner, cell, now);
           if (damage > 0) damageMap.set(HexSnakeGame.keyOf(cell), damage);
         });
@@ -1068,7 +1072,7 @@
       if (projectile.kind === "lobsterPalmSetup") return false;
       if (projectile.owner === observer) return true;
       if (!projectile.sandwormHidden) return true;
-      return projectile.impactAt - now <= sandwormRevealBeforeImpactMs;
+      return projectile.impactAt - now <= AiConfig.sandwormRevealBeforeImpactMs;
     }
 
     function foodValueFor(owner, opponent, food, now) {
@@ -1083,8 +1087,8 @@
       const normalizedTypes = foodTypeIdsForValue(food);
       const ownStock = ownerStock(owner);
       const opponentStock = ownerStock(opponent);
-      const ownDeficit = normalizedTypes.reduce((sum, type) => sum + maxFoodStock - (ownStock[type] || 0), 0) / Math.max(1, normalizedTypes.length);
-      const opponentDeficit = normalizedTypes.reduce((sum, type) => sum + maxFoodStock - (opponentStock[type] || 0), 0) / Math.max(1, normalizedTypes.length);
+      const ownDeficit = normalizedTypes.reduce((sum, type) => sum + AiConfig.maxFoodStock - (ownStock[type] || 0), 0) / Math.max(1, normalizedTypes.length);
+      const opponentDeficit = normalizedTypes.reduce((sum, type) => sum + AiConfig.maxFoodStock - (opponentStock[type] || 0), 0) / Math.max(1, normalizedTypes.length);
       const preferred = foodMatchesPreference(profile.preferredFood, food);
       const opponentPreferred = foodMatchesPreference(opponentProfile.preferredFood, food);
       if (isHighAiDifficulty()) {
@@ -1136,7 +1140,7 @@
 
     function alternativeFoodArrivals(owner, head, contestedFood, now) {
       const contestedKey = HexSnakeGame.keyOf(contestedFood);
-      return foods
+      return AiState.foods
         .filter(food => HexSnakeGame.keyOf(food) !== contestedKey)
         .map(food => ({
           key: HexSnakeGame.keyOf(food),
@@ -1188,35 +1192,35 @@
 
     function setAiFoodTarget(owner, nextTargetKey, now) {
       if (owner === "player") {
-        if (nextTargetKey !== playerFoodTargetKey) playerFoodTargetAt = nextTargetKey ? now : 0;
-        playerFoodTargetKey = nextTargetKey;
+        if (nextTargetKey !== AiState.playerFoodTargetKey) AiState.playerFoodTargetAt = nextTargetKey ? now : 0;
+        AiState.playerFoodTargetKey = nextTargetKey;
       } else {
-        if (nextTargetKey !== computerFoodTargetKey) computerFoodTargetAt = nextTargetKey ? now : 0;
-        computerFoodTargetKey = nextTargetKey;
+        if (nextTargetKey !== AiState.computerFoodTargetKey) AiState.computerFoodTargetAt = nextTargetKey ? now : 0;
+        AiState.computerFoodTargetKey = nextTargetKey;
       }
     }
 
     function shouldAbandonFoodTarget(owner, opponent, food, now, lockedScore, bestScore, targetAge) {
       if (!isHighAiDifficulty()) return false;
       const occupied = movementOccupiedSet(owner, opponent, now);
-      const reachable = reachableSpace(food, occupied, deadEndMinSpace);
+      const reachable = reachableSpace(food, occupied, AiConfig.deadEndMinSpace);
       const expectedDamage = expectedDamageAt(owner, food, now);
       const opponentAdvantage = foodRaceAdvantage(owner, opponent, food, now);
       return expectedDamage >= ownerHp(owner)
-        || reachable < deadEndMinSpace
+        || reachable < AiConfig.deadEndMinSpace
         || opponentAdvantage > 0.45
         || (targetAge >= 750 && bestScore > lockedScore + 2.25);
     }
 
     function chooseAiMoveTarget(owner, opponent, now) {
       const perceivedOpponent = perceivedSnakeFor(owner, opponent, now);
-      if (!foods.length) return perceivedOpponent[0];
-      const targetKey = owner === "player" ? playerFoodTargetKey : computerFoodTargetKey;
-      const targetAt = owner === "player" ? playerFoodTargetAt : computerFoodTargetAt;
+      if (!AiState.foods.length) return perceivedOpponent[0];
+      const targetKey = owner === "player" ? AiState.playerFoodTargetKey : AiState.computerFoodTargetKey;
+      const targetAt = owner === "player" ? AiState.playerFoodTargetAt : AiState.computerFoodTargetAt;
       const staleTarget = targetKey && Number.isFinite(targetAt) && now - targetAt >= 20000 ? targetKey : null;
-      const choices = foods.filter(food => HexSnakeGame.keyOf(food) !== staleTarget);
-      const filteredChoices = filterUnsafeFoodTargets(owner, opponent, choices.length ? choices : foods, now);
-      const targetPool = filterContestedFoodTargets(owner, opponent, filteredChoices.length ? filteredChoices : choices.length ? choices : foods, now);
+      const choices = AiState.foods.filter(food => HexSnakeGame.keyOf(food) !== staleTarget);
+      const filteredChoices = filterUnsafeFoodTargets(owner, opponent, choices.length ? choices : AiState.foods, now);
+      const targetPool = filterContestedFoodTargets(owner, opponent, filteredChoices.length ? filteredChoices : choices.length ? choices : AiState.foods, now);
       if (!targetPool.length) {
         setAiFoodTarget(owner, null, now);
         return perceivedOpponent[0];
@@ -1253,19 +1257,19 @@
         food,
         opponentAdvantage: foodRaceAdvantage(owner, opponent, food, now),
         expectedDamage: expectedDamageAt(owner, food, now),
-        reachable: reachableSpace(food, occupied, deadEndMinSpace)
+        reachable: reachableSpace(food, occupied, AiConfig.deadEndMinSpace)
       }));
       const maxOpponentAdvantage = Math.max(0, ...withRace.map(row => row.opponentAdvantage));
       const filtered = withRace
         .filter(row => !isHighAiDifficulty() || row.expectedDamage < ownerHp(owner))
         .filter(row => !(maxOpponentAdvantage > 0 && row.opponentAdvantage === maxOpponentAdvantage))
-        .filter(row => row.reachable >= deadEndMinSpace)
+        .filter(row => row.reachable >= AiConfig.deadEndMinSpace)
         .map(row => row.food);
       return filtered.length ? filtered : candidateFoods;
     }
 
     function canTurnForSnake(snakeParts, currentDirection, nextDirection) {
-      return snakeParts.length < 2 || (nextDirection + 3) % directions.length !== currentDirection;
+      return snakeParts.length < 2 || (nextDirection + 3) % AiConfig.directions.length !== currentDirection;
     }
 
     function movementOccupiedSetForSnake(owner, opponent, snakeParts, now) {
@@ -1280,7 +1284,7 @@
       const cache = activeCacheFor(owner, now);
       const cacheKey = HexSnakeGame.keyOf(target);
       if (cache?.targetBenefits.has(cacheKey)) return cache.targetBenefits.get(cacheKey);
-      const targetFood = foods.find(food => HexSnakeGame.keyOf(food) === HexSnakeGame.keyOf(target));
+      const targetFood = AiState.foods.find(food => HexSnakeGame.keyOf(food) === HexSnakeGame.keyOf(target));
       const value = targetFood ? Math.min(20, foodResourceValueFor(owner, targetFood)) : 0;
       if (cache) cache.targetBenefits.set(cacheKey, value);
       return value;
@@ -1310,7 +1314,7 @@
       const expectedDamage = expectedDamageAt(owner, next, now);
       const reachable = reachableSpace(next, occupied, 10);
       const trapRisk = Math.max(0, 5 - reachable);
-      const deadEnd = reachableSpace(next, occupied, deadEndMinSpace) < deadEndMinSpace;
+      const deadEnd = reachableSpace(next, occupied, AiConfig.deadEndMinSpace) < AiConfig.deadEndMinSpace;
       const lethalThreat = expectedDamage >= ownerHp(owner);
       const weights = aiStrategyWeightsFor(owner).movement;
       const etaThreat = opponentEtaThreatForCell(owner, opponent, snakeParts[0], next, opponentSnake[0], now);
@@ -1343,7 +1347,7 @@
     }
 
     function movementFoodKeySet() {
-      return new Set(foods.map(HexSnakeGame.keyOf));
+      return new Set(AiState.foods.map(HexSnakeGame.keyOf));
     }
 
     function advanceMovementSnake(snakeParts, option, foodKeys) {
@@ -1354,12 +1358,12 @@
       } else {
         nextSnake.pop();
       }
-      return { snake: nextSnake, foodKeys: nextFoodKeys };
+      return { snakeParts: nextSnake, foodKeys: nextFoodKeys };
     }
 
     function terminalMobilityPenalty(owner, opponent, snakeParts, currentDirection, target, opponentSnake, opponentThreat, now, distanceToTarget) {
       const occupied = movementOccupiedSetForSnake(owner, opponent, snakeParts, now);
-      const options = directions
+      const options = AiConfig.directions
         .map((_, candidate) => {
           if (!canTurnForSnake(snakeParts, currentDirection, candidate)) return null;
           return movementOptionForState(owner, opponent, snakeParts, currentDirection, candidate, target, occupied, opponentSnake, opponentThreat, now, distanceToTarget);
@@ -1375,7 +1379,7 @@
     function lookaheadMovementScore(owner, opponent, firstOption, target, opponentSnake, opponentThreat, now, distanceToTarget) {
       const firstStep = advanceMovementSnake(ownerSnake(owner), firstOption, movementFoodKeySet());
       let beam = [{
-        snake: firstStep.snake,
+        snakeParts: firstStep.snakeParts,
         direction: firstOption.direction,
         foodKeys: firstStep.foodKeys,
         score: firstOption.tacticalValue + movementHardPenalty(firstOption),
@@ -1385,13 +1389,13 @@
       for (let depth = 1; depth < aiLookaheadDepth; depth += 1) {
         const expanded = [];
         beam.forEach(row => {
-          const occupied = movementOccupiedSetForSnake(owner, opponent, row.snake, now);
-          directions.forEach((_, candidate) => {
-            if (!canTurnForSnake(row.snake, row.direction, candidate)) return;
-            const option = movementOptionForState(owner, opponent, row.snake, row.direction, candidate, target, occupied, opponentSnake, opponentThreat, now, distanceToTarget);
-            const nextStep = advanceMovementSnake(row.snake, option, row.foodKeys);
+          const occupied = movementOccupiedSetForSnake(owner, opponent, row.snakeParts, now);
+          AiConfig.directions.forEach((_, candidate) => {
+            if (!canTurnForSnake(row.snakeParts, row.direction, candidate)) return;
+            const option = movementOptionForState(owner, opponent, row.snakeParts, row.direction, candidate, target, occupied, opponentSnake, opponentThreat, now, distanceToTarget);
+            const nextStep = advanceMovementSnake(row.snakeParts, option, row.foodKeys);
             expanded.push({
-              snake: nextStep.snake,
+              snakeParts: nextStep.snakeParts,
               direction: option.direction,
               foodKeys: nextStep.foodKeys,
               score: row.score + row.discount * (option.tacticalValue + movementHardPenalty(option)),
@@ -1405,7 +1409,7 @@
       }
 
       return Math.min(...beam.map(row => (
-        row.score + row.discount * terminalMobilityPenalty(owner, opponent, row.snake, row.direction, target, opponentSnake, opponentThreat, now, distanceToTarget)
+        row.score + row.discount * terminalMobilityPenalty(owner, opponent, row.snakeParts, row.direction, target, opponentSnake, opponentThreat, now, distanceToTarget)
       )));
     }
 
@@ -1413,7 +1417,7 @@
       const opponent = opponentOf(owner);
       return withAiDecisionCache(owner, opponent, now, () => withAiPerf("chooseAiDirection", () => {
         const ownSnake = ownerSnake(owner);
-        const currentDirection = owner === "player" ? dir : computerDir;
+        const currentDirection = owner === "player" ? AiState.dir : AiState.computerDir;
         const opponentSnake = perceivedSnakeFor(owner, opponent, now);
         const opponentDirection = perceivedDirectionFor(opponent, now);
         const opponentThreat = HexSnakeGame.nextWrappedCell(opponentSnake[0], opponentDirection);
@@ -1430,7 +1434,7 @@
         };
         const options = [];
 
-        directions.forEach((_, candidate) => {
+        AiConfig.directions.forEach((_, candidate) => {
           if (!HexSnakeGame.canOwnerTurn(owner, candidate)) return;
           options.push(movementOptionForState(owner, opponent, ownSnake, currentDirection, candidate, target, occupied, opponentSnake, opponentThreat, now, distanceToTarget));
         });
@@ -1451,7 +1455,7 @@
           const bValue = Number.isFinite(b.tacticalValue) ? b.tacticalValue : b.fallbackValue;
           return aValue - bValue;
         });
-        const randomChance = { high: 0, extreme: 0, medium: 0.3, low: 0.52, novice: 0.52 }[computerDifficulty];
+        const randomChance = { high: 0, extreme: 0, medium: 0.3, low: 0.52, novice: 0.52 }[AiState.computerDifficulty];
 
         if (Math.random() < randomChance) return randomItem(sortableOptions).direction;
         return sortableOptions[0].direction;
@@ -1471,14 +1475,14 @@
       const profile = chooseAiAttackProfile("computer", now);
       if (!profile) return;
       const target = chooseAiAttackTarget("computer", profile, now);
-      const computerCharacter = characterFor("computer");
+      const computerCharacter = AiUI.characterFor("computer");
       const morayLinePlan = profile === "big" && computerCharacter.id === "moray"
         ? chooseMorayLineAttackPlan("computer", now)
         : null;
       const attackTarget = morayLinePlan?.target || target;
       const options = profile === "big" ? {
         aimDirection: morayLinePlan?.direction ?? chooseAiAttackDirection("computer", attackTarget, now),
-        aimOrigin: computerCharacter.id === "moray" ? attackTarget : computerSnake[0]
+        aimOrigin: computerCharacter.id === "moray" ? attackTarget : AiState.computerSnake[0]
       } : {};
       if (HexSnakeGame.launchAttack("computer", attackTarget, now, profile, options)) {
         HexSnakeGame.setStatus(profile === "small" ? "P2 施放小招。" : "P2 施放大招，2 秒後落地。");
@@ -1498,14 +1502,14 @@
       const profile = chooseAiAttackProfile("player", now);
       if (!profile) return;
       const target = chooseAiAttackTarget("player", profile, now);
-      const playerCharacter = characterFor("player");
+      const playerCharacter = AiUI.characterFor("player");
       const morayLinePlan = profile === "big" && playerCharacter.id === "moray"
         ? chooseMorayLineAttackPlan("player", now)
         : null;
       const attackTarget = morayLinePlan?.target || target;
       const options = profile === "big" ? {
         aimDirection: morayLinePlan?.direction ?? chooseAiAttackDirection("player", attackTarget, now),
-        aimOrigin: playerCharacter.id === "moray" ? attackTarget : snake[0]
+        aimOrigin: playerCharacter.id === "moray" ? attackTarget : AiState.snake[0]
       } : {};
       if (HexSnakeGame.launchAttack("player", attackTarget, now, profile, options)) HexSnakeGame.flashAttackButton(profile, 150);
     }

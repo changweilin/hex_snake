@@ -582,6 +582,9 @@ Object.defineProperties(HexSnakeState.config, {
   attackNeedTotal: {
     get: () => attackNeedTotal,
   },
+  attackUltimateBalance: {
+    get: () => attackUltimateBalance,
+  },
   attackSlowMs: {
     get: () => attackSlowMs,
   },
@@ -638,6 +641,15 @@ Object.defineProperties(HexSnakeState.config, {
   },
   foodTypeById: {
     get: () => foodTypeById,
+  },
+  blackFoodEnergy: {
+    get: () => blackFoodEnergy,
+  },
+  dualColorStockGain: {
+    get: () => dualColorStockGain,
+  },
+  foodEnergy: {
+    get: () => foodEnergy,
   },
   foodTypes: {
     get: () => foodTypes,
@@ -728,6 +740,9 @@ Object.defineProperties(HexSnakeState.config, {
   },
   sandwormRevealBeforeImpactMs: {
     get: () => sandwormRevealBeforeImpactMs,
+  },
+  singleColorStockGain: {
+    get: () => singleColorStockGain,
   },
 });
 
@@ -1391,6 +1406,12 @@ const hudFrameIntervalMs = 100;
 const replayRecordCheckIntervalMs = 100;
 let lastHudFrameAt = -Infinity;
 let lastReplayRecordCheckAt = -Infinity;
+
+Object.defineProperties(HexSnakeState.config, {
+  deadEndMinSpace: {
+    get: () => deadEndMinSpace,
+  },
+});
 
 Object.defineProperties(HexSnakeState.game, {
   best: {
@@ -3989,6 +4010,7 @@ function formatTime(ms) {
 }
 
 Object.assign(HexSnakeUI, {
+  ammoChargeFor,
   ammoFor,
   attackBombCost,
   attackCooldownRemainingMs,
