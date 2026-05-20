@@ -7,3 +7,5 @@ const HexSnakeState = {
   replay: {},
   ui: {}
 };
+
+const HexSnakeUI = {};

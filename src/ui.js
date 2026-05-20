@@ -3077,6 +3077,42 @@ function buildResourceHud() {
     });
 }
 
+Object.assign(HexSnakeUI, {
+  applyPortraitCharacter,
+  buildCharacterStage,
+  buildResourceHud,
+  buildRulesContent,
+  clearLogoTransition,
+  closePortraitLightbox,
+  closeRulesModal,
+  finishTutorial,
+  hideCharacterStage,
+  isLogoTransitionActive,
+  isTutorialOpen,
+  moveTutorial,
+  openPortraitLightbox,
+  openRulesModal,
+  playStartLogoCountdown,
+  renderIntroPortraits,
+  renderWinnerPortrait,
+  selectPortraitOwner,
+  setCharacterStageOverlayMode,
+  setFighterPose,
+  setLastResultShareData,
+  setOverlayChromeVisible,
+  setResultShareStatus,
+  shiftPortraitLightbox,
+  shiftPortraitVariantMode,
+  shouldShowTutorial,
+  showAttackCallout,
+  showCharacterStage,
+  showLogoTransition,
+  showResultCallout,
+  showStatusCallout,
+  showTutorial,
+  updateResultSharePanel,
+});
+
 function emptyStock() {
   return Object.fromEntries(foodTypes.map((type) => [type.id, 0]));
 }
