@@ -132,7 +132,7 @@ async function assertCriticalControls(page, profile) {
     ["#rulesButton", "rules button", 34],
     ["#settingsReplayButton", "replay button", 34],
     ["#statsButton", "stats button", 34],
-    ["#gmToggle", "GM button", 34]
+    ["#networkToggle", "LAN button", 34]
   ];
 
   for (const [selector, label] of containers) {
@@ -167,6 +167,14 @@ async function exerciseSettingsControls(page) {
     timeout: actionTimeoutMs
   });
   console.log("ok - settings toggles update mobile control and performance state");
+  await page.locator('#settingsContent [data-settings-page-button="gm"]').click({ timeout: actionTimeoutMs });
+  await page.locator("#gmContent").waitFor({ state: "visible", timeout: actionTimeoutMs });
+  const gmPageTab = await elementBox(page, '#gmContent [data-settings-page-button="gm"]');
+  assertWithinViewport(gmPageTab, page.viewportSize(), "GM page tab");
+  assertTapTarget(gmPageTab, "GM page tab", 24);
+  await page.locator("#gmCloseButton").click({ timeout: actionTimeoutMs });
+  await page.locator("#gmContent").waitFor({ state: "hidden", timeout: actionTimeoutMs });
+  console.log("ok - GM settings page opens from settings tabs");
 }
 
 async function exercisePointerCancel(page) {

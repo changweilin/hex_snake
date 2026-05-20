@@ -3404,23 +3404,42 @@
     .settings-page-bar,
     button.settings-page-bar {
       width: 34px;
-      height: 6px;
-      min-height: 6px;
+      height: 28px;
+      min-height: 28px;
       padding: 0;
       border: 0;
       border-radius: 999px;
-      background: rgba(148, 163, 184, 0.42);
+      background: transparent;
       box-shadow: none;
       opacity: 0.72;
-      transition: width 160ms ease, background 160ms ease, opacity 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+      position: relative;
+      transition: width 160ms ease, opacity 160ms ease, transform 160ms ease;
+    }
+
+    .settings-page-bar::before,
+    button.settings-page-bar::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 50%;
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.42);
+      transform: translateY(-50%);
+      transition: background 160ms ease, box-shadow 160ms ease;
     }
 
     .settings-page-bar.is-active,
     button.settings-page-bar.is-active {
       width: 48px;
+      opacity: 1;
+    }
+
+    .settings-page-bar.is-active::before,
+    button.settings-page-bar.is-active::before {
       background: #f59e0b;
       box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.16);
-      opacity: 1;
     }
 
     .settings-page-bar:hover,

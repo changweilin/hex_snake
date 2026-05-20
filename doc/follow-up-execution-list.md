@@ -1,6 +1,6 @@
 # Follow-up Execution List
 
-更新日期：2026-05-09（Asia/Taipei）
+更新日期：2026-05-20（Asia/Taipei）
 
 這份清單以未完成事項為主。剛完成的 P0 可以短期保留狀態，下一輪整理時再移除；平衡與 AI 判斷請改以最新 `reports/` 輸出或重新執行模擬結果為準。
 
@@ -37,8 +37,8 @@
   - 範圍：完成 target-vs-baseline quick profile 產物、補 README/SOP 導覽、整理可讀報表。
   - 目標：讓策略訓練、驗證、套用與報表判讀能從專案根目錄一路追到 `doc/strategy-optimization-sop.md` 與 `reports/`。
   - 驗收：輸出目錄包含 `baseline-cross.*`、`best-cross.*`、`comparison.md`、`manifest.json`；README 文件導覽列出策略最佳化 SOP；`comparison.md` 能清楚列出每個角色的 marginal delta。
-  - 狀態：進行中；README 已補 `doc/strategy-optimization-sop.md` 與 dashboard 指令導覽；`reports/dashboard.html` 已重新產生；完整 overnight target-vs-baseline 訓練正在 `reports/strategy-full-overnight-cem-shortlist-bg-20260509-114019/` 執行，尚未產生最終 `manifest.json`。
-  - 下一步：等待該 run 完成後檢查 `manifest.json`、`comparison.md`、`baseline-cross.*`、`best-cross.*`，再執行 `npm.cmd run reports:dashboard`。
+  - 狀態：完成；overnight target-vs-baseline run 已結束並封存於 `reports/archive/strategy-full-overnight-cem-shortlist-bg-20260509-114019/`，包含 `manifest.json`、`comparison.md`、`baseline-cross.*` 與 `best-cross.*`；`comparison.md` 顯示 optimized target-vs-field 50.8%，較 baseline 49.8% 增加 1.0%。`npm.cmd run reports:dashboard` 已於 2026-05-20 重新產生 `reports/dashboard.html`。
+  - 下一步：若要套用策略，先依 SOP 評估 `best-strategies-for-apply.json` 的小幅收益與 `completed-insufficient-qualified` 狀態；否則可將此項移出 P0 待辦。
 
 ## P1 - AI
 

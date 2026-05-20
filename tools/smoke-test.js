@@ -282,6 +282,13 @@ async function clearBlockingOverlay(page) {
   });
 }
 
+async function openGmSettings(page, label) {
+  await page.locator("#settingsToggle").click({ timeout: actionTimeoutMs });
+  await expectVisible(page, "#settingsContent", "settings panel opens before GM page");
+  await page.locator('#settingsContent [data-settings-page-button="gm"]').click({ timeout: actionTimeoutMs });
+  await expectVisible(page, "#gmContent", label);
+}
+
 async function setRangeValue(page, selector, value) {
   await page.locator(selector).evaluate((input, nextValue) => {
     input.value = nextValue;
@@ -399,8 +406,7 @@ async function exerciseControlProfiles(page) {
   await expectHidden(page, "#settingsContent", "settings panel closes before GM profile setup");
   await clearBlockingOverlay(page);
 
-  await page.locator("#gmToggle").click({ timeout: actionTimeoutMs });
-  await expectVisible(page, "#gmContent", "GM panel opens for control profile setup");
+  await openGmSettings(page, "GM panel opens for control profile setup");
   await setChangedValue(page, "#gridSize", "8");
   await setChangedValue(page, "#foodCount", "2");
   await setChangedValue(page, "#initialSpeed", "1.5");
@@ -447,8 +453,7 @@ async function exerciseControlProfiles(page) {
   await clickModalBackdrop(page, "#settingsContent");
   await expectHidden(page, "#settingsContent", "settings panel closes before profile divergence");
   await clearBlockingOverlay(page);
-  await page.locator("#gmToggle").click({ timeout: actionTimeoutMs });
-  await expectVisible(page, "#gmContent", "GM panel opens for profile divergence");
+  await openGmSettings(page, "GM panel opens for profile divergence");
   await setChangedValue(page, "#gridSize", "10");
   await setChangedValue(page, "#foodCount", "4");
   await setChangedValue(page, "#initialSpeed", "1");

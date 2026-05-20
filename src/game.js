@@ -4032,6 +4032,12 @@
     const settingsPageSwipeStartDistance = 12;
     const settingsPageSwipeDistance = 64;
 
+    function isSettingsInteractiveTarget(target) {
+      return Boolean(target?.closest?.(
+        "a, button, input, label, select, textarea, [contenteditable='true'], [role='button'], [role='tab']"
+      ));
+    }
+
     function beginSettingsPageSwipe(event, page) {
       if (event.button !== undefined && event.button !== 0) return;
       settingsPageSwipe = {
@@ -4164,6 +4170,7 @@
         setSettingsOpen(false);
         return;
       }
+      if (isSettingsInteractiveTarget(event.target)) return;
       beginSettingsPageSwipe(event, "settings");
     }, { capture: true });
     settingsContent.addEventListener("pointermove", moveSettingsPageSwipe, { capture: true, passive: false });
@@ -4176,6 +4183,7 @@
         setGmOpen(false);
         return;
       }
+      if (isSettingsInteractiveTarget(event.target)) return;
       beginSettingsPageSwipe(event, "gm");
     }, { capture: true });
     gmContent.addEventListener("pointermove", moveSettingsPageSwipe, { capture: true, passive: false });
@@ -5294,6 +5302,10 @@
         }
         return;
       }
+      if (!versionModal.hidden) {
+        if (event.key === "Escape" || event.key === "Esc") HexSnakeAbout.closeModal();
+        return;
+      }
       if (!settingsContent.hidden || !gmContent.hidden || !networkContent.hidden) {
         if (event.key === "Escape" || event.key === "Esc") {
           setSettingsOpen(false);
@@ -5337,10 +5349,6 @@
       }
       if (!statsModal.hidden) {
         if (event.key === "Escape" || event.key === "Esc") HexSnakeStats.closeModal();
-        return;
-      }
-      if (!versionModal.hidden) {
-        if (event.key === "Escape" || event.key === "Esc") HexSnakeAbout.closeModal();
         return;
       }
       if (isLogoTransitionActive()) {

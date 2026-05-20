@@ -1,6 +1,6 @@
 # Hex Snake Store Release Checklist
 
-更新日期：2026-05-19
+更新日期：2026-05-20
 
 ## 已完成
 
@@ -32,8 +32,10 @@
 
 ## 發布前總檢
 
-- [ ] `npm run release:check`
-- [ ] `npm run android:build:debug`
-- [ ] `npm run android:bundle:release`
-- [ ] `npm run store:check`
+- [x] `npm run release:check`
+- [x] `npm run android:build:debug`
+- [x] `npm run android:bundle:release`
+- [x] `npm run store:check`
 - [ ] 實機長時間遊玩與低階 Android 效能觀察。
+
+備註：2026-05-20 本機總檢通過；debug APK 位於 `android/app/build/outputs/apk/debug/app-debug.apk`，release AAB 位於 `android/app/build/outputs/bundle/release/app-release.aab`。release signingConfig 尚未設定，仍需完成正式簽章後才能上傳 Play Store。
