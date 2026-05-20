@@ -105,7 +105,7 @@ const HexSnakeStats = (() => {
   }
 
   function characterName(characterId) {
-    return characterById.get(characterId)?.name || characterId || "未選擇";
+    return HexSnakeUI.characterForId(characterId)?.name || characterId || "未選擇";
   }
 
   function modeLabel(mode) {
@@ -176,13 +176,13 @@ const HexSnakeStats = (() => {
   }
 
   function renderSummary(stats) {
-    statsSummary.innerHTML = "";
+    HexSnakeDOM.statsSummary.innerHTML = "";
     const totals = stats.totals;
     [
       ["對戰", totals.matches, "statsTotalMatches"],
       ["P1 勝率", formatPercent(totals.playerWins, totals.matches), "statsWinRate"],
       ["最佳分數", totals.bestPlayerScore, "statsBestScore"],
-      ["總時長", formatTime(totals.totalDurationMs), "statsTotalDuration"]
+      ["總時長", HexSnakeUI.formatTime(totals.totalDurationMs), "statsTotalDuration"]
     ].forEach(([label, value, id]) => {
       const card = document.createElement("div");
       card.className = "app-stats-card";
@@ -192,18 +192,18 @@ const HexSnakeStats = (() => {
       const labelEl = document.createElement("span");
       labelEl.textContent = label;
       card.append(valueEl, labelEl);
-      statsSummary.append(card);
+      HexSnakeDOM.statsSummary.append(card);
     });
   }
 
   function renderRecent(stats) {
-    statsRecentList.innerHTML = "";
-    statsRecentCount.textContent = `${stats.recent.length} / ${recentLimit}`;
+    HexSnakeDOM.statsRecentList.innerHTML = "";
+    HexSnakeDOM.statsRecentCount.textContent = `${stats.recent.length} / ${recentLimit}`;
     if (!stats.recent.length) {
       const empty = document.createElement("div");
       empty.className = "replay-empty";
       empty.textContent = "還沒有戰績，完成一場後會出現在這裡。";
-      statsRecentList.append(empty);
+      HexSnakeDOM.statsRecentList.append(empty);
       return;
     }
 
@@ -218,14 +218,14 @@ const HexSnakeStats = (() => {
       title.textContent = `${formatDate(record.createdAt)} ${winnerLabel(record.winnerOwner)} ${record.playerScore}:${record.computerScore}`;
       const meta = document.createElement("div");
       meta.className = "replay-meta";
-      meta.textContent = `${modeLabel(record.mode)} · ${characterName(record.playerCharacterId)} vs ${characterName(record.computerCharacterId)} · ${formatTime(record.durationMs)}${record.surrendered ? " · 投降" : ""}`;
+      meta.textContent = `${modeLabel(record.mode)} · ${characterName(record.playerCharacterId)} vs ${characterName(record.computerCharacterId)} · ${HexSnakeUI.formatTime(record.durationMs)}${record.surrendered ? " · 投降" : ""}`;
       details.append(title, meta);
 
       const badge = document.createElement("span");
       badge.className = `app-stats-badge ${record.winnerOwner === "player" ? "is-win" : record.winnerOwner === "computer" ? "is-loss" : "is-draw"}`;
       badge.textContent = winnerLabel(record.winnerOwner);
       row.append(details, badge);
-      statsRecentList.append(row);
+      HexSnakeDOM.statsRecentList.append(row);
     });
   }
 
@@ -242,13 +242,13 @@ const HexSnakeStats = (() => {
 
   function renderCharacterMastery(stats) {
     const rows = characterRows(stats);
-    statsCharacterList.innerHTML = "";
-    statsCharacterCount.textContent = `${rows.length}`;
+    HexSnakeDOM.statsCharacterList.innerHTML = "";
+    HexSnakeDOM.statsCharacterCount.textContent = `${rows.length}`;
     if (!rows.length) {
       const empty = document.createElement("div");
       empty.className = "replay-empty";
       empty.textContent = "P1 使用角色完成對戰後會累積熟練度。";
-      statsCharacterList.append(empty);
+      HexSnakeDOM.statsCharacterList.append(empty);
       return;
     }
 
@@ -263,14 +263,14 @@ const HexSnakeStats = (() => {
       title.textContent = characterName(row.characterId);
       const meta = document.createElement("div");
       meta.className = "replay-meta";
-      meta.textContent = `${row.played} 場 · ${row.wins} 勝 ${row.losses} 敗 ${row.draws} 平 · 最高 ${row.bestScore} · ${formatTime(row.durationMs)}`;
+      meta.textContent = `${row.played} 場 · ${row.wins} 勝 ${row.losses} 敗 ${row.draws} 平 · 最高 ${row.bestScore} · ${HexSnakeUI.formatTime(row.durationMs)}`;
       details.append(title, meta);
 
       const badge = document.createElement("span");
       badge.className = "app-stats-badge";
       badge.textContent = formatPercent(row.wins, row.played);
       item.append(details, badge);
-      statsCharacterList.append(item);
+      HexSnakeDOM.statsCharacterList.append(item);
     });
   }
 
@@ -282,14 +282,14 @@ const HexSnakeStats = (() => {
   }
 
   function openModal() {
-    if (running && !gameOver) return;
+    if (HexSnakeState.game.running && !HexSnakeState.game.gameOver) return;
     HexSnakeGame.clearRelayRestartTimer();
     refreshModal();
-    statsModal.hidden = false;
+    HexSnakeDOM.statsModal.hidden = false;
   }
 
   function closeModal() {
-    statsModal.hidden = true;
+    HexSnakeDOM.statsModal.hidden = true;
   }
 
   function clearStats() {

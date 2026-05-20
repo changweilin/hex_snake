@@ -496,17 +496,6 @@ function foodEffectDescription(type) {
   return type.effect || "";
 }
 
-const poseAliases = {
-  opening: "opening",
-  intro: "opening",
-  idle: "intro",
-  attack: "small",
-  small: "small",
-  big: "big",
-  victory: "victory",
-  defeat: "defeat",
-};
-const portraitPoses = new Set(Object.keys(poseAliases));
 let characters = [];
 let characterById = new Map();
 
@@ -520,6 +509,17 @@ function hasCharacterId(characterId) {
 
 function characterForId(characterId) {
   return characterById.get(characterId) || null;
+}
+
+function characterList() {
+  return characters;
+}
+
+function setCharacterCatalog(nextCharacters) {
+  characters = Array.isArray(nextCharacters) ? nextCharacters : [];
+  characterById = new Map(
+    characters.map((character) => [character.id, character]),
+  );
 }
 
 function characterFallbackId(owner) {
@@ -541,10 +541,13 @@ function isSelectableCharacterChoiceId(value) {
 Object.assign(HexSnakeUI, {
   characterFallbackId,
   characterForId,
+  characterList,
   hasCharacterCatalog,
   hasCharacterId,
   isRandomCharacterChoiceId,
   isSelectableCharacterChoiceId,
+  randomCharacterChoiceId,
+  setCharacterCatalog,
 });
 
 const colors = {
@@ -632,6 +635,9 @@ Object.defineProperties(HexSnakeState.config, {
   },
   foodTypes: {
     get: () => foodTypes,
+  },
+  foodLabels: {
+    get: () => foodLabels,
   },
   gameOverContinuousVisualMaxWaitMs: {
     get: () => gameOverContinuousVisualMaxWaitMs,
@@ -1714,6 +1720,15 @@ Object.defineProperties(HexSnakeState.game, {
 });
 
 Object.defineProperties(HexSnakeState.ui, {
+  portraitVariantMode: {
+    get: () => portraitVariantMode,
+  },
+  portraitVariantModes: {
+    get: () => portraitVariantModes,
+  },
+  defaultPortraitVariantMode: {
+    get: () => defaultPortraitVariantMode,
+  },
   perfStatsKey: {
     get: () => perfStatsKey,
   },
@@ -3525,6 +3540,7 @@ Object.assign(HexSnakeUI, {
   finishTutorial,
   characterFallbackId,
   characterForId,
+  characterList,
   hasCharacterCatalog,
   hasCharacterId,
   hideCharacterStage,
@@ -3539,7 +3555,9 @@ Object.assign(HexSnakeUI, {
   playStartLogoCountdown,
   renderIntroPortraits,
   renderWinnerPortrait,
+  randomCharacterChoiceId,
   selectPortraitOwner,
+  setCharacterCatalog,
   setCharacterStageOverlayMode,
   setFighterPose,
   setLastResultShareData,

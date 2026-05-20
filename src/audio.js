@@ -58,7 +58,7 @@
     function setSfxMuted(muted) {
       sfxMuted = Boolean(muted);
       HexSnakeState.audio.muted = sfxMuted;
-      sfxMuteToggle.checked = sfxMuted;
+      HexSnakeDOM.sfxMuteToggle.checked = sfxMuted;
       HexSnakeStorage.set("hexSnakeSfxMuted", sfxMuted ? "1" : "0");
       if (sfxMuted && sfxContext?.state === "running") {
         sfxContext.suspend().catch(() => {});
@@ -72,7 +72,7 @@
     }
 
     function sfxAssetMode() {
-      return portraitVariantMode === "human" ? "human" : "beast";
+      return HexSnakeState.ui.portraitVariantMode === "human" ? "human" : "beast";
     }
 
     function deployAudioUrl(url) {
@@ -156,7 +156,7 @@
       return eventName === "victory" || eventName === "defeat" ? 0.7 : 0.45;
     }
 
-    function characterSfxProfile(characterId, variantMode = portraitVariantMode) {
+    function characterSfxProfile(characterId, variantMode = HexSnakeState.ui.portraitVariantMode) {
       const characterProfile = sfxCharacterProfiles[characterId] || sfxCharacterProfiles.dragon;
       const variantProfile = sfxVariantProfiles[variantMode] || sfxVariantProfiles.chibi;
       return {
@@ -264,7 +264,7 @@
       if (!shouldPlaySfx(owner, eventName, nowMs)) return;
       const eventProfile = sfxEventProfiles[eventName] || sfxEventProfiles.select;
       const character = options.character || characterFor(owner);
-      const profile = characterSfxProfile(character?.id || "dragon", portraitVariantMode);
+      const profile = characterSfxProfile(character?.id || "dragon", HexSnakeState.ui.portraitVariantMode);
       const base = profile.base * profile.pitch;
       const duration = eventProfile.duration * profile.decayScale;
       const gain = eventProfile.gain * sfxGainForOwner(owner, eventName) * (options.gainScale || 1);
