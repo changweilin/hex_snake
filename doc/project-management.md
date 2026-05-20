@@ -31,7 +31,7 @@
 | iOS 上架主線 | blocked | 取得 macOS / Xcode / Apple signing 環境 | 尚未驗證 |
 | LAN / Wi-Fi 多人 | Phase 2 自動化首輪完成 | 雙機長時間 reconnect / snapshot 驗證，之後規劃 WebRTC | `doc/local-multiplayer-progress-plan.md`、`test:network` |
 | AI / 規則一致性 | gate 已檢查，不套用 | 保留現行策略；若再推策略，先針對 dragon 負 delta 與 gu_king qualified 不足做新訓練 | `doc/strategy-optimization-sop.md`、`reports/` |
-| 架構整理 | presentation state 首輪完成 | 下一輪處理 character catalog API：`characters`、`characterById`、`randomCharacterChoiceId` | `npm run audit:globals`、`npm run audit:state-boundary`、`doc/state-boundary-audit.md` |
+| 架構整理 | character catalog API 完成 | 下一輪處理 misc/render runtime state：`cells`、`cellSize`、`center`、board shake、`rafId`、relay counters | `npm run audit:globals`、`npm run audit:state-boundary`、`doc/state-boundary-audit.md` |
 | 產品延伸 | 暫緩 | 等上架與核心穩定後再推 replay 分享、每日挑戰、觀戰聯賽 | 本文件 P3 |
 
 ## 主控看板
@@ -56,7 +56,7 @@
 
 | 項目 | 狀態 | 下一步 | 完成標準 |
 | --- | --- | --- | --- |
-| 核心 facade / ES modules | presentation state 首輪完成 | result share、tutorial / portrait swipe、logo transition、replay record timing 已改走 `HexSnakeState.ui`；下一輪處理 character catalog API | build、quick、smoke、audit 通過 |
+| 核心 facade / ES modules | character catalog API 完成 | `characters`、`characterById`、`randomCharacterChoiceId` 讀取已改走 `HexSnakeUI` catalog query；下一輪處理 misc/render runtime state | build、quick、smoke、audit 通過 |
 | Browser / simulator 共用規則核心 | 未開始 | 等 AI 對齊差異明確後，先抽純函式與常數，不碰 DOM/UI state | 同 seed 關鍵差異可解釋 |
 | Render / CSS 拆分 | 未開始 | 先列 board/snake/effects 與 layout/settings/portrait/replay/HUD 搬移清單 | 桌機與手機 smoke screenshot 正常 |
 
@@ -94,7 +94,8 @@
 | 角色/方向/timer state | 2026-05-20 將 character choice/id、computer difficulty、dir/nextDir/computerDir、energy/bomb flashes、hold/preview timers 包成 `HexSnakeState.game` getter/setter；`audit:globals` 從 660 降至 645，`audit:state-boundary` 從 939/197 降至 817/182 | 已接續完成 controls/settings state 首輪 |
 | Controls/settings state 首輪 | 2026-05-20 將 grid/food/speed/GM settings、keybinds、keyboard aim/preview、target 與 joystick pointer state 包成 `HexSnakeState.game` getter/setter；`audit:globals` 從 645 降至 631，`audit:state-boundary` 從 817/182 降至 668/168 | 已接續完成 presentation/actions API 首輪 |
 | Presentation/actions API 首輪 | 2026-05-20 建立 `HexSnakeUI` facade，將 `game.js` 對 portrait、tutorial、rules、result share、callouts、character stage 的 UI 動作呼叫收斂到單一入口；`audit:globals` 從 631 降至 600，`audit:state-boundary` 從 668/168 降至 564/135 | 已接續完成 presentation state 首輪 |
-| Presentation state 首輪 | 2026-05-20 將 result share、tutorial / portrait swipe、start logo countdown、logo transition duration 與 replay record timing 改走 `HexSnakeState.ui`；`audit:globals` 從 600 降至 580，`audit:state-boundary` 從 564/135 降至 471/115，direct writes 從 109 降至 51 | 下一輪處理 character catalog API：`characters`、`characterById`、`randomCharacterChoiceId` |
+| Presentation state 首輪 | 2026-05-20 將 result share、tutorial / portrait swipe、start logo countdown、logo transition duration 與 replay record timing 改走 `HexSnakeState.ui`；`audit:globals` 從 600 降至 580，`audit:state-boundary` 從 564/135 降至 471/115，direct writes 從 109 降至 51 | 已接續完成 character catalog API |
+| Character catalog API | 2026-05-20 新增 `HexSnakeUI` catalog query，收斂 `game.js` 對 `characters`、`characterById`、`randomCharacterChoiceId` 的直接讀取；`audit:globals` 從 580 降至 577，`audit:state-boundary` 從 471/115 降至 438/112，presentation/actions 群組清零 | 下一輪處理 misc/render runtime state：`cells`、layout、board shake、`rafId`、relay counters |
 | Release gate | `release:check` 串接 build、text、data、assets、size、quick、network、mobile、smoke、offline、app readiness | `release:check` |
 | App shell 基礎封裝 | Capacitor 8、Android / iOS 專案、mobile platform adapter、APK / AAB build scripts 已建立 | `app:check`、Android build scripts |
 | Android 實機驗證 | 2026-05-20 使用者確認 debug APK 實機測試正常，返回鍵、背景暫停 / 恢復、震動、音效 unlock 與長時間效能無問題 | 後續版本若改 platform adapter 或原生設定，再重測 |
@@ -119,7 +120,7 @@
 3. iOS 目前被環境阻塞，因此不阻擋 Android 主線；取得 macOS / Xcode 後可與 Android Play 後台並行。
 4. LAN protocol hardening 的 AI 可處理首輪已完成；剩餘雙機長時間驗證屬裝置測試，不阻擋下一個 AI 可直接處理項目。
 5. AI / simulator 對齊排在策略套用與共用規則核心之前，因為尚未確認差異前，直接套策略或抽共用核心都容易把錯誤固定下來。
-6. Facade / ES modules 排在共用規則核心之前，因為先清楚模組邊界，再抽共享純函式，回歸風險較低；目前 `ui.js`、`render.js`、`ai.js` 可安全移動的執行期 game API 已完成，`running`、`paused`、`gameOver`、match collections、combat/resource state、runtime/session state、角色/方向/timer state、controls/settings state、presentation/actions API 與 presentation state 已接到明確邊界，下一步處理 character catalog API。
+6. Facade / ES modules 排在共用規則核心之前，因為先清楚模組邊界，再抽共享純函式，回歸風險較低；目前 `ui.js`、`render.js`、`ai.js` 可安全移動的執行期 game API 已完成，`running`、`paused`、`gameOver`、match collections、combat/resource state、runtime/session state、角色/方向/timer state、controls/settings state、presentation/actions API、presentation state 與 character catalog API 已接到明確邊界，下一步處理 misc/render runtime state。
 7. Replay 分享、每日挑戰、觀戰聯賽屬產品延伸，等上架、多人協議與核心穩定後再做，避免擴大同時變更面。
 
 ## 固定檢查
@@ -182,6 +183,6 @@ npm.cmd run evaluate:strategy-gate -- --character <id> --candidates <candidate-j
 1. 建立 Google Play internal testing，補資料安全、內容分級、截圖與商店欄位，並上傳 signed release AAB。
 2. 找 macOS / Xcode 環境執行 iOS build 與 TestFlight；若環境已備妥，可與第 1 步並行。
 3. LAN 多人剩餘雙機長時間 reconnect / snapshot 驗證；若通過，再規劃 WebRTC DataChannel。
-4. 繼續 `game.js` boundary：下一刀處理 character catalog API，收斂 `characters`、`characterById`、`randomCharacterChoiceId` 等角色資料讀取。
+4. 繼續 `game.js` boundary：下一刀處理 misc/render runtime state，優先收斂 `cells`、`cellSize`、`center`、board shake、`rafId` 與 relay counters。
 5. 若之後要繼續 AI 訓練，先以 dragon / gu_king 為目標重跑完整 target-vs-field gate，不直接套用既有輸出。
 6. 最後再做 replay 分享、每日挑戰與觀戰聯賽。

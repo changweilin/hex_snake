@@ -509,6 +509,44 @@ const poseAliases = {
 const portraitPoses = new Set(Object.keys(poseAliases));
 let characters = [];
 let characterById = new Map();
+
+function hasCharacterCatalog() {
+  return characters.length > 0;
+}
+
+function hasCharacterId(characterId) {
+  return characterById.has(characterId);
+}
+
+function characterForId(characterId) {
+  return characterById.get(characterId) || null;
+}
+
+function characterFallbackId(owner) {
+  const character =
+    owner === "computer"
+      ? characters[Math.min(1, characters.length - 1)]
+      : characters[0];
+  return character?.id || "";
+}
+
+function isRandomCharacterChoiceId(value) {
+  return value === randomCharacterChoiceId;
+}
+
+function isSelectableCharacterChoiceId(value) {
+  return isRandomCharacterChoiceId(value) || hasCharacterId(value);
+}
+
+Object.assign(HexSnakeUI, {
+  characterFallbackId,
+  characterForId,
+  hasCharacterCatalog,
+  hasCharacterId,
+  isRandomCharacterChoiceId,
+  isSelectableCharacterChoiceId,
+});
+
 const colors = {
   cell: "#2a3445",
   cellAlt: "#303c4d",
@@ -3196,8 +3234,14 @@ Object.assign(HexSnakeUI, {
   closePortraitLightbox,
   closeRulesModal,
   finishTutorial,
+  characterFallbackId,
+  characterForId,
+  hasCharacterCatalog,
+  hasCharacterId,
   hideCharacterStage,
   isLogoTransitionActive,
+  isRandomCharacterChoiceId,
+  isSelectableCharacterChoiceId,
   isTutorialOpen,
   logoTransitionDirection,
   moveTutorial,

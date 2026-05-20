@@ -68,9 +68,9 @@
     function normalizeCharacterChoice(owner, value) {
       const fallback = owner === "computer" ? defaultSettings.computerCharacterId : defaultSettings.playerCharacterId;
       const choice = String(value || fallback).slice(0, 64);
-      if (choice === randomCharacterChoiceId) return choice;
-      if (!characterById.size) return choice || fallback;
-      return characterById.has(choice) ? choice : fallback;
+      if (HexSnakeUI.isRandomCharacterChoiceId(choice)) return choice;
+      if (!HexSnakeUI.hasCharacterCatalog()) return choice || fallback;
+      return HexSnakeUI.hasCharacterId(choice) ? choice : fallback;
     }
 
     function normalizeGmPresetMode(value) {
@@ -204,16 +204,16 @@
     function applyProfileCharacterChoices(settings) {
       HexSnakeState.game.playerCharacterChoice = normalizeCharacterChoice("player", settings.playerCharacterChoice);
       HexSnakeState.game.computerCharacterChoice = normalizeCharacterChoice("computer", settings.computerCharacterChoice);
-      if (HexSnakeState.game.playerCharacterChoice === randomCharacterChoiceId) {
+      if (HexSnakeUI.isRandomCharacterChoiceId(HexSnakeState.game.playerCharacterChoice)) {
         ensureStartLogoRandomCharacterId("player");
       } else {
-        HexSnakeState.game.playerCharacterId = characterById.has(HexSnakeState.game.playerCharacterChoice) ? HexSnakeState.game.playerCharacterChoice : defaultSettings.playerCharacterId;
+        HexSnakeState.game.playerCharacterId = HexSnakeUI.hasCharacterId(HexSnakeState.game.playerCharacterChoice) ? HexSnakeState.game.playerCharacterChoice : defaultSettings.playerCharacterId;
         clearStartLogoRandomCharacterId("player");
       }
-      if (HexSnakeState.game.computerCharacterChoice === randomCharacterChoiceId) {
+      if (HexSnakeUI.isRandomCharacterChoiceId(HexSnakeState.game.computerCharacterChoice)) {
         ensureStartLogoRandomCharacterId("computer");
       } else {
-        HexSnakeState.game.computerCharacterId = characterById.has(HexSnakeState.game.computerCharacterChoice) ? HexSnakeState.game.computerCharacterChoice : defaultSettings.computerCharacterId;
+        HexSnakeState.game.computerCharacterId = HexSnakeUI.hasCharacterId(HexSnakeState.game.computerCharacterChoice) ? HexSnakeState.game.computerCharacterChoice : defaultSettings.computerCharacterId;
         clearStartLogoRandomCharacterId("computer");
       }
       syncCharacterInputs();
@@ -307,10 +307,10 @@
     function loadSavedCharacterChoices() {
       const savedPlayer = HexSnakeStorage.get("hexSnakePlayerCharacterId");
       const savedComputer = HexSnakeStorage.get("hexSnakeComputerCharacterId");
-      if (savedPlayer === randomCharacterChoiceId || characterById.has(savedPlayer)) HexSnakeState.game.playerCharacterChoice = savedPlayer;
-      if (savedComputer === randomCharacterChoiceId || characterById.has(savedComputer)) HexSnakeState.game.computerCharacterChoice = savedComputer;
-      HexSnakeState.game.playerCharacterId = characterById.has(HexSnakeState.game.playerCharacterChoice) ? HexSnakeState.game.playerCharacterChoice : characters[0].id;
-      HexSnakeState.game.computerCharacterId = characterById.has(HexSnakeState.game.computerCharacterChoice) ? HexSnakeState.game.computerCharacterChoice : characters[Math.min(1, characters.length - 1)].id;
+      if (HexSnakeUI.isSelectableCharacterChoiceId(savedPlayer)) HexSnakeState.game.playerCharacterChoice = savedPlayer;
+      if (HexSnakeUI.isSelectableCharacterChoiceId(savedComputer)) HexSnakeState.game.computerCharacterChoice = savedComputer;
+      HexSnakeState.game.playerCharacterId = HexSnakeUI.hasCharacterId(HexSnakeState.game.playerCharacterChoice) ? HexSnakeState.game.playerCharacterChoice : HexSnakeUI.characterFallbackId("player");
+      HexSnakeState.game.computerCharacterId = HexSnakeUI.hasCharacterId(HexSnakeState.game.computerCharacterChoice) ? HexSnakeState.game.computerCharacterChoice : HexSnakeUI.characterFallbackId("computer");
     }
 
     function saveCharacterChoices() {
@@ -324,16 +324,16 @@
     }
 
     function resolveCharacterChoice(owner, choice) {
-      const fallback = owner === "player" ? characters[0] : characters[Math.min(1, characters.length - 1)];
-      if (choice === randomCharacterChoiceId) return consumeStartLogoRandomCharacterId(owner) || randomCharacter().id;
-      return characterById.has(choice) ? choice : fallback.id;
+      const fallbackId = HexSnakeUI.characterFallbackId(owner);
+      if (HexSnakeUI.isRandomCharacterChoiceId(choice)) return consumeStartLogoRandomCharacterId(owner) || randomCharacter().id;
+      return HexSnakeUI.hasCharacterId(choice) ? choice : fallbackId;
     }
 
     function resolveCharacterChoicesForStart() {
-      HexSnakeState.game.playerCharacterChoice = playerCharacterInput.value === randomCharacterChoiceId || characterById.has(playerCharacterInput.value)
+      HexSnakeState.game.playerCharacterChoice = HexSnakeUI.isSelectableCharacterChoiceId(playerCharacterInput.value)
         ? playerCharacterInput.value
         : defaultSettings.playerCharacterId;
-      HexSnakeState.game.computerCharacterChoice = computerCharacterInput.value === randomCharacterChoiceId || characterById.has(computerCharacterInput.value)
+      HexSnakeState.game.computerCharacterChoice = HexSnakeUI.isSelectableCharacterChoiceId(computerCharacterInput.value)
         ? computerCharacterInput.value
         : defaultSettings.computerCharacterId;
       HexSnakeState.game.playerCharacterId = resolveCharacterChoice("player", HexSnakeState.game.playerCharacterChoice);
@@ -1925,7 +1925,7 @@
 
     function characterForVisualType(owner, visualType = null) {
       const visualCharacterId = typeof visualType === "string" ? visualType.split("-")[0] : null;
-      return characterById.get(visualCharacterId) || characterFor(owner);
+      return HexSnakeUI.characterForId(visualCharacterId) || characterFor(owner);
     }
 
     function burstVisualType(projectile) {
@@ -4463,10 +4463,10 @@
       input.addEventListener("change", () => {
         if (HexSnakeState.game.running) return;
         const changedOwner = input === computerCharacterInput ? "computer" : "player";
-        HexSnakeState.game.playerCharacterChoice = playerCharacterInput.value === randomCharacterChoiceId || characterById.has(playerCharacterInput.value) ? playerCharacterInput.value : defaultSettings.playerCharacterId;
-        HexSnakeState.game.computerCharacterChoice = computerCharacterInput.value === randomCharacterChoiceId || characterById.has(computerCharacterInput.value) ? computerCharacterInput.value : defaultSettings.computerCharacterId;
-        if (characterById.has(HexSnakeState.game.playerCharacterChoice)) HexSnakeState.game.playerCharacterId = HexSnakeState.game.playerCharacterChoice;
-        if (characterById.has(HexSnakeState.game.computerCharacterChoice)) HexSnakeState.game.computerCharacterId = HexSnakeState.game.computerCharacterChoice;
+        HexSnakeState.game.playerCharacterChoice = HexSnakeUI.isSelectableCharacterChoiceId(playerCharacterInput.value) ? playerCharacterInput.value : defaultSettings.playerCharacterId;
+        HexSnakeState.game.computerCharacterChoice = HexSnakeUI.isSelectableCharacterChoiceId(computerCharacterInput.value) ? computerCharacterInput.value : defaultSettings.computerCharacterId;
+        if (HexSnakeUI.hasCharacterId(HexSnakeState.game.playerCharacterChoice)) HexSnakeState.game.playerCharacterId = HexSnakeState.game.playerCharacterChoice;
+        if (HexSnakeUI.hasCharacterId(HexSnakeState.game.computerCharacterChoice)) HexSnakeState.game.computerCharacterId = HexSnakeState.game.computerCharacterChoice;
         syncCharacterInputs();
         saveCharacterChoices();
         preloadPortraitsFor("player");
@@ -4480,8 +4480,9 @@
         HexSnakeUI.renderIntroPortraits(true);
         overlay.classList.add("show");
         const selectedId = changedOwner === "computer" ? HexSnakeState.game.computerCharacterChoice : HexSnakeState.game.playerCharacterChoice;
-        if (characterById.has(selectedId)) {
-          HexSnakeAudio.playCharacter(changedOwner, "select", { character: characterById.get(selectedId), unlock: true });
+        const selectedCharacter = HexSnakeUI.characterForId(selectedId);
+        if (selectedCharacter) {
+          HexSnakeAudio.playCharacter(changedOwner, "select", { character: selectedCharacter, unlock: true });
         }
       });
     });
@@ -4864,7 +4865,7 @@
 
     startButton.addEventListener("click", () => {
       if (HexSnakeReplay.isPlaybackMode()) return;
-      if (!characters.length) {
+      if (!HexSnakeUI.hasCharacterCatalog()) {
         window.location.reload();
         return;
       }
@@ -4893,7 +4894,7 @@
 
     computerBattleButton.addEventListener("click", () => {
       if (HexSnakeReplay.isPlaybackMode()) return;
-      if (!characters.length) {
+      if (!HexSnakeUI.hasCharacterCatalog()) {
         window.location.reload();
         return;
       }
