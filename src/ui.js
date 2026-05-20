@@ -1395,6 +1395,112 @@ let logoCountdownTimer = null;
 let logoTransitionSerial = 0;
 let startLogoCountdownPending = false;
 
+Object.defineProperties(HexSnakeState.ui, {
+  lastResultShareData: {
+    get: () => lastResultShareData,
+    set: (value) => {
+      lastResultShareData = value || null;
+    },
+  },
+  resultShareInProgress: {
+    get: () => resultShareInProgress,
+    set: (value) => {
+      resultShareInProgress = Boolean(value);
+    },
+  },
+  replayRecordCheckIntervalMs: {
+    get: () => replayRecordCheckIntervalMs,
+  },
+  lastReplayRecordCheckAt: {
+    get: () => lastReplayRecordCheckAt,
+    set: (value) => {
+      lastReplayRecordCheckAt = value;
+    },
+  },
+  selectedPortraitOwner: {
+    get: () => selectedPortraitOwner,
+    set: (value) => {
+      selectedPortraitOwner = value === "computer" ? "computer" : "player";
+    },
+  },
+  tutorialSwipeStartX: {
+    get: () => tutorialSwipeStartX,
+    set: (value) => {
+      tutorialSwipeStartX = value;
+    },
+  },
+  tutorialSwipeStartY: {
+    get: () => tutorialSwipeStartY,
+    set: (value) => {
+      tutorialSwipeStartY = value;
+    },
+  },
+  tutorialSwipePointerId: {
+    get: () => tutorialSwipePointerId,
+    set: (value) => {
+      tutorialSwipePointerId = value;
+    },
+  },
+  tutorialSwipeDidMove: {
+    get: () => tutorialSwipeDidMove,
+    set: (value) => {
+      tutorialSwipeDidMove = Boolean(value);
+    },
+  },
+  portraitSwipeStartX: {
+    get: () => portraitSwipeStartX,
+    set: (value) => {
+      portraitSwipeStartX = value;
+    },
+  },
+  portraitSwipeStartY: {
+    get: () => portraitSwipeStartY,
+    set: (value) => {
+      portraitSwipeStartY = value;
+    },
+  },
+  portraitSwipeOwner: {
+    get: () => portraitSwipeOwner,
+    set: (value) => {
+      portraitSwipeOwner =
+        value === "computer" || value === "player" ? value : null;
+    },
+  },
+  portraitInfoSwipeStartX: {
+    get: () => portraitInfoSwipeStartX,
+    set: (value) => {
+      portraitInfoSwipeStartX = value;
+    },
+  },
+  portraitInfoSwipeStartY: {
+    get: () => portraitInfoSwipeStartY,
+    set: (value) => {
+      portraitInfoSwipeStartY = value;
+    },
+  },
+  portraitIntroDidSwipe: {
+    get: () => portraitIntroDidSwipe,
+    set: (value) => {
+      portraitIntroDidSwipe = Boolean(value);
+    },
+  },
+  portraitLightboxDidSwipe: {
+    get: () => portraitLightboxDidSwipe,
+    set: (value) => {
+      portraitLightboxDidSwipe = Boolean(value);
+    },
+  },
+  startLogoCountdownPending: {
+    get: () => startLogoCountdownPending,
+    set: (value) => {
+      startLogoCountdownPending = Boolean(value);
+    },
+  },
+  logoTransitionDurationMs: {
+    get: () => logoTransitionDurationMs,
+  },
+});
+
 function fighterArt(
   character,
   pose = "idle",
@@ -3016,6 +3122,10 @@ function showResultCallout(owner, pose) {
   });
 }
 
+function clearFighterCallouts() {
+  lockedFighterCallouts.clear();
+}
+
 function buildResourceHud() {
   resourceBoard.innerHTML = "";
   resourceEls = new Map();
@@ -3089,6 +3199,7 @@ Object.assign(HexSnakeUI, {
   hideCharacterStage,
   isLogoTransitionActive,
   isTutorialOpen,
+  logoTransitionDirection,
   moveTutorial,
   openPortraitLightbox,
   openRulesModal,
@@ -3110,6 +3221,7 @@ Object.assign(HexSnakeUI, {
   showResultCallout,
   showStatusCallout,
   showTutorial,
+  clearFighterCallouts,
   updateResultSharePanel,
 });
 

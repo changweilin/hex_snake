@@ -850,7 +850,7 @@
       HexSnakeState.game.portraitPoseTimers = {};
       Object.values(HexSnakeState.game.attackCalloutTimers).forEach(clearTimeout);
       HexSnakeState.game.attackCalloutTimers = {};
-      lockedFighterCallouts.clear();
+      HexSnakeUI.clearFighterCallouts();
       preloadPortraitsFor("player");
       preloadPortraitsFor("computer");
       HexSnakeUI.buildCharacterStage();
@@ -897,7 +897,7 @@
       HexSnakeState.game.lastFeedElapsedMs = 0;
       HexSnakeState.game.lastTimerFrame = 0;
       HexSnakeState.game.lastHudFrameAt = -Infinity;
-      lastReplayRecordCheckAt = -Infinity;
+      HexSnakeState.ui.lastReplayRecordCheckAt = -Infinity;
       HexSnakeState.game.lastPlayerStep = 0;
       HexSnakeState.game.lastComputerStep = 0;
       HexSnakeState.game.playerStunUntil = 0;
@@ -979,12 +979,12 @@
     }
 
     async function copyCurrentResult() {
-      if (!lastResultShareData || resultShareInProgress) return;
-      resultShareInProgress = true;
+      if (!HexSnakeState.ui.lastResultShareData || HexSnakeState.ui.resultShareInProgress) return;
+      HexSnakeState.ui.resultShareInProgress = true;
       HexSnakeUI.updateResultSharePanel();
       HexSnakeUI.setResultShareStatus("正在複製結果...");
       try {
-        if (await HexSnakePlatform.share.copyText(resultCopyText(lastResultShareData))) {
+        if (await HexSnakePlatform.share.copyText(resultCopyText(HexSnakeState.ui.lastResultShareData))) {
           HexSnakeUI.setResultShareStatus("結果已複製。", "success");
           return;
         }
@@ -993,7 +993,7 @@
         console.warn("Unable to copy result.", error);
         HexSnakeUI.setResultShareStatus("複製失敗，請稍後再試。", "error");
       } finally {
-        resultShareInProgress = false;
+        HexSnakeState.ui.resultShareInProgress = false;
         HexSnakeUI.updateResultSharePanel();
       }
     }
@@ -1003,17 +1003,17 @@
         setStatus("LAN guest is waiting for Host to start.");
         return false;
       }
-      if (HexSnakeReplay.isPlaybackMode() || HexSnakeState.game.running || startLogoCountdownPending || HexSnakeUI.isLogoTransitionActive()) return false;
+      if (HexSnakeReplay.isPlaybackMode() || HexSnakeState.game.running || HexSnakeState.ui.startLogoCountdownPending || HexSnakeUI.isLogoTransitionActive()) return false;
       if (HexSnakeState.game.gameOver) {
         if (!canRestartAfterGameOver()) return false;
         returnToStartScreen();
       }
       HexSnakeUI.showCharacterStage({ startLogoCharacters: true, overlay: true });
-      startLogoCountdownPending = true;
+      HexSnakeState.ui.startLogoCountdownPending = true;
       setSettingsLocked(true);
       setStatus("開局倒數中：3 秒後開始。");
       HexSnakeUI.playStartLogoCountdown().then(ready => {
-        startLogoCountdownPending = false;
+        HexSnakeState.ui.startLogoCountdownPending = false;
         if (!ready || HexSnakeState.game.running || HexSnakeState.game.gameOver || HexSnakeReplay.isPlaybackMode()) {
           if (!HexSnakeState.game.running && !HexSnakeState.game.gameOver) setSettingsLocked(false);
           return;
@@ -1024,7 +1024,7 @@
     }
 
     function skipLogoTransition() {
-      if (logoTransitionDirection() !== "in" || HexSnakeState.game.gameOverLogoTransitionEndsAt <= 0) return false;
+      if (HexSnakeUI.logoTransitionDirection() !== "in" || HexSnakeState.game.gameOverLogoTransitionEndsAt <= 0) return false;
       HexSnakeState.game.gameOverLogoTransitionEndsAt = 0;
       showGameOverSettlement();
       return true;
@@ -1105,7 +1105,7 @@
       if (!HexSnakeState.game.gameOver) return;
       const nextOwner = owner === "computer" ? "computer" : "player";
       returnToStartScreen();
-      selectedPortraitOwner = nextOwner;
+      HexSnakeState.ui.selectedPortraitOwner = nextOwner;
       overlayTitle.textContent = "角色選擇";
       overlayText.textContent = "選好角色後關閉選擇畫面，會回到開始畫面。";
       HexSnakeUI.renderIntroPortraits(true);
@@ -1316,8 +1316,8 @@
     }
 
     function recordReplaySnapshotThrottled(now) {
-      if (now - lastReplayRecordCheckAt < replayRecordCheckIntervalMs) return;
-      lastReplayRecordCheckAt = now;
+      if (now - HexSnakeState.ui.lastReplayRecordCheckAt < HexSnakeState.ui.replayRecordCheckIntervalMs) return;
+      HexSnakeState.ui.lastReplayRecordCheckAt = now;
       HexSnakeReplay.recordSnapshot(now);
     }
 
@@ -3054,9 +3054,9 @@
       if (shouldUseGameOverLogo) HexSnakeUI.showCharacterStage({ rebuild: false, overlay: true });
       else HexSnakeUI.hideCharacterStage();
       HexSnakeState.game.gameOverContinuousVisualDeadlineAt = gameOverAt + gameOverContinuousVisualMaxWaitMs;
-      HexSnakeState.game.gameOverLogoTransitionEndsAt = shouldUseGameOverLogo ? gameOverAt + logoTransitionDurationMs : 0;
+      HexSnakeState.game.gameOverLogoTransitionEndsAt = shouldUseGameOverLogo ? gameOverAt + HexSnakeState.ui.logoTransitionDurationMs : 0;
       updateAutoBattleControls();
-      restartUnlockAt = gameOverAt + (shouldUseGameOverLogo ? logoTransitionDurationMs : gameOverRestartDelayMs);
+      restartUnlockAt = gameOverAt + (shouldUseGameOverLogo ? HexSnakeState.ui.logoTransitionDurationMs : gameOverRestartDelayMs);
       setSettingsLocked(false);
       if (HexSnakeState.game.totalElapsedMs > bestTotalMs) {
         bestTotalMs = HexSnakeState.game.totalElapsedMs;
@@ -4214,22 +4214,22 @@
     winnerPortrait.addEventListener("pointerdown", event => {
       const swipeZone = event.target.closest("[data-portrait-swipe-owner]");
       if (swipeZone && (event.target.closest("[data-portrait-select]") || event.target.closest(".intro-avatar-gate"))) {
-        portraitSwipeStartX = event.clientX;
-        portraitSwipeStartY = event.clientY;
-        portraitSwipeOwner = swipeZone.dataset.portraitSwipeOwner === "computer" ? "computer" : "player";
-        portraitIntroDidSwipe = false;
+        HexSnakeState.ui.portraitSwipeStartX = event.clientX;
+        HexSnakeState.ui.portraitSwipeStartY = event.clientY;
+        HexSnakeState.ui.portraitSwipeOwner = swipeZone.dataset.portraitSwipeOwner === "computer" ? "computer" : "player";
+        HexSnakeState.ui.portraitIntroDidSwipe = false;
         return;
       }
       if (event.target.closest(".portrait-copy") && event.target.closest("[data-portrait-select]")) {
-        portraitInfoSwipeStartX = event.clientX;
-        portraitInfoSwipeStartY = event.clientY;
-        portraitIntroDidSwipe = false;
+        HexSnakeState.ui.portraitInfoSwipeStartX = event.clientX;
+        HexSnakeState.ui.portraitInfoSwipeStartY = event.clientY;
+        HexSnakeState.ui.portraitIntroDidSwipe = false;
       }
     });
 
     winnerPortrait.addEventListener("click", event => {
-      if (portraitIntroDidSwipe) {
-        portraitIntroDidSwipe = false;
+      if (HexSnakeState.ui.portraitIntroDidSwipe) {
+        HexSnakeState.ui.portraitIntroDidSwipe = false;
         return;
       }
       const portraitShift = event.target.closest("[data-portrait-shift][data-portrait-owner]");
@@ -4245,7 +4245,7 @@
       const fullPortrait = event.target.closest("[data-full-portrait]");
       if (fullPortrait) {
         const owner = fullPortrait.dataset.fullPortrait === "computer" ? "computer" : "player";
-        if (owner !== selectedPortraitOwner) {
+        if (owner !== HexSnakeState.ui.selectedPortraitOwner) {
           HexSnakeUI.selectPortraitOwner(owner);
           return;
         }
@@ -4259,7 +4259,7 @@
       }
       const introButton = event.target.closest("[data-open-intro]");
       if (!introButton) return;
-      selectedPortraitOwner = introButton.dataset.openIntro === "computer" ? "computer" : "player";
+      HexSnakeState.ui.selectedPortraitOwner = introButton.dataset.openIntro === "computer" ? "computer" : "player";
       overlayTitle.textContent = "角色選擇";
       overlayText.textContent = "點擊 P1 或 P2 立繪選擇要調整的角色，使用左右箭頭切換。";
       startButton.textContent = "開始";
@@ -4267,57 +4267,57 @@
     });
 
     winnerPortrait.addEventListener("pointerup", event => {
-      if (portraitSwipeStartX !== null) {
-        const deltaX = event.clientX - portraitSwipeStartX;
-        const deltaY = event.clientY - portraitSwipeStartY;
-        const owner = portraitSwipeOwner;
-        portraitSwipeStartX = null;
-        portraitSwipeStartY = null;
-        portraitSwipeOwner = null;
+      if (HexSnakeState.ui.portraitSwipeStartX !== null) {
+        const deltaX = event.clientX - HexSnakeState.ui.portraitSwipeStartX;
+        const deltaY = event.clientY - HexSnakeState.ui.portraitSwipeStartY;
+        const owner = HexSnakeState.ui.portraitSwipeOwner;
+        HexSnakeState.ui.portraitSwipeStartX = null;
+        HexSnakeState.ui.portraitSwipeStartY = null;
+        HexSnakeState.ui.portraitSwipeOwner = null;
         if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) >= 42) {
-          portraitIntroDidSwipe = true;
+          HexSnakeState.ui.portraitIntroDidSwipe = true;
           setTimeout(() => {
-            portraitIntroDidSwipe = false;
+            HexSnakeState.ui.portraitIntroDidSwipe = false;
           }, 160);
           HexSnakeUI.shiftPortraitVariantMode(deltaY < 0 ? -1 : 1);
           return;
         }
         if (Math.abs(deltaX) < 42) return;
-        portraitIntroDidSwipe = true;
+        HexSnakeState.ui.portraitIntroDidSwipe = true;
         setTimeout(() => {
-          portraitIntroDidSwipe = false;
+          HexSnakeState.ui.portraitIntroDidSwipe = false;
         }, 160);
         HexSnakeUI.applyPortraitCharacter(owner, deltaX < 0 ? 1 : -1);
         return;
       }
-      if (portraitInfoSwipeStartX !== null) {
-        const deltaX = event.clientX - portraitInfoSwipeStartX;
-        const deltaY = event.clientY - portraitInfoSwipeStartY;
-        portraitInfoSwipeStartX = null;
-        portraitInfoSwipeStartY = null;
+      if (HexSnakeState.ui.portraitInfoSwipeStartX !== null) {
+        const deltaX = event.clientX - HexSnakeState.ui.portraitInfoSwipeStartX;
+        const deltaY = event.clientY - HexSnakeState.ui.portraitInfoSwipeStartY;
+        HexSnakeState.ui.portraitInfoSwipeStartX = null;
+        HexSnakeState.ui.portraitInfoSwipeStartY = null;
         if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) >= 42) {
-          portraitIntroDidSwipe = true;
+          HexSnakeState.ui.portraitIntroDidSwipe = true;
           setTimeout(() => {
-            portraitIntroDidSwipe = false;
+            HexSnakeState.ui.portraitIntroDidSwipe = false;
           }, 160);
           HexSnakeUI.shiftPortraitVariantMode(deltaY < 0 ? -1 : 1);
           return;
         }
         if (Math.abs(deltaX) < 42) return;
-        portraitIntroDidSwipe = true;
+        HexSnakeState.ui.portraitIntroDidSwipe = true;
         setTimeout(() => {
-          portraitIntroDidSwipe = false;
+          HexSnakeState.ui.portraitIntroDidSwipe = false;
         }, 160);
-        HexSnakeUI.applyPortraitCharacter(selectedPortraitOwner, deltaX < 0 ? 1 : -1);
+        HexSnakeUI.applyPortraitCharacter(HexSnakeState.ui.selectedPortraitOwner, deltaX < 0 ? 1 : -1);
       }
     });
 
     winnerPortrait.addEventListener("pointercancel", () => {
-      portraitSwipeStartX = null;
-      portraitSwipeStartY = null;
-      portraitSwipeOwner = null;
-      portraitInfoSwipeStartX = null;
-      portraitInfoSwipeStartY = null;
+      HexSnakeState.ui.portraitSwipeStartX = null;
+      HexSnakeState.ui.portraitSwipeStartY = null;
+      HexSnakeState.ui.portraitSwipeOwner = null;
+      HexSnakeState.ui.portraitInfoSwipeStartX = null;
+      HexSnakeState.ui.portraitInfoSwipeStartY = null;
     });
 
     portraitLightboxClose.addEventListener("click", HexSnakeUI.closePortraitLightbox);
@@ -4338,35 +4338,35 @@
 
     portraitLightbox.addEventListener("pointerdown", event => {
       if (event.target.closest("button")) return;
-      portraitSwipeStartX = event.clientX;
-      portraitSwipeStartY = event.clientY;
-      portraitLightboxDidSwipe = false;
+      HexSnakeState.ui.portraitSwipeStartX = event.clientX;
+      HexSnakeState.ui.portraitSwipeStartY = event.clientY;
+      HexSnakeState.ui.portraitLightboxDidSwipe = false;
     });
 
     portraitLightbox.addEventListener("pointerup", event => {
-      if (portraitSwipeStartX === null) return;
-      const deltaX = event.clientX - portraitSwipeStartX;
-      const deltaY = event.clientY - portraitSwipeStartY;
-      portraitSwipeStartX = null;
-      portraitSwipeStartY = null;
+      if (HexSnakeState.ui.portraitSwipeStartX === null) return;
+      const deltaX = event.clientX - HexSnakeState.ui.portraitSwipeStartX;
+      const deltaY = event.clientY - HexSnakeState.ui.portraitSwipeStartY;
+      HexSnakeState.ui.portraitSwipeStartX = null;
+      HexSnakeState.ui.portraitSwipeStartY = null;
       if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) >= 42) {
-        portraitLightboxDidSwipe = true;
+        HexSnakeState.ui.portraitLightboxDidSwipe = true;
         HexSnakeUI.shiftPortraitVariantMode(deltaY < 0 ? -1 : 1);
         return;
       }
       if (Math.abs(deltaX) < 42) return;
-      portraitLightboxDidSwipe = true;
+      HexSnakeState.ui.portraitLightboxDidSwipe = true;
       HexSnakeUI.shiftPortraitLightbox(deltaX < 0 ? 1 : -1);
     });
 
     portraitLightbox.addEventListener("pointercancel", () => {
-      portraitSwipeStartX = null;
-      portraitSwipeStartY = null;
+      HexSnakeState.ui.portraitSwipeStartX = null;
+      HexSnakeState.ui.portraitSwipeStartY = null;
     });
 
     portraitLightbox.addEventListener("click", event => {
-      if (portraitLightboxDidSwipe) {
-        portraitLightboxDidSwipe = false;
+      if (HexSnakeState.ui.portraitLightboxDidSwipe) {
+        HexSnakeState.ui.portraitLightboxDidSwipe = false;
         return;
       }
       if (event.target === portraitLightbox) HexSnakeUI.closePortraitLightbox();
@@ -4798,8 +4798,8 @@
     };
 
     winnerPortrait.addEventListener("click", event => {
-      if (tutorialSwipeDidMove) {
-        tutorialSwipeDidMove = false;
+      if (HexSnakeState.ui.tutorialSwipeDidMove) {
+        HexSnakeState.ui.tutorialSwipeDidMove = false;
         event.preventDefault();
         return;
       }
@@ -4818,47 +4818,47 @@
     overlay.addEventListener("pointerdown", event => {
       if (!HexSnakeUI.isTutorialOpen() || event.button > 0) return;
       if (tutorialActionButtonFromEvent(event)) return;
-      tutorialSwipeStartX = event.clientX;
-      tutorialSwipeStartY = event.clientY;
-      tutorialSwipePointerId = event.pointerId;
-      tutorialSwipeDidMove = false;
+      HexSnakeState.ui.tutorialSwipeStartX = event.clientX;
+      HexSnakeState.ui.tutorialSwipeStartY = event.clientY;
+      HexSnakeState.ui.tutorialSwipePointerId = event.pointerId;
+      HexSnakeState.ui.tutorialSwipeDidMove = false;
       overlay.setPointerCapture?.(event.pointerId);
     }, true);
 
     overlay.addEventListener("pointermove", event => {
-      if (!HexSnakeUI.isTutorialOpen() || tutorialSwipeStartX === null) return;
-      if (tutorialSwipePointerId !== null && event.pointerId !== tutorialSwipePointerId) return;
-      const deltaX = event.clientX - tutorialSwipeStartX;
-      const deltaY = event.clientY - tutorialSwipeStartY;
+      if (!HexSnakeUI.isTutorialOpen() || HexSnakeState.ui.tutorialSwipeStartX === null) return;
+      if (HexSnakeState.ui.tutorialSwipePointerId !== null && event.pointerId !== HexSnakeState.ui.tutorialSwipePointerId) return;
+      const deltaX = event.clientX - HexSnakeState.ui.tutorialSwipeStartX;
+      const deltaY = event.clientY - HexSnakeState.ui.tutorialSwipeStartY;
       if (Math.abs(deltaX) > 10 && Math.abs(deltaX) > Math.abs(deltaY)) event.preventDefault();
     }, true);
 
     overlay.addEventListener("pointerup", event => {
-      if (!HexSnakeUI.isTutorialOpen() || tutorialSwipeStartX === null) return;
-      if (tutorialSwipePointerId !== null && event.pointerId !== tutorialSwipePointerId) return;
-      const deltaX = event.clientX - tutorialSwipeStartX;
-      const deltaY = event.clientY - tutorialSwipeStartY;
-      const pointerId = tutorialSwipePointerId;
-      tutorialSwipeStartX = null;
-      tutorialSwipeStartY = null;
-      tutorialSwipePointerId = null;
+      if (!HexSnakeUI.isTutorialOpen() || HexSnakeState.ui.tutorialSwipeStartX === null) return;
+      if (HexSnakeState.ui.tutorialSwipePointerId !== null && event.pointerId !== HexSnakeState.ui.tutorialSwipePointerId) return;
+      const deltaX = event.clientX - HexSnakeState.ui.tutorialSwipeStartX;
+      const deltaY = event.clientY - HexSnakeState.ui.tutorialSwipeStartY;
+      const pointerId = HexSnakeState.ui.tutorialSwipePointerId;
+      HexSnakeState.ui.tutorialSwipeStartX = null;
+      HexSnakeState.ui.tutorialSwipeStartY = null;
+      HexSnakeState.ui.tutorialSwipePointerId = null;
       if (pointerId !== null && overlay.hasPointerCapture?.(pointerId)) overlay.releasePointerCapture(pointerId);
       if (Math.max(Math.abs(deltaX), Math.abs(deltaY)) < 42) return;
       if (Math.abs(deltaX) <= Math.abs(deltaY)) return;
-      tutorialSwipeDidMove = true;
+      HexSnakeState.ui.tutorialSwipeDidMove = true;
       event.preventDefault();
       HexSnakeUI.moveTutorial(deltaX < 0 ? 1 : -1);
       setTimeout(() => {
-        tutorialSwipeDidMove = false;
+        HexSnakeState.ui.tutorialSwipeDidMove = false;
       }, 160);
     }, true);
 
     overlay.addEventListener("pointercancel", event => {
-      if (tutorialSwipePointerId === null || event.pointerId !== tutorialSwipePointerId) return;
-      const pointerId = tutorialSwipePointerId;
-      tutorialSwipeStartX = null;
-      tutorialSwipeStartY = null;
-      tutorialSwipePointerId = null;
+      if (HexSnakeState.ui.tutorialSwipePointerId === null || event.pointerId !== HexSnakeState.ui.tutorialSwipePointerId) return;
+      const pointerId = HexSnakeState.ui.tutorialSwipePointerId;
+      HexSnakeState.ui.tutorialSwipeStartX = null;
+      HexSnakeState.ui.tutorialSwipeStartY = null;
+      HexSnakeState.ui.tutorialSwipePointerId = null;
       if (overlay.hasPointerCapture?.(pointerId)) overlay.releasePointerCapture(pointerId);
     }, true);
 
