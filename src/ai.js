@@ -1,6 +1,7 @@
     const AiConfig = HexSnakeState.config;
     const AiState = HexSnakeState.game;
     const AiUI = HexSnakeUI;
+    const AiGame = HexSnakeUI.aiGame;
 
     let wrappedDistanceBoardCache = null;
     let activeAiDecisionCache = null;
@@ -84,8 +85,8 @@
     }
 
     function boardCacheSignature() {
-      const first = AiState.cells[0] ? HexSnakeGame.keyOf(AiState.cells[0]) : "";
-      const last = AiState.cells.length ? HexSnakeGame.keyOf(AiState.cells[AiState.cells.length - 1]) : "";
+      const first = AiState.cells[0] ? AiGame.keyOf(AiState.cells[0]) : "";
+      const last = AiState.cells.length ? AiGame.keyOf(AiState.cells[AiState.cells.length - 1]) : "";
       return `${AiState.radius}:${AiState.cells.length}:${first}:${last}`;
     }
 
@@ -94,14 +95,14 @@
       const signature = boardCacheSignature();
       if (wrappedDistanceBoardCache?.signature === signature) return wrappedDistanceBoardCache;
 
-      const indexByKey = new Map(AiState.cells.map((cell, index) => [HexSnakeGame.keyOf(cell), index]));
+      const indexByKey = new Map(AiState.cells.map((cell, index) => [AiGame.keyOf(cell), index]));
       const neighborsByKey = new Map(AiState.cells.map(cell => [
-        HexSnakeGame.keyOf(cell),
-        AiConfig.directions.map((_, direction) => HexSnakeGame.nextWrappedCell(cell, direction))
+        AiGame.keyOf(cell),
+        AiConfig.directions.map((_, direction) => AiGame.nextWrappedCell(cell, direction))
       ]));
       const nearbyOneByKey = new Map(AiState.cells.map(cell => [
-        HexSnakeGame.keyOf(cell),
-        AiState.cells.filter(candidate => HexSnakeGame.hexDistance(candidate, cell) <= 1)
+        AiGame.keyOf(cell),
+        AiState.cells.filter(candidate => AiGame.hexDistance(candidate, cell) <= 1)
       ]));
       const distances = AiState.cells.map((source, sourceIndex) => {
         const row = new Uint16Array(AiState.cells.length);
@@ -110,10 +111,10 @@
         const queue = [source];
         for (let index = 0; index < queue.length; index += 1) {
           const current = queue[index];
-          const currentDistance = row[indexByKey.get(HexSnakeGame.keyOf(current))];
+          const currentDistance = row[indexByKey.get(AiGame.keyOf(current))];
           AiConfig.directions.forEach((_, direction) => {
-            const next = HexSnakeGame.nextWrappedCell(current, direction);
-            const nextIndex = indexByKey.get(HexSnakeGame.keyOf(next));
+            const next = AiGame.nextWrappedCell(current, direction);
+            const nextIndex = indexByKey.get(AiGame.keyOf(next));
             if (!Number.isInteger(nextIndex) || row[nextIndex] !== 65535) return;
             row[nextIndex] = currentDistance + 1;
             queue.push(next);
@@ -129,8 +130,8 @@
     function cachedWrappedDistance(start, target) {
       const cache = ensureWrappedDistanceBoardCache();
       if (!cache || !start || !target) return null;
-      const startIndex = cache.indexByKey.get(HexSnakeGame.keyOf(start));
-      const targetIndex = cache.indexByKey.get(HexSnakeGame.keyOf(target));
+      const startIndex = cache.indexByKey.get(AiGame.keyOf(start));
+      const targetIndex = cache.indexByKey.get(AiGame.keyOf(target));
       if (!Number.isInteger(startIndex) || !Number.isInteger(targetIndex)) return null;
       const value = cache.distances[startIndex][targetIndex];
       return value === 65535 ? null : value;
@@ -138,16 +139,16 @@
 
     function nearbyCellsWithinOne(cell) {
       const cache = ensureWrappedDistanceBoardCache();
-      return cache?.nearbyOneByKey.get(HexSnakeGame.keyOf(cell)) || AiState.cells.filter(candidate => HexSnakeGame.hexDistance(candidate, cell) <= 1);
+      return cache?.nearbyOneByKey.get(AiGame.keyOf(cell)) || AiState.cells.filter(candidate => AiGame.hexDistance(candidate, cell) <= 1);
     }
 
     function neighborCellsFor(cell) {
       const cache = ensureWrappedDistanceBoardCache();
-      return cache?.neighborsByKey.get(HexSnakeGame.keyOf(cell)) || AiConfig.directions.map((_, direction) => HexSnakeGame.nextWrappedCell(cell, direction));
+      return cache?.neighborsByKey.get(AiGame.keyOf(cell)) || AiConfig.directions.map((_, direction) => AiGame.nextWrappedCell(cell, direction));
     }
 
     function nearbyOpenSpace(cell, occupied) {
-      return nearbyCellsWithinOne(cell).reduce((count, candidate) => count + (occupied.has(HexSnakeGame.keyOf(candidate)) ? 0 : 1), 0);
+      return nearbyCellsWithinOne(cell).reduce((count, candidate) => count + (occupied.has(AiGame.keyOf(candidate)) ? 0 : 1), 0);
     }
 
     function nearestFoodDistance(cell) {
@@ -157,23 +158,23 @@
 
     function wrappedDistance(start, target) {
       if (!start || !target) return Number.POSITIVE_INFINITY;
-      if (HexSnakeGame.keyOf(start) === HexSnakeGame.keyOf(target)) return 0;
+      if (AiGame.keyOf(start) === AiGame.keyOf(target)) return 0;
       const cachedDistance = cachedWrappedDistance(start, target);
       if (cachedDistance !== null) return cachedDistance;
-      const visited = new Set([HexSnakeGame.keyOf(start)]);
+      const visited = new Set([AiGame.keyOf(start)]);
       const queue = [{ cell: start, distance: 0 }];
       for (let index = 0; index < queue.length; index += 1) {
         const current = queue[index];
         for (let direction = 0; direction < AiConfig.directions.length; direction += 1) {
-          const next = HexSnakeGame.nextWrappedCell(current.cell, direction);
-          const nextKey = HexSnakeGame.keyOf(next);
+          const next = AiGame.nextWrappedCell(current.cell, direction);
+          const nextKey = AiGame.keyOf(next);
           if (visited.has(nextKey)) continue;
-          if (nextKey === HexSnakeGame.keyOf(target)) return current.distance + 1;
+          if (nextKey === AiGame.keyOf(target)) return current.distance + 1;
           visited.add(nextKey);
           queue.push({ cell: next, distance: current.distance + 1 });
         }
       }
-      return HexSnakeGame.hexDistance(start, target);
+      return AiGame.hexDistance(start, target);
     }
 
     function nearestFoodFor(cell) {
@@ -462,7 +463,7 @@
 
     function foodResourceValueFor(owner, food) {
       const cache = activeAiDecisionCache;
-      const cacheKey = food ? `${owner}:${HexSnakeGame.keyOf(food)}` : null;
+      const cacheKey = food ? `${owner}:${AiGame.keyOf(food)}` : null;
       if (cache && cacheKey && cache.foodResourceValues.has(cacheKey)) {
         return cache.foodResourceValues.get(cacheKey);
       }
@@ -577,17 +578,17 @@
     function strongestVisibleDamage(owner, profile, now) {
       const opponent = opponentOf(owner);
       const stock = ownerStock(owner);
-      const stats = HexSnakeGame.attackStats(stock, profile);
+      const stats = AiGame.attackStats(stock, profile);
       const targetSnake = perceivedSnakeFor(owner, opponent, now);
       const head = targetSnake[0];
       const candidates = cellsWithinDistance(head, 0, Math.max(1, Math.ceil(stats.radius + 1)));
-      return candidates.reduce((best, cell) => Math.max(best, HexSnakeGame.damageSnake(targetSnake, cell, stats.radius, stats.damage)), 0);
+      return candidates.reduce((best, cell) => Math.max(best, AiGame.damageSnake(targetSnake, cell, stats.radius, stats.damage)), 0);
     }
 
     function shouldUseBigAttack(owner, now) {
       if (!AiUI.canAttack(owner, "big")) return false;
       if (AiState.computerDifficulty === "low") {
-        const distance = HexSnakeGame.hexDistance(ownerHead(owner), perceivedSnakeFor(owner, opponentOf(owner), now)[0]);
+        const distance = AiGame.hexDistance(ownerHead(owner), perceivedSnakeFor(owner, opponentOf(owner), now)[0]);
         return !AiUI.canAttack(owner, "small") || hasResourcePressure(owner) || lateGameSkillPhase(owner, now) >= 0.86 || (distance <= 2 && Math.random() < 0.35) || Math.random() < 0.18;
       }
       if (AiState.computerDifficulty === "medium" || isHighAiDifficulty()) {
@@ -684,7 +685,7 @@
     function castTimingScore(owner, profile, now) {
       const weights = aiStrategyWeightsFor(owner).castTiming;
       const opponent = opponentOf(owner);
-      const distance = HexSnakeGame.hexDistance(ownerHead(owner), perceivedSnakeFor(owner, opponent, now)[0]);
+      const distance = AiGame.hexDistance(ownerHead(owner), perceivedSnakeFor(owner, opponent, now)[0]);
       let score = 0;
       if (isLethalAttack(owner, profile, now)) score += weights.lethal * 3;
       if (hasFullBombsAndNearFullEnergy(owner)) score += weights.nearFullEnergy;
@@ -697,7 +698,7 @@
 
     function attackExpectedValue(owner, profile, target, targetWeight, now, damageOverride = null) {
       const opponent = opponentOf(owner);
-      const stats = HexSnakeGame.attackStats(ownerStock(owner), profile);
+      const stats = AiGame.attackStats(ownerStock(owner), profile);
       const targetSnake = perceivedSnakeFor(owner, opponent, now);
       const damage = damageOverride ?? attackTargetDamage(targetSnake, target, stats.radius, stats.damage);
       const cappedDamage = Math.min(damage, ownerHp(opponent));
@@ -705,7 +706,7 @@
       const allocation = aiStrategyWeightsFor(owner).skillAllocation;
       const allocationScore = profile === "small" ? allocation.preferSmall : allocation.preferBig;
       const resourcePenalty = attackResourceCost(profile) * (profile === "big" ? 0.34 : 0.24);
-      const controlValue = HexSnakeGame.attackHitStunChances(ownerStock(owner)).body * 1.4 + (hasOpponentDebuff(owner, now) ? 0.75 : 0);
+      const controlValue = AiGame.attackHitStunChances(ownerStock(owner)).body * 1.4 + (hasOpponentDebuff(owner, now) ? 0.75 : 0);
       return cappedDamage * 1.15
         + targetWeight * 0.6
         + castTimingScore(owner, profile, now)
@@ -721,7 +722,7 @@
       const opponent = opponentOf(owner);
       const targetSnake = perceivedSnakeFor(owner, opponent, now);
       const targetHead = targetSnake[0];
-      const stats = HexSnakeGame.attackStats(ownerStock(owner), profile);
+      const stats = AiGame.attackStats(ownerStock(owner), profile);
       const maxDamageTarget = bestBodyClusterTarget(targetSnake, stats) || targetHead;
       const weights = aiStrategyWeightsFor(owner).castTarget;
       const nearestFood = nearestFoodFor(targetHead);
@@ -745,7 +746,7 @@
         { target: maxDamageTarget, weight: weights.bodyCluster },
         { target: nearestFood || targetHead, weight: nearestFood ? weights.targetNearestFood : 0 }
       ]
-        .filter(item => item.target && !seen.has(HexSnakeGame.keyOf(item.target)) && seen.add(HexSnakeGame.keyOf(item.target)))
+        .filter(item => item.target && !seen.has(AiGame.keyOf(item.target)) && seen.add(AiGame.keyOf(item.target)))
         .map(item => {
           const damage = attackTargetDamage(targetSnake, item.target, stats.radius, stats.damage);
           return {
@@ -802,13 +803,13 @@
 
     function cellsWithinDistance(origin, minDistance, maxDistance) {
       return AiState.cells.filter(cell => {
-        const distance = HexSnakeGame.hexDistance(cell, origin);
+        const distance = AiGame.hexDistance(cell, origin);
         return distance >= minDistance && distance <= maxDistance;
       });
     }
 
     function attackTargetDamage(targetSnake, target, impactRadius, damageScale) {
-      return HexSnakeGame.damageSnake(targetSnake, target, impactRadius, damageScale);
+      return AiGame.damageSnake(targetSnake, target, impactRadius, damageScale);
     }
 
     function bestBodyClusterTarget(targetSnake, stats) {
@@ -816,7 +817,7 @@
       const seen = new Set();
       const candidates = targetSnake.flatMap(segment => cellsWithinDistance(segment, 0, Math.max(1, Math.ceil(stats.radius))))
         .filter(cell => {
-          const key = HexSnakeGame.keyOf(cell);
+          const key = AiGame.keyOf(cell);
           if (seen.has(key)) return false;
           seen.add(key);
           return true;
@@ -843,8 +844,8 @@
 
     function morayLineCandidateStats(targetSnake, lineCells, lineShape) {
       return targetSnake.reduce((stats, segment, index) => {
-        const distance = lineCells.reduce((best, lineCell) => Math.min(best, HexSnakeGame.hexDistance(segment, lineCell)), Infinity);
-        const damageMultiplier = HexSnakeGame.lineBandDamageMultiplier(distance, lineShape);
+        const distance = lineCells.reduce((best, lineCell) => Math.min(best, AiGame.hexDistance(segment, lineCell)), Infinity);
+        const damageMultiplier = AiGame.lineBandDamageMultiplier(distance, lineShape);
         if (index === 0) stats.headDistance = distance;
         if (damageMultiplier > 0) {
           stats.hits += 1;
@@ -870,21 +871,21 @@
       const opponent = opponentOf(owner);
       const targetSnake = perceivedSnakeFor(owner, opponent, now);
       const fallbackTarget = targetSnake[0] || ownerHead(opponent) || ownerHead(owner);
-      const fallbackDirection = HexSnakeGame.ownerDirection(owner);
+      const fallbackDirection = AiGame.ownerDirection(owner);
       if (!targetSnake.length || !fallbackTarget) return { target: fallbackTarget, direction: fallbackDirection };
 
-      const lineShape = HexSnakeGame.bandShapeFromTotalWidth(HexSnakeGame.attackStats(ownerStock(owner), "small").radius);
+      const lineShape = AiGame.bandShapeFromTotalWidth(AiGame.attackStats(ownerStock(owner), "small").radius);
       const idealDirection = directionForLongestBodyAxis(targetSnake, fallbackDirection);
       let best = null;
       targetSnake.forEach((origin, originIndex) => {
         AiConfig.directions.forEach((_, direction) => {
-          const stats = morayLineCandidateStats(targetSnake, HexSnakeGame.boardLineThrough(origin, direction), lineShape);
+          const stats = morayLineCandidateStats(targetSnake, AiGame.boardLineThrough(origin, direction), lineShape);
           const candidate = {
             target: { q: origin.q, r: origin.r },
             direction,
             originIndex,
-            directionTurn: HexSnakeGame.turnDistance(direction, idealDirection),
-            ownerTurn: HexSnakeGame.turnDistance(direction, fallbackDirection),
+            directionTurn: AiGame.turnDistance(direction, idealDirection),
+            ownerTurn: AiGame.turnDistance(direction, fallbackDirection),
             ...stats
           };
           if (isBetterMorayLineCandidate(candidate, best)) best = candidate;
@@ -901,7 +902,7 @@
     }
 
     function morayFieldTickMs(stock) {
-      return Math.max(1, HexSnakeGame.attackStats(stock, "small").delay);
+      return Math.max(1, AiGame.attackStats(stock, "small").delay);
     }
 
     function morayFieldDamageTicks(stock) {
@@ -912,8 +913,8 @@
       const opponent = opponentOf(owner);
       const targetSnake = perceivedSnakeFor(owner, opponent, now);
       if (!targetSnake.length || !plan?.target) return 0;
-      const lineShape = HexSnakeGame.bandShapeFromTotalWidth(HexSnakeGame.attackStats(ownerStock(owner), "small").radius);
-      const stats = morayLineCandidateStats(targetSnake, HexSnakeGame.boardLineThrough(plan.target, plan.direction), lineShape);
+      const lineShape = AiGame.bandShapeFromTotalWidth(AiGame.attackStats(ownerStock(owner), "small").radius);
+      const stats = morayLineCandidateStats(targetSnake, AiGame.boardLineThrough(plan.target, plan.direction), lineShape);
       const damageMultiplier = ultimateSetting("moray", "damageMultiplier", 0.24);
       return stats.damageScore * AiUI.attackDamage(ownerStock(owner), "big") * damageMultiplier * morayFieldDamageTicks(ownerStock(owner));
     }
@@ -923,12 +924,12 @@
       const targetSnake = perceivedSnakeFor(owner, opponent, now);
       const targetHead = targetSnake[0] || target;
       const nearestFood = nearestFoodFor(targetHead);
-      const fallbackDirection = HexSnakeGame.ownerDirection(owner);
-      const ideal = HexSnakeGame.directionFromSourceToTarget(ownerHead(owner), target, fallbackDirection);
+      const fallbackDirection = AiGame.ownerDirection(owner);
+      const ideal = AiGame.directionFromSourceToTarget(ownerHead(owner), target, fallbackDirection);
       const weights = aiStrategyWeightsFor(owner).castDirection;
       const candidates = [
         {
-          direction: HexSnakeGame.directionFromSourceToTarget(ownerHead(owner), targetHead, fallbackDirection),
+          direction: AiGame.directionFromSourceToTarget(ownerHead(owner), targetHead, fallbackDirection),
           weight: weights.selfHeadToOpponentHead
         },
         {
@@ -936,11 +937,11 @@
           weight: weights.opponentBodyLongestAxis
         },
         {
-          direction: nearestFood ? HexSnakeGame.directionFromSourceToTarget(targetHead, nearestFood, fallbackDirection) : fallbackDirection,
+          direction: nearestFood ? AiGame.directionFromSourceToTarget(targetHead, nearestFood, fallbackDirection) : fallbackDirection,
           weight: nearestFood ? weights.opponentHeadToNearestFood : 0
         }
       ];
-      candidates.sort((a, b) => b.weight - a.weight || HexSnakeGame.turnDistance(a.direction, ideal) - HexSnakeGame.turnDistance(b.direction, ideal));
+      candidates.sort((a, b) => b.weight - a.weight || AiGame.turnDistance(a.direction, ideal) - AiGame.turnDistance(b.direction, ideal));
       return candidates[0].direction;
     }
 
@@ -948,7 +949,7 @@
       const opponent = opponentOf(owner);
       const targetSnake = perceivedSnakeFor(owner, opponent, now);
       const targetHead = targetSnake[0];
-      const stats = HexSnakeGame.attackStats(ownerStock(owner), profile);
+      const stats = AiGame.attackStats(ownerStock(owner), profile);
       if (profile === "big" && AiUI.characterFor(owner).id === "moray") return chooseMorayLineAttackPlan(owner, now).target;
 
       if (isHighAiDifficulty()) {
@@ -968,16 +969,16 @@
     }
 
     function shortestFoodDistance(start, occupied) {
-      const foodKeys = new Set(AiState.foods.map(HexSnakeGame.keyOf));
-      const visited = new Set([HexSnakeGame.keyOf(start)]);
+      const foodKeys = new Set(AiState.foods.map(AiGame.keyOf));
+      const visited = new Set([AiGame.keyOf(start)]);
       const queue = [{ cell: start, distance: 0 }];
 
       for (let index = 0; index < queue.length; index += 1) {
         const current = queue[index];
-        if (foodKeys.has(HexSnakeGame.keyOf(current.cell))) return current.distance;
+        if (foodKeys.has(AiGame.keyOf(current.cell))) return current.distance;
 
         neighborCellsFor(current.cell).forEach(next => {
-          const nextKey = HexSnakeGame.keyOf(next);
+          const nextKey = AiGame.keyOf(next);
           if (visited.has(nextKey)) return;
           if (occupied.has(nextKey) && !foodKeys.has(nextKey)) return;
           visited.add(nextKey);
@@ -989,13 +990,13 @@
     }
 
     function reachableSpaceUncached(start, occupied, maxCells = 10) {
-      if (occupied.has(HexSnakeGame.keyOf(start))) return 0;
-      const visited = new Set([HexSnakeGame.keyOf(start)]);
+      if (occupied.has(AiGame.keyOf(start))) return 0;
+      const visited = new Set([AiGame.keyOf(start)]);
       const queue = [start];
       for (let index = 0; index < queue.length && visited.size < maxCells; index += 1) {
         const current = queue[index];
         neighborCellsFor(current).forEach(next => {
-          const nextKey = HexSnakeGame.keyOf(next);
+          const nextKey = AiGame.keyOf(next);
           if (visited.has(nextKey) || occupied.has(nextKey)) return;
           visited.add(nextKey);
           queue.push(next);
@@ -1007,7 +1008,7 @@
     function reachableSpace(start, occupied, maxCells = 10) {
       const cache = activeAiDecisionCache;
       if (!cache) return reachableSpaceUncached(start, occupied, maxCells);
-      const cacheKey = `${HexSnakeGame.keyOf(start)}|${maxCells}|${occupiedSignature(occupied)}`;
+      const cacheKey = `${AiGame.keyOf(start)}|${maxCells}|${occupiedSignature(occupied)}`;
       if (!cache.reachableSpaces.has(cacheKey)) {
         cache.reachableSpaces.set(cacheKey, reachableSpaceUncached(start, occupied, maxCells));
       }
@@ -1015,7 +1016,7 @@
     }
 
     function expectedDamageAtUncached(owner, cell, now) {
-      if (HexSnakeGame.isOwnerDamageImmune(owner, now)) return 0;
+      if (AiGame.isOwnerDamageImmune(owner, now)) return 0;
       const opponent = opponentOf(owner);
       let damage = 0;
       AiState.projectiles.forEach(projectile => {
@@ -1023,20 +1024,20 @@
         if (!isProjectileVisibleTo(owner, projectile, now)) return;
         if (projectile.kind === "line" || projectile.kind === "lineHazardSetup") {
           const multiplier = projectile.lineCells?.reduce((best, lineCell) => (
-            Math.max(best, HexSnakeGame.lineBandDamageMultiplier(HexSnakeGame.hexDistance(lineCell, cell), projectile))
+            Math.max(best, AiGame.lineBandDamageMultiplier(AiGame.hexDistance(lineCell, cell), projectile))
           ), 0) || 0;
           damage += (projectile.damage || 0) * multiplier;
           return;
         }
         const target = projectile.explosionTarget || projectile.target;
-        if (target) damage += (projectile.damage || 0) * HexSnakeGame.circleDamageMultiplier(HexSnakeGame.hexDistance(cell, target), projectile.radius || 0);
+        if (target) damage += (projectile.damage || 0) * AiGame.circleDamageMultiplier(AiGame.hexDistance(cell, target), projectile.radius || 0);
       });
       AiState.hazards.forEach(hazard => {
         if (hazard.owner !== opponent || now > hazard.endAt) return;
-        if (hazard.kind === "radiation") damage += (hazard.damage || 0) * HexSnakeGame.circleDamageMultiplier(HexSnakeGame.hexDistance(cell, hazard.target), hazard.radius || 0);
+        if (hazard.kind === "radiation") damage += (hazard.damage || 0) * AiGame.circleDamageMultiplier(AiGame.hexDistance(cell, hazard.target), hazard.radius || 0);
         if (hazard.kind !== "radiation" && hazard.cells?.length) {
           const multiplier = hazard.cells.reduce((best, hazardCell) => (
-            Math.max(best, HexSnakeGame.lineBandDamageMultiplier(HexSnakeGame.hexDistance(hazardCell, cell), hazard))
+            Math.max(best, AiGame.lineBandDamageMultiplier(AiGame.hexDistance(hazardCell, cell), hazard))
           ), 0);
           damage += (hazard.damage || 0) * multiplier;
         }
@@ -1055,7 +1056,7 @@
       if (hasVisibleThreat) {
         AiState.cells.forEach(cell => {
           const damage = expectedDamageAtUncached(owner, cell, now);
-          if (damage > 0) damageMap.set(HexSnakeGame.keyOf(cell), damage);
+          if (damage > 0) damageMap.set(AiGame.keyOf(cell), damage);
         });
       }
       cache.damageMaps.set(owner, damageMap);
@@ -1064,7 +1065,7 @@
 
     function expectedDamageAt(owner, cell, now) {
       const damageMap = expectedDamageMapFor(owner, now);
-      if (damageMap) return damageMap.get(HexSnakeGame.keyOf(cell)) || 0;
+      if (damageMap) return damageMap.get(AiGame.keyOf(cell)) || 0;
       return expectedDamageAtUncached(owner, cell, now);
     }
 
@@ -1139,24 +1140,24 @@
     }
 
     function alternativeFoodArrivals(owner, head, contestedFood, now) {
-      const contestedKey = HexSnakeGame.keyOf(contestedFood);
+      const contestedKey = AiGame.keyOf(contestedFood);
       return AiState.foods
-        .filter(food => HexSnakeGame.keyOf(food) !== contestedKey)
+        .filter(food => AiGame.keyOf(food) !== contestedKey)
         .map(food => ({
-          key: HexSnakeGame.keyOf(food),
+          key: AiGame.keyOf(food),
           arrival: foodArrivalFrom(owner, head, food, now)
         }))
         .sort((a, b) => a.arrival - b.arrival || a.key.localeCompare(b.key));
     }
 
     function stableFoodRaceTieOwner(food) {
-      return HexSnakeGame.stableVariantIndex(food, 41, 2) === 0 ? "player" : "computer";
+      return AiGame.stableVariantIndex(food, 41, 2) === 0 ? "player" : "computer";
     }
 
     function isAutoFoodRaceTieBreakActive(owner, opponent) {
       if (owner === opponent) return false;
-      if (typeof HexSnakeGame.isPlayerAutoControlActive !== "function") return true;
-      return HexSnakeGame.isPlayerAutoControlActive();
+      if (typeof AiGame.isPlayerAutoControlActive !== "function") return true;
+      return AiGame.isPlayerAutoControlActive();
     }
 
     function contestedFoodTieWinner(owner, opponent, food, now) {
@@ -1218,14 +1219,14 @@
       const targetKey = owner === "player" ? AiState.playerFoodTargetKey : AiState.computerFoodTargetKey;
       const targetAt = owner === "player" ? AiState.playerFoodTargetAt : AiState.computerFoodTargetAt;
       const staleTarget = targetKey && Number.isFinite(targetAt) && now - targetAt >= 20000 ? targetKey : null;
-      const choices = AiState.foods.filter(food => HexSnakeGame.keyOf(food) !== staleTarget);
+      const choices = AiState.foods.filter(food => AiGame.keyOf(food) !== staleTarget);
       const filteredChoices = filterUnsafeFoodTargets(owner, opponent, choices.length ? choices : AiState.foods, now);
       const targetPool = filterContestedFoodTargets(owner, opponent, filteredChoices.length ? filteredChoices : choices.length ? choices : AiState.foods, now);
       if (!targetPool.length) {
         setAiFoodTarget(owner, null, now);
         return perceivedOpponent[0];
       }
-      const lockedTarget = !staleTarget && targetKey ? targetPool.find(food => HexSnakeGame.keyOf(food) === targetKey) : null;
+      const lockedTarget = !staleTarget && targetKey ? targetPool.find(food => AiGame.keyOf(food) === targetKey) : null;
       const sortedTargets = [...targetPool]
         .map(food => ({ food, score: foodValueFor(owner, opponent, food, now) }))
         .sort((a, b) => b.score - a.score);
@@ -1235,7 +1236,7 @@
       const target = lockedTarget && !shouldAbandonFoodTarget(owner, opponent, lockedTarget, now, lockedScore, bestTarget?.score ?? -Infinity, targetAge)
         ? lockedTarget
         : bestTarget?.food;
-      const nextTargetKey = target ? HexSnakeGame.keyOf(target) : null;
+      const nextTargetKey = target ? AiGame.keyOf(target) : null;
       setAiFoodTarget(owner, nextTargetKey, now);
       return target;
     }
@@ -1243,9 +1244,9 @@
     function movementOccupiedSet(owner, opponent, now) {
       const ownSnake = ownerSnake(owner);
       const opponentSnake = perceivedSnakeFor(owner, opponent, now);
-      const occupied = new Set(ownSnake.slice(0, -1).map(HexSnakeGame.keyOf));
+      const occupied = new Set(ownSnake.slice(0, -1).map(AiGame.keyOf));
       if (aiAvoidsOpponentBody() && !isOwnerUnderground(opponent, now)) {
-        opponentSnake.forEach(segment => occupied.add(HexSnakeGame.keyOf(segment)));
+        opponentSnake.forEach(segment => occupied.add(AiGame.keyOf(segment)));
       }
       return occupied;
     }
@@ -1274,17 +1275,17 @@
 
     function movementOccupiedSetForSnake(owner, opponent, snakeParts, now) {
       const opponentSnake = perceivedSnakeFor(owner, opponent, now);
-      const occupied = new Set(snakeParts.slice(0, -1).map(HexSnakeGame.keyOf));
-      if (!isOwnerUnderground(opponent, now)) opponentSnake.forEach(segment => occupied.add(HexSnakeGame.keyOf(segment)));
+      const occupied = new Set(snakeParts.slice(0, -1).map(AiGame.keyOf));
+      if (!isOwnerUnderground(opponent, now)) opponentSnake.forEach(segment => occupied.add(AiGame.keyOf(segment)));
       return occupied;
     }
 
     function movementTargetBenefit(owner, opponent, target, now) {
       if (!isHighAiDifficulty() || !target) return 0;
       const cache = activeCacheFor(owner, now);
-      const cacheKey = HexSnakeGame.keyOf(target);
+      const cacheKey = AiGame.keyOf(target);
       if (cache?.targetBenefits.has(cacheKey)) return cache.targetBenefits.get(cacheKey);
-      const targetFood = AiState.foods.find(food => HexSnakeGame.keyOf(food) === HexSnakeGame.keyOf(target));
+      const targetFood = AiState.foods.find(food => AiGame.keyOf(food) === AiGame.keyOf(target));
       const value = targetFood ? Math.min(20, foodResourceValueFor(owner, targetFood)) : 0;
       if (cache) cache.targetBenefits.set(cacheKey, value);
       return value;
@@ -1301,12 +1302,12 @@
     }
 
     function movementOptionForState(owner, opponent, snakeParts, currentDirection, candidate, target, occupied, opponentSnake, opponentThreat, now, distanceToTarget = cell => wrappedDistance(cell, target)) {
-      const next = HexSnakeGame.nextWrappedCell(snakeParts[0], candidate);
-      const nextKey = HexSnakeGame.keyOf(next);
-      const selfBlocked = snakeParts.slice(0, -1).some(segment => HexSnakeGame.keyOf(segment) === nextKey);
-      const opponentBlocked = opponentSnake.some(segment => HexSnakeGame.keyOf(segment) === nextKey);
+      const next = AiGame.nextWrappedCell(snakeParts[0], candidate);
+      const nextKey = AiGame.keyOf(next);
+      const selfBlocked = snakeParts.slice(0, -1).some(segment => AiGame.keyOf(segment) === nextKey);
+      const opponentBlocked = opponentSnake.some(segment => AiGame.keyOf(segment) === nextKey);
       const blocked = selfBlocked || opponentBlocked || occupied.has(nextKey);
-      const headThreat = HexSnakeGame.keyOf(opponentThreat) === nextKey;
+      const headThreat = AiGame.keyOf(opponentThreat) === nextKey;
       const danger = headThreat ? 20 : 0;
       const wallPressure = nearbyOpenSpace(next, occupied);
       const pathDistance = isHighAiDifficulty() ? Number.POSITIVE_INFINITY : shortestFoodDistance(next, occupied);
@@ -1347,14 +1348,14 @@
     }
 
     function movementFoodKeySet() {
-      return new Set(AiState.foods.map(HexSnakeGame.keyOf));
+      return new Set(AiState.foods.map(AiGame.keyOf));
     }
 
     function advanceMovementSnake(snakeParts, option, foodKeys) {
       const nextFoodKeys = new Set(foodKeys);
       const nextSnake = [option.next, ...snakeParts];
-      if (nextFoodKeys.has(HexSnakeGame.keyOf(option.next))) {
-        nextFoodKeys.delete(HexSnakeGame.keyOf(option.next));
+      if (nextFoodKeys.has(AiGame.keyOf(option.next))) {
+        nextFoodKeys.delete(AiGame.keyOf(option.next));
       } else {
         nextSnake.pop();
       }
@@ -1420,12 +1421,12 @@
         const currentDirection = owner === "player" ? AiState.dir : AiState.computerDir;
         const opponentSnake = perceivedSnakeFor(owner, opponent, now);
         const opponentDirection = perceivedDirectionFor(opponent, now);
-        const opponentThreat = HexSnakeGame.nextWrappedCell(opponentSnake[0], opponentDirection);
+        const opponentThreat = AiGame.nextWrappedCell(opponentSnake[0], opponentDirection);
         const target = chooseAiMoveTarget(owner, opponent, now);
         const occupied = movementOccupiedSet(owner, opponent, now);
         const targetDistanceCache = new Map();
         const distanceToTarget = cell => {
-          const key = HexSnakeGame.keyOf(cell);
+          const key = AiGame.keyOf(cell);
           if (!targetDistanceCache.has(key)) {
             const distance = wrappedDistance(cell, target);
             targetDistanceCache.set(key, isHighAiDifficulty() ? arrivalTimeForDistance(owner, distance, now) : distance);
@@ -1435,7 +1436,7 @@
         const options = [];
 
         AiConfig.directions.forEach((_, candidate) => {
-          if (!HexSnakeGame.canOwnerTurn(owner, candidate)) return;
+          if (!AiGame.canOwnerTurn(owner, candidate)) return;
           options.push(movementOptionForState(owner, opponent, ownSnake, currentDirection, candidate, target, occupied, opponentSnake, opponentThreat, now, distanceToTarget));
         });
 
@@ -1484,8 +1485,8 @@
         aimDirection: morayLinePlan?.direction ?? chooseAiAttackDirection("computer", attackTarget, now),
         aimOrigin: computerCharacter.id === "moray" ? attackTarget : AiState.computerSnake[0]
       } : {};
-      if (HexSnakeGame.launchAttack("computer", attackTarget, now, profile, options)) {
-        HexSnakeGame.setStatus(profile === "small" ? "P2 施放小招。" : "P2 施放大招，2 秒後落地。");
+      if (AiGame.launchAttack("computer", attackTarget, now, profile, options)) {
+        AiGame.setStatus(profile === "small" ? "P2 施放小招。" : "P2 施放大招，2 秒後落地。");
       }
     }
 
@@ -1498,7 +1499,7 @@
     }
 
     function maybeAutoBattlePlayerAttack(now) {
-      if (!HexSnakeGame.isPlayerAutoControlActive() || isNoviceComputer()) return;
+      if (!AiGame.isPlayerAutoControlActive() || isNoviceComputer()) return;
       const profile = chooseAiAttackProfile("player", now);
       if (!profile) return;
       const target = chooseAiAttackTarget("player", profile, now);
@@ -1511,7 +1512,7 @@
         aimDirection: morayLinePlan?.direction ?? chooseAiAttackDirection("player", attackTarget, now),
         aimOrigin: playerCharacter.id === "moray" ? attackTarget : AiState.snake[0]
       } : {};
-      if (HexSnakeGame.launchAttack("player", attackTarget, now, profile, options)) HexSnakeGame.flashAttackButton(profile, 150);
+      if (AiGame.launchAttack("player", attackTarget, now, profile, options)) AiGame.flashAttackButton(profile, 150);
     }
 
     const HexSnakeAI = Object.freeze({

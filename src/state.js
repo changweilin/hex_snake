@@ -10,6 +10,7 @@ const HexSnakeState = {
 };
 
 const HexSnakeUI = {};
+HexSnakeUI.aiGame = {};
 HexSnakeUI.replayGame = {};
 const HexSnakeRenderGame = {};
 

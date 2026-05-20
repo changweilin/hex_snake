@@ -5483,6 +5483,29 @@
       updatePerfOverlay
     });
 
+    Object.assign(HexSnakeUI.aiGame, {
+      attackHitStunChances,
+      attackStats,
+      bandShapeFromTotalWidth,
+      boardLineThrough,
+      canOwnerTurn,
+      circleDamageMultiplier,
+      damageSnake,
+      directionFromSourceToTarget,
+      flashAttackButton,
+      hexDistance,
+      isOwnerDamageImmune,
+      isPlayerAutoControlActive,
+      keyOf,
+      launchAttack,
+      lineBandDamageMultiplier,
+      nextWrappedCell,
+      ownerDirection,
+      setStatus,
+      stableVariantIndex,
+      turnDistance
+    });
+
     Object.assign(HexSnakeUI.replayGame, {
       buildCells,
       clearRelayRestartTimer,
