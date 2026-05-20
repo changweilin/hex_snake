@@ -263,7 +263,7 @@
       const nowMs = performance.now();
       if (!shouldPlaySfx(owner, eventName, nowMs)) return;
       const eventProfile = sfxEventProfiles[eventName] || sfxEventProfiles.select;
-      const character = options.character || characterFor(owner);
+      const character = options.character || HexSnakeUI.characterFor(owner);
       const profile = characterSfxProfile(character?.id || "dragon", HexSnakeState.ui.portraitVariantMode);
       const base = profile.base * profile.pitch;
       const duration = eventProfile.duration * profile.decayScale;

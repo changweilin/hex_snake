@@ -1,4 +1,6 @@
 const HexSnakeAbout = (() => {
+  const AboutDom = HexSnakeDOM;
+
   function yesNo(value) {
     return value ? "是" : "否";
   }
@@ -25,12 +27,12 @@ const HexSnakeAbout = (() => {
     if (id) valueEl.id = id;
     valueEl.textContent = String(value ?? "");
     row.append(labelEl, valueEl);
-    versionInfoList.append(row);
+    AboutDom.versionInfoList.append(row);
   }
 
   function renderVersionInfo() {
     const info = HexSnakePlatform.appInfo;
-    versionInfoList.innerHTML = "";
+    AboutDom.versionInfoList.innerHTML = "";
     addRow("名稱", info.name, "versionAppName");
     addRow("版本", info.version, "versionAppVersion");
     addRow("Build", info.buildVersion, "versionBuildVersion");
@@ -45,11 +47,11 @@ const HexSnakeAbout = (() => {
 
   function openModal() {
     renderVersionInfo();
-    versionModal.hidden = false;
+    AboutDom.versionModal.hidden = false;
   }
 
   function closeModal() {
-    versionModal.hidden = true;
+    AboutDom.versionModal.hidden = true;
   }
 
   return Object.freeze({
