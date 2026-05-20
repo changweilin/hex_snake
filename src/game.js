@@ -5483,6 +5483,17 @@
       updatePerfOverlay
     });
 
+    Object.assign(HexSnakeUI.replayGame, {
+      buildCells,
+      clearRelayRestartTimer,
+      returnToStartScreen,
+      setSettingsLocked,
+      setStatus,
+      updateAutoBattleControls,
+      updateHud,
+      updateSettingsActionMode
+    });
+
     Object.assign(HexSnakeUI, {
       clearRelayRestartTimer,
       loadSavedCharacterChoices,
