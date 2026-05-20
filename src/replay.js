@@ -19,6 +19,7 @@
     const ReplayState = HexSnakeState.replay;
     const ReplayDom = HexSnakeDOM;
     const ReplayGame = HexSnakeUI.replayGame;
+    const ReplayRender = HexSnakeRender;
     ReplayState.mode = replayMode;
     ReplayState.surrendered = replaySurrendered;
 
@@ -401,7 +402,7 @@
         HexSnakeUI.buildCharacterStage();
       }
       ReplayGame.updateHud();
-      draw();
+      ReplayRender.draw();
     }
 
     function replayPlaybackSpeedLabel(value) {
@@ -510,7 +511,7 @@
       ReplayGame.updateHud();
       ReplayGame.updateSettingsActionMode();
       ReplayGame.updateAutoBattleControls();
-      draw();
+      ReplayRender.draw();
     }
 
     function renderReplayFrame() {

@@ -1,5 +1,7 @@
 let minGridSize = 6;
 const UiDom = HexSnakeDOM;
+const UiGame = HexSnakeUI.uiGame;
+const UiRender = HexSnakeRender;
 let maxGridSize = 12;
 let minFoodCount = 1;
 let maxFoodCount = 4;
@@ -2438,7 +2440,7 @@ function tutorialCaptureCrop(type) {
 
 function tutorialCropPoint(cell, type) {
   const crop = tutorialCaptureCrop(type);
-  const point = HexSnakeGame.axialToPixel(cell);
+  const point = UiGame.axialToPixel(cell);
   const rect = UiDom.playArea.getBoundingClientRect();
   const scaleX = rect.width ? UiDom.canvas.width / rect.width : 1;
   const scaleY = rect.height ? UiDom.canvas.height / rect.height : 1;
@@ -2482,7 +2484,7 @@ function tutorialMoveArrowMarkup(cue) {
 
 function tutorialMoveFoodCell() {
   const head = snake?.[0] || { q: 0, r: 0 };
-  return HexSnakeGame.nextWrappedCell(HexSnakeGame.nextWrappedCell(head, 1), 1);
+  return UiGame.nextWrappedCell(UiGame.nextWrappedCell(head, 1), 1);
 }
 
 function tutorialCaptureUrl(type) {
@@ -2499,7 +2501,7 @@ function tutorialCaptureUrl(type) {
   try {
     if (type === "move" && snake?.[0]) {
       dir = 1;
-      snake = HexSnakeGame.createStartingSnake(
+      snake = UiGame.createStartingSnake(
         { q: 0, r: 0 },
         dir,
         Math.max(3, defaultSettings.initialLength),
@@ -2517,7 +2519,7 @@ function tutorialCaptureUrl(type) {
     if (type === "small" && computerSnake?.[0]) {
       const hitHead = { q: 0, r: 0 };
       computerDir = 2;
-      computerSnake = HexSnakeGame.createStartingSnake(
+      computerSnake = UiGame.createStartingSnake(
         hitHead,
         computerDir,
         Math.max(4, defaultSettings.initialLength + 1),
@@ -2525,7 +2527,7 @@ function tutorialCaptureUrl(type) {
       lastVisibleComputerSnake = computerSnake.map((segment) => ({
         ...segment,
       }));
-      snake = HexSnakeGame.createStartingSnake(
+      snake = UiGame.createStartingSnake(
         { q: -2, r: 1 },
         1,
         Math.max(3, defaultSettings.initialLength),
@@ -2539,13 +2541,13 @@ function tutorialCaptureUrl(type) {
           target: { q: computerSnake[0].q, r: computerSnake[0].r },
           owner: "player",
           radius: Math.max(3.1, blastRadius(playerStock || initialStock) + 1.1),
-          visualType: HexSnakeGame.attackVisualType("player", "small"),
+          visualType: UiGame.attackVisualType("player", "small"),
           startedAt: now - blastDurationMs * 0.02,
           endAt: now + blastDurationMs * 0.98,
         },
       ];
     }
-    draw();
+    UiRender.draw();
     const crop = tutorialCaptureCrop(type);
     const out = document.createElement("canvas");
     const targetWidth = Math.max(1, Math.round(crop.w));
@@ -2569,7 +2571,7 @@ function tutorialCaptureUrl(type) {
       targetHeight,
     );
     if (type === "small") {
-      const hitPoint = HexSnakeGame.axialToPixel({ q: 0, r: 0 });
+      const hitPoint = UiGame.axialToPixel({ q: 0, r: 0 });
       const x = hitPoint.x - crop.x;
       const y = hitPoint.y - crop.y;
       const radiusPx = cellSize * 3.35;
@@ -2978,8 +2980,8 @@ function buildRulesContent() {
 }
 
 function openRulesModal() {
-  HexSnakeGame.setSettingsOpen(false);
-  HexSnakeGame.setGmOpen(false);
+  UiGame.setSettingsOpen(false);
+  UiGame.setGmOpen(false);
   rulesModal.hidden = false;
   rulesButton.setAttribute("aria-expanded", "true");
   rulesCloseButton.focus();
@@ -3298,7 +3300,7 @@ function setPortraitCharacterForOwner(
   if (characterId !== randomCharacterChoiceId)
     HexSnakeUI.preloadPortraitsFor(selectedPortraitOwner);
   renderIntroPortraits(showDetails);
-  HexSnakeGame.resize();
+  UiGame.resize();
   if (characterId !== randomCharacterChoiceId) {
     HexSnakeAudio.playCharacter(owner, "select", {
       character: characterById.get(characterId),
@@ -3659,20 +3661,20 @@ function startingStock() {
   return Object.fromEntries(
     foodTypes.map((type) => [
       type.id,
-      HexSnakeGame.clampInitialStock(initialStock[type.id]),
+      UiGame.clampInitialStock(initialStock[type.id]),
     ]),
   );
 }
 
 function startingEnergy() {
   return gmMode
-    ? HexSnakeGame.clampInitialEnergy(initialEnergy)
+    ? UiGame.clampInitialEnergy(initialEnergy)
     : defaultSettings.initialEnergy;
 }
 
 function startingBombs() {
   return gmMode
-    ? HexSnakeGame.clampInitialBombs(initialBombs)
+    ? UiGame.clampInitialBombs(initialBombs)
     : defaultSettings.initialBombs;
 }
 
@@ -3741,7 +3743,7 @@ function moveInterval(stock) {
 function moveIntervalFor(owner, now) {
   const stock = owner === "player" ? playerStock : computerStock;
   const slowUntil = owner === "player" ? playerSlowUntil : computerSlowUntil;
-  const speedScale = HexSnakeGame.isPlayerAutoControlActive() ? computerBattleSpeed : 1;
+  const speedScale = UiGame.isPlayerAutoControlActive() ? computerBattleSpeed : 1;
   return (moveInterval(stock) * (now < slowUntil ? 2 : 1)) / speedScale;
 }
 

@@ -1,6 +1,7 @@
     const { keyLabel, normalizeAutoBattleSpeed, normalizeKey } = HexSnakeControls;
     const Dom = HexSnakeDOM;
     const GameAI = HexSnakeAI;
+    const GameRender = HexSnakeRender;
 
     function saveKeybinds() {
       HexSnakeStorage.setJson("hexSnakeKeybinds", HexSnakeState.game.keybinds);
@@ -802,7 +803,7 @@
       const boardWidth = Math.sqrt(3) * (HexSnakeState.game.radius * 2 + 1);
       const boardHeight = HexSnakeState.game.radius * 3 + 2;
       HexSnakeState.game.cellSize = Math.min(rect.width / (boardWidth + 0.8), rect.height / (boardHeight + 0.8));
-      draw();
+      GameRender.draw();
     }
 
     function createStartingSnake(head, direction, length) {
@@ -1909,7 +1910,7 @@
     function triggerSmallHitShake(projectile, playerDamage, computerDamage, now) {
       if (projectile.profile !== "small") return;
       if (playerDamage <= 0 && computerDamage <= 0) return;
-      triggerBoardShake(projectile.visualType || attackVisualType(projectile.owner, projectile.profile), now, { profile: "smallHit" });
+      GameRender.triggerBoardShake(projectile.visualType || attackVisualType(projectile.owner, projectile.profile), now, { profile: "smallHit" });
     }
 
     function pushCircleAttack({ owner, profile, source = null, target, createdAt, impactAt, delay, radius, damage, stunChance, hidden = false, flat = false, visualType = null, ...extra }) {
@@ -2665,7 +2666,7 @@
           startedAt: now,
           endAt: now + HexSnakeState.config.blastDurationMs * 1.25
         });
-        triggerBoardShake(visualType, now);
+        GameRender.triggerBoardShake(visualType, now);
         return { visualType };
       }
       if (projectile.kind === "lineHazardSetup") {
@@ -2683,7 +2684,7 @@
           startedAt: now,
           endAt: now + HexSnakeState.config.blastDurationMs
         });
-        triggerBoardShake(visualType, now);
+        GameRender.triggerBoardShake(visualType, now);
         return { visualType };
       }
       if (projectile.kind === "line") {
@@ -2701,7 +2702,7 @@
           startedAt: now,
           endAt: now + HexSnakeState.config.blastDurationMs
         });
-        triggerBoardShake(visualType, now);
+        GameRender.triggerBoardShake(visualType, now);
         return { visualType };
       }
       if (projectile.kind === "headCircle" && projectile.followHead) {
@@ -2722,7 +2723,7 @@
         startedAt: now,
         endAt: now + HexSnakeState.config.blastDurationMs
       });
-      triggerBoardShake(visualType, now);
+      GameRender.triggerBoardShake(visualType, now);
       if (projectile.kind === "headCircle" && projectile.radiationDurationMs) {
         HexSnakeState.game.hazards.push({
           kind: "radiation",
@@ -2756,7 +2757,7 @@
       HexSnakeState.game.hazards = HexSnakeState.game.hazards.filter(hazard => now <= hazard.endAt);
       HexSnakeState.game.hazards.forEach(hazard => {
         if (now < hazard.startedAt || hazard.shaken) return;
-        triggerBoardShake(hazard.visualType || attackVisualType(hazard.owner, "big"), now);
+        GameRender.triggerBoardShake(hazard.visualType || attackVisualType(hazard.owner, "big"), now);
         hazard.shaken = true;
       });
       const projectilesActive = HexSnakeState.game.projectiles.some(projectile => now < projectile.impactAt);
@@ -2801,7 +2802,7 @@
       activeHazards.forEach(hazard => {
         if (now < hazard.startedAt || now < hazard.nextTickAt) return;
         if (!hazard.shaken) {
-          triggerBoardShake(hazard.visualType || attackVisualType(hazard.owner, "big"), now);
+          GameRender.triggerBoardShake(hazard.visualType || attackVisualType(hazard.owner, "big"), now);
           hazard.shaken = true;
         }
         hazard.nextTickAt = now + hazard.tickMs;
@@ -3123,7 +3124,7 @@
       if (!HexSnakeState.game.running) {
         const frameNow = now || performance.now();
         const visualsActive = HexSnakeState.game.gameOverSettlementPending && advanceGameOverVisuals(frameNow);
-        draw();
+        GameRender.draw();
         if (HexSnakeState.game.gameOverSettlementPending && HexSnakeState.game.gameOverLogoTransitionEndsAt) {
           if (frameNow < HexSnakeState.game.gameOverLogoTransitionEndsAt) {
             HexSnakeState.game.rafId = requestAnimationFrame(loop);
@@ -3184,7 +3185,7 @@
       recordReplaySnapshotThrottled(now);
       broadcastNetworkSnapshot(now);
       updateAutoBattleControls();
-      draw();
+      GameRender.draw();
       HexSnakeState.game.rafId = requestAnimationFrame(loop);
     }
 
@@ -3237,7 +3238,7 @@
       } catch (error) {
         // Window-level pointer listeners still finish the attack gesture.
       }
-      requestPreviewDraw();
+      GameRender.requestPreviewDraw();
       return true;
     }
 
@@ -3250,7 +3251,7 @@
       HexSnakeState.game.targetCell = directionalAttackTarget(HexSnakeState.game.controlAttackPointer.direction);
       HexSnakeState.game.targetActive = true;
       if (HexSnakeState.game.controlAttackPointer.direction !== previousDirection) triggerTouchFeedback(event, 5);
-      requestPreviewDraw();
+      GameRender.requestPreviewDraw();
     }
 
     function finishControlPadAttackPointer(event) {
@@ -3268,7 +3269,7 @@
       HexSnakeState.game.controlAttackPointer = null;
       HexSnakeState.game.targetActive = false;
       if (Dom.controlRow.hasPointerCapture?.(event.pointerId)) Dom.controlRow.releasePointerCapture(event.pointerId);
-      requestPreviewDraw();
+      GameRender.requestPreviewDraw();
     }
 
     function moveStick(event) {
@@ -3375,7 +3376,7 @@
       };
       HexSnakeState.game.targetCell = nearestInsideCell(pixelToAxial(targetPixel.x, targetPixel.y));
       HexSnakeState.game.targetActive = true;
-      requestPreviewDraw();
+      GameRender.requestPreviewDraw();
     }
 
     function releaseTargetStick() {
@@ -3552,13 +3553,13 @@
       HexSnakeState.game.targetActive = Boolean(target);
       HexSnakeState.game.selectedAttackProfile = profile;
       updateTargetModeIndicator();
-      requestPreviewDraw();
+      GameRender.requestPreviewDraw();
       clearKeyboardAttackPreviewTimer();
       HexSnakeState.game.keyboardAttackPreviewTimer = setTimeout(() => {
         HexSnakeState.game.keyboardAttackPreviewTimer = null;
         if (HexSnakeState.game.keyboardAttackPreview === preview) HexSnakeState.game.keyboardAttackPreview = null;
         HexSnakeState.game.targetActive = false;
-        requestPreviewDraw();
+        GameRender.requestPreviewDraw();
       }, 900);
       setStatus(`${profile === "big" ? "大招" : "小招"}按鍵目標：${keyboardAttackHintLabel(profile)}`);
     }
@@ -3657,7 +3658,7 @@
       HexSnakeState.game.selectedAttackProfile = profile === "big" ? "big" : "small";
       HexSnakeState.game.targetCell = playerDirectAttackTarget(profile, pointer);
       HexSnakeState.game.targetActive = Boolean(HexSnakeState.game.targetCell);
-      requestPreviewDraw();
+      GameRender.requestPreviewDraw();
     }
 
     function launchDirectPlayerAttack(profile = "small", pointer = null) {
@@ -3736,10 +3737,10 @@
         HexSnakeState.game.targetCell = { ...target };
         HexSnakeState.game.targetActive = true;
         flashAttackButton(profile);
-        draw();
+        GameRender.draw();
         setTimeout(() => {
           HexSnakeState.game.targetActive = false;
-          draw();
+          GameRender.draw();
         }, 180);
         const moveName = profile === "small" ? HexSnakeUI.characterFor("player").smallMove : HexSnakeUI.characterFor("player").bigMove;
         setStatus(`${moveName} 發動。`);
@@ -3847,7 +3848,7 @@
       } catch (error) {
         // Pointer capture is a convenience; window-level listeners still finish the drag.
       }
-      requestPreviewDraw();
+      GameRender.requestPreviewDraw();
     }
 
     function moveBoardAttackPointer(event) {
@@ -3864,7 +3865,7 @@
         return;
       }
       previewDirectAttack(HexSnakeState.game.attackPointer.previewProfile, HexSnakeState.game.attackPointer);
-      requestPreviewDraw();
+      GameRender.requestPreviewDraw();
     }
 
     function finishBoardAttackPointer(event) {
@@ -3886,7 +3887,7 @@
       clearAttackPointerLongPressTimer();
       HexSnakeState.game.targetActive = false;
       if (Dom.canvas.hasPointerCapture?.(event.pointerId)) Dom.canvas.releasePointerCapture(event.pointerId);
-      requestPreviewDraw();
+      GameRender.requestPreviewDraw();
     }
 
     function currentSettingsPage() {
@@ -5455,8 +5456,8 @@
       }
       if (HexSnakeState.game.running || HexSnakeState.game.gameOverSettlementPending) {
         HexSnakeState.game.rafId = requestAnimationFrame(loop);
-      } else if (isEffectComparisonMode()) {
-        HexSnakeState.game.rafId = requestAnimationFrame(comparisonLoop);
+      } else if (GameRender.isEffectComparisonMode()) {
+        HexSnakeState.game.rafId = requestAnimationFrame(GameRender.comparisonLoop);
       }
     });
     HexSnakePlatform.lifecycle.onBackButton?.(handlePlatformBackButton);
@@ -5504,6 +5505,20 @@
       setStatus,
       stableVariantIndex,
       turnDistance
+    });
+
+    Object.assign(HexSnakeUI.uiGame, {
+      attackVisualType,
+      axialToPixel,
+      clampInitialBombs,
+      clampInitialEnergy,
+      clampInitialStock,
+      createStartingSnake,
+      isPlayerAutoControlActive,
+      nextWrappedCell,
+      resize,
+      setGmOpen,
+      setSettingsOpen
     });
 
     Object.assign(HexSnakeUI.replayGame, {
@@ -5617,13 +5632,13 @@
       if (HexSnakeUI.shouldShowTutorial()) HexSnakeUI.showTutorial(0);
       HexSnakeUI.preloadPortraitsFor("player");
       HexSnakeUI.preloadPortraitsFor("computer");
-      if (isEffectComparisonMode()) {
+      if (GameRender.isEffectComparisonMode()) {
         Dom.overlay.classList.remove("show");
         Dom.characterStage.hidden = true;
         HexSnakeUI.setCharacterStageOverlayMode(false);
         setStatus("Skill effect comparison mode.");
         cancelAnimationFrame(HexSnakeState.game.rafId);
-        HexSnakeState.game.rafId = requestAnimationFrame(comparisonLoop);
+        HexSnakeState.game.rafId = requestAnimationFrame(GameRender.comparisonLoop);
       }
       if ("requestIdleCallback" in window) {
         requestIdleCallback(HexSnakeUI.preloadAllPortraits, { timeout: 1500 });

@@ -3981,3 +3981,11 @@
       }
       RenderDom.ctx.restore();
     }
+
+    Object.assign(HexSnakeRender, {
+      comparisonLoop,
+      draw,
+      isEffectComparisonMode,
+      requestPreviewDraw,
+      triggerBoardShake
+    });

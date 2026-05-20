@@ -12,6 +12,8 @@ const HexSnakeState = {
 const HexSnakeUI = {};
 HexSnakeUI.aiGame = {};
 HexSnakeUI.replayGame = {};
+HexSnakeUI.uiGame = {};
+const HexSnakeRender = {};
 const HexSnakeRenderGame = {};
 
 const HexSnakeControls = (() => {
@@ -58,5 +60,6 @@ const HexSnakeControls = (() => {
 
 window.HexSnakeState = HexSnakeState;
 window.HexSnakeUI = HexSnakeUI;
+window.HexSnakeRender = HexSnakeRender;
 window.HexSnakeRenderGame = HexSnakeRenderGame;
 window.HexSnakeControls = HexSnakeControls;
