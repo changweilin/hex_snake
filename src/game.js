@@ -5487,6 +5487,19 @@
     });
     HexSnakePlatform.lifecycle.onBackButton?.(handlePlatformBackButton);
 
+    const HexSnakeGame = Object.freeze({
+      buildCells,
+      clearRelayRestartTimer,
+      loadSavedCharacterChoices,
+      returnToStartScreen,
+      setSettingsLocked,
+      setStatus,
+      syncCharacterInputs,
+      updateAutoBattleControls,
+      updateHud,
+      updateSettingsActionMode
+    });
+
     window.addEventListener("resize", resize);
 
     async function bootstrap() {

@@ -286,7 +286,7 @@
 
     function openReplayModal() {
       if (running && !gameOver) return;
-      clearRelayRestartTimer();
+      HexSnakeGame.clearRelayRestartTimer();
       setReplayMessage("");
       refreshReplayModal();
       replayModal.hidden = false;
@@ -356,7 +356,7 @@
       computerCharacterId = snapshot.computerCharacterId || record.computerCharacterId;
       gridSize = snapshot.gridSize || record.settings?.gridSize || gridSize;
       radius = snapshot.radius ?? gridSize - 1;
-      buildCells();
+      HexSnakeGame.buildCells();
       dir = snapshot.dir || 0;
       nextDir = snapshot.nextDir || dir;
       computerDir = snapshot.computerDir || 3;
@@ -391,7 +391,7 @@
       if (previousPlayerCharacterId !== playerCharacterId || previousComputerCharacterId !== computerCharacterId || !characterStage.innerHTML) {
         buildCharacterStage();
       }
-      updateHud();
+      HexSnakeGame.updateHud();
       draw();
     }
 
@@ -465,7 +465,7 @@
 
     function restoreReplayReturnState(state) {
       if (!state) {
-        returnToStartScreen();
+        HexSnakeGame.returnToStartScreen();
         return;
       }
       playerCharacterId = state.playerCharacterId;
@@ -497,10 +497,10 @@
       characterStage.className = state.characterStageClassName || "character-stage";
       characterStage.hidden = state.characterStageHidden;
       characterStage.innerHTML = state.characterStageHtml;
-      setStatus(state.statusText);
-      updateHud();
-      updateSettingsActionMode();
-      updateAutoBattleControls();
+      HexSnakeGame.setStatus(state.statusText);
+      HexSnakeGame.updateHud();
+      HexSnakeGame.updateSettingsActionMode();
+      HexSnakeGame.updateAutoBattleControls();
       draw();
     }
 
@@ -561,7 +561,7 @@
       if (!record.snapshots.length) return false;
       closeReplayModal();
       cancelAnimationFrame(rafId);
-      clearRelayRestartTimer();
+      HexSnakeGame.clearRelayRestartTimer();
       replayReturnState = captureReplayReturnState();
       replayMode = true;
       HexSnakeState.replay.mode = replayMode;
@@ -571,8 +571,8 @@
       computerBattleMode = false;
       playerAutoMode = false;
       computerBattleManualOverride = false;
-      updateAutoBattleControls();
-      setSettingsLocked(true);
+      HexSnakeGame.updateAutoBattleControls();
+      HexSnakeGame.setSettingsLocked(true);
       setOverlayChromeVisible(false);
       overlay.classList.remove("show");
       setCharacterStageOverlayMode(false);
@@ -602,7 +602,7 @@
       replayControls.hidden = true;
       replaySpeedMenu.hidden = true;
       replaySpeedSelect.setAttribute("aria-expanded", "false");
-      setSettingsLocked(false);
+      HexSnakeGame.setSettingsLocked(false);
       restoreReplayReturnState(replayReturnState);
       replayReturnState = null;
     }

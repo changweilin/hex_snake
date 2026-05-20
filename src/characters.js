@@ -70,7 +70,7 @@
       computerCharacterId = characterById.has(computerCharacterId) ? computerCharacterId : characters[Math.min(1, characters.length - 1)].id;
       playerCharacterChoice = playerCharacterId;
       computerCharacterChoice = computerCharacterId;
-      loadSavedCharacterChoices();
+      HexSnakeGame.loadSavedCharacterChoices();
     }
 
     function showCharacterDatabaseError(error) {
@@ -165,7 +165,7 @@
           ))
         ].join("");
       });
-      syncCharacterInputs();
+      HexSnakeGame.syncCharacterInputs();
     }
 
     function portraitLibrary(character) {
