@@ -1604,6 +1604,24 @@ Object.defineProperties(HexSnakeState.game, {
       highlightedAttackProfile = value;
     },
   },
+  previewDrawRafId: {
+    get: () => previewDrawRafId,
+    set: (value) => {
+      previewDrawRafId = value;
+    },
+  },
+  directionalPreviewCacheKey: {
+    get: () => directionalPreviewCacheKey,
+    set: (value) => {
+      directionalPreviewCacheKey = value;
+    },
+  },
+  directionalPreviewCache: {
+    get: () => directionalPreviewCache,
+    set: (value) => {
+      directionalPreviewCache = value;
+    },
+  },
   attackPointer: {
     get: () => attackPointer,
     set: (value) => {

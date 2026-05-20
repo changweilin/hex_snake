@@ -29,10 +29,10 @@
       RenderDom.ctx.translate(shake.x, shake.y);
       drawElementalBackdrop(now);
 
-      cells.forEach(cell => {
+      RenderState.cells.forEach(cell => {
         const { x, y } = HexSnakeGame.axialToPixel(cell);
         const shade = (cell.q - cell.r + radius) % 2 === 0 ? RenderConfig.colors.cell : RenderConfig.colors.cellAlt;
-        HexSnakeGame.hexPath(x, y, cellSize * 0.94);
+        HexSnakeGame.hexPath(x, y, RenderState.cellSize * 0.94);
         RenderDom.ctx.fillStyle = shade;
         RenderDom.ctx.fill();
         RenderDom.ctx.strokeStyle = RenderConfig.colors.cellLine;
@@ -40,7 +40,7 @@
         RenderDom.ctx.stroke();
       });
 
-      foods.forEach(food => {
+      RenderState.foods.forEach(food => {
         const type = RenderUI.foodTypeIds(food).map(typeId => RenderConfig.foodTypeById.get(typeId)).filter(Boolean);
         const { x, y } = HexSnakeGame.axialToPixel(food);
         drawFoodToken(x, y, type);
@@ -53,9 +53,9 @@
       drawQuetzalBloomPreview(now);
       drawBlasts();
 
-      if (computerSnake) {
+      if (RenderState.computerSnake) {
         const computerCharacter = RenderUI.characterFor("computer");
-        drawSnake(computerSnake, {
+        drawSnake(RenderState.computerSnake, {
           head: computerCharacter.color,
           body: computerCharacter.body,
           headLine: computerCharacter.line,
@@ -64,14 +64,14 @@
           ownerLine: RenderConfig.colors.computerHeadLine,
           character: computerCharacter,
           owner: "computer",
-          direction: computerDir,
+          direction: RenderState.computerDir,
           alpha: HexSnakeGame.sandwormUndergroundAlpha("computer", now)
         });
       }
 
-      if (snake) {
+      if (RenderState.snake) {
         const playerCharacter = RenderUI.characterFor("player");
-        drawSnake(snake, {
+        drawSnake(RenderState.snake, {
           head: playerCharacter.color,
           body: playerCharacter.body,
           headLine: playerCharacter.line,
@@ -80,7 +80,7 @@
           ownerLine: RenderConfig.colors.headLine,
           character: playerCharacter,
           owner: "player",
-          direction: dir,
+          direction: RenderState.dir,
           alpha: HexSnakeGame.sandwormUndergroundAlpha("player", now)
         });
       }
@@ -381,14 +381,14 @@
       for (let i = 0; i < count; i += 1) {
         const cell = cellsForEffect[Math.floor(stableUnitSeed(seed, i, "cell") * cellsForEffect.length) % cellsForEffect.length];
         const base = HexSnakeGame.axialToPixel(cell);
-        const jitterRadius = cellSize * (options.jitter ?? 0.72);
+        const jitterRadius = RenderState.cellSize * (options.jitter ?? 0.72);
         const jitterAngle = stableUnitSeed(seed, i, "angle") * Math.PI * 2;
-        const drift = (progress - 0.5) * cellSize * (options.drift ?? 0.34);
+        const drift = (progress - 0.5) * RenderState.cellSize * (options.drift ?? 0.34);
         const x = base.x + Math.cos(jitterAngle) * jitterRadius * stableUnitSeed(seed, i, "jx");
         const y = base.y + Math.sin(jitterAngle) * jitterRadius * stableUnitSeed(seed, i, "jy") - drift;
         const motif = motifs[(i + Math.floor(stableUnitSeed(seed, i, "motif") * motifs.length)) % motifs.length];
         const pulse = 0.76 + waveValue(progress, stableUnitSeed(seed, i, "pulse")) * 0.42;
-        const size = cellSize * (options.size ?? 0.86) * (0.68 + stableUnitSeed(seed, i, "size") * 0.72) * pulse;
+        const size = RenderState.cellSize * (options.size ?? 0.86) * (0.68 + stableUnitSeed(seed, i, "size") * 0.72) * pulse;
         const fade = options.persistent ? 1 : Math.sin(clamp01(progress) * Math.PI);
         drawElementSprite(x, y, size, jitterAngle + progress * Math.PI * (options.spin ?? 0.7), character, motif, alpha * fade * (0.34 + stableUnitSeed(seed, i, "alpha") * 0.5));
       }
@@ -402,18 +402,18 @@
       cellsForEffect.forEach((cell, index) => {
         const { x, y } = HexSnakeGame.axialToPixel(cell);
         const local = (progress + index * 0.037) % 1;
-        const radiusPx = cellSize * (options.radiusScale ?? 0.96);
+        const radiusPx = RenderState.cellSize * (options.radiusScale ?? 0.96);
         const gradient = RenderDom.ctx.createRadialGradient(x, y, radiusPx * 0.08, x, y, radiusPx);
         gradient.addColorStop(0, hexToRgba(element.glow, 0.2 * alpha));
         gradient.addColorStop(0.46, hexToRgba(element.primary, 0.15 * alpha));
         gradient.addColorStop(1, hexToRgba(element.deep, 0));
-        HexSnakeGame.hexPath(x, y, cellSize * 0.96);
+        HexSnakeGame.hexPath(x, y, RenderState.cellSize * 0.96);
         RenderDom.ctx.fillStyle = gradient;
         RenderDom.ctx.fill();
         if (index % 2 === 0) {
           const motif = spriteMotifsFor(character)[HexSnakeGame.stableVariantIndex(cell, index + Math.floor(local * 100), spriteMotifsFor(character).length)];
           const angle = local * Math.PI * 2 + index;
-          drawElementSprite(x, y, cellSize * 1.24, angle, character, motif, alpha * 0.2, "source-over");
+          drawElementSprite(x, y, RenderState.cellSize * 1.24, angle, character, motif, alpha * 0.2, "source-over");
         }
       });
       RenderDom.ctx.restore();
@@ -423,7 +423,7 @@
     function drawElementCircleTexture(x, y, radiusPx, progress, character, alpha = 1, options = {}) {
       const motifs = spriteMotifsFor(character);
       const maxParticles = Math.max(16, Math.floor((options.maxParticles ?? 120) * visualLoadScale()));
-      const count = Math.min(maxParticles, Math.max(16, Math.floor(radiusPx / Math.max(1, cellSize) * (options.density ?? 18))));
+      const count = Math.min(maxParticles, Math.max(16, Math.floor(radiusPx / Math.max(1, RenderState.cellSize) * (options.density ?? 18))));
       const element = elementColorsFor(character);
       RenderDom.ctx.save();
       RenderDom.ctx.globalCompositeOperation = "lighter";
@@ -444,7 +444,7 @@
         const px = x + Math.cos(orbit) * distance;
         const py = y + Math.sin(orbit) * distance * (options.ellipse ?? 0.82);
         const motif = motifs[i % motifs.length];
-        const size = cellSize * (options.size ?? 1.05) * (0.72 + stableUnitSeed(seed, i, "circle-size") * 0.88);
+        const size = RenderState.cellSize * (options.size ?? 1.05) * (0.72 + stableUnitSeed(seed, i, "circle-size") * 0.88);
         const fade = Math.sin(clamp01(progress) * Math.PI);
         drawElementSprite(px, py, size, orbit + progress * Math.PI * 2, character, motif, alpha * fade * (0.32 + stableUnitSeed(seed, i, "circle-alpha") * 0.58));
       }
@@ -467,7 +467,7 @@
     }
 
     function drawElementalBackdrop(now) {
-      if (!RenderUI.characterList().length || !cells.length) return;
+      if (!RenderUI.characterList().length || !RenderState.cells.length) return;
       const activeCharacters = [RenderUI.characterFor("player"), RenderUI.characterFor("computer")].filter(Boolean);
       const rect = RenderDom.playArea.getBoundingClientRect();
       const maxRadius = Math.max(rect.width, rect.height);
@@ -477,11 +477,11 @@
         RenderDom.ctx.save();
         RenderDom.ctx.globalCompositeOperation = "lighter";
         const gradient = RenderDom.ctx.createRadialGradient(
-          center.x + Math.cos(phase) * maxRadius * 0.16,
-          center.y + Math.sin(phase * 0.7) * maxRadius * 0.12,
+          RenderState.center.x + Math.cos(phase) * maxRadius * 0.16,
+          RenderState.center.y + Math.sin(phase * 0.7) * maxRadius * 0.12,
           maxRadius * 0.05,
-          center.x,
-          center.y,
+          RenderState.center.x,
+          RenderState.center.y,
           maxRadius * 0.58
         );
         gradient.addColorStop(0, hexToRgba(element.glow, ownerIndex ? 0.055 : 0.07));
@@ -495,9 +495,9 @@
         for (let i = 0; i < 18; i += 1) {
           const angle = stableUnitSeed(character.id, i, "backdrop-angle") * Math.PI * 2 + phase * (ownerIndex ? -0.45 : 0.38);
           const distance = maxRadius * (0.12 + stableUnitSeed(character.id, i, "backdrop-distance") * 0.36);
-          const x = center.x + Math.cos(angle) * distance;
-          const y = center.y + Math.sin(angle * 1.17) * distance * 0.64;
-          const size = cellSize * (1.1 + stableUnitSeed(character.id, i, "backdrop-size") * 1.7);
+          const x = RenderState.center.x + Math.cos(angle) * distance;
+          const y = RenderState.center.y + Math.sin(angle * 1.17) * distance * 0.64;
+          const size = RenderState.cellSize * (1.1 + stableUnitSeed(character.id, i, "backdrop-size") * 1.7);
           drawElementSprite(x, y, size, angle, character, motifs[i % motifs.length], 0.055, "source-over");
         }
       });
@@ -521,7 +521,7 @@
         RenderDom.ctx.beginPath();
         RenderDom.ctx.arc(x, y, radiusPx * (0.38 + ring * 0.19 + progress * 0.12), 0, Math.PI * 2);
         RenderDom.ctx.strokeStyle = hexToRgba(element.palette[ring], alpha * (0.34 - ring * 0.07));
-        RenderDom.ctx.lineWidth = Math.max(1.2, cellSize * (0.04 + ring * 0.012));
+        RenderDom.ctx.lineWidth = Math.max(1.2, RenderState.cellSize * (0.04 + ring * 0.012));
         RenderDom.ctx.stroke();
       }
       RenderDom.ctx.restore();
@@ -539,7 +539,7 @@
       RenderDom.ctx.fillStyle = hexToRgba(color, 0.58 * alpha);
       RenderDom.ctx.fill();
       RenderDom.ctx.strokeStyle = hexToRgba(line, 0.86 * alpha);
-      RenderDom.ctx.lineWidth = Math.max(1.2, cellSize * 0.04);
+      RenderDom.ctx.lineWidth = Math.max(1.2, RenderState.cellSize * 0.04);
       RenderDom.ctx.stroke();
       RenderDom.ctx.restore();
     }
@@ -549,7 +549,7 @@
       RenderDom.ctx.translate(x, y);
       RenderDom.ctx.rotate(angle);
       RenderDom.ctx.strokeStyle = hexToRgba(color, 0.82 * alpha);
-      RenderDom.ctx.lineWidth = Math.max(1.2, cellSize * 0.044);
+      RenderDom.ctx.lineWidth = Math.max(1.2, RenderState.cellSize * 0.044);
       RenderDom.ctx.lineCap = "round";
       RenderDom.ctx.lineJoin = "round";
       RenderDom.ctx.beginPath();
@@ -576,7 +576,7 @@
       RenderDom.ctx.fillStyle = hexToRgba(color, 0.46 * alpha);
       RenderDom.ctx.fill();
       RenderDom.ctx.strokeStyle = hexToRgba(color, 0.94 * alpha);
-      RenderDom.ctx.lineWidth = Math.max(1.2, cellSize * 0.038);
+      RenderDom.ctx.lineWidth = Math.max(1.2, RenderState.cellSize * 0.038);
       RenderDom.ctx.stroke();
       RenderDom.ctx.restore();
     }
@@ -594,24 +594,24 @@
         const color = paletteColor(character, i);
         const nextColor = paletteColor(character, i + 1);
         if (character.id === "dragon") {
-          drawElementShard(px, py, cellSize * 0.24, angle, color, motifAlpha);
+          drawElementShard(px, py, RenderState.cellSize * 0.24, angle, color, motifAlpha);
         } else if (character.id === "sandworm") {
-          drawDustCloud(px, py, cellSize * 0.48, progress + i * 0.07, color, nextColor);
+          drawDustCloud(px, py, RenderState.cellSize * 0.48, progress + i * 0.07, color, nextColor);
         } else if (character.id === "quetzal") {
-          drawFeatherShape(px, py, cellSize * 0.3, angle + Math.PI / 2, color, nextColor, motifAlpha);
+          drawFeatherShape(px, py, RenderState.cellSize * 0.3, angle + Math.PI / 2, color, nextColor, motifAlpha);
         } else if (character.id === "moray") {
           drawLightningBetween(
-            { x: px - Math.cos(angle) * cellSize * 0.34, y: py - Math.sin(angle) * cellSize * 0.34 },
-            { x: px + Math.cos(angle) * cellSize * 0.34, y: py + Math.sin(angle) * cellSize * 0.34 },
+            { x: px - Math.cos(angle) * RenderState.cellSize * 0.34, y: py - Math.sin(angle) * RenderState.cellSize * 0.34 },
+            { x: px + Math.cos(angle) * RenderState.cellSize * 0.34, y: py + Math.sin(angle) * RenderState.cellSize * 0.34 },
             progress + i * 0.09,
             color,
             0.88,
             4
           );
         } else if (character.id === "lobster") {
-          drawFlameTongue(px, py, cellSize * 0.34, angle, color, nextColor, motifAlpha);
+          drawFlameTongue(px, py, RenderState.cellSize * 0.34, angle, color, nextColor, motifAlpha);
         } else if (character.id === "gu_king") {
-          drawElementSigil(px, py, cellSize * 0.3, angle, color, motifAlpha);
+          drawElementSigil(px, py, RenderState.cellSize * 0.3, angle, color, motifAlpha);
         }
       }
       RenderDom.ctx.restore();
@@ -630,7 +630,7 @@
         const t = Math.max(0, progress - i * 0.08);
         const px = start.x + dx * t;
         const py = start.y + dy * t;
-        const spread = cellSize * (0.1 + i * 0.06);
+        const spread = RenderState.cellSize * (0.1 + i * 0.06);
         RenderDom.ctx.beginPath();
         RenderDom.ctx.moveTo(px - nx * spread, py - ny * spread);
         RenderDom.ctx.quadraticCurveTo(
@@ -640,7 +640,7 @@
           py + ny * spread
         );
         RenderDom.ctx.strokeStyle = hexToRgba(element.palette[i % element.palette.length], 0.42 * (1 - i * 0.1));
-        RenderDom.ctx.lineWidth = Math.max(1.2, cellSize * (0.055 - i * 0.003));
+        RenderDom.ctx.lineWidth = Math.max(1.2, RenderState.cellSize * (0.055 - i * 0.003));
         RenderDom.ctx.lineCap = "round";
         RenderDom.ctx.stroke();
       }
@@ -655,12 +655,12 @@
       RenderDom.ctx.fillStyle = hexToRgba(fill, 0.24 * alpha);
       RenderDom.ctx.fill();
       RenderDom.ctx.strokeStyle = hexToRgba(stroke, 0.96 * alpha);
-      RenderDom.ctx.lineWidth = Math.max(2, cellSize * 0.105 * lineScale);
+      RenderDom.ctx.lineWidth = Math.max(2, RenderState.cellSize * 0.105 * lineScale);
       RenderDom.ctx.stroke();
       RenderDom.ctx.beginPath();
       RenderDom.ctx.arc(x, y, radiusPx * (0.28 + progress * 0.28), 0, Math.PI * 2);
       RenderDom.ctx.strokeStyle = hexToRgba("#ffffff", 0.4 * alpha);
-      RenderDom.ctx.lineWidth = Math.max(1, cellSize * 0.04 * lineScale);
+      RenderDom.ctx.lineWidth = Math.max(1, RenderState.cellSize * 0.04 * lineScale);
       RenderDom.ctx.stroke();
       RenderDom.ctx.restore();
     }
@@ -689,7 +689,7 @@
       RenderDom.ctx.fillStyle = hexToRgba(element.hot, 0.9 * alpha);
       RenderDom.ctx.fill();
       RenderDom.ctx.strokeStyle = hexToRgba(element.secondary, 0.95 * alpha);
-      RenderDom.ctx.lineWidth = Math.max(1.4, cellSize * 0.05);
+      RenderDom.ctx.lineWidth = Math.max(1.4, RenderState.cellSize * 0.05);
       RenderDom.ctx.stroke();
       RenderDom.ctx.restore();
     }
@@ -707,7 +707,7 @@
       RenderDom.ctx.fillStyle = hexToRgba(element.primary, 0.64 * alpha);
       RenderDom.ctx.fill();
       RenderDom.ctx.strokeStyle = hexToRgba(element.glow, 0.86 * alpha);
-      RenderDom.ctx.lineWidth = Math.max(1.1, cellSize * 0.032);
+      RenderDom.ctx.lineWidth = Math.max(1.1, RenderState.cellSize * 0.032);
       RenderDom.ctx.stroke();
       RenderDom.ctx.restore();
     }
@@ -722,7 +722,7 @@
         RenderDom.ctx.beginPath();
         RenderDom.ctx.arc(0, 0, radiusPx * (0.48 + ring * 0.2), 0, Math.PI * 2);
         RenderDom.ctx.strokeStyle = hexToRgba(ring ? element.secondary : element.glow, (0.46 - ring * 0.1) * alpha);
-        RenderDom.ctx.lineWidth = Math.max(1.2, cellSize * (0.035 + ring * 0.012));
+        RenderDom.ctx.lineWidth = Math.max(1.2, RenderState.cellSize * (0.035 + ring * 0.012));
         RenderDom.ctx.stroke();
       }
       for (let i = 0; i < 6; i += 1) {
@@ -732,11 +732,11 @@
         RenderDom.ctx.save();
         RenderDom.ctx.translate(px, py);
         RenderDom.ctx.rotate(angle + Math.PI / 2);
-        drawLocalHex(cellSize * 0.11);
+        drawLocalHex(RenderState.cellSize * 0.11);
         RenderDom.ctx.fillStyle = hexToRgba(i % 2 ? element.primary : element.hot, 0.28 * alpha);
         RenderDom.ctx.fill();
         RenderDom.ctx.strokeStyle = hexToRgba(i % 2 ? element.glow : element.secondary, 0.78 * alpha);
-        RenderDom.ctx.lineWidth = Math.max(1, cellSize * 0.024);
+        RenderDom.ctx.lineWidth = Math.max(1, RenderState.cellSize * 0.024);
         RenderDom.ctx.stroke();
         RenderDom.ctx.restore();
       }
@@ -758,7 +758,7 @@
         RenderDom.ctx.lineTo(x + Math.cos(angle + 0.12) * mid, y + Math.sin(angle + 0.12) * mid * 0.72);
         RenderDom.ctx.lineTo(x + Math.cos(angle - 0.08) * outer, y + Math.sin(angle - 0.08) * outer * 0.72);
         RenderDom.ctx.strokeStyle = hexToRgba(i % 2 ? element.secondary : element.deep, alpha * (0.68 - progress * 0.24));
-        RenderDom.ctx.lineWidth = Math.max(1.4, cellSize * 0.045);
+        RenderDom.ctx.lineWidth = Math.max(1.4, RenderState.cellSize * 0.045);
         RenderDom.ctx.stroke();
       }
       RenderDom.ctx.restore();
@@ -778,7 +778,7 @@
           else RenderDom.ctx.lineTo(x + px, y + py);
         }
         RenderDom.ctx.strokeStyle = hexToRgba(band ? element.secondary : element.hot, alpha * (band ? 0.5 : 0.7));
-        RenderDom.ctx.lineWidth = Math.max(1.4, cellSize * (band ? 0.04 : 0.06));
+        RenderDom.ctx.lineWidth = Math.max(1.4, RenderState.cellSize * (band ? 0.04 : 0.06));
         RenderDom.ctx.lineCap = "round";
         RenderDom.ctx.stroke();
       }
@@ -795,7 +795,7 @@
       RenderDom.ctx.rotate(-0.08 + Math.sin(progress * Math.PI * 2) * 0.045);
       RenderDom.ctx.globalCompositeOperation = "source-over";
       RenderDom.ctx.shadowColor = hexToRgba(element.glow, 0.54 * alpha);
-      RenderDom.ctx.shadowBlur = cellSize * 0.16;
+      RenderDom.ctx.shadowBlur = RenderState.cellSize * 0.16;
 
       RenderDom.ctx.save();
       RenderDom.ctx.translate(0, lift);
@@ -812,14 +812,14 @@
       RenderDom.ctx.fillStyle = hexToRgba(element.primary, 0.9 * alpha);
       RenderDom.ctx.fill();
       RenderDom.ctx.strokeStyle = hexToRgba(element.hot, 0.94 * alpha);
-      RenderDom.ctx.lineWidth = Math.max(1.8, cellSize * 0.062);
+      RenderDom.ctx.lineWidth = Math.max(1.8, RenderState.cellSize * 0.062);
       RenderDom.ctx.stroke();
 
       RenderDom.ctx.beginPath();
       RenderDom.ctx.moveTo(-size * 0.2, -size * 0.1);
       RenderDom.ctx.quadraticCurveTo(size * 0.04, -size * 0.22, size * 0.34, -size * 0.16);
       RenderDom.ctx.strokeStyle = hexToRgba(element.deep, 0.44 * alpha);
-      RenderDom.ctx.lineWidth = Math.max(1.2, cellSize * 0.035);
+      RenderDom.ctx.lineWidth = Math.max(1.2, RenderState.cellSize * 0.035);
       RenderDom.ctx.stroke();
       RenderDom.ctx.beginPath();
       RenderDom.ctx.moveTo(-size * 0.18, size * 0.2);
@@ -833,7 +833,7 @@
       RenderDom.ctx.fillStyle = hexToRgba(element.deep, 0.82 * alpha);
       RenderDom.ctx.fill();
       RenderDom.ctx.strokeStyle = hexToRgba(element.glow, 0.72 * alpha);
-      RenderDom.ctx.lineWidth = Math.max(1.2, cellSize * 0.04);
+      RenderDom.ctx.lineWidth = Math.max(1.2, RenderState.cellSize * 0.04);
       RenderDom.ctx.stroke();
 
       if (strike > 0.55) {
@@ -841,7 +841,7 @@
         RenderDom.ctx.beginPath();
         RenderDom.ctx.ellipse(0, size * 0.62, size * (0.46 + strike * 0.24), size * (0.12 + strike * 0.04), 0, 0, Math.PI * 2);
         RenderDom.ctx.strokeStyle = hexToRgba(element.hot, alpha * 0.72);
-        RenderDom.ctx.lineWidth = Math.max(1.6, cellSize * 0.055);
+        RenderDom.ctx.lineWidth = Math.max(1.6, RenderState.cellSize * 0.055);
         RenderDom.ctx.stroke();
         for (let crack = 0; crack < 7; crack += 1) {
           const angle = -Math.PI * 0.88 + crack * Math.PI * 1.76 / 6;
@@ -851,7 +851,7 @@
           RenderDom.ctx.moveTo(Math.cos(angle) * inner, size * 0.62 + Math.sin(angle) * inner * 0.36);
           RenderDom.ctx.lineTo(Math.cos(angle) * outer, size * 0.62 + Math.sin(angle) * outer * 0.42);
           RenderDom.ctx.strokeStyle = hexToRgba(crack % 2 ? element.secondary : "#ffffff", alpha * (0.62 - crack * 0.035));
-          RenderDom.ctx.lineWidth = Math.max(1.1, cellSize * 0.032);
+          RenderDom.ctx.lineWidth = Math.max(1.1, RenderState.cellSize * 0.032);
           RenderDom.ctx.lineCap = "round";
           RenderDom.ctx.stroke();
         }
@@ -870,7 +870,7 @@
       RenderDom.ctx.fillStyle = hexToRgba("#020617", 0.72 * alpha);
       RenderDom.ctx.fill();
       RenderDom.ctx.strokeStyle = hexToRgba(element.glow, 0.82 * alpha);
-      RenderDom.ctx.lineWidth = Math.max(1.6, cellSize * 0.05);
+      RenderDom.ctx.lineWidth = Math.max(1.6, RenderState.cellSize * 0.05);
       RenderDom.ctx.stroke();
       for (let i = 0; i < 6; i += 1) {
         const angle = i * Math.PI / 3;
@@ -883,7 +883,7 @@
           Math.sin(angle + 0.68) * radiusPx * 0.54
         );
         RenderDom.ctx.strokeStyle = hexToRgba(i % 2 ? element.secondary : element.hot, 0.68 * alpha);
-        RenderDom.ctx.lineWidth = Math.max(1.1, cellSize * 0.034);
+        RenderDom.ctx.lineWidth = Math.max(1.1, RenderState.cellSize * 0.034);
         RenderDom.ctx.stroke();
       }
       RenderDom.ctx.restore();
@@ -912,7 +912,7 @@
         RenderDom.ctx.fillStyle = hexToRgba(element.primary, 0.88 * alpha);
         RenderDom.ctx.fill();
         RenderDom.ctx.strokeStyle = hexToRgba(element.deep, 0.94 * alpha);
-        RenderDom.ctx.lineWidth = Math.max(1.5, cellSize * 0.052);
+        RenderDom.ctx.lineWidth = Math.max(1.5, RenderState.cellSize * 0.052);
         RenderDom.ctx.stroke();
         drawSmallSkillGroundCracks(0, 0, size * 0.8, progress, character, 0.74 * alpha);
       } else if (character.id === "quetzal") {
@@ -924,7 +924,7 @@
         RenderDom.ctx.fillStyle = hexToRgba(element.deep, 0.88 * alpha);
         RenderDom.ctx.fill();
         RenderDom.ctx.strokeStyle = hexToRgba(element.hot, 0.94 * alpha);
-        RenderDom.ctx.lineWidth = Math.max(1.6, cellSize * 0.055);
+        RenderDom.ctx.lineWidth = Math.max(1.6, RenderState.cellSize * 0.055);
         RenderDom.ctx.stroke();
         drawSmallSkillWaterRibbon(0, 0, size * 0.9, progress, character, alpha);
       } else if (character.id === "lobster") {
@@ -970,7 +970,7 @@
         drawSmallSkillOrb(x, y, radiusPx * 0.42, progress, character, alpha);
         for (let i = 0; i < 8; i += 1) {
           const angle = i * Math.PI * 2 / 8 + progress * Math.PI * 0.8;
-          drawSmallSkillScale(x + Math.cos(angle) * radiusPx * 0.52, y + Math.sin(angle) * radiusPx * 0.38, cellSize * 0.18, angle, character, 0.7 * alpha);
+          drawSmallSkillScale(x + Math.cos(angle) * radiusPx * 0.52, y + Math.sin(angle) * radiusPx * 0.38, RenderState.cellSize * 0.18, angle, character, 0.7 * alpha);
         }
       } else if (character.id === "sandworm") {
         drawSandSpike(x, y, radiusPx * 0.88, progress, element.secondary, element.glow);
@@ -979,7 +979,7 @@
         drawSwampForestBloom(x, y, radiusPx * 0.66, progress, character, 0.72 * alpha, 2);
         for (let i = 0; i < 7; i += 1) {
           const angle = i * Math.PI * 2 / 7 + progress * 0.55;
-          drawFeatherShape(x + Math.cos(angle) * radiusPx * 0.5, y + Math.sin(angle) * radiusPx * 0.36, cellSize * 0.22, angle + Math.PI / 2, element.primary, element.hot, 0.68 * alpha);
+          drawFeatherShape(x + Math.cos(angle) * radiusPx * 0.5, y + Math.sin(angle) * radiusPx * 0.36, RenderState.cellSize * 0.22, angle + Math.PI / 2, element.primary, element.hot, 0.68 * alpha);
         }
       } else if (character.id === "moray") {
         drawSmallSkillWaterRibbon(x, y, radiusPx * 0.92, progress, character, alpha);
@@ -1002,7 +1002,7 @@
         for (let i = 0; i < 9; i += 1) {
           const angle = i * Math.PI * 2 / 9 - progress * Math.PI * 1.4;
           RenderDom.ctx.beginPath();
-          RenderDom.ctx.arc(x + Math.cos(angle) * radiusPx * 0.56, y + Math.sin(angle) * radiusPx * 0.4, cellSize * (0.06 + (i % 3) * 0.02), 0, Math.PI * 2);
+          RenderDom.ctx.arc(x + Math.cos(angle) * radiusPx * 0.56, y + Math.sin(angle) * radiusPx * 0.4, RenderState.cellSize * (0.06 + (i % 3) * 0.02), 0, Math.PI * 2);
           RenderDom.ctx.fillStyle = hexToRgba(i % 2 ? element.glow : element.secondary, 0.58 * alpha);
           RenderDom.ctx.fill();
         }
@@ -1025,29 +1025,29 @@
       RenderDom.ctx.save();
       RenderDom.ctx.globalCompositeOperation = "lighter";
       for (let i = 0; i < 5; i += 1) {
-        const back = cellSize * (0.32 + i * 0.22);
-        const width = cellSize * (0.1 + i * 0.035);
+        const back = RenderState.cellSize * (0.32 + i * 0.22);
+        const width = RenderState.cellSize * (0.1 + i * 0.035);
         const fade = alpha * (0.45 - i * 0.065) * Math.min(1, progress * 2.2);
         const tx = headX - ux * back;
         const ty = headY - uy * back;
         RenderDom.ctx.beginPath();
         if (character.id === "sandworm") {
-          RenderDom.ctx.ellipse(tx, ty + cellSize * 0.08, width * 1.35, width * 0.62, Math.atan2(uy, ux), 0, Math.PI * 2);
+          RenderDom.ctx.ellipse(tx, ty + RenderState.cellSize * 0.08, width * 1.35, width * 0.62, Math.atan2(uy, ux), 0, Math.PI * 2);
           RenderDom.ctx.fillStyle = hexToRgba(i % 2 ? element.secondary : element.dust || element.primary, fade);
           RenderDom.ctx.fill();
         } else if (character.id === "quetzal") {
-          drawFeatherShape(tx + nx * width * 0.5, ty + ny * width * 0.5, cellSize * (0.13 + i * 0.012), Math.atan2(uy, ux) + Math.PI / 2, i % 2 ? element.secondary : element.primary, element.glow, fade * 1.5);
+          drawFeatherShape(tx + nx * width * 0.5, ty + ny * width * 0.5, RenderState.cellSize * (0.13 + i * 0.012), Math.atan2(uy, ux) + Math.PI / 2, i % 2 ? element.secondary : element.primary, element.glow, fade * 1.5);
         } else if (character.id === "lobster") {
-          drawFlameTongue(tx, ty, cellSize * (0.16 + i * 0.018), Math.atan2(uy, ux) - Math.PI / 2, i % 2 ? element.secondary : element.primary, element.hot, fade * 1.25);
+          drawFlameTongue(tx, ty, RenderState.cellSize * (0.16 + i * 0.018), Math.atan2(uy, ux) - Math.PI / 2, i % 2 ? element.secondary : element.primary, element.hot, fade * 1.25);
         } else if (character.id === "gu_king") {
-          RenderDom.ctx.arc(tx + nx * Math.sin(i) * width, ty + ny * Math.sin(i) * width, cellSize * (0.055 + i * 0.008), 0, Math.PI * 2);
+          RenderDom.ctx.arc(tx + nx * Math.sin(i) * width, ty + ny * Math.sin(i) * width, RenderState.cellSize * (0.055 + i * 0.008), 0, Math.PI * 2);
           RenderDom.ctx.fillStyle = hexToRgba(i % 2 ? element.glow : element.secondary, fade * 1.25);
           RenderDom.ctx.fill();
         } else {
           RenderDom.ctx.moveTo(tx - nx * width, ty - ny * width);
-          RenderDom.ctx.quadraticCurveTo(tx - ux * cellSize * 0.16, ty - uy * cellSize * 0.16, tx + nx * width, ty + ny * width);
+          RenderDom.ctx.quadraticCurveTo(tx - ux * RenderState.cellSize * 0.16, ty - uy * RenderState.cellSize * 0.16, tx + nx * width, ty + ny * width);
           RenderDom.ctx.strokeStyle = hexToRgba(character.id === "moray" && i % 2 ? element.hot : i % 2 ? element.secondary : element.glow, fade);
-          RenderDom.ctx.lineWidth = Math.max(1.1, cellSize * (0.042 - i * 0.004));
+          RenderDom.ctx.lineWidth = Math.max(1.1, RenderState.cellSize * (0.042 - i * 0.004));
           RenderDom.ctx.lineCap = "round";
           RenderDom.ctx.stroke();
         }
@@ -1085,7 +1085,7 @@
         const size = radiusPx * (0.28 + progress * 0.42 + ring * 0.16);
         drawLocalHex(size);
         RenderDom.ctx.strokeStyle = hexToRgba(ring ? line : color, (1 - progress) * (ring ? 0.58 : 0.88));
-        RenderDom.ctx.lineWidth = Math.max(1.4, cellSize * (ring ? 0.045 : 0.072));
+        RenderDom.ctx.lineWidth = Math.max(1.4, RenderState.cellSize * (ring ? 0.045 : 0.072));
         RenderDom.ctx.stroke();
       }
       RenderDom.ctx.restore();
@@ -1101,14 +1101,14 @@
       RenderDom.ctx.beginPath();
       for (let i = 0; i <= segments; i += 1) {
         const t = i / segments;
-        const jitter = (i === 0 || i === segments) ? 0 : Math.sin((progress * 8 + i * 1.7) * Math.PI) * cellSize * 0.18;
+        const jitter = (i === 0 || i === segments) ? 0 : Math.sin((progress * 8 + i * 1.7) * Math.PI) * RenderState.cellSize * 0.18;
         const px = start.x + dx * t + nx * jitter;
         const py = start.y + dy * t + ny * jitter;
         if (i === 0) RenderDom.ctx.moveTo(px, py);
         else RenderDom.ctx.lineTo(px, py);
       }
       RenderDom.ctx.strokeStyle = hexToRgba(color, 0.96);
-      RenderDom.ctx.lineWidth = Math.max(1.8, cellSize * 0.075 * widthScale);
+      RenderDom.ctx.lineWidth = Math.max(1.8, RenderState.cellSize * 0.075 * widthScale);
       RenderDom.ctx.lineCap = "round";
       RenderDom.ctx.lineJoin = "round";
       RenderDom.ctx.stroke();
@@ -1127,7 +1127,7 @@
       RenderDom.ctx.fillStyle = hexToRgba(color, 0.62 * alpha);
       RenderDom.ctx.fill();
       RenderDom.ctx.strokeStyle = hexToRgba(line, 0.96 * alpha);
-      RenderDom.ctx.lineWidth = Math.max(1.2, cellSize * 0.045);
+      RenderDom.ctx.lineWidth = Math.max(1.2, RenderState.cellSize * 0.045);
       RenderDom.ctx.stroke();
       RenderDom.ctx.beginPath();
       RenderDom.ctx.moveTo(0, -size * 0.72);
@@ -1145,7 +1145,7 @@
         RenderDom.ctx.arc(
           x + Math.cos(angle) * distance,
           y + Math.sin(angle) * distance * 0.72,
-          Math.max(2, cellSize * (0.1 + (i % 3) * 0.025)) * (1 - progress * 0.25),
+          Math.max(2, RenderState.cellSize * (0.1 + (i % 3) * 0.025)) * (1 - progress * 0.25),
           0,
           Math.PI * 2
         );
@@ -1163,13 +1163,13 @@
       RenderDom.ctx.beginPath();
       RenderDom.ctx.arc(0, 0, radiusPx * 0.56, -0.82, 0.82);
       RenderDom.ctx.strokeStyle = hexToRgba(color, 0.94 * (1 - progress * 0.38));
-      RenderDom.ctx.lineWidth = Math.max(2.5, cellSize * 0.16);
+      RenderDom.ctx.lineWidth = Math.max(2.5, RenderState.cellSize * 0.16);
       RenderDom.ctx.lineCap = "round";
       RenderDom.ctx.stroke();
       RenderDom.ctx.beginPath();
       RenderDom.ctx.arc(radiusPx * 0.32, 0, radiusPx * 0.22, -1.2, 1.2);
       RenderDom.ctx.strokeStyle = hexToRgba(line, 0.92 * (1 - progress * 0.25));
-      RenderDom.ctx.lineWidth = Math.max(1.8, cellSize * 0.085);
+      RenderDom.ctx.lineWidth = Math.max(1.8, RenderState.cellSize * 0.085);
       RenderDom.ctx.stroke();
       RenderDom.ctx.restore();
     }
@@ -1182,7 +1182,7 @@
         const px = x + Math.cos(angle) * distance;
         const py = y + Math.sin(angle * 1.13) * distance;
         RenderDom.ctx.beginPath();
-        RenderDom.ctx.ellipse(px, py, cellSize * 0.07, cellSize * 0.035, angle, 0, Math.PI * 2);
+        RenderDom.ctx.ellipse(px, py, RenderState.cellSize * 0.07, RenderState.cellSize * 0.035, angle, 0, Math.PI * 2);
         RenderDom.ctx.fillStyle = hexToRgba(i % 2 ? color : line, 0.86 * (1 - progress * 0.24));
         RenderDom.ctx.fill();
       }
@@ -1237,7 +1237,7 @@
       RenderDom.ctx.beginPath();
       RenderDom.ctx.arc(x, y, radiusPx * (0.28 + progress * 0.54), 0, Math.PI * 2);
       RenderDom.ctx.strokeStyle = hexToRgba("#ffffff", 0.86 * alpha * (1 - progress * 0.28));
-      RenderDom.ctx.lineWidth = Math.max(3, cellSize * 0.12);
+      RenderDom.ctx.lineWidth = Math.max(3, RenderState.cellSize * 0.12);
       RenderDom.ctx.stroke();
       RenderDom.ctx.restore();
     }
@@ -1263,7 +1263,7 @@
         RenderDom.ctx.beginPath();
         RenderDom.ctx.arc(x, y, radiusPx * (0.22 + progress * 1.08 + ring * 0.14), 0, Math.PI * 2);
         RenderDom.ctx.strokeStyle = hexToRgba(ring % 2 ? element.secondary : "#ffffff", alpha * (0.94 - ring * 0.14) * (1 - progress * 0.28));
-        RenderDom.ctx.lineWidth = Math.max(2, cellSize * (0.19 - ring * 0.024));
+        RenderDom.ctx.lineWidth = Math.max(2, RenderState.cellSize * (0.19 - ring * 0.024));
         RenderDom.ctx.stroke();
       }
       for (let i = 0; i < 34; i += 1) {
@@ -1284,7 +1284,7 @@
         drawElementShard(
           x + Math.cos(angle) * radiusPx * (0.46 + progress * 0.24),
           y + Math.sin(angle) * radiusPx * (0.34 + progress * 0.18),
-          cellSize * 0.34,
+          RenderState.cellSize * 0.34,
           angle,
           i % 2 ? element.secondary : "#ffffff",
           alpha * (1 - progress * 0.24)
@@ -1314,7 +1314,7 @@
           Math.PI * 2
         );
         RenderDom.ctx.strokeStyle = hexToRgba(ring % 2 ? element.deep : "#020617", alpha * (0.78 - ring * 0.1));
-        RenderDom.ctx.lineWidth = Math.max(2, cellSize * (0.1 - ring * 0.01));
+        RenderDom.ctx.lineWidth = Math.max(2, RenderState.cellSize * (0.1 - ring * 0.01));
         RenderDom.ctx.stroke();
       }
       RenderDom.ctx.globalCompositeOperation = "lighter";
@@ -1337,7 +1337,7 @@
       RenderDom.ctx.fillStyle = hexToRgba("#000000", 0.94 * alpha);
       RenderDom.ctx.fill();
       RenderDom.ctx.strokeStyle = hexToRgba(element.glow, 0.7 * alpha);
-      RenderDom.ctx.lineWidth = Math.max(2, cellSize * 0.08);
+      RenderDom.ctx.lineWidth = Math.max(2, RenderState.cellSize * 0.08);
       RenderDom.ctx.stroke();
       RenderDom.ctx.restore();
     }
@@ -1358,21 +1358,21 @@
         const baseX = x + Math.cos(angle) * spread;
         const baseY = y + Math.sin(angle) * spread * 0.54;
         RenderDom.ctx.beginPath();
-        RenderDom.ctx.moveTo(baseX - cellSize * 0.18, baseY + height * 0.24);
-        RenderDom.ctx.quadraticCurveTo(baseX - cellSize * 0.28, baseY - height * 0.35, baseX, baseY - height);
-        RenderDom.ctx.quadraticCurveTo(baseX + cellSize * 0.28, baseY - height * 0.35, baseX + cellSize * 0.18, baseY + height * 0.24);
+        RenderDom.ctx.moveTo(baseX - RenderState.cellSize * 0.18, baseY + height * 0.24);
+        RenderDom.ctx.quadraticCurveTo(baseX - RenderState.cellSize * 0.28, baseY - height * 0.35, baseX, baseY - height);
+        RenderDom.ctx.quadraticCurveTo(baseX + RenderState.cellSize * 0.28, baseY - height * 0.35, baseX + RenderState.cellSize * 0.18, baseY + height * 0.24);
         RenderDom.ctx.closePath();
         RenderDom.ctx.fillStyle = hexToRgba(i % 2 ? element.primary : element.secondary, 0.6 * alpha * (1 - progress * 0.1));
         RenderDom.ctx.fill();
         RenderDom.ctx.strokeStyle = hexToRgba(i % 3 ? element.glow : "#fff7ed", 0.52 * alpha);
-        RenderDom.ctx.lineWidth = Math.max(1.1, cellSize * 0.035);
+        RenderDom.ctx.lineWidth = Math.max(1.1, RenderState.cellSize * 0.035);
         RenderDom.ctx.stroke();
       }
       for (let i = 0; i < 26; i += 1) {
         const angle = progress * Math.PI * 1.8 + i * Math.PI * 2 / 26;
         const distance = radiusPx * (0.64 + (i % 5) * 0.12 + progress * 0.28);
         RenderDom.ctx.beginPath();
-        RenderDom.ctx.arc(x + Math.cos(angle) * distance, y + Math.sin(angle) * distance * 0.66, cellSize * (0.11 + (i % 3) * 0.04), 0, Math.PI * 2);
+        RenderDom.ctx.arc(x + Math.cos(angle) * distance, y + Math.sin(angle) * distance * 0.66, RenderState.cellSize * (0.11 + (i % 3) * 0.04), 0, Math.PI * 2);
         RenderDom.ctx.fillStyle = hexToRgba(i % 2 ? element.dust || element.primary : "#7c2d12", 0.34 * alpha * (1 - progress * 0.32));
         RenderDom.ctx.fill();
       }
@@ -1380,7 +1380,7 @@
         RenderDom.ctx.beginPath();
         RenderDom.ctx.ellipse(x, y + radiusPx * 0.08, radiusPx * (0.36 + ring * 0.22 + progress * 0.28), radiusPx * (0.18 + ring * 0.11), progress * Math.PI + ring * 0.4, 0, Math.PI * 2);
         RenderDom.ctx.strokeStyle = hexToRgba(ring % 2 ? element.primary : element.glow, 0.52 * alpha * (1 - progress * 0.22));
-        RenderDom.ctx.lineWidth = Math.max(2, cellSize * 0.07);
+        RenderDom.ctx.lineWidth = Math.max(2, RenderState.cellSize * 0.07);
         RenderDom.ctx.stroke();
       }
       drawSandSpike(x, y, radiusPx * 1.35, progress, element.secondary, element.glow);
@@ -1475,7 +1475,7 @@
         const angle = progress * Math.PI * 2 + i * Math.PI * 2 / count;
         const distance = radiusPx * (0.12 + ((i * 5) % 8) * 0.075);
         RenderDom.ctx.beginPath();
-        RenderDom.ctx.arc(x + Math.cos(angle) * distance, y + Math.sin(angle) * distance * 0.68, cellSize * (0.035 + (i % 3) * 0.014), 0, Math.PI * 2);
+        RenderDom.ctx.arc(x + Math.cos(angle) * distance, y + Math.sin(angle) * distance * 0.68, RenderState.cellSize * (0.035 + (i % 3) * 0.014), 0, Math.PI * 2);
         RenderDom.ctx.fillStyle = hexToRgba(palette[i % palette.length], alpha * (0.5 + waveValue(progress, i * 0.09) * 0.28));
         RenderDom.ctx.fill();
       }
@@ -1507,7 +1507,7 @@
       RenderDom.ctx.fillStyle = hexToRgba(palette[0], 0.74 * alpha);
       RenderDom.ctx.fill();
       RenderDom.ctx.strokeStyle = hexToRgba(palette[1], 0.78 * alpha);
-      RenderDom.ctx.lineWidth = Math.max(1, cellSize * 0.025);
+      RenderDom.ctx.lineWidth = Math.max(1, RenderState.cellSize * 0.025);
       RenderDom.ctx.stroke();
       RenderDom.ctx.restore();
     }
@@ -1524,7 +1524,7 @@
       RenderDom.ctx.fillStyle = hexToRgba(palette[0], 0.58 * alpha);
       RenderDom.ctx.fill();
       RenderDom.ctx.strokeStyle = hexToRgba(palette[1], 0.72 * alpha);
-      RenderDom.ctx.lineWidth = Math.max(1, cellSize * 0.028);
+      RenderDom.ctx.lineWidth = Math.max(1, RenderState.cellSize * 0.028);
       RenderDom.ctx.stroke();
       RenderDom.ctx.restore();
     }
@@ -1565,7 +1565,7 @@
           RenderDom.ctx.moveTo(x, centerY);
           RenderDom.ctx.quadraticCurveTo(x + Math.cos(angle) * radiusPx * 0.32, centerY + Math.sin(angle) * radiusPx * 0.22, x + Math.cos(angle) * radiusPx * 0.48, centerY + Math.sin(angle) * radiusPx * 0.34);
           RenderDom.ctx.strokeStyle = hexToRgba(palette[i % 2], 0.64 * alpha);
-          RenderDom.ctx.lineWidth = Math.max(1, cellSize * 0.025);
+          RenderDom.ctx.lineWidth = Math.max(1, RenderState.cellSize * 0.025);
           RenderDom.ctx.stroke();
         }
       } else if (variant.silhouette === "tassel") {
@@ -1575,7 +1575,7 @@
           RenderDom.ctx.moveTo(bx, y + radiusPx * 0.28);
           RenderDom.ctx.lineTo(bx + Math.sin(progress * 5 + i) * radiusPx * 0.06, y - radiusPx * (0.18 + (i % 3) * 0.08));
           RenderDom.ctx.strokeStyle = hexToRgba(palette[i % 2], 0.72 * alpha);
-          RenderDom.ctx.lineWidth = Math.max(1.2, cellSize * 0.034);
+          RenderDom.ctx.lineWidth = Math.max(1.2, RenderState.cellSize * 0.034);
           RenderDom.ctx.stroke();
         }
       } else if (variant.silhouette === "giant") {
@@ -1638,7 +1638,7 @@
         RenderDom.ctx.moveTo(baseX, baseY);
         RenderDom.ctx.quadraticCurveTo(baseX + Math.cos(angle) * radiusPx * 0.18 + sway, baseY - height * 0.54, baseX + Math.cos(angle) * radiusPx * 0.28 + sway, baseY - height);
         RenderDom.ctx.strokeStyle = hexToRgba(palette[0], 0.72 * alpha);
-        RenderDom.ctx.lineWidth = Math.max(1.1, cellSize * 0.028 * width);
+        RenderDom.ctx.lineWidth = Math.max(1.1, RenderState.cellSize * 0.028 * width);
         RenderDom.ctx.lineCap = "round";
         RenderDom.ctx.stroke();
       };
@@ -1653,12 +1653,12 @@
           RenderDom.ctx.moveTo(bx, y + radiusPx * 0.34);
           RenderDom.ctx.lineTo(bx + sway * 0.4, top);
           RenderDom.ctx.strokeStyle = hexToRgba(palette[0], 0.82 * alpha);
-          RenderDom.ctx.lineWidth = Math.max(2, cellSize * (variant.silhouette === "thick cane" ? 0.072 : 0.046));
+          RenderDom.ctx.lineWidth = Math.max(2, RenderState.cellSize * (variant.silhouette === "thick cane" ? 0.072 : 0.046));
           RenderDom.ctx.stroke();
           for (let n = 0; n < 4; n += 1) {
             const ny = y + radiusPx * 0.2 - n * radiusPx * 0.18;
             RenderDom.ctx.beginPath();
-            RenderDom.ctx.arc(bx + sway * 0.12, ny, cellSize * 0.025, 0, Math.PI * 2);
+            RenderDom.ctx.arc(bx + sway * 0.12, ny, RenderState.cellSize * 0.025, 0, Math.PI * 2);
             RenderDom.ctx.fillStyle = hexToRgba(palette[1], 0.64 * alpha);
             RenderDom.ctx.fill();
           }
@@ -1668,7 +1668,7 @@
         RenderDom.ctx.moveTo(x, y + radiusPx * 0.36);
         RenderDom.ctx.lineTo(x + sway, y - radiusPx * 0.5);
         RenderDom.ctx.strokeStyle = hexToRgba(palette[2], 0.78 * alpha);
-        RenderDom.ctx.lineWidth = Math.max(1.4, cellSize * 0.035);
+        RenderDom.ctx.lineWidth = Math.max(1.4, RenderState.cellSize * 0.035);
         RenderDom.ctx.stroke();
         const grains = variant.silhouette === "long awn" ? 12 : 10;
         for (let i = 0; i < grains; i += 1) {
@@ -1683,7 +1683,7 @@
           drawLightningBetween({ x, y: y + radiusPx * 0.24 }, { x: x + Math.cos(angle) * radiusPx * 0.48 + sway, y: y + Math.sin(angle) * radiusPx * 0.56 }, progress + branch * 0.05, palette[0], 0.24, 3);
           if (variant.silhouette === "bead panicle") {
             RenderDom.ctx.beginPath();
-            RenderDom.ctx.arc(x + Math.cos(angle) * radiusPx * 0.42 + sway, y + Math.sin(angle) * radiusPx * 0.5, cellSize * 0.045, 0, Math.PI * 2);
+            RenderDom.ctx.arc(x + Math.cos(angle) * radiusPx * 0.42 + sway, y + Math.sin(angle) * radiusPx * 0.5, RenderState.cellSize * 0.045, 0, Math.PI * 2);
             RenderDom.ctx.fillStyle = hexToRgba(palette[1], 0.78 * alpha);
             RenderDom.ctx.fill();
           }
@@ -1694,7 +1694,7 @@
         for (let i = 0; i < 24; i += 1) {
           const angle = -Math.PI / 2 + (i - 8) * 0.12;
           RenderDom.ctx.beginPath();
-          RenderDom.ctx.ellipse(stemTop.x + Math.cos(angle) * radiusPx * 0.12, stemTop.y + Math.sin(angle) * radiusPx * 0.16, cellSize * 0.035, cellSize * 0.09, angle, 0, Math.PI * 2);
+          RenderDom.ctx.ellipse(stemTop.x + Math.cos(angle) * radiusPx * 0.12, stemTop.y + Math.sin(angle) * radiusPx * 0.16, RenderState.cellSize * 0.035, RenderState.cellSize * 0.09, angle, 0, Math.PI * 2);
           RenderDom.ctx.fillStyle = hexToRgba(i % 2 ? palette[1] : palette[0], 0.58 * alpha);
           RenderDom.ctx.fill();
         }
@@ -1736,7 +1736,7 @@
         RenderDom.ctx.bezierCurveTo(x - radiusPx * 0.08, y, x + radiusPx * 0.08 + sway, y - radiusPx * 0.28, x + sway, y - trunkHeight);
       }
       RenderDom.ctx.strokeStyle = hexToRgba(palette[2], 0.86 * alpha);
-      RenderDom.ctx.lineWidth = Math.max(2.2, cellSize * (variant.silhouette === "bottle trunk" ? 0.12 : 0.07));
+      RenderDom.ctx.lineWidth = Math.max(2.2, RenderState.cellSize * (variant.silhouette === "bottle trunk" ? 0.12 : 0.07));
       RenderDom.ctx.lineCap = "round";
       RenderDom.ctx.lineJoin = "round";
       RenderDom.ctx.stroke();
@@ -1779,7 +1779,7 @@
           RenderDom.ctx.moveTo(bx, y + radiusPx * 0.34);
           RenderDom.ctx.lineTo(bx + sway, y - radiusPx * (0.42 + (c % 2) * 0.12));
           RenderDom.ctx.strokeStyle = hexToRgba(palette[0], 0.74 * alpha);
-          RenderDom.ctx.lineWidth = Math.max(1.4, cellSize * 0.04);
+          RenderDom.ctx.lineWidth = Math.max(1.4, RenderState.cellSize * 0.04);
           RenderDom.ctx.stroke();
         }
       } else {
@@ -1825,7 +1825,7 @@
         RenderDom.ctx.fillStyle = hexToRgba(palette[0], 0.82 * alpha);
         RenderDom.ctx.fill();
         RenderDom.ctx.strokeStyle = hexToRgba(palette[1], 0.7 * alpha);
-        RenderDom.ctx.lineWidth = Math.max(1.1, cellSize * 0.03);
+        RenderDom.ctx.lineWidth = Math.max(1.1, RenderState.cellSize * 0.03);
         RenderDom.ctx.stroke();
       };
       RenderDom.ctx.save();
@@ -1850,7 +1850,7 @@
         RenderDom.ctx.fill();
         for (let i = 0; i < 12; i += 1) {
           RenderDom.ctx.beginPath();
-          RenderDom.ctx.arc(x + ((i % 3) - 1) * radiusPx * 0.1, y - radiusPx * (0.48 - Math.floor(i / 3) * 0.16), cellSize * 0.035, 0, Math.PI * 2);
+          RenderDom.ctx.arc(x + ((i % 3) - 1) * radiusPx * 0.1, y - radiusPx * (0.48 - Math.floor(i / 3) * 0.16), RenderState.cellSize * 0.035, 0, Math.PI * 2);
           RenderDom.ctx.strokeStyle = hexToRgba(palette[1], 0.64 * alpha);
           RenderDom.ctx.stroke();
         }
@@ -1898,7 +1898,7 @@
           if (variant.silhouette === "spotted cap" || variant.silhouette === "pore cap" || variant.silhouette === "cracked cap") {
             for (let dot = 0; dot < 5; dot += 1) {
               RenderDom.ctx.beginPath();
-              RenderDom.ctx.arc(mx + Math.cos(dot * 1.7) * radiusPx * 0.08, my - height - radiusPx * 0.05 + Math.sin(dot) * radiusPx * 0.04, cellSize * 0.025, 0, Math.PI * 2);
+              RenderDom.ctx.arc(mx + Math.cos(dot * 1.7) * radiusPx * 0.08, my - height - radiusPx * 0.05 + Math.sin(dot) * radiusPx * 0.04, RenderState.cellSize * 0.025, 0, Math.PI * 2);
               RenderDom.ctx.fillStyle = hexToRgba(palette[1], 0.8 * alpha);
               RenderDom.ctx.fill();
             }
@@ -1986,12 +1986,12 @@
       RenderDom.ctx.save();
       RenderDom.ctx.globalCompositeOperation = "lighter";
       for (let band = 0; band < 7; band += 1) {
-        const offset = (band - 3) * cellSize * 0.2;
+        const offset = (band - 3) * RenderState.cellSize * 0.2;
         RenderDom.ctx.beginPath();
         RenderDom.ctx.moveTo(start.x + nx * offset, start.y + ny * offset);
         RenderDom.ctx.lineTo(end.x + nx * offset, end.y + ny * offset);
         RenderDom.ctx.strokeStyle = hexToRgba(band === 3 ? element.primary : paletteColor(character, band), alpha * (band === 3 ? 0.98 : 0.48));
-        RenderDom.ctx.lineWidth = Math.max(2, cellSize * (band === 3 ? 0.22 : 0.075));
+        RenderDom.ctx.lineWidth = Math.max(2, RenderState.cellSize * (band === 3 ? 0.22 : 0.075));
         RenderDom.ctx.lineCap = "round";
         RenderDom.ctx.stroke();
       }
@@ -1999,15 +1999,15 @@
       RenderDom.ctx.moveTo(start.x, start.y);
       RenderDom.ctx.lineTo(end.x, end.y);
       RenderDom.ctx.strokeStyle = hexToRgba("#ffffff", alpha * 0.74);
-      RenderDom.ctx.lineWidth = Math.max(1.6, cellSize * 0.07);
+      RenderDom.ctx.lineWidth = Math.max(1.6, RenderState.cellSize * 0.07);
       RenderDom.ctx.lineCap = "round";
       RenderDom.ctx.stroke();
       cells.forEach((cell, index) => {
         const point = HexSnakeGame.axialToPixel(cell);
-        if (index % 2 === 0) drawPulseRing(point.x, point.y, cellSize * (0.78 + progress * 0.55), progress, element.deep, element.glow, 0.9);
+        if (index % 2 === 0) drawPulseRing(point.x, point.y, RenderState.cellSize * (0.78 + progress * 0.55), progress, element.deep, element.glow, 0.9);
         drawLightningBetween(
-          { x: point.x - nx * cellSize * 0.62, y: point.y - ny * cellSize * 0.62 },
-          { x: point.x + nx * cellSize * 0.62, y: point.y + ny * cellSize * 0.62 },
+          { x: point.x - nx * RenderState.cellSize * 0.62, y: point.y - ny * RenderState.cellSize * 0.62 },
+          { x: point.x + nx * RenderState.cellSize * 0.62, y: point.y + ny * RenderState.cellSize * 0.62 },
           progress + index * 0.12,
           index % 4 === 0 ? "#ffffff" : index % 2 ? element.violet || element.secondary : element.primary,
           1.18,
@@ -2018,7 +2018,7 @@
         const t = (i + waveValue(progress, i * 0.03)) / 26;
         const point = { x: start.x + dx * t, y: start.y + dy * t };
         const side = i % 2 ? 1 : -1;
-        const reach = cellSize * (0.62 + (i % 4) * 0.18);
+        const reach = RenderState.cellSize * (0.62 + (i % 4) * 0.18);
         drawLightningBetween(
           { x: point.x + nx * reach * side, y: point.y + ny * reach * side },
           { x: point.x - nx * reach * side * 0.55, y: point.y - ny * reach * side * 0.55 },
@@ -2044,7 +2044,7 @@
         RenderDom.ctx.beginPath();
         RenderDom.ctx.arc(x, y, radiusPx * (0.14 + progress * 0.9 + ring * 0.075), 0, Math.PI * 2);
         RenderDom.ctx.strokeStyle = hexToRgba(ring % 2 ? element.secondary : element.primary, alpha * (0.78 - ring * 0.085) * (1 - progress * 0.18));
-        RenderDom.ctx.lineWidth = Math.max(2, cellSize * (0.15 - ring * 0.012));
+        RenderDom.ctx.lineWidth = Math.max(2, RenderState.cellSize * (0.15 - ring * 0.012));
         RenderDom.ctx.stroke();
       }
       RenderDom.ctx.globalCompositeOperation = "source-over";
@@ -2054,7 +2054,7 @@
       RenderDom.ctx.fillStyle = hexToRgba(element.secondary, 0.34 * alpha);
       RenderDom.ctx.fill();
       RenderDom.ctx.beginPath();
-      RenderDom.ctx.roundRect?.(x - radiusPx * 0.16, y - stemHeight * 0.42, radiusPx * 0.32, stemHeight * 0.78, cellSize * 0.18);
+      RenderDom.ctx.roundRect?.(x - radiusPx * 0.16, y - stemHeight * 0.42, radiusPx * 0.32, stemHeight * 0.78, RenderState.cellSize * 0.18);
       if (!RenderDom.ctx.roundRect) RenderDom.ctx.rect(x - radiusPx * 0.16, y - stemHeight * 0.42, radiusPx * 0.32, stemHeight * 0.78);
       RenderDom.ctx.fillStyle = hexToRgba(element.primary, 0.28 * alpha);
       RenderDom.ctx.fill();
@@ -2063,7 +2063,7 @@
         drawFlameTongue(
           x + Math.cos(angle) * radiusPx * (0.24 + progress * 0.5),
           y + Math.sin(angle) * radiusPx * (0.24 + progress * 0.34),
-          cellSize * 0.42,
+          RenderState.cellSize * 0.42,
           angle,
           i % 2 ? element.primary : element.secondary,
           element.glow,
@@ -2093,7 +2093,7 @@
         const orbit = radiusPx * (0.18 + (flame % 6) * 0.085);
         const fx = x + Math.cos(angle) * orbit;
         const fy = y + Math.sin(angle) * orbit * 0.62 - radiusPx * (0.06 + waveValue(progress, flame * 0.04) * 0.18);
-        const size = cellSize * (0.28 + (flame % 5) * 0.045);
+        const size = RenderState.cellSize * (0.28 + (flame % 5) * 0.045);
         drawFlameTongue(
           fx,
           fy,
@@ -2111,8 +2111,8 @@
         RenderDom.ctx.ellipse(
           x + Math.cos(angle) * distance,
           y + Math.sin(angle) * distance * 0.66 - radiusPx * 0.16,
-          cellSize * (0.16 + (smoke % 3) * 0.035),
-          cellSize * (0.09 + (smoke % 3) * 0.024),
+          RenderState.cellSize * (0.16 + (smoke % 3) * 0.035),
+          RenderState.cellSize * (0.09 + (smoke % 3) * 0.024),
           angle,
           0,
           Math.PI * 2
@@ -2135,7 +2135,7 @@
       RenderDom.ctx.beginPath();
       RenderDom.ctx.arc(x, y - radiusPx * 0.04, radiusPx * (0.46 + waveValue(progress, 0.18) * 0.08), 0, Math.PI * 2);
       RenderDom.ctx.strokeStyle = hexToRgba("#ffffff", 0.62 * alpha);
-      RenderDom.ctx.lineWidth = Math.max(2, cellSize * 0.075);
+      RenderDom.ctx.lineWidth = Math.max(2, RenderState.cellSize * 0.075);
       RenderDom.ctx.stroke();
       RenderDom.ctx.restore();
     }
@@ -2158,7 +2158,7 @@
         RenderDom.ctx.beginPath();
         RenderDom.ctx.arc(x, y, radiusPx * (0.28 + ring * 0.18 + progress * 0.12), 0, Math.PI * 2);
         RenderDom.ctx.strokeStyle = hexToRgba(ring % 2 ? "#27272a" : element.secondary, alpha * fade * (0.46 - ring * 0.06));
-        RenderDom.ctx.lineWidth = Math.max(1.5, cellSize * (0.08 - ring * 0.008));
+        RenderDom.ctx.lineWidth = Math.max(1.5, RenderState.cellSize * (0.08 - ring * 0.008));
         RenderDom.ctx.stroke();
       }
       RenderDom.ctx.globalCompositeOperation = "lighter";
@@ -2166,7 +2166,7 @@
         const angle = i * Math.PI * 2 / 42 + progress * Math.PI * (i % 2 ? 0.8 : -0.6);
         const distance = radiusPx * (0.16 + ((i * 7) % 13) * 0.055 + progress * 0.2);
         RenderDom.ctx.beginPath();
-        RenderDom.ctx.arc(x + Math.cos(angle) * distance, y + Math.sin(angle) * distance * 0.72, cellSize * (0.045 + (i % 4) * 0.022), 0, Math.PI * 2);
+        RenderDom.ctx.arc(x + Math.cos(angle) * distance, y + Math.sin(angle) * distance * 0.72, RenderState.cellSize * (0.045 + (i % 4) * 0.022), 0, Math.PI * 2);
         RenderDom.ctx.fillStyle = hexToRgba(i % 3 ? element.secondary : "#fef3c7", alpha * fade * 0.72);
         RenderDom.ctx.fill();
       }
@@ -2180,7 +2180,7 @@
       RenderDom.ctx.rotate(progress * Math.PI * 1.6);
       RenderDom.ctx.textAlign = "center";
       RenderDom.ctx.textBaseline = "middle";
-      RenderDom.ctx.font = `${Math.max(9, cellSize * 0.24)}px serif`;
+      RenderDom.ctx.font = `${Math.max(9, RenderState.cellSize * 0.24)}px serif`;
       for (let i = 0; i < glyphs.length; i += 1) {
         const angle = i * Math.PI * 2 / glyphs.length;
         const gx = Math.cos(angle) * radiusPx;
@@ -2212,7 +2212,7 @@
           Math.PI * 2
         );
         RenderDom.ctx.strokeStyle = hexToRgba(ring % 2 ? "#fbbf24" : "#ffffff", alpha * fade * (0.7 - ring * 0.08));
-        RenderDom.ctx.lineWidth = Math.max(1.4, cellSize * (0.07 - ring * 0.006));
+        RenderDom.ctx.lineWidth = Math.max(1.4, RenderState.cellSize * (0.07 - ring * 0.006));
         RenderDom.ctx.stroke();
       }
       for (let i = 0; i < 18; i += 1) {
@@ -2248,7 +2248,7 @@
       RenderDom.ctx.fillStyle = hexToRgba("#e0f2fe", 0.64 * alpha);
       RenderDom.ctx.fill();
       RenderDom.ctx.strokeStyle = hexToRgba("#ffffff", 0.86 * alpha);
-      RenderDom.ctx.lineWidth = Math.max(1.1, cellSize * 0.032);
+      RenderDom.ctx.lineWidth = Math.max(1.1, RenderState.cellSize * 0.032);
       RenderDom.ctx.stroke();
       RenderDom.ctx.restore();
     }
@@ -2276,13 +2276,13 @@
         RenderDom.ctx.moveTo(x + Math.cos(angle) * inner, y + Math.sin(angle) * inner);
         RenderDom.ctx.lineTo(x + Math.cos(angle) * outer, y + Math.sin(angle) * outer);
         RenderDom.ctx.strokeStyle = hexToRgba(arm % 2 ? "#bae6fd" : "#ffffff", alpha * freeze * 0.78);
-        RenderDom.ctx.lineWidth = Math.max(1.4, cellSize * (0.045 + (arm % 3) * 0.014));
+        RenderDom.ctx.lineWidth = Math.max(1.4, RenderState.cellSize * (0.045 + (arm % 3) * 0.014));
         RenderDom.ctx.lineCap = "round";
         RenderDom.ctx.stroke();
         drawFrostShard(
           x + Math.cos(angle) * radiusPx * (0.48 + progress * 0.08),
           y + Math.sin(angle) * radiusPx * (0.48 + progress * 0.08),
-          cellSize * (0.2 + (arm % 3) * 0.035),
+          RenderState.cellSize * (0.2 + (arm % 3) * 0.035),
           angle,
           alpha * freeze
         );
@@ -2291,7 +2291,7 @@
         RenderDom.ctx.beginPath();
         RenderDom.ctx.arc(x, y, radiusPx * (0.28 + ring * 0.2 + progress * 0.18), 0, Math.PI * 2);
         RenderDom.ctx.strokeStyle = hexToRgba(ring % 2 ? "#7dd3fc" : "#ffffff", alpha * freeze * (0.58 - ring * 0.1));
-        RenderDom.ctx.lineWidth = Math.max(1.4, cellSize * (0.06 - ring * 0.008));
+        RenderDom.ctx.lineWidth = Math.max(1.4, RenderState.cellSize * (0.06 - ring * 0.008));
         RenderDom.ctx.stroke();
       }
       RenderDom.ctx.restore();
@@ -2313,14 +2313,14 @@
           Math.PI * 2
         );
         RenderDom.ctx.strokeStyle = hexToRgba(ring % 2 ? "#7dd3fc" : "#e0f2fe", alpha * fade * (0.64 - ring * 0.07));
-        RenderDom.ctx.lineWidth = Math.max(1.4, cellSize * (0.062 - ring * 0.005));
+        RenderDom.ctx.lineWidth = Math.max(1.4, RenderState.cellSize * (0.062 - ring * 0.005));
         RenderDom.ctx.stroke();
       }
       for (let i = 0; i < 18; i += 1) {
         const angle = i * Math.PI * 2 / 18 + progress * Math.PI * 0.8;
         const sx = x + Math.cos(angle) * radiusPx * 0.74;
         const sy = y + Math.sin(angle) * radiusPx * 0.52;
-        drawFrostShard(sx, sy, cellSize * (0.14 + (i % 3) * 0.026), angle + Math.PI, alpha * fade * 0.72);
+        drawFrostShard(sx, sy, RenderState.cellSize * (0.14 + (i % 3) * 0.026), angle + Math.PI, alpha * fade * 0.72);
       }
       for (let wisp = 0; wisp < 24; wisp += 1) {
         const angle = wisp * Math.PI * 2 / 24 + progress * Math.PI * 1.2;
@@ -2335,7 +2335,7 @@
           y + Math.sin(angle + 0.5) * base * 0.38 - lift
         );
         RenderDom.ctx.strokeStyle = hexToRgba(wisp % 2 ? "#bae6fd" : "#ffffff", alpha * fade * (0.34 + (wisp % 3) * 0.04));
-        RenderDom.ctx.lineWidth = Math.max(1.1, cellSize * 0.032);
+        RenderDom.ctx.lineWidth = Math.max(1.1, RenderState.cellSize * 0.032);
         RenderDom.ctx.lineCap = "round";
         RenderDom.ctx.stroke();
       }
@@ -2366,7 +2366,7 @@
         RenderDom.ctx.moveTo(x + Math.cos(angle) * inner, y + Math.sin(angle) * inner);
         RenderDom.ctx.lineTo(x + Math.cos(angle) * outer, y + Math.sin(angle) * outer);
         RenderDom.ctx.strokeStyle = hexToRgba(i % 3 ? "#ffffff" : "#fbbf24", alpha * fade * (0.58 + (i % 5) * 0.035));
-        RenderDom.ctx.lineWidth = Math.max(1.4, cellSize * (0.045 + (i % 3) * 0.018));
+        RenderDom.ctx.lineWidth = Math.max(1.4, RenderState.cellSize * (0.045 + (i % 3) * 0.018));
         RenderDom.ctx.lineCap = "round";
         RenderDom.ctx.stroke();
       }
@@ -2394,7 +2394,7 @@
           else RenderDom.ctx.lineTo(x + px, y + py);
         }
         RenderDom.ctx.strokeStyle = hexToRgba(layer % 2 ? element.secondary : element.dust || element.primary, alpha * (0.74 - layer * 0.08));
-        RenderDom.ctx.lineWidth = Math.max(1.6, cellSize * (0.09 - layer * 0.008));
+        RenderDom.ctx.lineWidth = Math.max(1.6, RenderState.cellSize * (0.09 - layer * 0.008));
         RenderDom.ctx.lineCap = "round";
         RenderDom.ctx.stroke();
       }
@@ -2402,7 +2402,7 @@
         const angle = progress * Math.PI * 5 + i * Math.PI * 2 / 16;
         const distance = size * (0.12 + (i % 5) * 0.065);
         RenderDom.ctx.beginPath();
-        RenderDom.ctx.arc(x + Math.cos(angle) * distance, y + Math.sin(angle) * distance * 0.72, cellSize * (0.045 + (i % 3) * 0.018), 0, Math.PI * 2);
+        RenderDom.ctx.arc(x + Math.cos(angle) * distance, y + Math.sin(angle) * distance * 0.72, RenderState.cellSize * (0.045 + (i % 3) * 0.018), 0, Math.PI * 2);
         RenderDom.ctx.fillStyle = hexToRgba(i % 2 ? element.glow : element.deep, alpha * 0.62);
         RenderDom.ctx.fill();
       }
@@ -2417,14 +2417,14 @@
       RenderDom.ctx.lineJoin = "round";
       RenderDom.ctx.lineCap = "round";
       RenderDom.ctx.shadowColor = hexToRgba(element.glow, 0.68);
-      RenderDom.ctx.shadowBlur = cellSize * 0.18;
+      RenderDom.ctx.shadowBlur = RenderState.cellSize * 0.18;
       RenderDom.ctx.beginPath();
       RenderDom.ctx.roundRect?.(-size * 0.18, -size * 0.32, size * 0.68, size * 0.64, size * 0.18);
       if (!RenderDom.ctx.roundRect) RenderDom.ctx.rect(-size * 0.18, -size * 0.32, size * 0.68, size * 0.64);
       RenderDom.ctx.fillStyle = hexToRgba(element.primary, 0.92 * alpha);
       RenderDom.ctx.fill();
       RenderDom.ctx.strokeStyle = hexToRgba(element.deep, 0.96 * alpha);
-      RenderDom.ctx.lineWidth = Math.max(1.6, cellSize * 0.06);
+      RenderDom.ctx.lineWidth = Math.max(1.6, RenderState.cellSize * 0.06);
       RenderDom.ctx.stroke();
       for (let i = 0; i < 4; i += 1) {
         RenderDom.ctx.beginPath();
@@ -2447,7 +2447,7 @@
         RenderDom.ctx.moveTo(-trail, -size * (0.22 - i * 0.025));
         RenderDom.ctx.quadraticCurveTo(-trail - size * 0.28, 0, -trail, size * (0.2 - i * 0.018));
         RenderDom.ctx.strokeStyle = hexToRgba(i % 2 ? element.secondary : element.glow, alpha * (0.52 - i * 0.06));
-        RenderDom.ctx.lineWidth = Math.max(1.2, cellSize * (0.05 - i * 0.004));
+        RenderDom.ctx.lineWidth = Math.max(1.2, RenderState.cellSize * (0.05 - i * 0.004));
         RenderDom.ctx.stroke();
       }
       RenderDom.ctx.restore();
@@ -2466,7 +2466,7 @@
       RenderDom.ctx.fillStyle = hexToRgba("#fff7ed", 0.34 * alpha * fade);
       RenderDom.ctx.fill();
       RenderDom.ctx.strokeStyle = hexToRgba(element.secondary, 0.92 * alpha * fade);
-      RenderDom.ctx.lineWidth = Math.max(2.2, cellSize * 0.095);
+      RenderDom.ctx.lineWidth = Math.max(2.2, RenderState.cellSize * 0.095);
       RenderDom.ctx.stroke();
       for (let finger = 0; finger < 5; finger += 1) {
         const fx = radiusPx * (-0.32 + finger * 0.16);
@@ -2485,7 +2485,7 @@
         RenderDom.ctx.moveTo(-radiusPx * 0.24, yLine);
         RenderDom.ctx.quadraticCurveTo(radiusPx * 0.08, yLine - radiusPx * 0.1, radiusPx * 0.28, yLine + radiusPx * 0.04);
         RenderDom.ctx.strokeStyle = hexToRgba(line % 2 ? element.secondary : "#ffffff", 0.52 * alpha * fade);
-        RenderDom.ctx.lineWidth = Math.max(1.1, cellSize * 0.035);
+        RenderDom.ctx.lineWidth = Math.max(1.1, RenderState.cellSize * 0.035);
         RenderDom.ctx.stroke();
       }
       RenderDom.ctx.restore();
@@ -2495,7 +2495,7 @@
         RenderDom.ctx.beginPath();
         RenderDom.ctx.arc(x, y, radiusPx * (0.42 + ring * 0.18 + progress * 0.18), 0, Math.PI * 2);
         RenderDom.ctx.strokeStyle = hexToRgba(ring % 2 ? element.secondary : element.hot, alpha * fade * (0.58 - ring * 0.07));
-        RenderDom.ctx.lineWidth = Math.max(1.4, cellSize * (0.065 - ring * 0.006));
+        RenderDom.ctx.lineWidth = Math.max(1.4, RenderState.cellSize * (0.065 - ring * 0.006));
         RenderDom.ctx.stroke();
       }
       RenderDom.ctx.restore();
@@ -2527,7 +2527,7 @@
           else RenderDom.ctx.lineTo(px, py);
         }
         RenderDom.ctx.strokeStyle = hexToRgba(arm % 3 === 0 ? element.secondary : arm % 3 === 1 ? element.glow : element.hot, alpha * 0.62);
-        RenderDom.ctx.lineWidth = Math.max(2.2, cellSize * 0.13);
+        RenderDom.ctx.lineWidth = Math.max(2.2, RenderState.cellSize * 0.13);
         RenderDom.ctx.lineCap = "round";
         RenderDom.ctx.stroke();
       }
@@ -2537,7 +2537,7 @@
         const px = x + Math.cos(angle) * distance;
         const py = y + Math.sin(angle) * distance * 0.7;
         RenderDom.ctx.beginPath();
-        RenderDom.ctx.arc(px, py, cellSize * (0.09 + (i % 4) * 0.035), 0, Math.PI * 2);
+        RenderDom.ctx.arc(px, py, RenderState.cellSize * (0.09 + (i % 4) * 0.035), 0, Math.PI * 2);
         RenderDom.ctx.fillStyle = hexToRgba(i % 4 === 0 ? element.secondary : i % 4 === 1 ? element.glow : i % 4 === 2 ? element.hot : "#020617", alpha * 0.72);
         RenderDom.ctx.fill();
       }
@@ -2572,7 +2572,7 @@
           else RenderDom.ctx.lineTo(px, py);
         }
         RenderDom.ctx.strokeStyle = hexToRgba(layer % 3 === 0 ? "#000000" : layer % 3 === 1 ? "#7f1d1d" : "#064e3b", alpha * fade * (0.78 - layer * 0.055));
-        RenderDom.ctx.lineWidth = Math.max(2, cellSize * (0.16 - layer * 0.011));
+        RenderDom.ctx.lineWidth = Math.max(2, RenderState.cellSize * (0.16 - layer * 0.011));
         RenderDom.ctx.lineCap = "round";
         RenderDom.ctx.stroke();
       }
@@ -2581,7 +2581,7 @@
       for (let i = 0; i < 46; i += 1) {
         const angle = progress * Math.PI * (1.5 + (i % 3) * 0.28) + i * Math.PI * 2 / 46;
         const distance = radiusPx * (0.18 + ((i * 7) % 13) * 0.055 + progress * 0.14);
-        const puff = cellSize * (0.09 + (i % 5) * 0.026);
+        const puff = RenderState.cellSize * (0.09 + (i % 5) * 0.026);
         RenderDom.ctx.beginPath();
         RenderDom.ctx.ellipse(
           x + Math.cos(angle) * distance,
@@ -2607,7 +2607,7 @@
           Math.PI * 2
         );
         RenderDom.ctx.strokeStyle = hexToRgba(ring % 2 ? "#7f1d1d" : "#064e3b", alpha * fade * (0.52 - ring * 0.08));
-        RenderDom.ctx.lineWidth = Math.max(1.4, cellSize * (0.072 - ring * 0.008));
+        RenderDom.ctx.lineWidth = Math.max(1.4, RenderState.cellSize * (0.072 - ring * 0.008));
         RenderDom.ctx.stroke();
       }
       RenderDom.ctx.globalCompositeOperation = "source-over";
@@ -2616,7 +2616,7 @@
       RenderDom.ctx.fillStyle = hexToRgba("#000000", 0.78 * alpha);
       RenderDom.ctx.fill();
       RenderDom.ctx.strokeStyle = hexToRgba(element.glow, 0.58 * alpha);
-      RenderDom.ctx.lineWidth = Math.max(1.6, cellSize * 0.05);
+      RenderDom.ctx.lineWidth = Math.max(1.6, RenderState.cellSize * 0.05);
       RenderDom.ctx.stroke();
       RenderDom.ctx.restore();
     }
@@ -2624,7 +2624,7 @@
     function drawSmallProjectileHead(x, y, projectile, progress, character, angle = 0) {
       const element = elementColorsFor(character);
       const projectileScale = projectile.kind === "lobsterPalm" ? 1.45 : 1;
-      const size = cellSize * Math.max(0.48, Math.min(0.86, 0.42 + (projectile.radius || 1) * 0.08)) * projectileScale;
+      const size = RenderState.cellSize * Math.max(0.48, Math.min(0.86, 0.42 + (projectile.radius || 1) * 0.08)) * projectileScale;
       const pulse = 0.9 + waveValue(progress, 0.2) * 0.16;
       RenderDom.ctx.save();
       RenderDom.ctx.translate(x, y);
@@ -2632,7 +2632,7 @@
       RenderDom.ctx.lineJoin = "round";
       RenderDom.ctx.lineCap = "round";
       RenderDom.ctx.shadowColor = hexToRgba(element.glow, 0.72);
-      RenderDom.ctx.shadowBlur = cellSize * 0.22;
+      RenderDom.ctx.shadowBlur = RenderState.cellSize * 0.22;
 
       if ((projectile.visualType || "").startsWith("lobster-palm")) {
         drawGhostFireBurn(0, 0, size * 0.92, progress, character, 0.5);
@@ -2657,7 +2657,7 @@
         RenderDom.ctx.fillStyle = hexToRgba(element.hot, 0.92);
         RenderDom.ctx.fill();
         RenderDom.ctx.strokeStyle = hexToRgba(element.deep, 0.95);
-        RenderDom.ctx.lineWidth = Math.max(1.5, cellSize * 0.055);
+        RenderDom.ctx.lineWidth = Math.max(1.5, RenderState.cellSize * 0.055);
         RenderDom.ctx.stroke();
         RenderDom.ctx.beginPath();
         RenderDom.ctx.moveTo(-size * 0.62, -size * 0.18);
@@ -2677,7 +2677,7 @@
         RenderDom.ctx.fillStyle = hexToRgba(element.secondary, 0.9);
         RenderDom.ctx.fill();
         RenderDom.ctx.strokeStyle = hexToRgba(element.deep, 0.9);
-        RenderDom.ctx.lineWidth = Math.max(1.4, cellSize * 0.05);
+        RenderDom.ctx.lineWidth = Math.max(1.4, RenderState.cellSize * 0.05);
         RenderDom.ctx.stroke();
         [-1, 1].forEach(mirror => {
           RenderDom.ctx.beginPath();
@@ -2695,7 +2695,7 @@
         RenderDom.ctx.fillStyle = hexToRgba(element.deep, 0.88);
         RenderDom.ctx.fill();
         RenderDom.ctx.strokeStyle = hexToRgba(element.hot, 0.92);
-        RenderDom.ctx.lineWidth = Math.max(1.8, cellSize * 0.065);
+        RenderDom.ctx.lineWidth = Math.max(1.8, RenderState.cellSize * 0.065);
         RenderDom.ctx.stroke();
         for (let i = 0; i < 3; i += 1) {
           RenderDom.ctx.beginPath();
@@ -2704,7 +2704,7 @@
           RenderDom.ctx.lineTo(size * 0.1, size * (offset - 0.16));
           RenderDom.ctx.lineTo(size * 0.32, size * offset);
           RenderDom.ctx.strokeStyle = hexToRgba(i % 2 ? element.secondary : element.glow, 0.92);
-          RenderDom.ctx.lineWidth = Math.max(1.2, cellSize * 0.044);
+          RenderDom.ctx.lineWidth = Math.max(1.2, RenderState.cellSize * 0.044);
           RenderDom.ctx.stroke();
         }
       } else if (character.id === "lobster") {
@@ -2719,14 +2719,14 @@
         RenderDom.ctx.fillStyle = hexToRgba(element.primary, 0.92);
         RenderDom.ctx.fill();
         RenderDom.ctx.strokeStyle = hexToRgba(element.deep, 0.98);
-        RenderDom.ctx.lineWidth = Math.max(1.6, cellSize * 0.06);
+        RenderDom.ctx.lineWidth = Math.max(1.6, RenderState.cellSize * 0.06);
         RenderDom.ctx.stroke();
         [-1, 1].forEach(mirror => {
           RenderDom.ctx.beginPath();
           RenderDom.ctx.moveTo(size * 0.36, mirror * size * 0.08);
           RenderDom.ctx.quadraticCurveTo(size * 0.62, mirror * size * 0.38, size * 0.86, mirror * size * 0.18);
           RenderDom.ctx.strokeStyle = hexToRgba(element.secondary, 0.95);
-          RenderDom.ctx.lineWidth = Math.max(1.8, cellSize * 0.07);
+          RenderDom.ctx.lineWidth = Math.max(1.8, RenderState.cellSize * 0.07);
           RenderDom.ctx.stroke();
         });
         drawFlameTongue(-size * 0.76, 0, size * 0.3, -Math.PI / 2, element.secondary, element.glow, 0.78);
@@ -2736,7 +2736,7 @@
         RenderDom.ctx.fillStyle = hexToRgba("#111827", 0.96);
         RenderDom.ctx.fill();
         RenderDom.ctx.strokeStyle = hexToRgba(element.primary, 0.95);
-        RenderDom.ctx.lineWidth = Math.max(1.7, cellSize * 0.062);
+        RenderDom.ctx.lineWidth = Math.max(1.7, RenderState.cellSize * 0.062);
         RenderDom.ctx.stroke();
         for (let i = 0; i < 6; i += 1) {
           const legAngle = i * Math.PI / 3 + progress * Math.PI;
@@ -2744,7 +2744,7 @@
           RenderDom.ctx.moveTo(Math.cos(legAngle) * size * 0.24, Math.sin(legAngle) * size * 0.24);
           RenderDom.ctx.lineTo(Math.cos(legAngle) * size * 0.62, Math.sin(legAngle) * size * 0.48);
           RenderDom.ctx.strokeStyle = hexToRgba(i % 2 ? element.glow : element.primary, 0.82);
-          RenderDom.ctx.lineWidth = Math.max(1.1, cellSize * 0.038);
+          RenderDom.ctx.lineWidth = Math.max(1.1, RenderState.cellSize * 0.038);
           RenderDom.ctx.stroke();
         }
         RenderDom.ctx.beginPath();
@@ -2758,7 +2758,7 @@
         RenderDom.ctx.fillStyle = hexToRgba(element.primary, 0.9);
         RenderDom.ctx.fill();
         RenderDom.ctx.strokeStyle = hexToRgba(element.glow, 0.95);
-        RenderDom.ctx.lineWidth = Math.max(1.5, cellSize * 0.055);
+        RenderDom.ctx.lineWidth = Math.max(1.5, RenderState.cellSize * 0.055);
         RenderDom.ctx.stroke();
       }
 
@@ -2766,7 +2766,7 @@
     }
 
     function drawProjectileCore(x, y, projectile, progress, character, travelAngle = 0) {
-      const radiusPx = cellSize * Math.max(0.7, projectile.radius || 1);
+      const radiusPx = RenderState.cellSize * Math.max(0.7, projectile.radius || 1);
       const type = projectile.visualType || HexSnakeGame.attackVisualType(projectile.owner, projectile.profile);
       const isBig = projectile.profile === "big" || isUltimateVisualType(type);
       const element = elementColorsFor(character);
@@ -2816,7 +2816,7 @@
         drawDarkGuKingTornado(x, y, radiusPx * 0.92, progress, character, 0.82);
       } else {
         RenderDom.ctx.beginPath();
-        RenderDom.ctx.arc(x, y, Math.max(5, cellSize * 0.16), 0, Math.PI * 2);
+        RenderDom.ctx.arc(x, y, Math.max(5, RenderState.cellSize * 0.16), 0, Math.PI * 2);
         RenderDom.ctx.fillStyle = character.color;
         RenderDom.ctx.fill();
       }
@@ -2831,7 +2831,7 @@
 
     function drawProjectiles() {
       const now = performance.now();
-      projectiles.forEach(projectile => {
+      RenderState.projectiles.forEach(projectile => {
         if (projectile.createdAt && now < projectile.createdAt) return;
         const blastCharacter = HexSnakeGame.characterForVisualType(projectile.owner, projectile.visualType);
         if (projectile.hidden) {
@@ -2841,7 +2841,7 @@
           if ((projectile.visualType || "").startsWith("sandworm")) {
             if (timeToImpact > RenderConfig.sandwormRevealBeforeImpactMs) return;
             const warningProgress = Math.max(0, 1 - timeToImpact / RenderConfig.sandwormRevealBeforeImpactMs);
-            const warningRadius = cellSize * Math.max(2.4, (projectile.radius || 1) * 4.4);
+            const warningRadius = RenderState.cellSize * Math.max(2.4, (projectile.radius || 1) * 4.4);
             const warningPlan = effectVisualPlanFor(projectile.visualType, "warning", blastCharacter);
             drawElementCircleTexture(target.x, target.y, warningRadius, warningProgress, blastCharacter, warningPlan.textureAlpha, {
               seed: `${projectile.visualType}:${projectile.impactAt}:warning`,
@@ -2896,7 +2896,7 @@
             const end = HexSnakeGame.axialToPixel(projectile.target || projectile.lineCells[projectile.lineCells.length - 1]);
             const x = start.x + (end.x - start.x) * progress;
             const y = start.y + (end.y - start.y) * progress;
-            const radiusPx = cellSize * Math.max(1.25, (projectile.width || 1) + 1.05);
+            const radiusPx = RenderState.cellSize * Math.max(1.25, (projectile.width || 1) + 1.05);
             drawEnergyBeamBurst(x, y, radiusPx, progress, blastCharacter, 0.94);
             drawPulseRing(x, y, radiusPx * 0.78, progress, blastCharacter.color, blastCharacter.line, 1.2);
             return;
@@ -2912,14 +2912,14 @@
           });
           lineTextureCells.forEach(cell => {
             const { x, y } = HexSnakeGame.axialToPixel(cell);
-            drawElementAura(x, y, cellSize * 0.7, progress + cell.q * 0.02, blastCharacter, 0.22);
-            HexSnakeGame.hexPath(x, y, cellSize * 0.88);
+            drawElementAura(x, y, RenderState.cellSize * 0.7, progress + cell.q * 0.02, blastCharacter, 0.22);
+            HexSnakeGame.hexPath(x, y, RenderState.cellSize * 0.88);
             RenderDom.ctx.fillStyle = hexToRgba(blastCharacter.accent || blastCharacter.color, alpha);
             RenderDom.ctx.fill();
             RenderDom.ctx.strokeStyle = hexToRgba(blastCharacter.line, alpha + 0.16);
-            RenderDom.ctx.lineWidth = Math.max(1, cellSize * 0.035);
+            RenderDom.ctx.lineWidth = Math.max(1, RenderState.cellSize * 0.035);
             RenderDom.ctx.stroke();
-            if (cell.q % 2 === 0) drawElementMotifs(x, y, cellSize * 0.62, progress + cell.r * 0.03, blastCharacter, 0.62, 6);
+            if (cell.q % 2 === 0) drawElementMotifs(x, y, RenderState.cellSize * 0.62, progress + cell.r * 0.03, blastCharacter, 0.62, 6);
           });
           const visibleCells = projectile.lineCells.slice(0, Math.max(0, Math.floor(projectile.lineCells.length * progress)));
           for (let i = 1; i < visibleCells.length; i += 1) {
@@ -2932,7 +2932,7 @@
           const target = HexSnakeGame.axialToPixel(projectile.followHead ? ownerHead(projectile.owner) : projectile.target);
           const type = projectile.visualType || "";
           const headCirclePlan = effectVisualPlanFor(type, type.startsWith("dragon-spirit") ? "warning" : "radiation", blastCharacter);
-          const warningRadius = cellSize * Math.max(1.35, projectile.radius || 1) * 1.04;
+          const warningRadius = RenderState.cellSize * Math.max(1.35, projectile.radius || 1) * 1.04;
           drawElementCircleTexture(target.x, target.y, warningRadius, progress, blastCharacter, headCirclePlan.textureAlpha * 0.7, {
             seed: `${projectile.visualType}:${projectile.createdAt}:headCircle`,
             density: headCirclePlan.density,
@@ -2942,11 +2942,11 @@
             ellipse: headCirclePlan.ellipse
           });
           if (type.startsWith("dragon-spirit")) {
-            drawFrostFreezeBurst(target.x, target.y, cellSize * Math.max(1.35, projectile.radius || 1) * 1.08, progress, blastCharacter, 0.72 + progress * 0.2);
+            drawFrostFreezeBurst(target.x, target.y, RenderState.cellSize * Math.max(1.35, projectile.radius || 1) * 1.08, progress, blastCharacter, 0.72 + progress * 0.2);
           } else {
-            drawUltimateImpactFrame(target.x, target.y, cellSize * Math.max(1.35, projectile.radius || 1) * 1.04, progress, blastCharacter, 0.58 + progress * 0.22);
-            drawNuclearBloom(target.x, target.y, cellSize * Math.max(1.2, projectile.radius || 1) * 0.96, progress, blastCharacter, 0.36 + progress * 0.32);
-            drawPulseRing(target.x, target.y, cellSize * Math.max(1.2, projectile.radius || 1) * (0.72 + progress * 0.5), progress, blastCharacter.color, blastCharacter.line, 1.08);
+            drawUltimateImpactFrame(target.x, target.y, RenderState.cellSize * Math.max(1.35, projectile.radius || 1) * 1.04, progress, blastCharacter, 0.58 + progress * 0.22);
+            drawNuclearBloom(target.x, target.y, RenderState.cellSize * Math.max(1.2, projectile.radius || 1) * 0.96, progress, blastCharacter, 0.36 + progress * 0.32);
+            drawPulseRing(target.x, target.y, RenderState.cellSize * Math.max(1.2, projectile.radius || 1) * (0.72 + progress * 0.5), progress, blastCharacter.color, blastCharacter.line, 1.08);
           }
           return;
         }
@@ -2956,7 +2956,7 @@
         const x = start.x + (end.x - start.x) * progress;
         const y = start.y + (end.y - start.y) * progress;
         const isSmallProjectile = projectile.profile === "small";
-        const arcHeight = Math.sin(progress * Math.PI) * cellSize * (isSmallProjectile ? 0.82 : 1.5);
+        const arcHeight = Math.sin(progress * Math.PI) * RenderState.cellSize * (isSmallProjectile ? 0.82 : 1.5);
         const projectilePoint = { x, y: y - arcHeight };
         const travelAngle = Math.atan2(end.y - start.y, end.x - start.x);
         if (!isSmallProjectile) {
@@ -2967,93 +2967,93 @@
         }
         drawProjectileCore(projectilePoint.x, projectilePoint.y, projectile, progress, blastCharacter, travelAngle);
         RenderDom.ctx.beginPath();
-        RenderDom.ctx.arc(end.x, end.y, cellSize * Math.max(0.52, (projectile.radius || 1) * 0.32), 0, Math.PI * 2);
+        RenderDom.ctx.arc(end.x, end.y, RenderState.cellSize * Math.max(0.52, (projectile.radius || 1) * 0.32), 0, Math.PI * 2);
         RenderDom.ctx.strokeStyle = hexToRgba(blastCharacter.line, 0.56);
-        RenderDom.ctx.lineWidth = Math.max(2, cellSize * 0.055);
+        RenderDom.ctx.lineWidth = Math.max(2, RenderState.cellSize * 0.055);
         RenderDom.ctx.stroke();
       });
     }
 
     function activeAttackPreviewProfile() {
-      if (controlAttackPointer) return "big";
-      if (keyboardAttackPreview) return keyboardAttackPreview.profile || selectedAttackProfile;
-      return attackPointer?.previewProfile || selectedAttackProfile;
+      if (RenderState.controlAttackPointer) return "big";
+      if (RenderState.keyboardAttackPreview) return RenderState.keyboardAttackPreview.profile || RenderState.selectedAttackProfile;
+      return RenderState.attackPointer?.previewProfile || RenderState.selectedAttackProfile;
     }
 
     function drawTarget() {
-      if (HexSnakeReplay.isPlaybackMode() && !targetActive) return;
-      if (!targetCell || !snake) return;
+      if (HexSnakeReplay.isPlaybackMode() && !RenderState.targetActive) return;
+      if (!RenderState.targetCell || !RenderState.snake) return;
       const profile = activeAttackPreviewProfile();
-      if (!targetActive && !canAttack("player", profile)) return;
+      if (!RenderState.targetActive && !RenderUI.canAttack("player", profile)) return;
       if (profile === "big" && RenderUI.characterFor("player").id === "sandworm") return;
-      const { x, y } = HexSnakeGame.axialToPixel(targetCell);
+      const { x, y } = HexSnakeGame.axialToPixel(RenderState.targetCell);
       RenderDom.ctx.beginPath();
-      const previewRadius = Math.max(1, blastRadius(playerStock) + (profile === "small" ? -1 : 0));
-      RenderDom.ctx.arc(x, y, cellSize * previewRadius * 1.52, 0, Math.PI * 2);
-      RenderDom.ctx.fillStyle = canAttack("player", profile) ? "rgba(245,158,11,0.1)" : "rgba(168,179,194,0.08)";
+      const previewRadius = Math.max(1, RenderUI.blastRadius(RenderState.playerStock) + (profile === "small" ? -1 : 0));
+      RenderDom.ctx.arc(x, y, RenderState.cellSize * previewRadius * 1.52, 0, Math.PI * 2);
+      RenderDom.ctx.fillStyle = RenderUI.canAttack("player", profile) ? "rgba(245,158,11,0.1)" : "rgba(168,179,194,0.08)";
       RenderDom.ctx.fill();
-      RenderDom.ctx.strokeStyle = canAttack("player", profile) ? "rgba(253,230,138,0.78)" : "rgba(168,179,194,0.36)";
+      RenderDom.ctx.strokeStyle = RenderUI.canAttack("player", profile) ? "rgba(253,230,138,0.78)" : "rgba(168,179,194,0.36)";
       RenderDom.ctx.lineWidth = 2;
       RenderDom.ctx.setLineDash([6, 6]);
       RenderDom.ctx.stroke();
       RenderDom.ctx.setLineDash([]);
-      HexSnakeGame.hexPath(x, y, cellSize * 0.55);
+      HexSnakeGame.hexPath(x, y, RenderState.cellSize * 0.55);
       RenderDom.ctx.strokeStyle = RenderConfig.colors.target;
       RenderDom.ctx.lineWidth = 2;
       RenderDom.ctx.stroke();
     }
 
     function directionalPreviewState() {
-      if (!snake?.length) return null;
+      if (!RenderState.snake?.length) return null;
       const character = RenderUI.characterFor("player");
       if (activeAttackPreviewProfile() !== "big" || !bigAttackUsesDrawnDirection(character.id)) return null;
-      if (keyboardAttackPreview?.profile === "big" && Number.isInteger(keyboardAttackPreview.direction)) {
+      if (RenderState.keyboardAttackPreview?.profile === "big" && Number.isInteger(RenderState.keyboardAttackPreview.direction)) {
         return {
           character,
-          direction: keyboardAttackPreview.direction,
-          origin: keyboardAttackPreview.origin || snake[0],
-          target: keyboardAttackPreview.target || HexSnakeGame.opponentHeadTarget(),
+          direction: RenderState.keyboardAttackPreview.direction,
+          origin: RenderState.keyboardAttackPreview.origin || RenderState.snake[0],
+          target: RenderState.keyboardAttackPreview.target || HexSnakeGame.opponentHeadTarget(),
           fromKeyboard: true
         };
       }
-      if (controlAttackPointer) {
+      if (RenderState.controlAttackPointer) {
         return {
           character,
-          direction: controlAttackPointer.direction,
-          origin: snake[0],
+          direction: RenderState.controlAttackPointer.direction,
+          origin: RenderState.snake[0],
           target: HexSnakeGame.opponentHeadTarget(),
           fromControlPad: true
         };
       }
-      if (!attackPointer) return null;
-      const target = character.id === "moray" && attackPointer.moved
-        ? attackPointer.currentCell
+      if (!RenderState.attackPointer) return null;
+      const target = character.id === "moray" && RenderState.attackPointer.moved
+        ? RenderState.attackPointer.currentCell
         : HexSnakeGame.opponentHeadTarget();
-      const direction = attackPointer.moved
-        ? HexSnakeGame.directionFromSourceToTarget(attackPointer.startCell, attackPointer.currentCell, HexSnakeGame.directionFromSourceToTarget(snake[0], target, HexSnakeGame.ownerDirection("player")))
-        : HexSnakeGame.directionFromSourceToTarget(snake[0], target, HexSnakeGame.ownerDirection("player"));
-      const origin = character.id === "moray" && attackPointer.moved ? target : snake[0];
+      const direction = RenderState.attackPointer.moved
+        ? HexSnakeGame.directionFromSourceToTarget(RenderState.attackPointer.startCell, RenderState.attackPointer.currentCell, HexSnakeGame.directionFromSourceToTarget(RenderState.snake[0], target, HexSnakeGame.ownerDirection("player")))
+        : HexSnakeGame.directionFromSourceToTarget(RenderState.snake[0], target, HexSnakeGame.ownerDirection("player"));
+      const origin = character.id === "moray" && RenderState.attackPointer.moved ? target : RenderState.snake[0];
       return {
         character,
         direction,
         origin,
         target,
-        dragStart: attackPointer.moved ? attackPointer.startCell : null,
-        dragTarget: attackPointer.moved ? attackPointer.currentCell : null
+        dragStart: RenderState.attackPointer.moved ? RenderState.attackPointer.startCell : null,
+        dragTarget: RenderState.attackPointer.moved ? RenderState.attackPointer.currentCell : null
       };
     }
 
     function directionalPreviewPath(origin, direction, character) {
       if (!origin || !Number.isInteger(direction)) return [];
       if (character.id === "moray") return HexSnakeGame.boardLineThrough(origin, direction);
-      const targetSnake = computerSnake || [];
+      const targetSnake = RenderState.computerSnake || [];
       const predictedPath = character.id === "lobster"
-        ? HexSnakeGame.lobsterFistPath(snake[0], direction, targetSnake)
+        ? HexSnakeGame.lobsterFistPath(RenderState.snake[0], direction, targetSnake)
         : [];
       if (predictedPath.length) return predictedPath;
       const path = [];
       let cursor = { q: origin.q, r: origin.r };
-      for (let step = 0; step < targetMaxHex; step += 1) {
+      for (let step = 0; step < RenderState.targetMaxHex; step += 1) {
         cursor = HexSnakeGame.nextWrappedCell(cursor, direction);
         path.push({ q: cursor.q, r: cursor.r });
       }
@@ -3065,9 +3065,9 @@
       const targetKey = preview.target ? HexSnakeGame.keyOf(preview.target) : "none";
       const dragStartKey = preview.dragStart ? HexSnakeGame.keyOf(preview.dragStart) : "none";
       const dragTargetKey = preview.dragTarget ? HexSnakeGame.keyOf(preview.dragTarget) : "none";
-      const playerSnakeKey = snake?.map(HexSnakeGame.keyOf).join("|") || "";
-      const computerSnakeKey = computerSnake?.map(HexSnakeGame.keyOf).join("|") || "";
-      const stockKey = RenderConfig.foodTypes.map(type => `${type.id}:${playerStock?.[type.id] || 0}`).join("|");
+      const playerSnakeKey = RenderState.snake?.map(HexSnakeGame.keyOf).join("|") || "";
+      const computerSnakeKey = RenderState.computerSnake?.map(HexSnakeGame.keyOf).join("|") || "";
+      const stockKey = RenderConfig.foodTypes.map(type => `${type.id}:${RenderState.playerStock?.[type.id] || 0}`).join("|");
       return [
         character.id,
         preview.direction,
@@ -3076,7 +3076,7 @@
         dragStartKey,
         dragTargetKey,
         radius,
-        targetMaxHex,
+        RenderState.targetMaxHex,
         stockKey,
         playerSnakeKey,
         computerSnakeKey
@@ -3085,17 +3085,17 @@
 
     function directionalPreviewData(preview, character) {
       const cacheKey = directionalPreviewKey(preview, character);
-      if (directionalPreviewCacheKey === cacheKey && directionalPreviewCache) return directionalPreviewCache;
+      if (RenderState.directionalPreviewCacheKey === cacheKey && RenderState.directionalPreviewCache) return RenderState.directionalPreviewCache;
       const path = directionalPreviewPath(preview.origin, preview.direction, character);
       const width = character.id === "moray" && path.length
-        ? Math.max(0, HexSnakeGame.bandDistanceFromTotalWidth(HexSnakeGame.attackStats(playerStock, "small").radius))
+        ? Math.max(0, HexSnakeGame.bandDistanceFromTotalWidth(HexSnakeGame.attackStats(RenderState.playerStock, "small").radius))
         : 0;
       const cellsForPreview = character.id === "moray" && path.length
-        ? HexSnakeGame.cellsNearCells(path, width, snake)
+        ? HexSnakeGame.cellsNearCells(path, width, RenderState.snake)
         : path;
-      directionalPreviewCacheKey = cacheKey;
-      directionalPreviewCache = { path, cellsForPreview };
-      return directionalPreviewCache;
+      RenderState.directionalPreviewCacheKey = cacheKey;
+      RenderState.directionalPreviewCache = { path, cellsForPreview };
+      return RenderState.directionalPreviewCache;
     }
 
     function directionBetweenCells(source, target, fallbackDirection = 0) {
@@ -3119,23 +3119,23 @@
       RenderDom.ctx.translate(point.x, point.y);
       RenderDom.ctx.rotate(angle * Math.PI / 180);
       RenderDom.ctx.beginPath();
-      RenderDom.ctx.moveTo(cellSize * 0.5, 0);
-      RenderDom.ctx.lineTo(-cellSize * 0.2, -cellSize * 0.32);
-      RenderDom.ctx.lineTo(-cellSize * 0.08, 0);
-      RenderDom.ctx.lineTo(-cellSize * 0.2, cellSize * 0.32);
+      RenderDom.ctx.moveTo(RenderState.cellSize * 0.5, 0);
+      RenderDom.ctx.lineTo(-RenderState.cellSize * 0.2, -RenderState.cellSize * 0.32);
+      RenderDom.ctx.lineTo(-RenderState.cellSize * 0.08, 0);
+      RenderDom.ctx.lineTo(-RenderState.cellSize * 0.2, RenderState.cellSize * 0.32);
       RenderDom.ctx.closePath();
       RenderDom.ctx.fillStyle = hexToRgba(lineColor, canCast ? 0.9 : 0.56);
       RenderDom.ctx.fill();
       RenderDom.ctx.strokeStyle = hexToRgba("#ffffff", canCast ? 0.72 : 0.34);
-      RenderDom.ctx.lineWidth = Math.max(1.2, cellSize * 0.035);
+      RenderDom.ctx.lineWidth = Math.max(1.2, RenderState.cellSize * 0.035);
       RenderDom.ctx.stroke();
       RenderDom.ctx.restore();
     }
 
     function requestPreviewDraw() {
-      if (previewDrawRafId) return;
-      previewDrawRafId = requestAnimationFrame(() => {
-        previewDrawRafId = 0;
+      if (RenderState.previewDrawRafId) return;
+      RenderState.previewDrawRafId = requestAnimationFrame(() => {
+        RenderState.previewDrawRafId = 0;
         draw();
       });
     }
@@ -3162,7 +3162,7 @@
       const dx = end.x - start.x;
       const dy = end.y - start.y;
       const distance = Math.hypot(dx, dy);
-      if (distance < cellSize * 0.25) return;
+      if (distance < RenderState.cellSize * 0.25) return;
       const pulse = waveValue(now / 680);
       RenderDom.ctx.save();
       RenderDom.ctx.globalCompositeOperation = "lighter";
@@ -3170,20 +3170,20 @@
       RenderDom.ctx.moveTo(start.x, start.y);
       RenderDom.ctx.lineTo(end.x, end.y);
       RenderDom.ctx.strokeStyle = hexToRgba(lineColor, canCast ? 0.72 + pulse * 0.16 : 0.36);
-      RenderDom.ctx.lineWidth = Math.max(2, cellSize * 0.07);
+      RenderDom.ctx.lineWidth = Math.max(2, RenderState.cellSize * 0.07);
       RenderDom.ctx.lineCap = "round";
-      RenderDom.ctx.setLineDash([cellSize * 0.18, cellSize * 0.14]);
+      RenderDom.ctx.setLineDash([RenderState.cellSize * 0.18, RenderState.cellSize * 0.14]);
       RenderDom.ctx.lineDashOffset = -now / 38;
       RenderDom.ctx.stroke();
       RenderDom.ctx.setLineDash([]);
 
       [start, end].forEach((point, index) => {
         RenderDom.ctx.beginPath();
-        RenderDom.ctx.arc(point.x, point.y, cellSize * (index ? 0.22 : 0.18), 0, Math.PI * 2);
+        RenderDom.ctx.arc(point.x, point.y, RenderState.cellSize * (index ? 0.22 : 0.18), 0, Math.PI * 2);
         RenderDom.ctx.fillStyle = hexToRgba(fillColor, index ? 0.42 : 0.26);
         RenderDom.ctx.fill();
         RenderDom.ctx.strokeStyle = hexToRgba("#ffffff", index ? 0.5 : 0.34);
-        RenderDom.ctx.lineWidth = Math.max(1, cellSize * 0.026);
+        RenderDom.ctx.lineWidth = Math.max(1, RenderState.cellSize * 0.026);
         RenderDom.ctx.stroke();
       });
 
@@ -3193,7 +3193,7 @@
     function drawDirectionalAttackPreview(now = performance.now()) {
       const preview = directionalPreviewState();
       if (!preview) return;
-      const canCast = canAttack("player", "big");
+      const canCast = RenderUI.canAttack("player", "big");
       const character = preview.character;
       const lineColor = canCast ? (character.line || RenderConfig.colors.target) : "#94a3b8";
       const fillColor = canCast ? (character.accent || character.color || RenderConfig.colors.target) : "#94a3b8";
@@ -3206,11 +3206,11 @@
       cellsForPreview.forEach((cell, index) => {
         const { x, y } = HexSnakeGame.axialToPixel(cell);
         const distanceFade = Math.max(0.22, 1 - index / Math.max(6, cellsForPreview.length + 2));
-        HexSnakeGame.hexPath(x, y, cellSize * (character.id === "moray" ? 0.92 : 0.72));
+        HexSnakeGame.hexPath(x, y, RenderState.cellSize * (character.id === "moray" ? 0.92 : 0.72));
         RenderDom.ctx.fillStyle = hexToRgba(fillColor, (0.12 + pulse * 0.08) * distanceFade);
         RenderDom.ctx.fill();
         RenderDom.ctx.strokeStyle = hexToRgba(lineColor, (0.38 + pulse * 0.18) * distanceFade);
-        RenderDom.ctx.lineWidth = Math.max(1.2, cellSize * 0.035);
+        RenderDom.ctx.lineWidth = Math.max(1.2, RenderState.cellSize * 0.035);
         RenderDom.ctx.stroke();
       });
 
@@ -3222,10 +3222,10 @@
         RenderDom.ctx.lineTo(point.x, point.y);
       });
       RenderDom.ctx.strokeStyle = hexToRgba(lineColor, canCast ? 0.82 : 0.46);
-      RenderDom.ctx.lineWidth = Math.max(3, cellSize * 0.1);
+      RenderDom.ctx.lineWidth = Math.max(3, RenderState.cellSize * 0.1);
       RenderDom.ctx.lineCap = "round";
       RenderDom.ctx.lineJoin = "round";
-      RenderDom.ctx.setLineDash([cellSize * 0.36, cellSize * 0.2]);
+      RenderDom.ctx.setLineDash([RenderState.cellSize * 0.36, RenderState.cellSize * 0.2]);
       RenderDom.ctx.lineDashOffset = -now / 48;
       RenderDom.ctx.stroke();
       RenderDom.ctx.setLineDash([]);
@@ -3234,25 +3234,25 @@
       drawDirectionalPreviewArrows(preview, path, lineColor, canCast);
 
       RenderDom.ctx.beginPath();
-      RenderDom.ctx.arc(sourcePoint.x, sourcePoint.y, cellSize * 0.42, 0, Math.PI * 2);
+      RenderDom.ctx.arc(sourcePoint.x, sourcePoint.y, RenderState.cellSize * 0.42, 0, Math.PI * 2);
       RenderDom.ctx.fillStyle = hexToRgba(fillColor, canCast ? 0.22 : 0.12);
       RenderDom.ctx.fill();
       RenderDom.ctx.strokeStyle = hexToRgba(lineColor, canCast ? 0.86 : 0.42);
-      RenderDom.ctx.lineWidth = Math.max(1.5, cellSize * 0.05);
+      RenderDom.ctx.lineWidth = Math.max(1.5, RenderState.cellSize * 0.05);
       RenderDom.ctx.stroke();
       RenderDom.ctx.restore();
     }
 
     function drawHazards() {
       const now = performance.now();
-      hazards.forEach(hazard => {
+      RenderState.hazards.forEach(hazard => {
         if (now < hazard.startedAt || now > hazard.endAt) return;
         const progress = (now - hazard.startedAt) / Math.max(1, hazard.endAt - hazard.startedAt);
         const alpha = 0.24 * (1 - progress * 0.55);
         const blastCharacter = HexSnakeGame.characterForVisualType(hazard.owner, hazard.visualType);
         if (hazard.kind === "radiation") {
           const { x, y } = HexSnakeGame.axialToPixel(hazard.target);
-          const radiusPx = cellSize * Math.max(1, hazard.radius || hazard.width || 1) * 1.52;
+          const radiusPx = RenderState.cellSize * Math.max(1, hazard.radius || hazard.width || 1) * 1.52;
           const radiationPlan = effectVisualPlanFor(hazard.visualType, "radiation", blastCharacter);
           drawElementCircleTexture(x, y, radiusPx, progress, blastCharacter, radiationPlan.textureAlpha, {
             seed: `${hazard.visualType}:${hazard.startedAt}`,
@@ -3286,15 +3286,15 @@
           const { x, y } = HexSnakeGame.axialToPixel(cell);
           if ((hazard.visualType || "").startsWith("quetzal")) {
             const variant = HexSnakeGame.stableVariantIndex(cell, hazard.startedAt || 0, 64);
-            drawSwampForestBloom(x, y, cellSize * 1.34, progress + (cell.q + cell.r) * 0.035, blastCharacter, 0.94 * (1 - progress * 0.08), variant);
+            drawSwampForestBloom(x, y, RenderState.cellSize * 1.34, progress + (cell.q + cell.r) * 0.035, blastCharacter, 0.94 * (1 - progress * 0.08), variant);
             return;
           }
-          drawElementAura(x, y, cellSize * 0.86, progress + (cell.q - cell.r) * 0.03, blastCharacter, 0.24);
-          HexSnakeGame.hexPath(x, y, cellSize * 0.9);
+          drawElementAura(x, y, RenderState.cellSize * 0.86, progress + (cell.q - cell.r) * 0.03, blastCharacter, 0.24);
+          HexSnakeGame.hexPath(x, y, RenderState.cellSize * 0.9);
           RenderDom.ctx.fillStyle = hexToRgba(blastCharacter.accent || blastCharacter.color, alpha + 0.08);
           RenderDom.ctx.fill();
           RenderDom.ctx.strokeStyle = hexToRgba(blastCharacter.line, alpha + 0.34);
-          RenderDom.ctx.lineWidth = Math.max(1.5, cellSize * 0.045);
+          RenderDom.ctx.lineWidth = Math.max(1.5, RenderState.cellSize * 0.045);
           RenderDom.ctx.stroke();
         });
       });
@@ -3319,23 +3319,23 @@
         const cells = blast.lineCells || [];
         cells.forEach((cell, index) => {
           const { x, y } = HexSnakeGame.axialToPixel(cell);
-          drawElementAura(x, y, cellSize * 1.04, progress + index * 0.04, character, 0.36 * alpha);
-          if (index % 2 === 0) drawPulseRing(x, y, cellSize * 0.84, progress, character.color, character.line, 0.86);
+          drawElementAura(x, y, RenderState.cellSize * 1.04, progress + index * 0.04, character, 0.36 * alpha);
+          if (index % 2 === 0) drawPulseRing(x, y, RenderState.cellSize * 0.84, progress, character.color, character.line, 0.86);
         });
         if (cells.length) {
           const head = HexSnakeGame.axialToPixel(cells[Math.min(cells.length - 1, Math.floor(cells.length * (0.58 + progress * 0.42)))]);
-          drawEnergyBeamBurst(head.x, head.y, cellSize * Math.max(1.9, (blast.width || 1) + 1.2), progress, character, alpha);
+          drawEnergyBeamBurst(head.x, head.y, RenderState.cellSize * Math.max(1.9, (blast.width || 1) + 1.2), progress, character, alpha);
         }
         return;
       }
       textureCells.forEach(cell => {
         const { x, y } = HexSnakeGame.axialToPixel(cell);
-        drawElementAura(x, y, cellSize * 0.86, progress + cell.r * 0.04, character, 0.32 * alpha);
-        HexSnakeGame.hexPath(x, y, cellSize * 0.94);
+        drawElementAura(x, y, RenderState.cellSize * 0.86, progress + cell.r * 0.04, character, 0.32 * alpha);
+        HexSnakeGame.hexPath(x, y, RenderState.cellSize * 0.94);
         RenderDom.ctx.fillStyle = hexToRgba(character.accent || character.color, 0.5 * alpha);
         RenderDom.ctx.fill();
         RenderDom.ctx.strokeStyle = hexToRgba("#ffffff", 0.82 * alpha);
-        RenderDom.ctx.lineWidth = Math.max(2, cellSize * 0.06);
+        RenderDom.ctx.lineWidth = Math.max(2, RenderState.cellSize * 0.06);
         RenderDom.ctx.stroke();
       });
     }
@@ -3412,14 +3412,14 @@
 
     function drawCircleBlast(blast, progress, alpha, character) {
       const { x, y } = HexSnakeGame.axialToPixel(blast.target);
-      const radiusPx = cellSize * (blast.radius || RenderConfig.baseBlastHexRadius) * 1.52;
+      const radiusPx = RenderState.cellSize * (blast.radius || RenderConfig.baseBlastHexRadius) * 1.52;
       const type = blast.visualType || HexSnakeGame.attackVisualType(blast.owner, "big");
       drawCircleImpactAt(x, y, radiusPx, progress, alpha, character, type, blast.hand || "right");
     }
 
     function drawBlasts() {
       const now = performance.now();
-      blasts.forEach(blast => {
+      RenderState.blasts.forEach(blast => {
         const progress = Math.min(1, (now - blast.startedAt) / RenderConfig.blastDurationMs);
         const alpha = 1 - progress;
         const blastCharacter = HexSnakeGame.characterForVisualType(blast.owner, blast.visualType);
@@ -3444,7 +3444,7 @@
     function drawEffectComparisonBoard(now = performance.now()) {
       const rect = RenderDom.playArea.getBoundingClientRect();
       const progress = (now % 1400) / 1400;
-      const oldCellSize = cellSize;
+      const oldCellSize = RenderState.cellSize;
       const rowCount = Math.max(1, RenderUI.characterList().length);
       const compactComparison = rect.width < 560;
       const headerHeight = compactComparison ? 54 : Math.min(64, Math.max(50, rect.height * 0.09));
@@ -3452,7 +3452,7 @@
       const labelWidth = compactComparison ? Math.min(96, rect.width * 0.25) : Math.min(150, rect.width * 0.2);
       const smallX = labelWidth + (rect.width - labelWidth) * 0.28;
       const bigX = labelWidth + (rect.width - labelWidth) * 0.72;
-      cellSize = Math.max(11, Math.min(28, rowHeight * 0.18, rect.width * 0.018));
+      RenderState.cellSize = Math.max(11, Math.min(28, rowHeight * 0.18, rect.width * 0.018));
 
       RenderDom.ctx.clearRect(0, 0, rect.width, rect.height);
       RenderDom.ctx.fillStyle = "#111720";
@@ -3517,7 +3517,7 @@
         RenderDom.ctx.font = "600 10px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
         RenderDom.ctx.fillText(bigType.replace(`${character.id}-`, ""), bigX, y + rowHeight * 0.33);
       });
-      cellSize = oldCellSize;
+      RenderState.cellSize = oldCellSize;
     }
 
     function drawStatusStar(x, y, size, angle, color, alpha) {
@@ -3558,37 +3558,37 @@
       if (slowed) {
         const pulse = waveValue(now / 1400);
         RenderDom.ctx.beginPath();
-        RenderDom.ctx.ellipse(head.x, head.y + cellSize * 0.06, cellSize * (0.74 + pulse * 0.18), cellSize * 0.46, 0, 0, Math.PI * 2);
+        RenderDom.ctx.ellipse(head.x, head.y + RenderState.cellSize * 0.06, RenderState.cellSize * (0.74 + pulse * 0.18), RenderState.cellSize * 0.46, 0, 0, Math.PI * 2);
         RenderDom.ctx.strokeStyle = hexToRgba("#93c5fd", 0.54);
-        RenderDom.ctx.lineWidth = Math.max(1.2, cellSize * 0.045);
-        RenderDom.ctx.setLineDash([cellSize * 0.16, cellSize * 0.12]);
+        RenderDom.ctx.lineWidth = Math.max(1.2, RenderState.cellSize * 0.045);
+        RenderDom.ctx.setLineDash([RenderState.cellSize * 0.16, RenderState.cellSize * 0.12]);
         RenderDom.ctx.stroke();
         RenderDom.ctx.setLineDash([]);
         for (let i = 1; i < Math.min(parts.length, 4); i += 1) {
           const cell = HexSnakeGame.axialToPixel(parts[i]);
           RenderDom.ctx.beginPath();
-          RenderDom.ctx.moveTo(cell.x - cellSize * 0.26, cell.y - cellSize * 0.16);
-          RenderDom.ctx.quadraticCurveTo(cell.x, cell.y + cellSize * 0.2, cell.x + cellSize * 0.26, cell.y - cellSize * 0.1);
+          RenderDom.ctx.moveTo(cell.x - RenderState.cellSize * 0.26, cell.y - RenderState.cellSize * 0.16);
+          RenderDom.ctx.quadraticCurveTo(cell.x, cell.y + RenderState.cellSize * 0.2, cell.x + RenderState.cellSize * 0.26, cell.y - RenderState.cellSize * 0.1);
           RenderDom.ctx.strokeStyle = hexToRgba("#bfdbfe", 0.22);
-          RenderDom.ctx.lineWidth = Math.max(1, cellSize * 0.035);
+          RenderDom.ctx.lineWidth = Math.max(1, RenderState.cellSize * 0.035);
           RenderDom.ctx.stroke();
         }
       }
 
       if (stunned) {
         const spin = now / 620;
-        const orbit = cellSize * 0.92;
+        const orbit = RenderState.cellSize * 0.92;
         RenderDom.ctx.beginPath();
         RenderDom.ctx.arc(head.x, head.y, orbit, 0, Math.PI * 2);
         RenderDom.ctx.strokeStyle = hexToRgba(character.line, 0.42);
-        RenderDom.ctx.lineWidth = Math.max(1.2, cellSize * 0.035);
+        RenderDom.ctx.lineWidth = Math.max(1.2, RenderState.cellSize * 0.035);
         RenderDom.ctx.stroke();
         for (let i = 0; i < 5; i += 1) {
           const angle = spin + i * Math.PI * 2 / 5;
           drawStatusStar(
             head.x + Math.cos(angle) * orbit,
             head.y + Math.sin(angle) * orbit * 0.72,
-            cellSize * 0.14,
+            RenderState.cellSize * 0.14,
             angle,
             i % 2 ? character.accent : character.line,
             0.84
@@ -3599,13 +3599,13 @@
       if (collisionLocked) {
         for (let i = 0; i < 6; i += 1) {
           const angle = i * Math.PI * 2 / 6 + waveValue(now / 420, i * 0.1) * 0.28;
-          const inner = cellSize * 0.42;
-          const outer = cellSize * 0.92;
+          const inner = RenderState.cellSize * 0.42;
+          const outer = RenderState.cellSize * 0.92;
           RenderDom.ctx.beginPath();
           RenderDom.ctx.moveTo(head.x + Math.cos(angle) * inner, head.y + Math.sin(angle) * inner);
           RenderDom.ctx.lineTo(head.x + Math.cos(angle + 0.13) * outer, head.y + Math.sin(angle + 0.13) * outer);
           RenderDom.ctx.strokeStyle = hexToRgba("#fef3c7", 0.58);
-          RenderDom.ctx.lineWidth = Math.max(1.2, cellSize * 0.04);
+          RenderDom.ctx.lineWidth = Math.max(1.2, RenderState.cellSize * 0.04);
           RenderDom.ctx.stroke();
         }
       }
@@ -3617,14 +3617,14 @@
       const type = types[0];
       const secondaryType = types[1];
       if (!type) return;
-      const size = cellSize * 0.62;
+      const size = RenderState.cellSize * 0.62;
       RenderDom.ctx.save();
       RenderDom.ctx.shadowColor = "rgba(0,0,0,0.42)";
       RenderDom.ctx.shadowBlur = 10;
       RenderDom.ctx.shadowOffsetY = 4;
       RenderDom.ctx.fillStyle = type.color;
       RenderDom.ctx.strokeStyle = "#f8fafc";
-      RenderDom.ctx.lineWidth = Math.max(2, cellSize * 0.09);
+      RenderDom.ctx.lineWidth = Math.max(2, RenderState.cellSize * 0.09);
 
       if (type.id === "black") {
         RenderDom.ctx.beginPath();
@@ -3673,12 +3673,12 @@
 
       RenderDom.ctx.strokeStyle = "#111720";
       RenderDom.ctx.fillStyle = "#111720";
-      RenderDom.ctx.lineWidth = Math.max(2, cellSize * 0.08);
+      RenderDom.ctx.lineWidth = Math.max(2, RenderState.cellSize * 0.08);
       RenderDom.ctx.lineCap = "round";
       RenderDom.ctx.lineJoin = "round";
       if (type.id === "black") {
         RenderDom.ctx.strokeStyle = "#e5e7eb";
-        RenderDom.ctx.lineWidth = Math.max(2, cellSize * 0.07);
+        RenderDom.ctx.lineWidth = Math.max(2, RenderState.cellSize * 0.07);
         RenderDom.ctx.beginPath();
         RenderDom.ctx.moveTo(x - size * 0.38, y);
         for (let i = 0; i < 6; i += 1) {
@@ -3748,7 +3748,7 @@
       RenderDom.ctx.fillStyle = fill;
       RenderDom.ctx.fill();
       RenderDom.ctx.strokeStyle = "rgba(255,255,255,0.56)";
-      RenderDom.ctx.lineWidth = Math.max(1, cellSize * 0.028);
+      RenderDom.ctx.lineWidth = Math.max(1, RenderState.cellSize * 0.028);
       RenderDom.ctx.stroke();
     }
 
@@ -3764,7 +3764,7 @@
     function drawSnakeHeadDetail(x, y, palette) {
       const character = palette.character;
       if (!character) return;
-      const headSize = cellSize * 0.82;
+      const headSize = RenderState.cellSize * 0.82;
       const angle = RenderConfig.directions[palette.direction ?? 0]?.angle ?? -90;
       const accent = character.accent || palette.headLine;
       const line = character.line || palette.headLine;
@@ -3784,7 +3784,7 @@
 
       if (character.id === "dragon") {
         RenderDom.ctx.strokeStyle = line;
-        RenderDom.ctx.lineWidth = Math.max(1.6, cellSize * 0.055);
+        RenderDom.ctx.lineWidth = Math.max(1.6, RenderState.cellSize * 0.055);
         drawMirroredPath([[-headSize * 0.2, -headSize * 0.18], [headSize * 0.1, -headSize * 0.26], [headSize * 0.42, -headSize * 0.08]]);
         drawMirroredPath([[-headSize * 0.2, -headSize * 0.18], [headSize * 0.1, -headSize * 0.26], [headSize * 0.42, -headSize * 0.08]], -1);
         RenderDom.ctx.fillStyle = accent;
@@ -3796,10 +3796,10 @@
           RenderDom.ctx.closePath();
           RenderDom.ctx.fill();
         });
-        strokeHeadEye(headSize * 0.22, -headSize * 0.18, Math.max(2, cellSize * 0.07));
+        strokeHeadEye(headSize * 0.22, -headSize * 0.18, Math.max(2, RenderState.cellSize * 0.07));
       } else if (character.id === "sandworm") {
         RenderDom.ctx.strokeStyle = line;
-        RenderDom.ctx.lineWidth = Math.max(1.8, cellSize * 0.065);
+        RenderDom.ctx.lineWidth = Math.max(1.8, RenderState.cellSize * 0.065);
         for (let i = -1; i <= 1; i += 1) {
           RenderDom.ctx.beginPath();
           RenderDom.ctx.ellipse(headSize * (0.08 - i * 0.16), 0, headSize * 0.18, headSize * 0.52, 0, 0, Math.PI * 2);
@@ -3810,7 +3810,7 @@
         RenderDom.ctx.ellipse(headSize * 0.42, 0, headSize * 0.18, headSize * 0.34, 0, 0, Math.PI * 2);
         RenderDom.ctx.fill();
         RenderDom.ctx.strokeStyle = accent;
-        RenderDom.ctx.lineWidth = Math.max(1.2, cellSize * 0.04);
+        RenderDom.ctx.lineWidth = Math.max(1.2, RenderState.cellSize * 0.04);
         [-0.45, -0.15, 0.15, 0.45].forEach(offset => {
           RenderDom.ctx.beginPath();
           RenderDom.ctx.moveTo(headSize * 0.28, headSize * offset);
@@ -3828,21 +3828,21 @@
           RenderDom.ctx.fill();
         });
         RenderDom.ctx.strokeStyle = line;
-        RenderDom.ctx.lineWidth = Math.max(1.4, cellSize * 0.052);
+        RenderDom.ctx.lineWidth = Math.max(1.4, RenderState.cellSize * 0.052);
         RenderDom.ctx.beginPath();
         RenderDom.ctx.moveTo(-headSize * 0.28, headSize * 0.28);
         RenderDom.ctx.quadraticCurveTo(headSize * 0.12, -headSize * 0.24, headSize * 0.42, -headSize * 0.02);
         RenderDom.ctx.stroke();
-        strokeHeadEye(headSize * 0.18, -headSize * 0.16, Math.max(2, cellSize * 0.065));
+        strokeHeadEye(headSize * 0.18, -headSize * 0.16, Math.max(2, RenderState.cellSize * 0.065));
       } else if (character.id === "moray") {
         RenderDom.ctx.strokeStyle = accent;
-        RenderDom.ctx.lineWidth = Math.max(2, cellSize * 0.075);
+        RenderDom.ctx.lineWidth = Math.max(2, RenderState.cellSize * 0.075);
         RenderDom.ctx.beginPath();
         RenderDom.ctx.moveTo(-headSize * 0.44, headSize * 0.12);
         RenderDom.ctx.quadraticCurveTo(-headSize * 0.02, -headSize * 0.2, headSize * 0.48, -headSize * 0.04);
         RenderDom.ctx.stroke();
         RenderDom.ctx.strokeStyle = line;
-        RenderDom.ctx.lineWidth = Math.max(1.4, cellSize * 0.046);
+        RenderDom.ctx.lineWidth = Math.max(1.4, RenderState.cellSize * 0.046);
         RenderDom.ctx.beginPath();
         RenderDom.ctx.moveTo(headSize * 0.12, headSize * 0.16);
         RenderDom.ctx.lineTo(headSize * 0.48, headSize * 0.16);
@@ -3856,10 +3856,10 @@
           RenderDom.ctx.closePath();
           RenderDom.ctx.fill();
         });
-        strokeHeadEye(headSize * 0.22, -headSize * 0.16, Math.max(2, cellSize * 0.065));
+        strokeHeadEye(headSize * 0.22, -headSize * 0.16, Math.max(2, RenderState.cellSize * 0.065));
       } else if (character.id === "gu_king") {
         RenderDom.ctx.strokeStyle = accent;
-        RenderDom.ctx.lineWidth = Math.max(1.6, cellSize * 0.06);
+        RenderDom.ctx.lineWidth = Math.max(1.6, RenderState.cellSize * 0.06);
         [-0.36, -0.18, 0, 0.18, 0.36].forEach(offset => {
           RenderDom.ctx.beginPath();
           RenderDom.ctx.moveTo(-headSize * 0.36, headSize * offset);
@@ -3883,11 +3883,11 @@
         RenderDom.ctx.lineTo(headSize * 0.1, -headSize * 0.02);
         RenderDom.ctx.closePath();
         RenderDom.ctx.fill();
-        strokeHeadEye(headSize * 0.2, -headSize * 0.12, Math.max(2, cellSize * 0.06), "#0f172a");
-        strokeHeadEye(headSize * 0.2, headSize * 0.12, Math.max(2, cellSize * 0.06), "#0f172a");
+        strokeHeadEye(headSize * 0.2, -headSize * 0.12, Math.max(2, RenderState.cellSize * 0.06), "#0f172a");
+        strokeHeadEye(headSize * 0.2, headSize * 0.12, Math.max(2, RenderState.cellSize * 0.06), "#0f172a");
       } else {
         RenderDom.ctx.strokeStyle = line;
-        RenderDom.ctx.lineWidth = Math.max(1.7, cellSize * 0.062);
+        RenderDom.ctx.lineWidth = Math.max(1.7, RenderState.cellSize * 0.062);
         RenderDom.ctx.beginPath();
         RenderDom.ctx.moveTo(-headSize * 0.16, -headSize * 0.36);
         RenderDom.ctx.quadraticCurveTo(headSize * 0.18, -headSize * 0.34, headSize * 0.38, -headSize * 0.08);
@@ -3897,14 +3897,14 @@
         RenderDom.ctx.quadraticCurveTo(headSize * 0.18, headSize * 0.34, headSize * 0.38, headSize * 0.08);
         RenderDom.ctx.stroke();
         RenderDom.ctx.strokeStyle = accent;
-        RenderDom.ctx.lineWidth = Math.max(2, cellSize * 0.07);
+        RenderDom.ctx.lineWidth = Math.max(2, RenderState.cellSize * 0.07);
         RenderDom.ctx.beginPath();
         RenderDom.ctx.moveTo(-headSize * 0.42, -headSize * 0.18);
         RenderDom.ctx.lineTo(-headSize * 0.1, -headSize * 0.02);
         RenderDom.ctx.lineTo(-headSize * 0.42, headSize * 0.18);
         RenderDom.ctx.stroke();
-        strokeHeadEye(headSize * 0.18, -headSize * 0.12, Math.max(2, cellSize * 0.06));
-        strokeHeadEye(headSize * 0.18, headSize * 0.12, Math.max(2, cellSize * 0.06));
+        strokeHeadEye(headSize * 0.18, -headSize * 0.12, Math.max(2, RenderState.cellSize * 0.06));
+        strokeHeadEye(headSize * 0.18, headSize * 0.12, Math.max(2, RenderState.cellSize * 0.06));
       }
 
       RenderDom.ctx.restore();
@@ -3915,7 +3915,7 @@
       RenderDom.ctx.globalAlpha *= palette.alpha ?? 1;
       parts.forEach((segment, index) => {
         const { x, y } = HexSnakeGame.axialToPixel(segment);
-        HexSnakeGame.hexPath(x, y, cellSize * (index === 0 ? 0.82 : 0.76));
+        HexSnakeGame.hexPath(x, y, RenderState.cellSize * (index === 0 ? 0.82 : 0.76));
         RenderDom.ctx.fillStyle = index === 0 ? palette.head : palette.body;
         RenderDom.ctx.fill();
         RenderDom.ctx.strokeStyle = index === 0 ? palette.headLine : palette.bodyLine;
@@ -3934,9 +3934,9 @@
     function drawSnakeOwnerMark(x, y, index, palette) {
       RenderDom.ctx.save();
       RenderDom.ctx.strokeStyle = palette.ownerColor || palette.headLine;
-      RenderDom.ctx.lineWidth = index === 0 ? Math.max(2, cellSize * 0.1) : Math.max(1.2, cellSize * 0.055);
-      RenderDom.ctx.setLineDash(palette.owner === "computer" ? [Math.max(3, cellSize * 0.14), Math.max(2, cellSize * 0.1)] : []);
-      HexSnakeGame.hexPath(x, y, cellSize * (index === 0 ? 0.9 : 0.82));
+      RenderDom.ctx.lineWidth = index === 0 ? Math.max(2, RenderState.cellSize * 0.1) : Math.max(1.2, RenderState.cellSize * 0.055);
+      RenderDom.ctx.setLineDash(palette.owner === "computer" ? [Math.max(3, RenderState.cellSize * 0.14), Math.max(2, RenderState.cellSize * 0.1)] : []);
+      HexSnakeGame.hexPath(x, y, RenderState.cellSize * (index === 0 ? 0.9 : 0.82));
       RenderDom.ctx.stroke();
       RenderDom.ctx.setLineDash([]);
       RenderDom.ctx.restore();
@@ -3950,31 +3950,31 @@
       RenderDom.ctx.lineJoin = "round";
       RenderDom.ctx.strokeStyle = index === 0 ? character.accent : hexToRgba(character.line, 0.88);
       RenderDom.ctx.fillStyle = hexToRgba(character.accent, index === 0 ? 0.95 : 0.72);
-      RenderDom.ctx.lineWidth = Math.max(1.4, cellSize * 0.055);
+      RenderDom.ctx.lineWidth = Math.max(1.4, RenderState.cellSize * 0.055);
 
       if (palette.owner === "computer") {
         RenderDom.ctx.beginPath();
-        RenderDom.ctx.arc(x, y, cellSize * (index === 0 ? 0.58 : 0.5), Math.PI * 0.18, Math.PI * 0.82);
+        RenderDom.ctx.arc(x, y, RenderState.cellSize * (index === 0 ? 0.58 : 0.5), Math.PI * 0.18, Math.PI * 0.82);
         RenderDom.ctx.stroke();
         RenderDom.ctx.beginPath();
-        RenderDom.ctx.arc(x, y, cellSize * (index === 0 ? 0.58 : 0.5), Math.PI * 1.18, Math.PI * 1.82);
+        RenderDom.ctx.arc(x, y, RenderState.cellSize * (index === 0 ? 0.58 : 0.5), Math.PI * 1.18, Math.PI * 1.82);
         RenderDom.ctx.stroke();
       } else {
         RenderDom.ctx.beginPath();
-        RenderDom.ctx.moveTo(x - cellSize * 0.42, y);
-        RenderDom.ctx.lineTo(x + cellSize * 0.42, y);
+        RenderDom.ctx.moveTo(x - RenderState.cellSize * 0.42, y);
+        RenderDom.ctx.lineTo(x + RenderState.cellSize * 0.42, y);
         RenderDom.ctx.stroke();
         RenderDom.ctx.beginPath();
-        RenderDom.ctx.arc(x, y, Math.max(2, cellSize * 0.09), 0, Math.PI * 2);
+        RenderDom.ctx.arc(x, y, Math.max(2, RenderState.cellSize * 0.09), 0, Math.PI * 2);
         RenderDom.ctx.fill();
       }
 
       if (index > 0 && index % 2 === 0) {
         RenderDom.ctx.strokeStyle = hexToRgba("#ffffff", 0.48);
-        RenderDom.ctx.lineWidth = Math.max(1, cellSize * 0.035);
+        RenderDom.ctx.lineWidth = Math.max(1, RenderState.cellSize * 0.035);
         RenderDom.ctx.beginPath();
-        RenderDom.ctx.moveTo(x - cellSize * 0.22, y - cellSize * 0.26);
-        RenderDom.ctx.lineTo(x + cellSize * 0.22, y + cellSize * 0.26);
+        RenderDom.ctx.moveTo(x - RenderState.cellSize * 0.22, y - RenderState.cellSize * 0.26);
+        RenderDom.ctx.lineTo(x + RenderState.cellSize * 0.22, y + RenderState.cellSize * 0.26);
         RenderDom.ctx.stroke();
       }
       RenderDom.ctx.restore();
