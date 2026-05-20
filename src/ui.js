@@ -700,6 +700,102 @@ Object.defineProperties(HexSnakeState.game, {
       gameOverComputerLost = Boolean(value);
     },
   },
+  gridSize: {
+    get: () => gridSize,
+    set: (value) => {
+      gridSize = value;
+    },
+  },
+  radius: {
+    get: () => radius,
+    set: (value) => {
+      radius = value;
+    },
+  },
+  foodCount: {
+    get: () => foodCount,
+    set: (value) => {
+      foodCount = value;
+    },
+  },
+  initialSpeed: {
+    get: () => initialSpeed,
+    set: (value) => {
+      initialSpeed = value;
+    },
+  },
+  gmMode: {
+    get: () => gmMode,
+    set: (value) => {
+      gmMode = Boolean(value);
+    },
+  },
+  initialLength: {
+    get: () => initialLength,
+    set: (value) => {
+      initialLength = value;
+    },
+  },
+  initialEnergy: {
+    get: () => initialEnergy,
+    set: (value) => {
+      initialEnergy = value;
+    },
+  },
+  initialBombs: {
+    get: () => initialBombs,
+    set: (value) => {
+      initialBombs = value;
+    },
+  },
+  initialStock: {
+    get: () => initialStock,
+    set: (value) => {
+      initialStock = value && typeof value === "object" ? value : {};
+    },
+  },
+  gmPresetMode: {
+    get: () => gmPresetMode,
+    set: (value) => {
+      gmPresetMode = value;
+    },
+  },
+  keybinds: {
+    get: () => keybinds,
+    set: (value) => {
+      keybinds = value;
+    },
+  },
+  keyboardAttackAim: {
+    get: () => keyboardAttackAim,
+    set: (value) => {
+      keyboardAttackAim = value;
+    },
+  },
+  keyboardAttackPreview: {
+    get: () => keyboardAttackPreview,
+    set: (value) => {
+      keyboardAttackPreview = value;
+    },
+  },
+  keyboardAimHeldKeys: {
+    get: () => keyboardAimHeldKeys,
+    set: (value) => {
+      keyboardAimHeldKeys = value instanceof Set ? value : new Set();
+    },
+  },
+  pendingDirectionKeybind: {
+    get: () => pendingDirectionKeybind,
+    set: (value) => {
+      pendingDirectionKeybind = value;
+    },
+  },
+  targetMaxHex: {
+    get: () => targetMaxHex,
+    set: (value) => {
+      targetMaxHex = value;
+    },
+  },
   playerCharacterChoice: {
     get: () => playerCharacterChoice,
     set: (value) => {
@@ -1199,6 +1295,66 @@ Object.defineProperties(HexSnakeState.game, {
     get: () => attackCalloutTimers,
     set: (value) => {
       attackCalloutTimers = value && typeof value === "object" ? value : {};
+    },
+  },
+  movePointerId: {
+    get: () => movePointerId,
+    set: (value) => {
+      movePointerId = value;
+    },
+  },
+  targetPointerId: {
+    get: () => targetPointerId,
+    set: (value) => {
+      targetPointerId = value;
+    },
+  },
+  moveStickLocked: {
+    get: () => moveStickLocked,
+    set: (value) => {
+      moveStickLocked = Boolean(value);
+    },
+  },
+  moveStickEngaged: {
+    get: () => moveStickEngaged,
+    set: (value) => {
+      moveStickEngaged = Boolean(value);
+    },
+  },
+  movePointerStartedAt: {
+    get: () => movePointerStartedAt,
+    set: (value) => {
+      movePointerStartedAt = value;
+    },
+  },
+  movePointerStartX: {
+    get: () => movePointerStartX,
+    set: (value) => {
+      movePointerStartX = value;
+    },
+  },
+  movePointerStartY: {
+    get: () => movePointerStartY,
+    set: (value) => {
+      movePointerStartY = value;
+    },
+  },
+  movePointerMoved: {
+    get: () => movePointerMoved,
+    set: (value) => {
+      movePointerMoved = Boolean(value);
+    },
+  },
+  targetCell: {
+    get: () => targetCell,
+    set: (value) => {
+      targetCell = value;
+    },
+  },
+  targetActive: {
+    get: () => targetActive,
+    set: (value) => {
+      targetActive = Boolean(value);
     },
   },
 });

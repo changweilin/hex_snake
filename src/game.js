@@ -26,7 +26,7 @@
     }
 
     function saveKeybinds() {
-      HexSnakeStorage.setJson("hexSnakeKeybinds", keybinds);
+      HexSnakeStorage.setJson("hexSnakeKeybinds", HexSnakeState.game.keybinds);
     }
 
     const controlProfilesKey = "hexSnakeControlProfilesV1";
@@ -35,7 +35,7 @@
     let controlProfiles = loadControlProfiles();
     let selectedControlProfileId = String(HexSnakeStorage.get(selectedControlProfileKey) || "").slice(0, 48);
 
-    function cloneKeybinds(value = keybinds) {
+    function cloneKeybinds(value = HexSnakeState.game.keybinds) {
       return {
         smallAttack: normalizeKey(value.smallAttack, defaultKeybinds.smallAttack),
         bigAttack: normalizeKey(value.bigAttack, defaultKeybinds.bigAttack),
@@ -45,7 +45,7 @@
       };
     }
 
-    function cloneKeyboardAttackAim(value = keyboardAttackAim) {
+    function cloneKeyboardAttackAim(value = HexSnakeState.game.keyboardAttackAim) {
       return {
         small: {
           targetModeIndex: Math.max(0, Number(value.small?.targetModeIndex) || 0) % keyboardTargetModes.length,
@@ -58,7 +58,7 @@
       };
     }
 
-    function cloneInitialStock(value = initialStock) {
+    function cloneInitialStock(value = HexSnakeState.game.initialStock) {
       return foodTypes.reduce((stock, type) => {
         stock[type.id] = clampInitialStock(value?.[type.id] ?? defaultSettings.initialStock[type.id] ?? 0);
         return stock;
@@ -78,20 +78,20 @@
     }
 
     function cloneGameSettings(value = {}) {
-      const presetMode = Object.prototype.hasOwnProperty.call(value, "gmPresetMode") ? value.gmPresetMode : gmPresetMode;
+      const presetMode = Object.prototype.hasOwnProperty.call(value, "gmPresetMode") ? value.gmPresetMode : HexSnakeState.game.gmPresetMode;
       return {
         computerDifficulty: ["novice", "low", "medium", "high", "extreme"].includes(value.computerDifficulty) ? value.computerDifficulty : HexSnakeState.game.computerDifficulty,
         playerCharacterChoice: normalizeCharacterChoice("player", value.playerCharacterChoice ?? HexSnakeState.game.playerCharacterChoice),
         computerCharacterChoice: normalizeCharacterChoice("computer", value.computerCharacterChoice ?? HexSnakeState.game.computerCharacterChoice),
-        gmMode: Boolean(value.gmMode ?? gmMode),
+        gmMode: Boolean(value.gmMode ?? HexSnakeState.game.gmMode),
         gmPresetMode: normalizeGmPresetMode(presetMode),
-        gridSize: clampGridSize(value.gridSize ?? gridSize),
-        foodCount: clampFoodCount(value.foodCount ?? foodCount),
-        initialSpeed: clampInitialSpeed(value.initialSpeed ?? initialSpeed),
-        initialLength: clampInitialLength(value.initialLength ?? initialLength),
-        initialEnergy: clampInitialEnergy(value.initialEnergy ?? initialEnergy),
-        initialBombs: clampInitialBombs(value.initialBombs ?? initialBombs),
-        initialStock: cloneInitialStock(value.initialStock ?? initialStock)
+        gridSize: clampGridSize(value.gridSize ?? HexSnakeState.game.gridSize),
+        foodCount: clampFoodCount(value.foodCount ?? HexSnakeState.game.foodCount),
+        initialSpeed: clampInitialSpeed(value.initialSpeed ?? HexSnakeState.game.initialSpeed),
+        initialLength: clampInitialLength(value.initialLength ?? HexSnakeState.game.initialLength),
+        initialEnergy: clampInitialEnergy(value.initialEnergy ?? HexSnakeState.game.initialEnergy),
+        initialBombs: clampInitialBombs(value.initialBombs ?? HexSnakeState.game.initialBombs),
+        initialStock: cloneInitialStock(value.initialStock ?? HexSnakeState.game.initialStock)
       };
     }
 
@@ -236,7 +236,7 @@
       setInitialEnergy(nextSettings.initialEnergy);
       setInitialBombs(nextSettings.initialBombs);
       foodTypes.forEach(type => setInitialStock(type.id, nextSettings.initialStock[type.id]));
-      gmPresetMode = normalizeGmPresetMode(nextSettings.gmPresetMode);
+      HexSnakeState.game.gmPresetMode = normalizeGmPresetMode(nextSettings.gmPresetMode);
       updateGmPresetHighlight();
       saveGmSettings();
     }
@@ -274,11 +274,11 @@
       if (HexSnakeState.game.running) return;
       const profile = selectedControlProfile();
       if (!profile) return renderControlProfiles("請先選擇配置檔。", "error");
-      keybinds = cloneKeybinds(profile.config.keybinds);
+      HexSnakeState.game.keybinds = cloneKeybinds(profile.config.keybinds);
       saveKeybinds();
       applyKeybinds();
       setLeftHandMode(profile.config.leftHandMode);
-      keyboardAttackAim = cloneKeyboardAttackAim(profile.config.keyboardAttackAim);
+      HexSnakeState.game.keyboardAttackAim = cloneKeyboardAttackAim(profile.config.keyboardAttackAim);
       updateTargetModeIndicator();
       const appliesGameSettings = Boolean(profile.config.gameSettings);
       applyProfileGameSettings(profile.config.gameSettings);
@@ -344,7 +344,7 @@
 
     function applyKeybinds() {
       directions.forEach((direction, index) => {
-        direction.key = keybinds.directions[index];
+        direction.key = HexSnakeState.game.keybinds.directions[index];
       });
       keyToDir = new Map(directions.map((direction, index) => [direction.key, index]));
       keyEls.forEach(el => {
@@ -360,29 +360,29 @@
         const direction = directions[Number(button.dataset.dir)];
         const label = button.querySelector("span") || button;
         if (direction) label.textContent = keyLabel(direction.key);
-        button.classList.toggle("is-awaiting-key", Number(button.dataset.dir) === pendingDirectionKeybind);
-        button.setAttribute("aria-pressed", String(Number(button.dataset.dir) === pendingDirectionKeybind));
+        button.classList.toggle("is-awaiting-key", Number(button.dataset.dir) === HexSnakeState.game.pendingDirectionKeybind);
+        button.setAttribute("aria-pressed", String(Number(button.dataset.dir) === HexSnakeState.game.pendingDirectionKeybind));
       });
-      document.querySelector("#smallAttackKey").value = keyLabel(keybinds.smallAttack);
-      document.querySelector("#bigAttackKey").value = keyLabel(keybinds.bigAttack);
-      document.querySelector("#pauseKey").value = keyLabel(keybinds.pause);
-      document.querySelector("#surrenderKey").value = keyLabel(keybinds.surrender);
+      document.querySelector("#smallAttackKey").value = keyLabel(HexSnakeState.game.keybinds.smallAttack);
+      document.querySelector("#bigAttackKey").value = keyLabel(HexSnakeState.game.keybinds.bigAttack);
+      document.querySelector("#pauseKey").value = keyLabel(HexSnakeState.game.keybinds.pause);
+      document.querySelector("#surrenderKey").value = keyLabel(HexSnakeState.game.keybinds.surrender);
       document.querySelectorAll("[data-keybind-dir]").forEach(input => {
-        input.value = keyLabel(keybinds.directions[Number(input.dataset.keybindDir)]);
+        input.value = keyLabel(HexSnakeState.game.keybinds.directions[Number(input.dataset.keybindDir)]);
       });
     }
 
     function setPendingDirectionKeybind(direction) {
-      pendingDirectionKeybind = Number.isInteger(direction) && direction >= 0 && direction < directions.length ? direction : null;
-      settingsDirHint.textContent = pendingDirectionKeybind === null
+      HexSnakeState.game.pendingDirectionKeybind = Number.isInteger(direction) && direction >= 0 && direction < directions.length ? direction : null;
+      settingsDirHint.textContent = HexSnakeState.game.pendingDirectionKeybind === null
         ? "點一個方向後按鍵盤設定快捷鍵"
-        : `按鍵盤設定 ${directions[pendingDirectionKeybind].label} 快捷鍵`;
+        : `按鍵盤設定 ${directions[HexSnakeState.game.pendingDirectionKeybind].label} 快捷鍵`;
       applyKeybinds();
     }
 
     function commitPendingDirectionKeybind(key) {
-      if (pendingDirectionKeybind === null) return false;
-      keybinds.directions[pendingDirectionKeybind] = normalizeKey(key, keybinds.directions[pendingDirectionKeybind]);
+      if (HexSnakeState.game.pendingDirectionKeybind === null) return false;
+      HexSnakeState.game.keybinds.directions[HexSnakeState.game.pendingDirectionKeybind] = normalizeKey(key, HexSnakeState.game.keybinds.directions[HexSnakeState.game.pendingDirectionKeybind]);
       saveKeybinds();
       setPendingDirectionKeybind(null);
       return true;
@@ -480,25 +480,25 @@
 
     function clampGridSize(value) {
       const parsed = Number.parseInt(value, 10);
-      if (!Number.isFinite(parsed)) return gridSize;
+      if (!Number.isFinite(parsed)) return HexSnakeState.game.gridSize;
       return Math.min(maxGridSize, Math.max(minGridSize, parsed));
     }
 
     function clampFoodCount(value) {
       const parsed = Number.parseInt(value, 10);
-      if (!Number.isFinite(parsed)) return foodCount;
+      if (!Number.isFinite(parsed)) return HexSnakeState.game.foodCount;
       return Math.min(maxFoodCount, Math.max(minFoodCount, parsed));
     }
 
     function clampInitialSpeed(value) {
       const parsed = Number.parseFloat(value);
-      if (!Number.isFinite(parsed)) return initialSpeed;
+      if (!Number.isFinite(parsed)) return HexSnakeState.game.initialSpeed;
       return Math.min(maxInitialSpeed, Math.max(minInitialSpeed, parsed));
     }
 
     function clampInitialLength(value) {
       const parsed = Number.parseInt(value, 10);
-      if (!Number.isFinite(parsed)) return initialLength;
+      if (!Number.isFinite(parsed)) return HexSnakeState.game.initialLength;
       return Math.min(maxInitialLength, Math.max(minInitialLength, parsed));
     }
 
@@ -522,9 +522,9 @@
 
     function buildCells() {
       cells = [];
-      for (let q = -radius; q <= radius; q += 1) {
-        const r1 = Math.max(-radius, -q - radius);
-        const r2 = Math.min(radius, -q + radius);
+      for (let q = -HexSnakeState.game.radius; q <= HexSnakeState.game.radius; q += 1) {
+        const r1 = Math.max(-HexSnakeState.game.radius, -q - HexSnakeState.game.radius);
+        const r2 = Math.min(HexSnakeState.game.radius, -q + HexSnakeState.game.radius);
         for (let r = r1; r <= r2; r += 1) {
           cells.push({ q, r });
         }
@@ -532,15 +532,15 @@
     }
 
     function setGridSize(value) {
-      gridSize = clampGridSize(value);
-      radius = gridSize - 1;
-      gridSizeInput.value = gridSize;
+      HexSnakeState.game.gridSize = clampGridSize(value);
+      HexSnakeState.game.radius = HexSnakeState.game.gridSize - 1;
+      gridSizeInput.value = HexSnakeState.game.gridSize;
       buildCells();
     }
 
     function setFoodCount(value) {
-      foodCount = clampFoodCount(value);
-      foodCountInput.value = foodCount;
+      HexSnakeState.game.foodCount = clampFoodCount(value);
+      foodCountInput.value = HexSnakeState.game.foodCount;
     }
 
     function setComputerDifficulty(value) {
@@ -549,35 +549,35 @@
     }
 
     function setInitialSpeed(value) {
-      initialSpeed = clampInitialSpeed(value);
-      initialSpeedInput.value = initialSpeed;
+      HexSnakeState.game.initialSpeed = clampInitialSpeed(value);
+      initialSpeedInput.value = HexSnakeState.game.initialSpeed;
     }
 
     function setInitialLength(value) {
-      initialLength = clampInitialLength(value);
-      initialLengthInput.value = initialLength;
+      HexSnakeState.game.initialLength = clampInitialLength(value);
+      initialLengthInput.value = HexSnakeState.game.initialLength;
     }
 
     function setInitialEnergy(value) {
-      initialEnergy = clampInitialEnergy(value);
-      initialEnergyInput.value = initialEnergy;
+      HexSnakeState.game.initialEnergy = clampInitialEnergy(value);
+      initialEnergyInput.value = HexSnakeState.game.initialEnergy;
     }
 
     function setInitialBombs(value) {
-      initialBombs = clampInitialBombs(value);
-      initialBombsInput.value = initialBombs;
+      HexSnakeState.game.initialBombs = clampInitialBombs(value);
+      initialBombsInput.value = HexSnakeState.game.initialBombs;
     }
 
     function setInitialStock(typeId, value) {
-      if (!Object.prototype.hasOwnProperty.call(initialStock, typeId)) return;
-      initialStock[typeId] = clampInitialStock(value);
+      if (!Object.prototype.hasOwnProperty.call(HexSnakeState.game.initialStock, typeId)) return;
+      HexSnakeState.game.initialStock[typeId] = clampInitialStock(value);
       const input = initialStockInputs.find(stockInput => stockInput.dataset.initialStock === typeId);
-      if (input) input.value = initialStock[typeId];
+      if (input) input.value = HexSnakeState.game.initialStock[typeId];
     }
 
     function updateGmPresetHighlight() {
       Object.entries(gmPresetButtons).forEach(([mode, button]) => {
-        const selected = gmPresetMode === mode;
+        const selected = HexSnakeState.game.gmPresetMode === mode;
         button.classList.toggle("is-selected", selected);
         button.setAttribute("aria-pressed", selected ? "true" : "false");
       });
@@ -585,21 +585,21 @@
 
     function saveGmSettings() {
       HexSnakeStorage.setJson("hexSnakeGmSettings", {
-        gridSize,
-        foodCount,
+        gridSize: HexSnakeState.game.gridSize,
+        foodCount: HexSnakeState.game.foodCount,
         computerDifficulty: HexSnakeState.game.computerDifficulty,
-        initialSpeed,
-        gmMode,
-        initialLength,
-        initialEnergy,
-        initialBombs,
-        initialStock,
-        gmPresetMode
+        initialSpeed: HexSnakeState.game.initialSpeed,
+        gmMode: HexSnakeState.game.gmMode,
+        initialLength: HexSnakeState.game.initialLength,
+        initialEnergy: HexSnakeState.game.initialEnergy,
+        initialBombs: HexSnakeState.game.initialBombs,
+        initialStock: HexSnakeState.game.initialStock,
+        gmPresetMode: HexSnakeState.game.gmPresetMode
       });
     }
 
     function applyGmSettingsChanged(options = {}) {
-      gmPresetMode = options.presetMode ?? null;
+      HexSnakeState.game.gmPresetMode = options.presetMode ?? null;
       updateGmPresetHighlight();
       saveGmSettings();
     }
@@ -620,17 +620,17 @@
         setInitialEnergy(saved.initialEnergy ?? defaultSettings.initialEnergy);
         setInitialBombs(saved.initialBombs ?? defaultSettings.initialBombs);
         foodTypes.forEach(type => setInitialStock(type.id, saved.initialStock?.[type.id] ?? defaultSettings.initialStock[type.id]));
-        gmPresetMode = Object.prototype.hasOwnProperty.call(gmPresetButtons, saved.gmPresetMode) ? saved.gmPresetMode : null;
+        HexSnakeState.game.gmPresetMode = Object.prototype.hasOwnProperty.call(gmPresetButtons, saved.gmPresetMode) ? saved.gmPresetMode : null;
         updateGmPresetHighlight();
       } catch {
-        gmPresetMode = "real";
+        HexSnakeState.game.gmPresetMode = "real";
         updateGmPresetHighlight();
       }
     }
 
     function setGmMode(active) {
-      gmMode = Boolean(active);
-      settingsToggle.classList.toggle("is-gm-active", gmMode);
+      HexSnakeState.game.gmMode = Boolean(active);
+      settingsToggle.classList.toggle("is-gm-active", HexSnakeState.game.gmMode);
       updateSettingsActionMode();
       updateGmControlState();
     }
@@ -761,7 +761,7 @@
 
     function isInside(cell) {
       const s = -cell.q - cell.r;
-      return Math.max(Math.abs(cell.q), Math.abs(cell.r), Math.abs(s)) <= radius;
+      return Math.max(Math.abs(cell.q), Math.abs(cell.r), Math.abs(s)) <= HexSnakeState.game.radius;
     }
 
     function axialToPixel(cell) {
@@ -821,8 +821,8 @@
       canvas.height = Math.floor(rect.height * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       center = { x: rect.width / 2, y: rect.height / 2 };
-      const boardWidth = Math.sqrt(3) * (radius * 2 + 1);
-      const boardHeight = radius * 3 + 2;
+      const boardWidth = Math.sqrt(3) * (HexSnakeState.game.radius * 2 + 1);
+      const boardHeight = HexSnakeState.game.radius * 3 + 2;
       cellSize = Math.min(rect.width / (boardWidth + 0.8), rect.height / (boardHeight + 0.8));
       draw();
     }
@@ -854,11 +854,11 @@
       preloadPortraitsFor("player");
       preloadPortraitsFor("computer");
       buildCharacterStage();
-      const offset = Math.min(2, Math.max(1, radius - 3));
+      const offset = Math.min(2, Math.max(1, HexSnakeState.game.radius - 3));
       HexSnakeState.game.dir = 0;
       HexSnakeState.game.nextDir = 0;
       HexSnakeState.game.computerDir = 3;
-      const startLength = gmMode ? initialLength : defaultSettings.initialLength;
+      const startLength = HexSnakeState.game.gmMode ? HexSnakeState.game.initialLength : defaultSettings.initialLength;
       HexSnakeState.game.snake = createStartingSnake({ q: -offset, r: offset }, HexSnakeState.game.dir, startLength);
       HexSnakeState.game.computerSnake = createStartingSnake({ q: offset, r: -offset }, HexSnakeState.game.computerDir, startLength);
       HexSnakeState.game.score = 0;
@@ -882,17 +882,17 @@
       boardShakeUntil = 0;
       boardShakeStartedAt = 0;
       boardShakeStrength = 0;
-      keyboardAttackAim.small = { targetModeIndex: 0, direction: HexSnakeState.game.dir };
-      keyboardAttackAim.big = { targetModeIndex: 0, direction: HexSnakeState.game.dir };
-      keyboardAttackPreview = null;
-      keyboardAimHeldKeys.clear();
+      HexSnakeState.game.keyboardAttackAim.small = { targetModeIndex: 0, direction: HexSnakeState.game.dir };
+      HexSnakeState.game.keyboardAttackAim.big = { targetModeIndex: 0, direction: HexSnakeState.game.dir };
+      HexSnakeState.game.keyboardAttackPreview = null;
+      HexSnakeState.game.keyboardAimHeldKeys.clear();
       if (HexSnakeState.game.keyboardAttackPreviewTimer) {
         clearTimeout(HexSnakeState.game.keyboardAttackPreviewTimer);
         HexSnakeState.game.keyboardAttackPreviewTimer = null;
       }
       updateTargetModeIndicator();
-      targetCell = { ...HexSnakeState.game.snake[0] };
-      targetActive = false;
+      HexSnakeState.game.targetCell = { ...HexSnakeState.game.snake[0] };
+      HexSnakeState.game.targetActive = false;
       HexSnakeState.game.totalElapsedMs = 0;
       HexSnakeState.game.lastFeedElapsedMs = 0;
       HexSnakeState.game.lastTimerFrame = 0;
@@ -1048,7 +1048,7 @@
       setFoodCount(foodCountInput.value);
       setComputerDifficulty(computerDifficultyInput.value);
       setInitialSpeed(initialSpeedInput.value);
-      setGmMode(gmMode);
+      setGmMode(HexSnakeState.game.gmMode);
       setInitialLength(initialLengthInput.value);
       setInitialEnergy(initialEnergyInput.value);
       setInitialBombs(initialBombsInput.value);
@@ -1152,7 +1152,7 @@
         ...HexSnakeState.game.foods.map(keyOf)
       ]);
       let generated = 0;
-      while (HexSnakeState.game.foods.length < foodCount) {
+      while (HexSnakeState.game.foods.length < HexSnakeState.game.foodCount) {
         const openCells = cells.filter(cell => !occupied.has(keyOf(cell)));
         if (!openCells.length) return;
         const cell = openCells[Math.floor(Math.random() * openCells.length)];
@@ -1727,7 +1727,7 @@
 
     function directionalAttackTarget(direction) {
       let target = { ...HexSnakeState.game.snake[0] };
-      for (let step = 0; step < targetMaxHex; step += 1) {
+      for (let step = 0; step < HexSnakeState.game.targetMaxHex; step += 1) {
         const next = nextWrappedCell(target, direction);
         target = next;
       }
@@ -1871,7 +1871,7 @@
       const path = [];
       let cursor = { q: source.q, r: source.r };
       let currentDirection = direction;
-      const maxSteps = Math.max(1, Math.ceil((radius * 2 + 1) / 2));
+      const maxSteps = Math.max(1, Math.ceil((HexSnakeState.game.radius * 2 + 1) / 2));
       const turnStep = Math.ceil(maxSteps / 2);
       for (let step = 0; step < maxSteps; step += 1) {
         if (step === turnStep) {
@@ -2104,7 +2104,7 @@
               hand
             }));
           } else {
-            const maxSteps = Math.max(1, Math.ceil((radius * 2 + 1) / 2));
+            const maxSteps = Math.max(1, Math.ceil((HexSnakeState.game.radius * 2 + 1) / 2));
             maxTravelDelay = Math.max(maxTravelDelay, small.delay + maxSteps * fistStepMs);
             HexSnakeState.game.projectiles.push({
               kind: "lobsterPalmSetup",
@@ -3257,8 +3257,8 @@
         direction: Number.isInteger(direction) ? direction : ownerDirection("player")
       };
       triggerTouchFeedback(event, 10);
-      targetCell = directionalAttackTarget(controlAttackPointer.direction);
-      targetActive = true;
+      HexSnakeState.game.targetCell = directionalAttackTarget(controlAttackPointer.direction);
+      HexSnakeState.game.targetActive = true;
       try {
         controlRow.setPointerCapture(event.pointerId);
       } catch (error) {
@@ -3274,8 +3274,8 @@
       const direction = controlPadDirectionFromEvent(event);
       const previousDirection = controlAttackPointer.direction;
       if (direction !== null) controlAttackPointer.direction = direction;
-      targetCell = directionalAttackTarget(controlAttackPointer.direction);
-      targetActive = true;
+      HexSnakeState.game.targetCell = directionalAttackTarget(controlAttackPointer.direction);
+      HexSnakeState.game.targetActive = true;
       if (controlAttackPointer.direction !== previousDirection) triggerTouchFeedback(event, 5);
       requestPreviewDraw();
     }
@@ -3293,7 +3293,7 @@
     function cancelControlPadAttackPointer(event) {
       if (!controlAttackPointer || event.pointerId !== controlAttackPointer.pointerId) return;
       controlAttackPointer = null;
-      targetActive = false;
+      HexSnakeState.game.targetActive = false;
       if (controlRow.hasPointerCapture?.(event.pointerId)) controlRow.releasePointerCapture(event.pointerId);
       requestPreviewDraw();
     }
@@ -3310,18 +3310,18 @@
       stick.style.transform = `translate(${Math.cos(angle) * distance}px, ${Math.sin(angle) * distance}px)`;
       const newDir = pointerToDirection(event, rect);
       if (newDir !== null) {
-        movePointerMoved = true;
+        HexSnakeState.game.movePointerMoved = true;
         setDirection(newDir, { feedbackEvent: event, feedbackStrength: 5 });
       }
     }
 
     function setMoveStickLocked(locked) {
-      moveStickLocked = locked;
-      moveStickEngaged = locked;
+      HexSnakeState.game.moveStickLocked = locked;
+      HexSnakeState.game.moveStickEngaged = locked;
       joyZone.querySelector(".joystick").classList.toggle("locked", locked);
       if (!locked) {
-        movePointerId = null;
-        moveStickEngaged = false;
+        HexSnakeState.game.movePointerId = null;
+        HexSnakeState.game.moveStickEngaged = false;
         clearMoveStickRebound();
         stick.style.transform = "translate(0, 0)";
       }
@@ -3356,17 +3356,17 @@
 
     function engageMoveStick(event) {
       clearMoveStickHoldTimer();
-      if (movePointerId !== event.pointerId || moveStickEngaged) return;
-      moveStickEngaged = true;
+      if (HexSnakeState.game.movePointerId !== event.pointerId || HexSnakeState.game.moveStickEngaged) return;
+      HexSnakeState.game.moveStickEngaged = true;
       joyZone.querySelector(".joystick").classList.add("locked");
       moveStick(event);
     }
 
     function releaseMoveStick(event) {
       clearMoveStickHoldTimer();
-      if (moveStickLocked) return;
-      movePointerId = null;
-      moveStickEngaged = false;
+      if (HexSnakeState.game.moveStickLocked) return;
+      HexSnakeState.game.movePointerId = null;
+      HexSnakeState.game.moveStickEngaged = false;
       joyZone.querySelector(".joystick").classList.remove("locked");
       setDirectionButtonHighlight(null);
       stick.classList.add("is-rebounding");
@@ -3394,32 +3394,32 @@
       const angle = Math.atan2(dy, dx);
       targetStick.style.transform = `translate(${Math.cos(angle) * distance}px, ${Math.sin(angle) * distance}px)`;
       const playerPixel = axialToPixel(HexSnakeState.game.snake[0]);
-      const maxPixelRange = targetMaxHex * cellSize;
+      const maxPixelRange = HexSnakeState.game.targetMaxHex * cellSize;
       const ratio = Math.min(1, rawDistance / Math.max(1, rect.width * 0.44));
       const targetPixel = {
         x: playerPixel.x + Math.cos(angle) * maxPixelRange * ratio,
         y: playerPixel.y + Math.sin(angle) * maxPixelRange * ratio
       };
-      targetCell = nearestInsideCell(pixelToAxial(targetPixel.x, targetPixel.y));
-      targetActive = true;
+      HexSnakeState.game.targetCell = nearestInsideCell(pixelToAxial(targetPixel.x, targetPixel.y));
+      HexSnakeState.game.targetActive = true;
       requestPreviewDraw();
     }
 
     function releaseTargetStick() {
-      targetPointerId = null;
+      HexSnakeState.game.targetPointerId = null;
       targetStick.style.transform = "translate(0, 0)";
-      if (targetActive && HexSnakeState.game.running && !HexSnakeState.game.paused && !HexSnakeState.game.gameOver) {
-        if (launchAttack("player", targetCell || HexSnakeState.game.snake[0], performance.now())) {
+      if (HexSnakeState.game.targetActive && HexSnakeState.game.running && !HexSnakeState.game.paused && !HexSnakeState.game.gameOver) {
+        if (launchAttack("player", HexSnakeState.game.targetCell || HexSnakeState.game.snake[0], performance.now())) {
           setStatus("P1 施放炸彈，2 秒後落地。");
         } else {
           setStatus(`大招需要 ${bigAttackBombCost} 枚炸彈，且四種庫存各至少 2。`);
         }
       }
-      targetActive = false;
+      HexSnakeState.game.targetActive = false;
     }
 
     function opponentHeadTarget() {
-      return HexSnakeState.game.computerSnake?.[0] || HexSnakeState.game.snake?.[0] || targetCell;
+      return HexSnakeState.game.computerSnake?.[0] || HexSnakeState.game.snake?.[0] || HexSnakeState.game.targetCell;
     }
 
     function opponentCentroidTarget() {
@@ -3438,7 +3438,7 @@
     }
 
     function keyboardTargetMode(profile = "small") {
-      const aim = keyboardAttackAim[profile] || keyboardAttackAim.small;
+      const aim = HexSnakeState.game.keyboardAttackAim[profile] || HexSnakeState.game.keyboardAttackAim.small;
       return keyboardTargetModes[aim.targetModeIndex % keyboardTargetModes.length] || "head";
     }
 
@@ -3455,7 +3455,7 @@
     }
 
     function keyboardAttackDirection(profile = "big") {
-      const aim = keyboardAttackAim[profile] || keyboardAttackAim.big;
+      const aim = HexSnakeState.game.keyboardAttackAim[profile] || HexSnakeState.game.keyboardAttackAim.big;
       return Number.isInteger(aim.direction) ? aim.direction : ownerDirection("player");
     }
 
@@ -3574,17 +3574,17 @@
         preview.direction = keyboardAttackDirection(profile);
         preview.origin = characterFor("player").id === "moray" ? target : HexSnakeState.game.snake?.[0];
       }
-      keyboardAttackPreview = preview;
-      targetCell = target;
-      targetActive = Boolean(target);
+      HexSnakeState.game.keyboardAttackPreview = preview;
+      HexSnakeState.game.targetCell = target;
+      HexSnakeState.game.targetActive = Boolean(target);
       selectedAttackProfile = profile;
       updateTargetModeIndicator();
       requestPreviewDraw();
       clearKeyboardAttackPreviewTimer();
       HexSnakeState.game.keyboardAttackPreviewTimer = setTimeout(() => {
         HexSnakeState.game.keyboardAttackPreviewTimer = null;
-        if (keyboardAttackPreview === preview) keyboardAttackPreview = null;
-        targetActive = false;
+        if (HexSnakeState.game.keyboardAttackPreview === preview) HexSnakeState.game.keyboardAttackPreview = null;
+        HexSnakeState.game.targetActive = false;
         requestPreviewDraw();
       }, 900);
       setStatus(`${profile === "big" ? "大招" : "小招"}按鍵目標：${keyboardAttackHintLabel(profile)}`);
@@ -3594,13 +3594,13 @@
       if (!HexSnakeState.game.running || HexSnakeState.game.gameOver) {
         if (!autoStartGame()) return false;
       }
-      const aim = keyboardAttackAim[profile] || keyboardAttackAim.small;
+      const aim = HexSnakeState.game.keyboardAttackAim[profile] || HexSnakeState.game.keyboardAttackAim.small;
       if (keyboardAttackUsesDirection(profile)) {
         aim.direction = (keyboardAttackDirection(profile) + 1) % directions.length;
       } else {
         aim.targetModeIndex = (aim.targetModeIndex + 1) % keyboardTargetModes.length;
       }
-      keyboardAttackAim[profile] = aim;
+      HexSnakeState.game.keyboardAttackAim[profile] = aim;
       selectedAttackProfile = profile;
       showKeyboardAttackHint(profile);
       return true;
@@ -3609,11 +3609,11 @@
     function handleKeyboardAimKeyDown(event, profile = "small", key = "") {
       event.preventDefault();
       if (event.repeat) return true;
-      if (keyboardAimHeldKeys.has(key)) {
-        keyboardAimHeldKeys.delete(key);
+      if (HexSnakeState.game.keyboardAimHeldKeys.has(key)) {
+        HexSnakeState.game.keyboardAimHeldKeys.delete(key);
         setAttackButtonHighlight(null);
       }
-      keyboardAimHeldKeys.add(key);
+      HexSnakeState.game.keyboardAimHeldKeys.add(key);
       setAttackButtonHighlight(profile === "big" ? "bigAim" : "smallAim");
       triggerTouchFeedback(event, profile === "big" ? 12 : 8);
       cycleKeyboardAttackAim(profile);
@@ -3621,17 +3621,17 @@
     }
 
     function handleKeyboardAimKeyUp(event, key = "") {
-      if (!keyboardAimHeldKeys.has(key)) return false;
+      if (!HexSnakeState.game.keyboardAimHeldKeys.has(key)) return false;
       event.preventDefault();
-      keyboardAimHeldKeys.delete(key);
+      HexSnakeState.game.keyboardAimHeldKeys.delete(key);
       releaseAttackButtonHighlight();
       triggerTouchFeedback(event, 5);
       return true;
     }
 
     function clearKeyboardAimKeyLocks() {
-      if (!keyboardAimHeldKeys.size) return;
-      keyboardAimHeldKeys.clear();
+      if (!HexSnakeState.game.keyboardAimHeldKeys.size) return;
+      HexSnakeState.game.keyboardAimHeldKeys.clear();
       setAttackButtonHighlight(null);
     }
 
@@ -3682,8 +3682,8 @@
 
     function previewDirectAttack(profile = "small", pointer = null) {
       selectedAttackProfile = profile === "big" ? "big" : "small";
-      targetCell = playerDirectAttackTarget(profile, pointer);
-      targetActive = Boolean(targetCell);
+      HexSnakeState.game.targetCell = playerDirectAttackTarget(profile, pointer);
+      HexSnakeState.game.targetActive = Boolean(HexSnakeState.game.targetCell);
       requestPreviewDraw();
     }
 
@@ -3758,14 +3758,14 @@
       }
       const now = performance.now();
       if (launchAttack("player", target, now, profile, options)) {
-        keyboardAttackPreview = null;
+        HexSnakeState.game.keyboardAttackPreview = null;
         clearKeyboardAttackPreviewTimer();
-        targetCell = { ...target };
-        targetActive = true;
+        HexSnakeState.game.targetCell = { ...target };
+        HexSnakeState.game.targetActive = true;
         flashAttackButton(profile);
         draw();
         setTimeout(() => {
-          targetActive = false;
+          HexSnakeState.game.targetActive = false;
           draw();
         }, 180);
         const moveName = profile === "small" ? characterFor("player").smallMove : characterFor("player").bigMove;
@@ -3794,7 +3794,7 @@
     function performModuleAttack() {
       const module = characterStage.querySelector('[data-module="player"]');
       if (module) module.classList.remove("is-charging");
-      launchPlayerAttack(targetCell || HexSnakeState.game.snake[0]);
+      launchPlayerAttack(HexSnakeState.game.targetCell || HexSnakeState.game.snake[0]);
     }
 
     function clearModuleHold() {
@@ -3911,7 +3911,7 @@
       if (!attackPointer || event.pointerId !== attackPointer.pointerId) return;
       attackPointer = null;
       clearAttackPointerLongPressTimer();
-      targetActive = false;
+      HexSnakeState.game.targetActive = false;
       if (canvas.hasPointerCapture?.(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
       requestPreviewDraw();
     }
@@ -4380,7 +4380,7 @@
       resetGame();
       resize();
       overlayTitle.textContent = "棋盤已更新";
-      overlayText.textContent = `棋盤半徑已設為 ${gridSize}。開始後設定會鎖定到下一局。`;
+      overlayText.textContent = `棋盤半徑已設為 ${HexSnakeState.game.gridSize}。開始後設定會鎖定到下一局。`;
       startButton.textContent = "開始";
       renderIntroPortraits(true);
       overlay.classList.add("show");
@@ -4393,7 +4393,7 @@
       resetGame();
       resize();
       overlayTitle.textContent = "食物數量已更新";
-      overlayText.textContent = `場上會維持 ${foodCount} 個蛋白、脂肪、纖維、碳水隨機食物。`;
+      overlayText.textContent = `場上會維持 ${HexSnakeState.game.foodCount} 個蛋白、脂肪、纖維、碳水隨機食物。`;
       startButton.textContent = "開始";
       renderIntroPortraits(true);
       overlay.classList.add("show");
@@ -4419,7 +4419,7 @@
       resetGame();
       resize();
       overlayTitle.textContent = "初始速度已更新";
-      overlayText.textContent = `初始速度已設為 ${initialSpeed}x。`;
+      overlayText.textContent = `初始速度已設為 ${HexSnakeState.game.initialSpeed}x。`;
       startButton.textContent = "開始";
       renderIntroPortraits(true);
       overlay.classList.add("show");
@@ -4533,7 +4533,7 @@
       HexSnakeState.game.computerCharacterChoice = HexSnakeState.game.computerCharacterId;
       syncCharacterInputs();
       saveCharacterChoices();
-      keybinds = structuredClone(defaultKeybinds);
+      HexSnakeState.game.keybinds = structuredClone(defaultKeybinds);
       saveKeybinds();
       applyKeybinds();
       setLeftHandMode(false);
@@ -4552,7 +4552,7 @@
     });
 
     function defaultPlayerAttackTarget() {
-      return targetCell || HexSnakeState.game.computerSnake[0] || HexSnakeState.game.snake[0];
+      return HexSnakeState.game.targetCell || HexSnakeState.game.computerSnake[0] || HexSnakeState.game.snake[0];
     }
 
     function attackButtonPointerTarget(profile) {
@@ -4764,11 +4764,11 @@
       });
       input.addEventListener("change", () => {
         const normalized = normalizeKey(input.value, " ");
-        if (input.id === "smallAttackKey") keybinds.smallAttack = normalized;
-        else if (input.id === "bigAttackKey") keybinds.bigAttack = normalized;
-        else if (input.id === "pauseKey") keybinds.pause = normalized;
-        else if (input.id === "surrenderKey") keybinds.surrender = normalized;
-        else if (input.dataset.keybindDir !== undefined) keybinds.directions[Number(input.dataset.keybindDir)] = normalized;
+        if (input.id === "smallAttackKey") HexSnakeState.game.keybinds.smallAttack = normalized;
+        else if (input.id === "bigAttackKey") HexSnakeState.game.keybinds.bigAttack = normalized;
+        else if (input.id === "pauseKey") HexSnakeState.game.keybinds.pause = normalized;
+        else if (input.id === "surrenderKey") HexSnakeState.game.keybinds.surrender = normalized;
+        else if (input.dataset.keybindDir !== undefined) HexSnakeState.game.keybinds.directions[Number(input.dataset.keybindDir)] = normalized;
         saveKeybinds();
         applyKeybinds();
       });
@@ -5190,13 +5190,13 @@
         return;
       }
       triggerTouchFeedback(event, 5);
-      movePointerId = event.pointerId;
-      movePointerStartedAt = performance.now();
-      movePointerStartX = event.clientX;
-      movePointerStartY = event.clientY;
-      movePointerMoved = false;
-      moveStickEngaged = false;
-      joyZone.setPointerCapture(movePointerId);
+      HexSnakeState.game.movePointerId = event.pointerId;
+      HexSnakeState.game.movePointerStartedAt = performance.now();
+      HexSnakeState.game.movePointerStartX = event.clientX;
+      HexSnakeState.game.movePointerStartY = event.clientY;
+      HexSnakeState.game.movePointerMoved = false;
+      HexSnakeState.game.moveStickEngaged = false;
+      joyZone.setPointerCapture(HexSnakeState.game.movePointerId);
       clearMoveStickHoldTimer();
       HexSnakeState.game.moveStickHoldTimer = setTimeout(() => engageMoveStick(event), 80);
     });
@@ -5206,11 +5206,11 @@
         moveControlPadAttackPointer(event);
         return;
       }
-      if (event.pointerId === movePointerId && !moveStickEngaged) {
-        const dragDistance = Math.hypot(event.clientX - movePointerStartX, event.clientY - movePointerStartY);
+      if (event.pointerId === HexSnakeState.game.movePointerId && !HexSnakeState.game.moveStickEngaged) {
+        const dragDistance = Math.hypot(event.clientX - HexSnakeState.game.movePointerStartX, event.clientY - HexSnakeState.game.movePointerStartY);
         if (dragDistance > 5) engageMoveStick(event);
       }
-      if (event.pointerId === movePointerId && moveStickEngaged) moveStick(event);
+      if (event.pointerId === HexSnakeState.game.movePointerId && HexSnakeState.game.moveStickEngaged) moveStick(event);
     });
 
     joyZone.addEventListener("pointerup", event => {
@@ -5233,8 +5233,8 @@
         moveControlPadAttackPointer(event);
         return;
       }
-      if (!moveStickLocked && !moveStickEngaged) return;
-      if (event.pointerId === movePointerId || event.pointerType === "mouse") {
+      if (!HexSnakeState.game.moveStickLocked && !HexSnakeState.game.moveStickEngaged) return;
+      if (event.pointerId === HexSnakeState.game.movePointerId || event.pointerType === "mouse") {
         moveStick(event);
       }
     });
@@ -5280,7 +5280,7 @@
     });
 
     window.addEventListener("keydown", event => {
-      if (pendingDirectionKeybind !== null) {
+      if (HexSnakeState.game.pendingDirectionKeybind !== null) {
         event.preventDefault();
         event.stopPropagation();
         if (event.key === "Escape" || event.key === "Esc") setPendingDirectionKeybind(null);
@@ -5386,12 +5386,12 @@
       if (event.target && ["INPUT", "SELECT", "TEXTAREA"].includes(event.target.tagName)) return;
 
       const pressedKey = event.key === " " ? " " : event.key.toLowerCase();
-      if (pressedKey === keybinds.pause) {
+      if (pressedKey === HexSnakeState.game.keybinds.pause) {
         event.preventDefault();
         togglePause();
         return;
       }
-      if (pressedKey === keybinds.surrender) {
+      if (pressedKey === HexSnakeState.game.keybinds.surrender) {
         event.preventDefault();
         surrenderGame();
         return;
@@ -5400,9 +5400,9 @@
         handleKeyboardAimKeyDown(event, pressedKey === "x" ? "small" : "big", pressedKey);
         return;
       }
-      if (pressedKey === keybinds.smallAttack || pressedKey === keybinds.bigAttack) {
+      if (pressedKey === HexSnakeState.game.keybinds.smallAttack || pressedKey === HexSnakeState.game.keybinds.bigAttack) {
         event.preventDefault();
-        const profile = pressedKey === keybinds.smallAttack ? "small" : "big";
+        const profile = pressedKey === HexSnakeState.game.keybinds.smallAttack ? "small" : "big";
         launchKeyboardPlayerAttack(profile);
         return;
       }
@@ -5411,7 +5411,7 @@
         setDirection(keyToDir.get(pressedKey));
         return;
       }
-      if ((pressedKey === " " && keybinds.pause !== " ") || (pressedKey === "q" && keybinds.smallAttack !== "q" && keybinds.bigAttack !== "q")) {
+      if ((pressedKey === " " && HexSnakeState.game.keybinds.pause !== " ") || (pressedKey === "q" && HexSnakeState.game.keybinds.smallAttack !== "q" && HexSnakeState.game.keybinds.bigAttack !== "q")) {
         event.preventDefault();
         return;
       }
@@ -5442,7 +5442,7 @@
         if (!HexSnakeState.game.running || HexSnakeState.game.gameOver) {
           if (!autoStartGame()) return;
         }
-        if (launchAttack("player", targetCell || HexSnakeState.game.snake[0], performance.now())) {
+        if (launchAttack("player", HexSnakeState.game.targetCell || HexSnakeState.game.snake[0], performance.now())) {
           setStatus("P1 施放炸彈，2 秒後落地。");
         } else {
           setStatus(`大招需要 ${bigAttackBombCost} 枚炸彈，且四種庫存各至少 2。`);
@@ -5559,7 +5559,7 @@
       setFoodCount(foodCountInput.value);
       setComputerDifficulty(computerDifficultyInput.value);
       setInitialSpeed(initialSpeedInput.value);
-      setGmMode(gmMode);
+      setGmMode(HexSnakeState.game.gmMode);
       setInitialLength(initialLengthInput.value);
       setInitialEnergy(initialEnergyInput.value);
       setInitialBombs(initialBombsInput.value);
