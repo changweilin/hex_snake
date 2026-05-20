@@ -690,6 +690,36 @@ Object.defineProperties(HexSnakeState.game, {
       computerBattleSpeed = value;
     },
   },
+  relayModePreference: {
+    get: () => relayModePreference,
+    set: (value) => {
+      relayModePreference = Boolean(value);
+    },
+  },
+  relayMode: {
+    get: () => relayMode,
+    set: (value) => {
+      relayMode = Boolean(value);
+    },
+  },
+  relayPlayerWins: {
+    get: () => relayPlayerWins,
+    set: (value) => {
+      relayPlayerWins = value;
+    },
+  },
+  relayComputerWins: {
+    get: () => relayComputerWins,
+    set: (value) => {
+      relayComputerWins = value;
+    },
+  },
+  relayDraws: {
+    get: () => relayDraws,
+    set: (value) => {
+      relayDraws = value;
+    },
+  },
   relayRestartTimer: {
     get: () => relayRestartTimer,
     set: (value) => {
@@ -756,6 +786,42 @@ Object.defineProperties(HexSnakeState.game, {
       foodCount = value;
     },
   },
+  cells: {
+    get: () => cells,
+    set: (value) => {
+      cells = Array.isArray(value) ? value : [];
+    },
+  },
+  cellSize: {
+    get: () => cellSize,
+    set: (value) => {
+      cellSize = value;
+    },
+  },
+  center: {
+    get: () => center,
+    set: (value) => {
+      center = value && typeof value === "object" ? value : { x: 0, y: 0 };
+    },
+  },
+  boardShakeUntil: {
+    get: () => boardShakeUntil,
+    set: (value) => {
+      boardShakeUntil = value;
+    },
+  },
+  boardShakeStartedAt: {
+    get: () => boardShakeStartedAt,
+    set: (value) => {
+      boardShakeStartedAt = value;
+    },
+  },
+  boardShakeStrength: {
+    get: () => boardShakeStrength,
+    set: (value) => {
+      boardShakeStrength = value;
+    },
+  },
   initialSpeed: {
     get: () => initialSpeed,
     set: (value) => {
@@ -802,6 +868,18 @@ Object.defineProperties(HexSnakeState.game, {
     get: () => keybinds,
     set: (value) => {
       keybinds = value;
+    },
+  },
+  selectedAttackProfile: {
+    get: () => selectedAttackProfile,
+    set: (value) => {
+      selectedAttackProfile = value;
+    },
+  },
+  keyToDir: {
+    get: () => keyToDir,
+    set: (value) => {
+      keyToDir = value instanceof Map ? value : new Map();
     },
   },
   keyboardAttackAim: {
@@ -1130,6 +1208,18 @@ let lastHudFrameAt = -Infinity;
 let lastReplayRecordCheckAt = -Infinity;
 
 Object.defineProperties(HexSnakeState.game, {
+  best: {
+    get: () => best,
+    set: (value) => {
+      best = value;
+    },
+  },
+  bestTotalMs: {
+    get: () => bestTotalMs,
+    set: (value) => {
+      bestTotalMs = value;
+    },
+  },
   score: {
     get: () => score,
     set: (value) => {
@@ -1323,6 +1413,30 @@ Object.defineProperties(HexSnakeState.game, {
       attackHighlightReleaseTimer = value;
     },
   },
+  highlightedAttackProfile: {
+    get: () => highlightedAttackProfile,
+    set: (value) => {
+      highlightedAttackProfile = value;
+    },
+  },
+  attackPointer: {
+    get: () => attackPointer,
+    set: (value) => {
+      attackPointer = value;
+    },
+  },
+  attackButtonPointerId: {
+    get: () => attackButtonPointerId,
+    set: (value) => {
+      attackButtonPointerId = value;
+    },
+  },
+  controlAttackPointer: {
+    get: () => controlAttackPointer,
+    set: (value) => {
+      controlAttackPointer = value;
+    },
+  },
   portraitPoseTimers: {
     get: () => portraitPoseTimers,
     set: (value) => {
@@ -1433,7 +1547,31 @@ let logoCountdownTimer = null;
 let logoTransitionSerial = 0;
 let startLogoCountdownPending = false;
 
+Object.defineProperties(HexSnakeState.game, {
+  rafId: {
+    get: () => rafId,
+    set: (value) => {
+      rafId = value;
+    },
+  },
+  restartUnlockAt: {
+    get: () => restartUnlockAt,
+    set: (value) => {
+      restartUnlockAt = value;
+    },
+  },
+});
+
 Object.defineProperties(HexSnakeState.ui, {
+  perfStatsKey: {
+    get: () => perfStatsKey,
+  },
+  perfStatsVisible: {
+    get: () => perfStatsVisible,
+    set: (value) => {
+      perfStatsVisible = Boolean(value);
+    },
+  },
   lastResultShareData: {
     get: () => lastResultShareData,
     set: (value) => {
