@@ -50,7 +50,7 @@
     }
 
     function normalizeGmPresetMode(value) {
-      return Object.prototype.hasOwnProperty.call(gmPresetButtons, value) ? value : null;
+      return Object.prototype.hasOwnProperty.call(Dom.gmPresetButtons, value) ? value : null;
     }
 
     function cloneGameSettings(value = {}) {
@@ -82,7 +82,7 @@
     function controlProfileConfig() {
       return {
         keybinds: cloneKeybinds(),
-        leftHandMode: Boolean(leftHandModeInput.checked),
+        leftHandMode: Boolean(Dom.leftHandModeInput.checked),
         keyboardAttackAim: cloneKeyboardAttackAim(),
         gameSettings: cloneGameSettings(),
         preferences: cloneProfilePreferences()
@@ -135,35 +135,35 @@
     }
 
     function setControlProfileStatus(text = "", state = "") {
-      controlProfileStatus.textContent = text;
-      controlProfileStatus.hidden = !text;
-      if (state) controlProfileStatus.dataset.state = state;
-      else delete controlProfileStatus.dataset.state;
+      Dom.controlProfileStatus.textContent = text;
+      Dom.controlProfileStatus.hidden = !text;
+      if (state) Dom.controlProfileStatus.dataset.state = state;
+      else delete Dom.controlProfileStatus.dataset.state;
     }
 
     function renderControlProfiles(message = "", state = "") {
       const previousId = selectedControlProfileId;
-      controlProfileSelect.innerHTML = "";
+      Dom.controlProfileSelect.innerHTML = "";
       const empty = document.createElement("option");
       empty.value = "";
       empty.textContent = controlProfiles.length ? "選擇配置" : "尚無配置";
-      controlProfileSelect.append(empty);
+      Dom.controlProfileSelect.append(empty);
       controlProfiles.forEach(profile => {
         const option = document.createElement("option");
         option.value = profile.id;
         option.textContent = profile.name;
-        controlProfileSelect.append(option);
+        Dom.controlProfileSelect.append(option);
       });
       selectedControlProfileId = resolvedControlProfileId(previousId);
       if (selectedControlProfileId !== previousId) saveSelectedControlProfileId();
-      controlProfileSelect.value = selectedControlProfileId;
+      Dom.controlProfileSelect.value = selectedControlProfileId;
       const selected = selectedControlProfile();
-      if (selected && !controlProfileNameInput.value.trim()) controlProfileNameInput.value = selected.name;
-      controlProfileApplyButton.disabled = !selectedControlProfileId || HexSnakeState.game.running;
-      controlProfileDeleteButton.disabled = !selectedControlProfileId || HexSnakeState.game.running;
-      controlProfileSaveButton.disabled = HexSnakeState.game.running;
-      controlProfileNameInput.disabled = HexSnakeState.game.running;
-      controlProfileSelect.disabled = HexSnakeState.game.running || !controlProfiles.length;
+      if (selected && !Dom.controlProfileNameInput.value.trim()) Dom.controlProfileNameInput.value = selected.name;
+      Dom.controlProfileApplyButton.disabled = !selectedControlProfileId || HexSnakeState.game.running;
+      Dom.controlProfileDeleteButton.disabled = !selectedControlProfileId || HexSnakeState.game.running;
+      Dom.controlProfileSaveButton.disabled = HexSnakeState.game.running;
+      Dom.controlProfileNameInput.disabled = HexSnakeState.game.running;
+      Dom.controlProfileSelect.disabled = HexSnakeState.game.running || !controlProfiles.length;
       setControlProfileStatus(message, state);
     }
 
@@ -227,7 +227,7 @@
 
     function saveCurrentControlProfile() {
       if (HexSnakeState.game.running) return;
-      const name = (controlProfileNameInput.value.trim() || selectedControlProfile()?.name || uniqueControlProfileName()).slice(0, 16);
+      const name = (Dom.controlProfileNameInput.value.trim() || selectedControlProfile()?.name || uniqueControlProfileName()).slice(0, 16);
       const now = new Date().toISOString();
       const existingIndex = controlProfiles.findIndex(profile => profile.id === selectedControlProfileId);
       const nextProfile = {
@@ -240,7 +240,7 @@
       else controlProfiles.unshift(nextProfile);
       controlProfiles = controlProfiles.slice(0, controlProfileLimit);
       selectedControlProfileId = nextProfile.id;
-      controlProfileNameInput.value = name;
+      Dom.controlProfileNameInput.value = name;
       saveControlProfiles();
       saveSelectedControlProfileId();
       renderControlProfiles("配置檔已儲存。", "success");
@@ -259,7 +259,7 @@
       const appliesGameSettings = Boolean(profile.config.gameSettings);
       applyProfileGameSettings(profile.config.gameSettings);
       applyProfilePreferences(profile.config.preferences);
-      controlProfileNameInput.value = profile.name;
+      Dom.controlProfileNameInput.value = profile.name;
       saveSelectedControlProfileId();
       if (appliesGameSettings) {
         resetGame();
@@ -276,7 +276,7 @@
       selectedControlProfileId = resolvedControlProfileId("", true);
       saveControlProfiles();
       saveSelectedControlProfileId();
-      controlProfileNameInput.value = "";
+      Dom.controlProfileNameInput.value = "";
       renderControlProfiles("配置檔已刪除。", "success");
     }
 
@@ -295,8 +295,8 @@
     }
 
     function syncCharacterInputs() {
-      playerCharacterInput.value = HexSnakeState.game.playerCharacterChoice;
-      computerCharacterInput.value = HexSnakeState.game.computerCharacterChoice;
+      Dom.playerCharacterInput.value = HexSnakeState.game.playerCharacterChoice;
+      Dom.computerCharacterInput.value = HexSnakeState.game.computerCharacterChoice;
     }
 
     function resolveCharacterChoice(owner, choice) {
@@ -306,11 +306,11 @@
     }
 
     function resolveCharacterChoicesForStart() {
-      HexSnakeState.game.playerCharacterChoice = HexSnakeUI.isSelectableCharacterChoiceId(playerCharacterInput.value)
-        ? playerCharacterInput.value
+      HexSnakeState.game.playerCharacterChoice = HexSnakeUI.isSelectableCharacterChoiceId(Dom.playerCharacterInput.value)
+        ? Dom.playerCharacterInput.value
         : HexSnakeState.config.defaultSettings.playerCharacterId;
-      HexSnakeState.game.computerCharacterChoice = HexSnakeUI.isSelectableCharacterChoiceId(computerCharacterInput.value)
-        ? computerCharacterInput.value
+      HexSnakeState.game.computerCharacterChoice = HexSnakeUI.isSelectableCharacterChoiceId(Dom.computerCharacterInput.value)
+        ? Dom.computerCharacterInput.value
         : HexSnakeState.config.defaultSettings.computerCharacterId;
       HexSnakeState.game.playerCharacterId = resolveCharacterChoice("player", HexSnakeState.game.playerCharacterChoice);
       HexSnakeState.game.computerCharacterId = resolveCharacterChoice("computer", HexSnakeState.game.computerCharacterChoice);
@@ -323,16 +323,16 @@
         direction.key = HexSnakeState.game.keybinds.directions[index];
       });
       HexSnakeState.game.keyToDir = new Map(HexSnakeState.config.directions.map((direction, index) => [direction.key, index]));
-      keyEls.forEach(el => {
+      Dom.keyEls.forEach(el => {
         const direction = HexSnakeState.config.directions[Number(el.dataset.dir)];
         if (direction) el.textContent = keyLabel(direction.key);
       });
-      hexDirButtons.forEach(button => {
+      Dom.hexDirButtons.forEach(button => {
         const direction = HexSnakeState.config.directions[Number(button.dataset.dir)];
         const label = button.querySelector("span") || button;
         if (direction) label.textContent = keyLabel(direction.key);
       });
-      settingsDirButtons.forEach(button => {
+      Dom.settingsDirButtons.forEach(button => {
         const direction = HexSnakeState.config.directions[Number(button.dataset.dir)];
         const label = button.querySelector("span") || button;
         if (direction) label.textContent = keyLabel(direction.key);
@@ -350,7 +350,7 @@
 
     function setPendingDirectionKeybind(direction) {
       HexSnakeState.game.pendingDirectionKeybind = Number.isInteger(direction) && direction >= 0 && direction < HexSnakeState.config.directions.length ? direction : null;
-      settingsDirHint.textContent = HexSnakeState.game.pendingDirectionKeybind === null
+      Dom.settingsDirHint.textContent = HexSnakeState.game.pendingDirectionKeybind === null
         ? "點一個方向後按鍵盤設定快捷鍵"
         : `按鍵盤設定 ${HexSnakeState.config.directions[HexSnakeState.game.pendingDirectionKeybind].label} 快捷鍵`;
       applyKeybinds();
@@ -393,14 +393,14 @@
     }
 
     function updateAttackButtons() {
-      smallAttackButton.classList.toggle("is-selected", HexSnakeState.game.highlightedAttackProfile === "small");
-      bigAttackButton.classList.toggle("is-selected", HexSnakeState.game.highlightedAttackProfile === "big");
-      keyboardSmallAimButton.classList.toggle("is-selected", HexSnakeState.game.highlightedAttackProfile === "smallAim");
-      keyboardBigAimButton.classList.toggle("is-selected", HexSnakeState.game.highlightedAttackProfile === "bigAim");
+      Dom.smallAttackButton.classList.toggle("is-selected", HexSnakeState.game.highlightedAttackProfile === "small");
+      Dom.bigAttackButton.classList.toggle("is-selected", HexSnakeState.game.highlightedAttackProfile === "big");
+      Dom.keyboardSmallAimButton.classList.toggle("is-selected", HexSnakeState.game.highlightedAttackProfile === "smallAim");
+      Dom.keyboardBigAimButton.classList.toggle("is-selected", HexSnakeState.game.highlightedAttackProfile === "bigAim");
       Dom.targetModeSmallIndicator.classList.toggle("is-active", HexSnakeState.game.highlightedAttackProfile === "smallAim");
       Dom.targetModeBigIndicator.classList.toggle("is-active", HexSnakeState.game.highlightedAttackProfile === "bigAim");
-      smallAttackButton.classList.toggle("secondary", HexSnakeState.game.highlightedAttackProfile !== "small");
-      bigAttackButton.classList.toggle("secondary", HexSnakeState.game.highlightedAttackProfile !== "big");
+      Dom.smallAttackButton.classList.toggle("secondary", HexSnakeState.game.highlightedAttackProfile !== "small");
+      Dom.bigAttackButton.classList.toggle("secondary", HexSnakeState.game.highlightedAttackProfile !== "big");
       updateTargetModeIndicator();
     }
 
@@ -413,14 +413,14 @@
 
     function setLeftHandMode(enabled) {
       const active = Boolean(enabled);
-      controlRow.classList.toggle("left-handed", active);
-      leftHandModeInput.checked = active;
+      Dom.controlRow.classList.toggle("left-handed", active);
+      Dom.leftHandModeInput.checked = active;
       HexSnakeStorage.set("hexSnakeLeftHandMode", active ? "1" : "0");
     }
 
     function syncLowPowerMode() {
       const active = HexSnakePlatform.display.lowPowerMode();
-      lowPowerModeInput.checked = active;
+      Dom.lowPowerModeInput.checked = active;
       document.body.classList.toggle("is-low-power", active);
       updatePerfOverlay();
       return active;
@@ -434,24 +434,24 @@
 
     function setPerfStatsVisible(enabled) {
       HexSnakeState.ui.perfStatsVisible = Boolean(enabled);
-      perfStatsToggle.checked = HexSnakeState.ui.perfStatsVisible;
-      perfOverlay.hidden = !HexSnakeState.ui.perfStatsVisible;
+      Dom.perfStatsToggle.checked = HexSnakeState.ui.perfStatsVisible;
+      Dom.perfOverlay.hidden = !HexSnakeState.ui.perfStatsVisible;
       HexSnakeStorage.set(HexSnakeState.ui.perfStatsKey, HexSnakeState.ui.perfStatsVisible ? "1" : "0");
       updatePerfOverlay();
     }
 
     function updatePerfOverlay(stats = HexSnakePlatform.display.frameStats) {
-      if (!perfOverlay) return;
+      if (!Dom.perfOverlay) return;
       if (!HexSnakeState.ui.perfStatsVisible) {
-        perfOverlay.hidden = true;
+        Dom.perfOverlay.hidden = true;
         return;
       }
-      perfOverlay.hidden = false;
-      perfOverlay.classList.toggle("is-low-power", HexSnakePlatform.display.lowPowerMode());
+      Dom.perfOverlay.hidden = false;
+      Dom.perfOverlay.classList.toggle("is-low-power", HexSnakePlatform.display.lowPowerMode());
       const fps = Number.isFinite(stats.fps) ? Math.round(stats.fps) : 0;
       const frameMs = Number.isFinite(stats.frameMs) ? stats.frameMs.toFixed(1) : "0.0";
-      perfFps.textContent = `${fps} FPS`;
-      perfFrameMs.textContent = `${frameMs} ms`;
+      Dom.perfFps.textContent = `${fps} FPS`;
+      Dom.perfFrameMs.textContent = `${frameMs} ms`;
     }
 
     function clampGridSize(value) {
@@ -511,49 +511,49 @@
     function setGridSize(value) {
       HexSnakeState.game.gridSize = clampGridSize(value);
       HexSnakeState.game.radius = HexSnakeState.game.gridSize - 1;
-      gridSizeInput.value = HexSnakeState.game.gridSize;
+      Dom.gridSizeInput.value = HexSnakeState.game.gridSize;
       buildCells();
     }
 
     function setFoodCount(value) {
       HexSnakeState.game.foodCount = clampFoodCount(value);
-      foodCountInput.value = HexSnakeState.game.foodCount;
+      Dom.foodCountInput.value = HexSnakeState.game.foodCount;
     }
 
     function setComputerDifficulty(value) {
       HexSnakeState.game.computerDifficulty = ["novice", "low", "medium", "high", "extreme"].includes(value) ? value : "medium";
-      computerDifficultyInput.value = HexSnakeState.game.computerDifficulty;
+      Dom.computerDifficultyInput.value = HexSnakeState.game.computerDifficulty;
     }
 
     function setInitialSpeed(value) {
       HexSnakeState.game.initialSpeed = clampInitialSpeed(value);
-      initialSpeedInput.value = HexSnakeState.game.initialSpeed;
+      Dom.initialSpeedInput.value = HexSnakeState.game.initialSpeed;
     }
 
     function setInitialLength(value) {
       HexSnakeState.game.initialLength = clampInitialLength(value);
-      initialLengthInput.value = HexSnakeState.game.initialLength;
+      Dom.initialLengthInput.value = HexSnakeState.game.initialLength;
     }
 
     function setInitialEnergy(value) {
       HexSnakeState.game.initialEnergy = clampInitialEnergy(value);
-      initialEnergyInput.value = HexSnakeState.game.initialEnergy;
+      Dom.initialEnergyInput.value = HexSnakeState.game.initialEnergy;
     }
 
     function setInitialBombs(value) {
       HexSnakeState.game.initialBombs = clampInitialBombs(value);
-      initialBombsInput.value = HexSnakeState.game.initialBombs;
+      Dom.initialBombsInput.value = HexSnakeState.game.initialBombs;
     }
 
     function setInitialStock(typeId, value) {
       if (!Object.prototype.hasOwnProperty.call(HexSnakeState.game.initialStock, typeId)) return;
       HexSnakeState.game.initialStock[typeId] = clampInitialStock(value);
-      const input = initialStockInputs.find(stockInput => stockInput.dataset.initialStock === typeId);
+      const input = Dom.initialStockInputs.find(stockInput => stockInput.dataset.initialStock === typeId);
       if (input) input.value = HexSnakeState.game.initialStock[typeId];
     }
 
     function updateGmPresetHighlight() {
-      Object.entries(gmPresetButtons).forEach(([mode, button]) => {
+      Object.entries(Dom.gmPresetButtons).forEach(([mode, button]) => {
         const selected = HexSnakeState.game.gmPresetMode === mode;
         button.classList.toggle("is-selected", selected);
         button.setAttribute("aria-pressed", selected ? "true" : "false");
@@ -597,7 +597,7 @@
         setInitialEnergy(saved.initialEnergy ?? HexSnakeState.config.defaultSettings.initialEnergy);
         setInitialBombs(saved.initialBombs ?? HexSnakeState.config.defaultSettings.initialBombs);
         HexSnakeState.config.foodTypes.forEach(type => setInitialStock(type.id, saved.initialStock?.[type.id] ?? HexSnakeState.config.defaultSettings.initialStock[type.id]));
-        HexSnakeState.game.gmPresetMode = Object.prototype.hasOwnProperty.call(gmPresetButtons, saved.gmPresetMode) ? saved.gmPresetMode : null;
+        HexSnakeState.game.gmPresetMode = Object.prototype.hasOwnProperty.call(Dom.gmPresetButtons, saved.gmPresetMode) ? saved.gmPresetMode : null;
         updateGmPresetHighlight();
       } catch {
         HexSnakeState.game.gmPresetMode = "real";
@@ -607,17 +607,17 @@
 
     function setGmMode(active) {
       HexSnakeState.game.gmMode = Boolean(active);
-      settingsToggle.classList.toggle("is-gm-active", HexSnakeState.game.gmMode);
+      Dom.settingsToggle.classList.toggle("is-gm-active", HexSnakeState.game.gmMode);
       updateSettingsActionMode();
       updateGmControlState();
     }
 
     function updateGmControlState() {
       const disabled = HexSnakeState.game.running;
-      initialLengthInput.disabled = disabled;
-      initialEnergyInput.disabled = disabled;
-      initialBombsInput.disabled = disabled;
-      initialStockInputs.forEach(input => {
+      Dom.initialLengthInput.disabled = disabled;
+      Dom.initialEnergyInput.disabled = disabled;
+      Dom.initialBombsInput.disabled = disabled;
+      Dom.initialStockInputs.forEach(input => {
         input.disabled = disabled;
       });
     }
@@ -635,7 +635,7 @@
     function refreshGmPreview() {
       resetGame();
       resize();
-      if (overlay.classList.contains("show")) {
+      if (Dom.overlay.classList.contains("show")) {
         HexSnakeUI.renderIntroPortraits(false);
       }
     }
@@ -668,20 +668,20 @@
     }
 
     function setGmSettingsLocked(locked) {
-      gridSizeInput.disabled = locked;
-      foodCountInput.disabled = locked;
-      initialSpeedInput.disabled = locked;
-      initialLengthInput.disabled = locked;
-      initialEnergyInput.disabled = locked;
-      initialBombsInput.disabled = locked;
-      initialStockInputs.forEach(input => {
+      Dom.gridSizeInput.disabled = locked;
+      Dom.foodCountInput.disabled = locked;
+      Dom.initialSpeedInput.disabled = locked;
+      Dom.initialLengthInput.disabled = locked;
+      Dom.initialEnergyInput.disabled = locked;
+      Dom.initialBombsInput.disabled = locked;
+      Dom.initialStockInputs.forEach(input => {
         input.disabled = locked;
       });
-      networkToggle.disabled = locked;
-      realModeButton.disabled = locked;
-      midGameModeButton.disabled = locked;
-      ultimateModeButton.disabled = locked;
-      lateGameModeButton.disabled = locked;
+      Dom.networkToggle.disabled = locked;
+      Dom.realModeButton.disabled = locked;
+      Dom.midGameModeButton.disabled = locked;
+      Dom.ultimateModeButton.disabled = locked;
+      Dom.lateGameModeButton.disabled = locked;
     }
 
     function updateSettingsActionMode() {
@@ -691,16 +691,16 @@
         setGmOpen(false);
         setNetworkOpen(false);
       }
-      settingsToggle.hidden = showSurrender;
-      surrenderButton.hidden = !showSurrender;
-      surrenderButton.disabled = !showSurrender;
-      networkToggle.classList.toggle("is-auto", showSurrender);
-      networkToggle.classList.toggle("is-active", showSurrender ? isPlayerAutoControlActive() : !networkContent.hidden);
-      gmLetter.textContent = showSurrender ? "Auto" : "LAN";
-      networkToggle.title = showSurrender ? "Auto 操作" : "LAN / Wi-Fi";
-      networkToggle.setAttribute("aria-label", showSurrender ? "Auto 操作" : "LAN / Wi-Fi");
-      networkToggle.setAttribute("aria-expanded", showSurrender ? "false" : networkToggle.getAttribute("aria-expanded"));
-      networkToggle.disabled = showSurrender ? false : networkToggle.disabled;
+      Dom.settingsToggle.hidden = showSurrender;
+      Dom.surrenderButton.hidden = !showSurrender;
+      Dom.surrenderButton.disabled = !showSurrender;
+      Dom.networkToggle.classList.toggle("is-auto", showSurrender);
+      Dom.networkToggle.classList.toggle("is-active", showSurrender ? isPlayerAutoControlActive() : !Dom.networkContent.hidden);
+      Dom.gmLetter.textContent = showSurrender ? "Auto" : "LAN";
+      Dom.networkToggle.title = showSurrender ? "Auto 操作" : "LAN / Wi-Fi";
+      Dom.networkToggle.setAttribute("aria-label", showSurrender ? "Auto 操作" : "LAN / Wi-Fi");
+      Dom.networkToggle.setAttribute("aria-expanded", showSurrender ? "false" : Dom.networkToggle.getAttribute("aria-expanded"));
+      Dom.networkToggle.disabled = showSurrender ? false : Dom.networkToggle.disabled;
     }
 
     function setSettingsLocked(locked) {
@@ -709,18 +709,18 @@
         setGmOpen(false);
         setNetworkOpen(false);
       }
-      settingsToggle.disabled = locked;
-      settingsReplayButton.disabled = locked;
-      statsButton.disabled = locked;
-      versionInfoButton.disabled = locked;
-      controlProfileNameInput.disabled = locked;
-      controlProfileSelect.disabled = locked || !controlProfiles.length;
-      controlProfileSaveButton.disabled = locked;
-      controlProfileApplyButton.disabled = locked || !selectedControlProfileId;
-      controlProfileDeleteButton.disabled = locked || !selectedControlProfileId;
-      computerDifficultyInput.disabled = locked;
-      playerCharacterInput.disabled = locked;
-      computerCharacterInput.disabled = locked;
+      Dom.settingsToggle.disabled = locked;
+      Dom.settingsReplayButton.disabled = locked;
+      Dom.statsButton.disabled = locked;
+      Dom.versionInfoButton.disabled = locked;
+      Dom.controlProfileNameInput.disabled = locked;
+      Dom.controlProfileSelect.disabled = locked || !controlProfiles.length;
+      Dom.controlProfileSaveButton.disabled = locked;
+      Dom.controlProfileApplyButton.disabled = locked || !selectedControlProfileId;
+      Dom.controlProfileDeleteButton.disabled = locked || !selectedControlProfileId;
+      Dom.computerDifficultyInput.disabled = locked;
+      Dom.playerCharacterInput.disabled = locked;
+      Dom.computerCharacterInput.disabled = locked;
       setGmSettingsLocked(locked);
       updateSettingsActionMode();
     }
@@ -780,23 +780,23 @@
     }
 
     function hexPath(x, y, size) {
-      ctx.beginPath();
+      Dom.ctx.beginPath();
       for (let i = 0; i < 6; i += 1) {
         const angle = Math.PI / 180 * (60 * i - 30);
         const px = x + size * Math.cos(angle);
         const py = y + size * Math.sin(angle);
-        if (i === 0) ctx.moveTo(px, py);
-        else ctx.lineTo(px, py);
+        if (i === 0) Dom.ctx.moveTo(px, py);
+        else Dom.ctx.lineTo(px, py);
       }
-      ctx.closePath();
+      Dom.ctx.closePath();
     }
 
     function resize() {
-      const rect = playArea.getBoundingClientRect();
+      const rect = Dom.playArea.getBoundingClientRect();
       const dpr = HexSnakePlatform.display.devicePixelRatio();
-      canvas.width = Math.floor(rect.width * dpr);
-      canvas.height = Math.floor(rect.height * dpr);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      Dom.canvas.width = Math.floor(rect.width * dpr);
+      Dom.canvas.height = Math.floor(rect.height * dpr);
+      Dom.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       HexSnakeState.game.center = { x: rect.width / 2, y: rect.height / 2 };
       const boardWidth = Math.sqrt(3) * (HexSnakeState.game.radius * 2 + 1);
       const boardHeight = HexSnakeState.game.radius * 3 + 2;
@@ -930,7 +930,7 @@
     }
 
     function currentDifficultyLabel() {
-      return computerDifficultyInput.selectedOptions[0]?.textContent?.trim() || HexSnakeState.game.computerDifficulty;
+      return Dom.computerDifficultyInput.selectedOptions[0]?.textContent?.trim() || HexSnakeState.game.computerDifficulty;
     }
 
     function buildResultShareData({ winnerOwner, plainResultText, scoreText, resultReason, endedInAutoMode }) {
@@ -985,7 +985,7 @@
         if (!canRestartAfterGameOver()) return false;
         returnToStartScreen();
       }
-      HexSnakeUI.showCharacterStage({ startLogoCharacters: true, overlay: true });
+      HexSnakeUI.showCharacterStage({ startLogoCharacters: true, "overlay": true });
       HexSnakeState.ui.startLogoCountdownPending = true;
       setSettingsLocked(true);
       setStatus("開局倒數中：3 秒後開始。");
@@ -1022,14 +1022,14 @@
       if (HexSnakeState.game.computerBattleMode || HexSnakeState.game.playerAutoMode) setRelayMode(HexSnakeState.game.relayModePreference, Boolean(options.resetRelayScore), false);
       if (!HexSnakeState.game.computerBattleMode && !HexSnakeState.game.playerAutoMode) setRelayMode(false, false, false);
       if (HexSnakeState.game.computerBattleMode || HexSnakeState.game.playerAutoMode) setComputerBattleSpeed(HexSnakeStorage.get("hexSnakeAutoBattleSpeed"), false);
-      setFoodCount(foodCountInput.value);
-      setComputerDifficulty(computerDifficultyInput.value);
-      setInitialSpeed(initialSpeedInput.value);
+      setFoodCount(Dom.foodCountInput.value);
+      setComputerDifficulty(Dom.computerDifficultyInput.value);
+      setInitialSpeed(Dom.initialSpeedInput.value);
       setGmMode(HexSnakeState.game.gmMode);
-      setInitialLength(initialLengthInput.value);
-      setInitialEnergy(initialEnergyInput.value);
-      setInitialBombs(initialBombsInput.value);
-      initialStockInputs.forEach(input => setInitialStock(input.dataset.initialStock, input.value));
+      setInitialLength(Dom.initialLengthInput.value);
+      setInitialEnergy(Dom.initialEnergyInput.value);
+      setInitialBombs(Dom.initialBombsInput.value);
+      Dom.initialStockInputs.forEach(input => setInitialStock(input.dataset.initialStock, input.value));
       saveGmSettings();
       resolveCharacterChoicesForStart();
       resetGame();
@@ -1039,8 +1039,8 @@
       HexSnakeState.game.running = true;
       setSettingsLocked(true);
       setStatus("對戰中：吃食物累積能量，集滿可獲得炸彈。");
-      overlay.classList.remove("show");
-      HexSnakeUI.showCharacterStage({ rebuild: false, overlay: false });
+      Dom.overlay.classList.remove("show");
+      HexSnakeUI.showCharacterStage({ rebuild: false, "overlay": false });
       updateAutoBattleControls();
       HexSnakeState.game.lastPlayerStep = performance.now();
       HexSnakeState.game.lastComputerStep = HexSnakeState.game.lastPlayerStep;
@@ -1069,13 +1069,13 @@
       updateSettingsActionMode();
       updateAutoBattleControls();
       resetGame();
-      overlayTitle.textContent = "準備開局";
-      overlayText.textContent = "重新選擇角色後按開始。";
-      startButton.textContent = "開始";
-      computerBattleButton.hidden = false;
-      replayArchiveButton.hidden = false;
+      Dom.overlayTitle.textContent = "準備開局";
+      Dom.overlayText.textContent = "重新選擇角色後按開始。";
+      Dom.startButton.textContent = "開始";
+      Dom.computerBattleButton.hidden = false;
+      Dom.replayArchiveButton.hidden = false;
       HexSnakeUI.renderIntroPortraits(false);
-      overlay.classList.add("show");
+      Dom.overlay.classList.add("show");
     }
 
     function openGameOverCharacterSelect(owner) {
@@ -1083,10 +1083,10 @@
       const nextOwner = owner === "computer" ? "computer" : "player";
       returnToStartScreen();
       HexSnakeState.ui.selectedPortraitOwner = nextOwner;
-      overlayTitle.textContent = "角色選擇";
-      overlayText.textContent = "選好角色後關閉選擇畫面，會回到開始畫面。";
+      Dom.overlayTitle.textContent = "角色選擇";
+      Dom.overlayText.textContent = "選好角色後關閉選擇畫面，會回到開始畫面。";
       HexSnakeUI.renderIntroPortraits(true);
-      overlay.classList.add("show");
+      Dom.overlay.classList.add("show");
     }
 
     function randomFoodType(preferredFoodId = null) {
@@ -1281,7 +1281,7 @@
       const computerSpeed = Math.round(computerSpeedValue * 10) / 10;
       Dom.playerSpeedEl.textContent = `${playerSpeed}x`;
       Dom.computerSpeedEl.textContent = `${computerSpeed}x`;
-      keyEls.forEach(el => el.classList.toggle("active", Number(el.dataset.dir) === HexSnakeState.game.nextDir));
+      Dom.keyEls.forEach(el => el.classList.toggle("active", Number(el.dataset.dir) === HexSnakeState.game.nextDir));
       updateStockHud("player", HexSnakeState.game.playerStock, HexSnakeState.game.playerAmmo, HexSnakeState.game.playerAmmoCharge);
       updateStockHud("computer", HexSnakeState.game.computerStock, HexSnakeState.game.computerAmmo, HexSnakeState.game.computerAmmoCharge);
       updateCooldownHud(now);
@@ -1307,14 +1307,14 @@
     }
 
     function renderAutoSpeedMenu() {
-      autoSpeedMenu.innerHTML = HexSnakeState.config.autoBattleSpeeds.map(speed => `
+      Dom.autoSpeedMenu.innerHTML = HexSnakeState.config.autoBattleSpeeds.map(speed => `
         <button class="${speed === HexSnakeState.game.computerBattleSpeed ? "is-selected" : ""}" type="button" data-auto-speed="${speed}">${autoBattleSpeedLabel(speed)}</button>
       `).join("");
     }
 
     function setAutoSpeedMenuOpen(open) {
-      autoSpeedMenu.hidden = !open;
-      autoBattleSpeedSelect.setAttribute("aria-expanded", open ? "true" : "false");
+      Dom.autoSpeedMenu.hidden = !open;
+      Dom.autoBattleSpeedSelect.setAttribute("aria-expanded", open ? "true" : "false");
       if (open) renderAutoSpeedMenu();
     }
 
@@ -1329,23 +1329,23 @@
     function renderReplaySpeedMenu() {
       const playback = HexSnakeReplay.playback;
       const selectedSpeed = playback?.speed ?? 1;
-      replaySpeedMenu.innerHTML = replaySpeedOptions().map(speed => `
+      Dom.replaySpeedMenu.innerHTML = replaySpeedOptions().map(speed => `
         <button class="${speed === selectedSpeed ? "is-selected" : ""}" type="button" data-replay-speed="${speed}">${replaySpeedLabel(speed)}</button>
       `).join("");
     }
 
     function setReplaySpeedMenuOpen(open) {
-      replaySpeedMenu.hidden = !open;
-      replaySpeedSelect.setAttribute("aria-expanded", open ? "true" : "false");
+      Dom.replaySpeedMenu.hidden = !open;
+      Dom.replaySpeedSelect.setAttribute("aria-expanded", open ? "true" : "false");
       if (open) renderReplaySpeedMenu();
     }
 
     function setComputerBattleSpeed(value, persist = true) {
       HexSnakeState.game.computerBattleSpeed = normalizeAutoBattleSpeed(value);
-      autoBattleSpeedSelect.textContent = autoBattleSpeedLabel(HexSnakeState.game.computerBattleSpeed);
-      autoBattleSpeedSelect.dataset.value = String(HexSnakeState.game.computerBattleSpeed);
-      autoBattleSpeedSelect.setAttribute("aria-valuenow", String(HexSnakeState.game.computerBattleSpeed));
-      autoBattleSpeedSelect.setAttribute("aria-valuetext", autoBattleSpeedLabel(HexSnakeState.game.computerBattleSpeed));
+      Dom.autoBattleSpeedSelect.textContent = autoBattleSpeedLabel(HexSnakeState.game.computerBattleSpeed);
+      Dom.autoBattleSpeedSelect.dataset.value = String(HexSnakeState.game.computerBattleSpeed);
+      Dom.autoBattleSpeedSelect.setAttribute("aria-valuenow", String(HexSnakeState.game.computerBattleSpeed));
+      Dom.autoBattleSpeedSelect.setAttribute("aria-valuetext", autoBattleSpeedLabel(HexSnakeState.game.computerBattleSpeed));
       renderAutoSpeedMenu();
       if (persist) {
         HexSnakeStorage.set("hexSnakeAutoBattleSpeed", String(HexSnakeState.game.computerBattleSpeed));
@@ -1393,7 +1393,7 @@
       if (persist) HexSnakeState.game.relayModePreference = Boolean(enabled);
       const requestedRelayMode = persist ? HexSnakeState.game.relayModePreference : Boolean(enabled);
       HexSnakeState.game.relayMode = requestedRelayMode && isRelayModeAvailable();
-      relayModeInput.checked = HexSnakeState.game.relayMode;
+      Dom.relayModeInput.checked = HexSnakeState.game.relayMode;
       if (persist) HexSnakeStorage.set("hexSnakeRelayMode", HexSnakeState.game.relayModePreference ? "1" : "0");
       if (resetScore) resetRelayScore();
       if (!HexSnakeState.game.relayMode) clearRelayRestartTimer();
@@ -1402,22 +1402,22 @@
 
     function updateRelayControls() {
       const visible = !HexSnakeReplay.isPlaybackMode() && (HexSnakeState.game.relayMode || (HexSnakeState.game.running && !HexSnakeState.game.gameOver && isRelayModeAvailable()));
-      relayPanel.hidden = !visible;
-      relayModeInput.checked = HexSnakeState.game.relayMode;
-      relayScore.innerHTML = `<span class="owner-name is-p1">P1</span> ${HexSnakeState.game.relayPlayerWins} 勝 / <span class="owner-name is-p2">P2</span> ${HexSnakeState.game.relayComputerWins} 勝 / 平手 ${HexSnakeState.game.relayDraws}`;
+      Dom.relayPanel.hidden = !visible;
+      Dom.relayModeInput.checked = HexSnakeState.game.relayMode;
+      Dom.relayScore.innerHTML = `<span class="owner-name is-p1">P1</span> ${HexSnakeState.game.relayPlayerWins} 勝 / <span class="owner-name is-p2">P2</span> ${HexSnakeState.game.relayComputerWins} 勝 / 平手 ${HexSnakeState.game.relayDraws}`;
     }
 
     function updateAutoBattleControls() {
       const visible = isPlayerAutoControlActive() && HexSnakeState.game.running && !HexSnakeState.game.gameOver && !HexSnakeReplay.isPlaybackMode();
-      autoBattlePanel.hidden = !visible;
-      autoBattleSpeedSelect.textContent = autoBattleSpeedLabel(HexSnakeState.game.computerBattleSpeed);
-      autoBattleSpeedSelect.dataset.value = String(HexSnakeState.game.computerBattleSpeed);
-      autoBattleSpeedSelect.setAttribute("aria-valuenow", String(HexSnakeState.game.computerBattleSpeed));
-      autoBattleSpeedSelect.setAttribute("aria-valuetext", autoBattleSpeedLabel(HexSnakeState.game.computerBattleSpeed));
+      Dom.autoBattlePanel.hidden = !visible;
+      Dom.autoBattleSpeedSelect.textContent = autoBattleSpeedLabel(HexSnakeState.game.computerBattleSpeed);
+      Dom.autoBattleSpeedSelect.dataset.value = String(HexSnakeState.game.computerBattleSpeed);
+      Dom.autoBattleSpeedSelect.setAttribute("aria-valuenow", String(HexSnakeState.game.computerBattleSpeed));
+      Dom.autoBattleSpeedSelect.setAttribute("aria-valuetext", autoBattleSpeedLabel(HexSnakeState.game.computerBattleSpeed));
       if (!visible) setAutoSpeedMenuOpen(false);
-      autoPauseButton.textContent = HexSnakeState.game.paused ? "▶" : "⏸";
-      autoPauseButton.setAttribute("aria-label", HexSnakeState.game.paused ? "播放" : "暫停");
-      autoPauseButton.title = HexSnakeState.game.paused ? "播放" : "暫停";
+      Dom.autoPauseButton.textContent = HexSnakeState.game.paused ? "▶" : "⏸";
+      Dom.autoPauseButton.setAttribute("aria-label", HexSnakeState.game.paused ? "播放" : "暫停");
+      Dom.autoPauseButton.title = HexSnakeState.game.paused ? "播放" : "暫停";
       updateRelayControls();
       updateSkillPrepVisibility();
     }
@@ -1581,8 +1581,8 @@
       HexSnakeState.game.computerBattleManualOverride = false;
       HexSnakeState.game.relayMode = false;
       setSettingsLocked(!final);
-      overlay.classList.remove("show");
-      HexSnakeUI.showCharacterStage({ rebuild: false, overlay: false });
+      Dom.overlay.classList.remove("show");
+      HexSnakeUI.showCharacterStage({ rebuild: false, "overlay": false });
       HexSnakeReplay.applySnapshot(message.snapshot, {
         playerCharacterId: message.snapshot.playerCharacterId,
         computerCharacterId: message.snapshot.computerCharacterId,
@@ -1707,7 +1707,7 @@
     }
 
     function setDirectionButtonHighlight(direction = null) {
-      hexDirButtons.forEach(button => button.classList.toggle("active", Number(button.dataset.dir) === direction));
+      Dom.hexDirButtons.forEach(button => button.classList.toggle("active", Number(button.dataset.dir) === direction));
     }
 
     function setDirection(newDir, options = {}) {
@@ -2782,7 +2782,7 @@
       HexSnakeUI.hideCharacterStage();
       HexSnakeUI.clearLogoTransition();
       HexSnakeUI.renderWinnerPortrait(HexSnakeState.game.gameOverResultOwner, HexSnakeState.game.gameOverPlayerLost, HexSnakeState.game.gameOverComputerLost);
-      overlay.classList.add("show");
+      Dom.overlay.classList.add("show");
       if (HexSnakeState.game.gameOverRelayStartOptions) {
         const nextOptions = HexSnakeState.game.gameOverRelayStartOptions;
         HexSnakeState.game.gameOverRelayStartOptions = null;
@@ -3023,7 +3023,7 @@
       HexSnakeState.game.playerAutoMode = false;
       HexSnakeState.game.computerBattleManualOverride = false;
       HexSnakeState.game.gameOver = true;
-      if (shouldUseGameOverLogo) HexSnakeUI.showCharacterStage({ rebuild: false, overlay: true });
+      if (shouldUseGameOverLogo) HexSnakeUI.showCharacterStage({ rebuild: false, "overlay": true });
       else HexSnakeUI.hideCharacterStage();
       HexSnakeState.game.gameOverContinuousVisualDeadlineAt = gameOverAt + HexSnakeState.config.gameOverContinuousVisualMaxWaitMs;
       HexSnakeState.game.gameOverLogoTransitionEndsAt = shouldUseGameOverLogo ? gameOverAt + HexSnakeState.ui.logoTransitionDurationMs : 0;
@@ -3080,7 +3080,7 @@
         endedInAutoMode
       }));
       setStatus(`對戰結束：${plainResultText}`);
-      overlayTitle.innerHTML = resultTitleHtml;
+      Dom.overlayTitle.innerHTML = resultTitleHtml;
       HexSnakeAudio.playCharacter("player", winnerOwner === "player" ? "victory" : "defeat", { gainScale: winnerOwner ? 1 : 0.82 });
       HexSnakeAudio.playCharacter("computer", winnerOwner === "computer" ? "victory" : "defeat", { delay: winnerOwner ? 0.08 : 0.12, gainScale: winnerOwner ? 1 : 0.82 });
       HexSnakeState.game.gameOverResultOwner = winnerOwner;
@@ -3094,13 +3094,13 @@
         else HexSnakeState.game.relayDraws += 1;
         updateRelayControls();
       }
-      startButton.textContent = "重新開始";
+      Dom.startButton.textContent = "重新開始";
       HexSnakeState.game.gameOverSettlementPending = true;
       HexSnakeState.game.gameOverRelayStartOptions = shouldContinueRelay ? nextRelayStartOptions : null;
-      overlayText.textContent = shouldContinueRelay
+      Dom.overlayText.textContent = shouldContinueRelay
         ? `${scoreText}。${resultReason} 接力賽：P1 ${HexSnakeState.game.relayPlayerWins} 勝，P2 ${HexSnakeState.game.relayComputerWins} 勝，平手 ${HexSnakeState.game.relayDraws}。`
         : `${scoreText}。${resultReason}`;
-      overlayText.hidden = true;
+      Dom.overlayText.hidden = true;
       if (shouldUseGameOverLogo) {
         const winnerLabel = winnerOwner === "player" ? "P1" : winnerOwner === "computer" ? "P2" : null;
         const winnerCharacter = winnerOwner ? characterFor(winnerOwner) : null;
@@ -3206,7 +3206,7 @@
     }
 
     function controlPadDirectionFromEvent(event) {
-      const rect = joyZone.contains(event.target) ? joyZone.getBoundingClientRect() : controlRow.getBoundingClientRect();
+      const rect = Dom.joyZone.contains(event.target) ? Dom.joyZone.getBoundingClientRect() : Dom.controlRow.getBoundingClientRect();
       return pointerToDirection(event, rect);
     }
 
@@ -3232,7 +3232,7 @@
       HexSnakeState.game.targetCell = directionalAttackTarget(HexSnakeState.game.controlAttackPointer.direction);
       HexSnakeState.game.targetActive = true;
       try {
-        controlRow.setPointerCapture(event.pointerId);
+        Dom.controlRow.setPointerCapture(event.pointerId);
       } catch (error) {
         // Window-level pointer listeners still finish the attack gesture.
       }
@@ -3257,7 +3257,7 @@
       event.preventDefault();
       const direction = HexSnakeState.game.controlAttackPointer.direction;
       HexSnakeState.game.controlAttackPointer = null;
-      if (controlRow.hasPointerCapture?.(event.pointerId)) controlRow.releasePointerCapture(event.pointerId);
+      if (Dom.controlRow.hasPointerCapture?.(event.pointerId)) Dom.controlRow.releasePointerCapture(event.pointerId);
       triggerTouchFeedback(event, 6);
       launchPlayerAttackDirection(direction, "big");
     }
@@ -3266,20 +3266,20 @@
       if (!HexSnakeState.game.controlAttackPointer || event.pointerId !== HexSnakeState.game.controlAttackPointer.pointerId) return;
       HexSnakeState.game.controlAttackPointer = null;
       HexSnakeState.game.targetActive = false;
-      if (controlRow.hasPointerCapture?.(event.pointerId)) controlRow.releasePointerCapture(event.pointerId);
+      if (Dom.controlRow.hasPointerCapture?.(event.pointerId)) Dom.controlRow.releasePointerCapture(event.pointerId);
       requestPreviewDraw();
     }
 
     function moveStick(event) {
       clearMoveStickRebound();
-      const rect = joyZone.getBoundingClientRect();
+      const rect = Dom.joyZone.getBoundingClientRect();
       const cx = rect.left + rect.width / 2;
       const cy = rect.top + rect.height / 2;
       const dx = event.clientX - cx;
       const dy = event.clientY - cy;
       const distance = Math.min(54, Math.hypot(dx, dy));
       const angle = Math.atan2(dy, dx);
-      stick.style.transform = `translate(${Math.cos(angle) * distance}px, ${Math.sin(angle) * distance}px)`;
+      Dom.stick.style.transform = `translate(${Math.cos(angle) * distance}px, ${Math.sin(angle) * distance}px)`;
       const newDir = pointerToDirection(event, rect);
       if (newDir !== null) {
         HexSnakeState.game.movePointerMoved = true;
@@ -3290,12 +3290,12 @@
     function setMoveStickLocked(locked) {
       HexSnakeState.game.moveStickLocked = locked;
       HexSnakeState.game.moveStickEngaged = locked;
-      joyZone.querySelector(".joystick").classList.toggle("locked", locked);
+      Dom.joyZone.querySelector(".joystick").classList.toggle("locked", locked);
       if (!locked) {
         HexSnakeState.game.movePointerId = null;
         HexSnakeState.game.moveStickEngaged = false;
         clearMoveStickRebound();
-        stick.style.transform = "translate(0, 0)";
+        Dom.stick.style.transform = "translate(0, 0)";
       }
     }
 
@@ -3310,7 +3310,7 @@
         clearTimeout(HexSnakeState.game.moveStickReboundTimer);
         HexSnakeState.game.moveStickReboundTimer = null;
       }
-      stick.classList.remove("is-rebounding");
+      Dom.stick.classList.remove("is-rebounding");
     }
 
     function clearAttackPointerLongPressTimer() {
@@ -3320,7 +3320,7 @@
     }
 
     function pointerNearMoveCenter(event) {
-      const rect = joyZone.getBoundingClientRect();
+      const rect = Dom.joyZone.getBoundingClientRect();
       const cx = rect.left + rect.width / 2;
       const cy = rect.top + rect.height / 2;
       return Math.hypot(event.clientX - cx, event.clientY - cy) < Math.min(46, rect.width * 0.36);
@@ -3330,7 +3330,7 @@
       clearMoveStickHoldTimer();
       if (HexSnakeState.game.movePointerId !== event.pointerId || HexSnakeState.game.moveStickEngaged) return;
       HexSnakeState.game.moveStickEngaged = true;
-      joyZone.querySelector(".joystick").classList.add("locked");
+      Dom.joyZone.querySelector(".joystick").classList.add("locked");
       moveStick(event);
     }
 
@@ -3339,14 +3339,14 @@
       if (HexSnakeState.game.moveStickLocked) return;
       HexSnakeState.game.movePointerId = null;
       HexSnakeState.game.moveStickEngaged = false;
-      joyZone.querySelector(".joystick").classList.remove("locked");
+      Dom.joyZone.querySelector(".joystick").classList.remove("locked");
       setDirectionButtonHighlight(null);
-      stick.classList.add("is-rebounding");
-      stick.style.transform = "translate(0, 0)";
+      Dom.stick.classList.add("is-rebounding");
+      Dom.stick.style.transform = "translate(0, 0)";
       if (HexSnakeState.game.moveStickReboundTimer) clearTimeout(HexSnakeState.game.moveStickReboundTimer);
       HexSnakeState.game.moveStickReboundTimer = setTimeout(() => {
         HexSnakeState.game.moveStickReboundTimer = null;
-        stick.classList.remove("is-rebounding");
+        Dom.stick.classList.remove("is-rebounding");
       }, 180);
     }
 
@@ -3764,7 +3764,7 @@
     }
 
     function performModuleAttack() {
-      const module = characterStage.querySelector('[data-module="player"]');
+      const module = Dom.characterStage.querySelector('[data-module="player"]');
       if (module) module.classList.remove("is-charging");
       launchPlayerAttack(HexSnakeState.game.targetCell || HexSnakeState.game.snake[0]);
     }
@@ -3772,7 +3772,7 @@
     function clearModuleHold() {
       clearTimeout(HexSnakeState.game.moduleHoldTimer);
       HexSnakeState.game.moduleHoldTimer = null;
-      const module = characterStage.querySelector('[data-module="player"]');
+      const module = Dom.characterStage.querySelector('[data-module="player"]');
       if (module) module.classList.remove("is-charging");
     }
 
@@ -3784,11 +3784,11 @@
       }
       HexSnakeState.game.paused = !HexSnakeState.game.paused;
       setStatus(HexSnakeState.game.paused ? "已暫停" : "對戰中：吃食物累積能量，集滿可獲得炸彈。");
-      overlayTitle.textContent = "暫停";
-      overlayText.textContent = "按開始或快捷鍵繼續。";
-      startButton.textContent = "繼續";
+      Dom.overlayTitle.textContent = "暫停";
+      Dom.overlayText.textContent = "按開始或快捷鍵繼續。";
+      Dom.startButton.textContent = "繼續";
       HexSnakeUI.setOverlayChromeVisible(true);
-      overlay.classList.toggle("show", HexSnakeState.game.paused);
+      Dom.overlay.classList.toggle("show", HexSnakeState.game.paused);
       if (!HexSnakeState.game.paused) {
         HexSnakeState.game.lastPlayerStep = performance.now();
         HexSnakeState.game.lastComputerStep = HexSnakeState.game.lastPlayerStep;
@@ -3813,13 +3813,13 @@
     }
 
     function boardCellFromPointer(event) {
-      const rect = canvas.getBoundingClientRect();
+      const rect = Dom.canvas.getBoundingClientRect();
       return nearestInsideCell(pixelToAxial(event.clientX - rect.left, event.clientY - rect.top));
     }
 
     function beginBoardAttackPointer(event) {
       if (HexSnakeReplay.isPlaybackMode()) return;
-      if (event.target !== canvas) return;
+      if (event.target !== Dom.canvas) return;
       event.preventDefault();
       const cell = boardCellFromPointer(event);
       HexSnakeState.game.attackPointer = {
@@ -3842,7 +3842,7 @@
         previewDirectAttack("big", HexSnakeState.game.attackPointer);
       }, 460);
       try {
-        canvas.setPointerCapture(event.pointerId);
+        Dom.canvas.setPointerCapture(event.pointerId);
       } catch (error) {
         // Pointer capture is a convenience; window-level listeners still finish the drag.
       }
@@ -3873,7 +3873,7 @@
       pointer.currentCell = boardCellFromPointer(event);
       HexSnakeState.game.attackPointer = null;
       clearAttackPointerLongPressTimer();
-      if (canvas.hasPointerCapture?.(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
+      if (Dom.canvas.hasPointerCapture?.(event.pointerId)) Dom.canvas.releasePointerCapture(event.pointerId);
       const heldLongEnough = performance.now() - pointer.startedAt >= 460;
       const profile = pointer.moved || pointer.longPressed || heldLongEnough ? "big" : "small";
       launchDirectPlayerAttack(profile, pointer);
@@ -3884,13 +3884,13 @@
       HexSnakeState.game.attackPointer = null;
       clearAttackPointerLongPressTimer();
       HexSnakeState.game.targetActive = false;
-      if (canvas.hasPointerCapture?.(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
+      if (Dom.canvas.hasPointerCapture?.(event.pointerId)) Dom.canvas.releasePointerCapture(event.pointerId);
       requestPreviewDraw();
     }
 
     function currentSettingsPage() {
-      if (!settingsContent.hidden) return "settings";
-      if (!gmContent.hidden) return "gm";
+      if (!Dom.settingsContent.hidden) return "settings";
+      if (!Dom.gmContent.hidden) return "gm";
       return "";
     }
 
@@ -3904,7 +3904,7 @@
     }
 
     function updateSettingsPageBars(activePage = currentSettingsPage()) {
-      settingsPageButtons.forEach(button => {
+      Dom.settingsPageButtons.forEach(button => {
         const active = button.dataset.settingsPageButton === activePage;
         button.classList.toggle("is-active", active);
         button.setAttribute("aria-selected", String(active));
@@ -3921,39 +3921,39 @@
     }
 
     function updateSettingsPanelState() {
-      const settingsPagesOpen = !settingsContent.hidden || !gmContent.hidden;
-      settingsToggle.setAttribute("aria-expanded", String(settingsPagesOpen));
-      networkToggle.setAttribute("aria-expanded", String(!networkContent.hidden));
-      settingsToggle.closest(".settings-section").classList.toggle("open", settingsPagesOpen || !networkContent.hidden);
+      const settingsPagesOpen = !Dom.settingsContent.hidden || !Dom.gmContent.hidden;
+      Dom.settingsToggle.setAttribute("aria-expanded", String(settingsPagesOpen));
+      Dom.networkToggle.setAttribute("aria-expanded", String(!Dom.networkContent.hidden));
+      Dom.settingsToggle.closest(".settings-section").classList.toggle("open", settingsPagesOpen || !Dom.networkContent.hidden);
       updateSettingsPageBars();
       if (!HexSnakeState.game.running || HexSnakeState.game.gameOver || HexSnakeReplay.isPlaybackMode()) {
-        networkToggle.classList.toggle("is-active", !networkContent.hidden);
+        Dom.networkToggle.classList.toggle("is-active", !Dom.networkContent.hidden);
       }
     }
 
     function closeRulesPanelForOverlay() {
-      if (rulesModal.hidden) return;
-      rulesModal.hidden = true;
-      rulesButton.setAttribute("aria-expanded", "false");
+      if (Dom.rulesModal.hidden) return;
+      Dom.rulesModal.hidden = true;
+      Dom.rulesButton.setAttribute("aria-expanded", "false");
     }
 
     function setSettingsOpen(open, options = {}) {
       const previousPage = currentSettingsPage();
-      settingsContent.hidden = !open;
+      Dom.settingsContent.hidden = !open;
       if (!open) setPendingDirectionKeybind(null);
       if (open) {
         closeRulesPanelForOverlay();
-        gmContent.hidden = true;
-        networkContent.hidden = true;
-        setSettingsPageTransition(settingsContent, options.direction || (previousPage === "gm" ? "prev" : ""));
-        if (options.focus !== false) settingsCloseButton.focus();
+        Dom.gmContent.hidden = true;
+        Dom.networkContent.hidden = true;
+        setSettingsPageTransition(Dom.settingsContent, options.direction || (previousPage === "gm" ? "prev" : ""));
+        if (options.focus !== false) Dom.settingsCloseButton.focus();
       }
       updateSettingsPanelState();
     }
 
     function toggleSettings() {
-      if (settingsToggle.disabled || HexSnakeState.game.running) return;
-      const settingsPagesOpen = !settingsContent.hidden || !gmContent.hidden;
+      if (Dom.settingsToggle.disabled || HexSnakeState.game.running) return;
+      const settingsPagesOpen = !Dom.settingsContent.hidden || !Dom.gmContent.hidden;
       if (settingsPagesOpen) {
         setSettingsOpen(false);
         setGmOpen(false);
@@ -3964,28 +3964,28 @@
 
     function setGmOpen(open, options = {}) {
       const previousPage = currentSettingsPage();
-      gmContent.hidden = !open;
+      Dom.gmContent.hidden = !open;
       if (open && !HexSnakeState.game.running) {
         closeRulesPanelForOverlay();
-        settingsContent.hidden = true;
-        networkContent.hidden = true;
+        Dom.settingsContent.hidden = true;
+        Dom.networkContent.hidden = true;
         setPendingDirectionKeybind(null);
         setGmMode(true);
         saveGmSettings();
-        setSettingsPageTransition(gmContent, options.direction || (previousPage === "settings" ? "next" : ""));
-        if (options.focus !== false) gmCloseButton.focus();
+        setSettingsPageTransition(Dom.gmContent, options.direction || (previousPage === "settings" ? "next" : ""));
+        if (options.focus !== false) Dom.gmCloseButton.focus();
       }
       updateSettingsPanelState();
     }
 
     function setNetworkOpen(open) {
-      networkContent.hidden = !open;
+      Dom.networkContent.hidden = !open;
       if (open) {
         closeRulesPanelForOverlay();
-        settingsContent.hidden = true;
-        gmContent.hidden = true;
+        Dom.settingsContent.hidden = true;
+        Dom.gmContent.hidden = true;
         setPendingDirectionKeybind(null);
-        networkCloseButton.focus();
+        Dom.networkCloseButton.focus();
       }
       updateSettingsPanelState();
     }
@@ -3996,8 +3996,8 @@
         else setPlayerAutoMode(!HexSnakeState.game.playerAutoMode);
         return;
       }
-      if (networkToggle.disabled || HexSnakeState.game.running) return;
-      setNetworkOpen(networkToggle.getAttribute("aria-expanded") !== "true");
+      if (Dom.networkToggle.disabled || HexSnakeState.game.running) return;
+      setNetworkOpen(Dom.networkToggle.getAttribute("aria-expanded") !== "true");
     }
 
     let settingsPageSwipe = null;
@@ -4071,7 +4071,7 @@
     }
 
     function handlePlatformBackButton() {
-      if (!rulesModal.hidden) {
+      if (!Dom.rulesModal.hidden) {
         HexSnakeUI.closeRulesModal();
         return true;
       }
@@ -4079,23 +4079,23 @@
         HexSnakeUI.finishTutorial(true);
         return true;
       }
-      if (!replayModal.hidden) {
+      if (!Dom.replayModal.hidden) {
         HexSnakeReplay.closeModal();
         return true;
       }
-      if (!statsModal.hidden) {
+      if (!Dom.statsModal.hidden) {
         HexSnakeStats.closeModal();
         return true;
       }
-      if (!versionModal.hidden) {
+      if (!Dom.versionModal.hidden) {
         HexSnakeAbout.closeModal();
         return true;
       }
-      if (!portraitLightbox.hidden) {
+      if (!Dom.portraitLightbox.hidden) {
         HexSnakeUI.closePortraitLightbox();
         return true;
       }
-      if (!settingsContent.hidden || !gmContent.hidden || !networkContent.hidden) {
+      if (!Dom.settingsContent.hidden || !Dom.gmContent.hidden || !Dom.networkContent.hidden) {
         setSettingsOpen(false);
         setGmOpen(false);
         setNetworkOpen(false);
@@ -4121,69 +4121,69 @@
     document.addEventListener("pointerdown", HexSnakeAudio.unlock, { once: true, passive: true });
     document.addEventListener("keydown", HexSnakeAudio.unlock, { once: true });
 
-    settingsToggle.addEventListener("click", toggleSettings);
-    networkToggle.addEventListener("click", toggleNetworkSettings);
-    settingsCloseButton.addEventListener("click", () => setSettingsOpen(false));
-    gmCloseButton.addEventListener("click", () => setGmOpen(false));
-    networkCloseButton.addEventListener("click", () => setNetworkOpen(false));
-    settingsPageButtons.forEach(button => {
+    Dom.settingsToggle.addEventListener("click", toggleSettings);
+    Dom.networkToggle.addEventListener("click", toggleNetworkSettings);
+    Dom.settingsCloseButton.addEventListener("click", () => setSettingsOpen(false));
+    Dom.gmCloseButton.addEventListener("click", () => setGmOpen(false));
+    Dom.networkCloseButton.addEventListener("click", () => setNetworkOpen(false));
+    Dom.settingsPageButtons.forEach(button => {
       button.addEventListener("click", () => openSettingsPage(button.dataset.settingsPageButton));
     });
 
-    settingsToggle.addEventListener("pointerdown", event => {
+    Dom.settingsToggle.addEventListener("pointerdown", event => {
       event.stopPropagation();
     });
 
-    networkToggle.addEventListener("pointerdown", event => {
+    Dom.networkToggle.addEventListener("pointerdown", event => {
       event.stopPropagation();
     });
 
-    settingsContent.addEventListener("pointerdown", event => {
-      if (event.target === settingsContent) {
+    Dom.settingsContent.addEventListener("pointerdown", event => {
+      if (event.target === Dom.settingsContent) {
         setSettingsOpen(false);
         return;
       }
       if (isSettingsInteractiveTarget(event.target)) return;
       beginSettingsPageSwipe(event, "settings");
     }, { capture: true });
-    settingsContent.addEventListener("pointermove", moveSettingsPageSwipe, { capture: true, passive: false });
-    settingsContent.addEventListener("pointerup", finishSettingsPageSwipe, { capture: true });
-    settingsContent.addEventListener("pointercancel", cancelSettingsPageSwipe, { capture: true });
-    settingsContent.addEventListener("click", suppressSettingsPageClickAfterDrag, { capture: true });
+    Dom.settingsContent.addEventListener("pointermove", moveSettingsPageSwipe, { capture: true, passive: false });
+    Dom.settingsContent.addEventListener("pointerup", finishSettingsPageSwipe, { capture: true });
+    Dom.settingsContent.addEventListener("pointercancel", cancelSettingsPageSwipe, { capture: true });
+    Dom.settingsContent.addEventListener("click", suppressSettingsPageClickAfterDrag, { capture: true });
 
-    gmContent.addEventListener("pointerdown", event => {
-      if (event.target === gmContent) {
+    Dom.gmContent.addEventListener("pointerdown", event => {
+      if (event.target === Dom.gmContent) {
         setGmOpen(false);
         return;
       }
       if (isSettingsInteractiveTarget(event.target)) return;
       beginSettingsPageSwipe(event, "gm");
     }, { capture: true });
-    gmContent.addEventListener("pointermove", moveSettingsPageSwipe, { capture: true, passive: false });
-    gmContent.addEventListener("pointerup", finishSettingsPageSwipe, { capture: true });
-    gmContent.addEventListener("pointercancel", cancelSettingsPageSwipe, { capture: true });
-    gmContent.addEventListener("click", suppressSettingsPageClickAfterDrag, { capture: true });
+    Dom.gmContent.addEventListener("pointermove", moveSettingsPageSwipe, { capture: true, passive: false });
+    Dom.gmContent.addEventListener("pointerup", finishSettingsPageSwipe, { capture: true });
+    Dom.gmContent.addEventListener("pointercancel", cancelSettingsPageSwipe, { capture: true });
+    Dom.gmContent.addEventListener("click", suppressSettingsPageClickAfterDrag, { capture: true });
 
-    networkContent.addEventListener("pointerdown", event => {
-      if (event.target === networkContent) {
+    Dom.networkContent.addEventListener("pointerdown", event => {
+      if (event.target === Dom.networkContent) {
         setNetworkOpen(false);
         return;
       }
       event.stopPropagation();
     });
 
-    characterStage.addEventListener("pointerdown", event => {
+    Dom.characterStage.addEventListener("pointerdown", event => {
       if (HexSnakeReplay.isPlaybackMode()) return;
       const module = event.target.closest('[data-module="player"]');
       if (!module) return;
       event.preventDefault();
     });
 
-    characterStage.addEventListener("pointerup", clearModuleHold);
-    characterStage.addEventListener("pointercancel", clearModuleHold);
-    characterStage.addEventListener("pointerleave", clearModuleHold);
+    Dom.characterStage.addEventListener("pointerup", clearModuleHold);
+    Dom.characterStage.addEventListener("pointercancel", clearModuleHold);
+    Dom.characterStage.addEventListener("pointerleave", clearModuleHold);
 
-    winnerPortrait.addEventListener("pointerdown", event => {
+    Dom.winnerPortrait.addEventListener("pointerdown", event => {
       const swipeZone = event.target.closest("[data-portrait-swipe-owner]");
       if (swipeZone && (event.target.closest("[data-portrait-select]") || event.target.closest(".intro-avatar-gate"))) {
         HexSnakeState.ui.portraitSwipeStartX = event.clientX;
@@ -4199,7 +4199,7 @@
       }
     });
 
-    winnerPortrait.addEventListener("click", event => {
+    Dom.winnerPortrait.addEventListener("click", event => {
       if (HexSnakeState.ui.portraitIntroDidSwipe) {
         HexSnakeState.ui.portraitIntroDidSwipe = false;
         return;
@@ -4232,13 +4232,13 @@
       const introButton = event.target.closest("[data-open-intro]");
       if (!introButton) return;
       HexSnakeState.ui.selectedPortraitOwner = introButton.dataset.openIntro === "computer" ? "computer" : "player";
-      overlayTitle.textContent = "角色選擇";
-      overlayText.textContent = "點擊 P1 或 P2 立繪選擇要調整的角色，使用左右箭頭切換。";
-      startButton.textContent = "開始";
+      Dom.overlayTitle.textContent = "角色選擇";
+      Dom.overlayText.textContent = "點擊 P1 或 P2 立繪選擇要調整的角色，使用左右箭頭切換。";
+      Dom.startButton.textContent = "開始";
       HexSnakeUI.renderIntroPortraits(true);
     });
 
-    winnerPortrait.addEventListener("pointerup", event => {
+    Dom.winnerPortrait.addEventListener("pointerup", event => {
       if (HexSnakeState.ui.portraitSwipeStartX !== null) {
         const deltaX = event.clientX - HexSnakeState.ui.portraitSwipeStartX;
         const deltaY = event.clientY - HexSnakeState.ui.portraitSwipeStartY;
@@ -4284,7 +4284,7 @@
       }
     });
 
-    winnerPortrait.addEventListener("pointercancel", () => {
+    Dom.winnerPortrait.addEventListener("pointercancel", () => {
       HexSnakeState.ui.portraitSwipeStartX = null;
       HexSnakeState.ui.portraitSwipeStartY = null;
       HexSnakeState.ui.portraitSwipeOwner = null;
@@ -4292,30 +4292,30 @@
       HexSnakeState.ui.portraitInfoSwipeStartY = null;
     });
 
-    portraitLightboxClose.addEventListener("click", HexSnakeUI.closePortraitLightbox);
+    Dom.portraitLightboxClose.addEventListener("click", HexSnakeUI.closePortraitLightbox);
 
-    portraitLightboxShiftButtons.forEach(button => {
+    Dom.portraitLightboxShiftButtons.forEach(button => {
       button.addEventListener("click", event => {
         event.stopPropagation();
         HexSnakeUI.shiftPortraitLightbox(Number(button.dataset.portraitLightboxShift));
       });
     });
 
-    portraitLightboxVariantButtons.forEach(button => {
+    Dom.portraitLightboxVariantButtons.forEach(button => {
       button.addEventListener("click", event => {
         event.stopPropagation();
         HexSnakeUI.shiftPortraitVariantMode(button.dataset.portraitLightboxDirection === "up" ? -1 : 1);
       });
     });
 
-    portraitLightbox.addEventListener("pointerdown", event => {
+    Dom.portraitLightbox.addEventListener("pointerdown", event => {
       if (event.target.closest("button")) return;
       HexSnakeState.ui.portraitSwipeStartX = event.clientX;
       HexSnakeState.ui.portraitSwipeStartY = event.clientY;
       HexSnakeState.ui.portraitLightboxDidSwipe = false;
     });
 
-    portraitLightbox.addEventListener("pointerup", event => {
+    Dom.portraitLightbox.addEventListener("pointerup", event => {
       if (HexSnakeState.ui.portraitSwipeStartX === null) return;
       const deltaX = event.clientX - HexSnakeState.ui.portraitSwipeStartX;
       const deltaY = event.clientY - HexSnakeState.ui.portraitSwipeStartY;
@@ -4331,97 +4331,97 @@
       HexSnakeUI.shiftPortraitLightbox(deltaX < 0 ? 1 : -1);
     });
 
-    portraitLightbox.addEventListener("pointercancel", () => {
+    Dom.portraitLightbox.addEventListener("pointercancel", () => {
       HexSnakeState.ui.portraitSwipeStartX = null;
       HexSnakeState.ui.portraitSwipeStartY = null;
     });
 
-    portraitLightbox.addEventListener("click", event => {
+    Dom.portraitLightbox.addEventListener("click", event => {
       if (HexSnakeState.ui.portraitLightboxDidSwipe) {
         HexSnakeState.ui.portraitLightboxDidSwipe = false;
         return;
       }
-      if (event.target === portraitLightbox) HexSnakeUI.closePortraitLightbox();
+      if (event.target === Dom.portraitLightbox) HexSnakeUI.closePortraitLightbox();
     });
 
-    gridSizeInput.addEventListener("change", () => {
+    Dom.gridSizeInput.addEventListener("change", () => {
       if (HexSnakeState.game.running) return;
-      setGridSize(gridSizeInput.value);
+      setGridSize(Dom.gridSizeInput.value);
       applyGmSettingsChanged();
       cancelAnimationFrame(HexSnakeState.game.rafId);
       resetGame();
       resize();
-      overlayTitle.textContent = "棋盤已更新";
-      overlayText.textContent = `棋盤半徑已設為 ${HexSnakeState.game.gridSize}。開始後設定會鎖定到下一局。`;
-      startButton.textContent = "開始";
+      Dom.overlayTitle.textContent = "棋盤已更新";
+      Dom.overlayText.textContent = `棋盤半徑已設為 ${HexSnakeState.game.gridSize}。開始後設定會鎖定到下一局。`;
+      Dom.startButton.textContent = "開始";
       HexSnakeUI.renderIntroPortraits(true);
-      overlay.classList.add("show");
+      Dom.overlay.classList.add("show");
     });
 
-    foodCountInput.addEventListener("change", () => {
+    Dom.foodCountInput.addEventListener("change", () => {
       if (HexSnakeState.game.running) return;
-      setFoodCount(foodCountInput.value);
+      setFoodCount(Dom.foodCountInput.value);
       applyGmSettingsChanged();
       resetGame();
       resize();
-      overlayTitle.textContent = "食物數量已更新";
-      overlayText.textContent = `場上會維持 ${HexSnakeState.game.foodCount} 個蛋白、脂肪、纖維、碳水隨機食物。`;
-      startButton.textContent = "開始";
+      Dom.overlayTitle.textContent = "食物數量已更新";
+      Dom.overlayText.textContent = `場上會維持 ${HexSnakeState.game.foodCount} 個蛋白、脂肪、纖維、碳水隨機食物。`;
+      Dom.startButton.textContent = "開始";
       HexSnakeUI.renderIntroPortraits(true);
-      overlay.classList.add("show");
+      Dom.overlay.classList.add("show");
     });
 
-    computerDifficultyInput.addEventListener("change", () => {
+    Dom.computerDifficultyInput.addEventListener("change", () => {
       if (HexSnakeState.game.running) return;
-      setComputerDifficulty(computerDifficultyInput.value);
+      setComputerDifficulty(Dom.computerDifficultyInput.value);
       saveGmSettings();
       resetGame();
       resize();
-      overlayTitle.textContent = "難度已更新";
-      overlayText.textContent = `電腦難度設為 ${computerDifficultyInput.selectedOptions[0].textContent}。`;
-      startButton.textContent = "開始";
+      Dom.overlayTitle.textContent = "難度已更新";
+      Dom.overlayText.textContent = `電腦難度設為 ${computerDifficultyInput.selectedOptions[0].textContent}。`;
+      Dom.startButton.textContent = "開始";
       HexSnakeUI.renderIntroPortraits(true);
-      overlay.classList.add("show");
+      Dom.overlay.classList.add("show");
     });
 
-    initialSpeedInput.addEventListener("change", () => {
+    Dom.initialSpeedInput.addEventListener("change", () => {
       if (HexSnakeState.game.running) return;
-      setInitialSpeed(initialSpeedInput.value);
+      setInitialSpeed(Dom.initialSpeedInput.value);
       applyGmSettingsChanged();
       resetGame();
       resize();
-      overlayTitle.textContent = "初始速度已更新";
-      overlayText.textContent = `初始速度已設為 ${HexSnakeState.game.initialSpeed}x。`;
-      startButton.textContent = "開始";
+      Dom.overlayTitle.textContent = "初始速度已更新";
+      Dom.overlayText.textContent = `初始速度已設為 ${HexSnakeState.game.initialSpeed}x。`;
+      Dom.startButton.textContent = "開始";
       HexSnakeUI.renderIntroPortraits(true);
-      overlay.classList.add("show");
+      Dom.overlay.classList.add("show");
     });
 
-    initialLengthInput.addEventListener("change", () => {
+    Dom.initialLengthInput.addEventListener("change", () => {
       if (HexSnakeState.game.running) return;
-      setInitialLength(initialLengthInput.value);
+      setInitialLength(Dom.initialLengthInput.value);
       applyGmSettingsChanged();
       resetGame();
       resize();
     });
 
-    initialEnergyInput.addEventListener("change", () => {
+    Dom.initialEnergyInput.addEventListener("change", () => {
       if (HexSnakeState.game.running) return;
-      setInitialEnergy(initialEnergyInput.value);
+      setInitialEnergy(Dom.initialEnergyInput.value);
       applyGmSettingsChanged();
       resetGame();
       resize();
     });
 
-    initialBombsInput.addEventListener("change", () => {
+    Dom.initialBombsInput.addEventListener("change", () => {
       if (HexSnakeState.game.running) return;
-      setInitialBombs(initialBombsInput.value);
+      setInitialBombs(Dom.initialBombsInput.value);
       applyGmSettingsChanged();
       resetGame();
       resize();
     });
 
-    initialStockInputs.forEach(input => {
+    Dom.initialStockInputs.forEach(input => {
       input.addEventListener("change", () => {
         if (HexSnakeState.game.running) return;
         setInitialStock(input.dataset.initialStock, input.value);
@@ -4431,12 +4431,12 @@
       });
     });
 
-    [playerCharacterInput, computerCharacterInput].forEach(input => {
+    [Dom.playerCharacterInput, Dom.computerCharacterInput].forEach(input => {
       input.addEventListener("change", () => {
         if (HexSnakeState.game.running) return;
-        const changedOwner = input === computerCharacterInput ? "computer" : "player";
-        HexSnakeState.game.playerCharacterChoice = HexSnakeUI.isSelectableCharacterChoiceId(playerCharacterInput.value) ? playerCharacterInput.value : HexSnakeState.config.defaultSettings.playerCharacterId;
-        HexSnakeState.game.computerCharacterChoice = HexSnakeUI.isSelectableCharacterChoiceId(computerCharacterInput.value) ? computerCharacterInput.value : HexSnakeState.config.defaultSettings.computerCharacterId;
+        const changedOwner = input === Dom.computerCharacterInput ? "computer" : "player";
+        HexSnakeState.game.playerCharacterChoice = HexSnakeUI.isSelectableCharacterChoiceId(Dom.playerCharacterInput.value) ? Dom.playerCharacterInput.value : HexSnakeState.config.defaultSettings.playerCharacterId;
+        HexSnakeState.game.computerCharacterChoice = HexSnakeUI.isSelectableCharacterChoiceId(Dom.computerCharacterInput.value) ? Dom.computerCharacterInput.value : HexSnakeState.config.defaultSettings.computerCharacterId;
         if (HexSnakeUI.hasCharacterId(HexSnakeState.game.playerCharacterChoice)) HexSnakeState.game.playerCharacterId = HexSnakeState.game.playerCharacterChoice;
         if (HexSnakeUI.hasCharacterId(HexSnakeState.game.computerCharacterChoice)) HexSnakeState.game.computerCharacterId = HexSnakeState.game.computerCharacterChoice;
         syncCharacterInputs();
@@ -4446,11 +4446,11 @@
         HexSnakeUI.buildCharacterStage();
         resetGame();
         resize();
-        overlayTitle.textContent = "角色已更新";
-        overlayText.textContent = `P1 選擇 ${selectedCharacterFor("player")?.name || "隨機選擇"}，P2 選擇 ${selectedCharacterFor("computer")?.name || "隨機選擇"}。`;
-        startButton.textContent = "開始";
+        Dom.overlayTitle.textContent = "角色已更新";
+        Dom.overlayText.textContent = `P1 選擇 ${selectedCharacterFor("player")?.name || "隨機選擇"}，P2 選擇 ${selectedCharacterFor("computer")?.name || "隨機選擇"}。`;
+        Dom.startButton.textContent = "開始";
         HexSnakeUI.renderIntroPortraits(true);
-        overlay.classList.add("show");
+        Dom.overlay.classList.add("show");
         const selectedId = changedOwner === "computer" ? HexSnakeState.game.computerCharacterChoice : HexSnakeState.game.playerCharacterChoice;
         const selectedCharacter = HexSnakeUI.characterForId(selectedId);
         if (selectedCharacter) {
@@ -4459,13 +4459,13 @@
       });
     });
 
-    resetBestTimeButton.addEventListener("click", () => {
+    Dom.resetBestTimeButton.addEventListener("click", () => {
       HexSnakeState.game.bestTotalMs = 0;
       HexSnakeStorage.set("hexSnakeBestTotalMs", "0");
       updateHud();
     });
 
-    realModeButton.addEventListener("click", () => {
+    Dom.realModeButton.addEventListener("click", () => {
       if (HexSnakeState.game.running) return;
       setGmMode(true);
       resetGmParameters();
@@ -4473,28 +4473,28 @@
       refreshGmPreview();
     });
 
-    midGameModeButton.addEventListener("click", () => {
+    Dom.midGameModeButton.addEventListener("click", () => {
       if (HexSnakeState.game.running) return;
       applyMidGameModePreset();
       applyGmSettingsChanged({ presetMode: "mid" });
       refreshGmPreview();
     });
 
-    ultimateModeButton.addEventListener("click", () => {
+    Dom.ultimateModeButton.addEventListener("click", () => {
       if (HexSnakeState.game.running) return;
       applyUltimateModePreset();
       applyGmSettingsChanged({ presetMode: "battle" });
       refreshGmPreview();
     });
 
-    lateGameModeButton.addEventListener("click", () => {
+    Dom.lateGameModeButton.addEventListener("click", () => {
       if (HexSnakeState.game.running) return;
       applyLateGameModePreset();
       applyGmSettingsChanged({ presetMode: "late" });
       refreshGmPreview();
     });
 
-    resetSettingsButton.addEventListener("click", () => {
+    Dom.resetSettingsButton.addEventListener("click", () => {
       if (HexSnakeState.game.running) return;
       setComputerDifficulty(HexSnakeState.config.defaultSettings.computerDifficulty);
       setGmMode(HexSnakeState.config.defaultSettings.gmMode);
@@ -4517,11 +4517,11 @@
       setPerfStatsVisible(false);
       resetGame();
       resize();
-      overlayTitle.textContent = "已回到預設值";
-      overlayText.textContent = "一般設定已恢復預設，GM 設定維持不變。";
-      startButton.textContent = "開始";
+      Dom.overlayTitle.textContent = "已回到預設值";
+      Dom.overlayText.textContent = "一般設定已恢復預設，GM 設定維持不變。";
+      Dom.startButton.textContent = "開始";
       HexSnakeUI.renderIntroPortraits(true);
-      overlay.classList.add("show");
+      Dom.overlay.classList.add("show");
     });
 
     function defaultPlayerAttackTarget() {
@@ -4605,89 +4605,89 @@
       clearKeyboardAimKeyLocks();
     }
 
-    smallAttackButton.addEventListener("pointerdown", event => handleAttackButtonDown(event, "small"));
-    bigAttackButton.addEventListener("pointerdown", event => handleAttackButtonDown(event, "big"));
-    keyboardSmallAimButton.addEventListener("pointerdown", event => handleKeyboardAimButtonDown(event, "small"));
-    keyboardBigAimButton.addEventListener("pointerdown", event => handleKeyboardAimButtonDown(event, "big"));
-    smallAttackButton.addEventListener("pointerup", event => handleAttackButtonUp(event, "small"));
-    bigAttackButton.addEventListener("pointerup", event => handleAttackButtonUp(event, "big"));
-    keyboardSmallAimButton.addEventListener("pointerup", event => handleKeyboardAimButtonUp(event, "small"));
-    keyboardBigAimButton.addEventListener("pointerup", event => handleKeyboardAimButtonUp(event, "big"));
-    smallAttackButton.addEventListener("pointercancel", handleAttackButtonCancel);
-    bigAttackButton.addEventListener("pointercancel", handleAttackButtonCancel);
-    keyboardSmallAimButton.addEventListener("pointercancel", handleKeyboardAimButtonCancel);
-    keyboardBigAimButton.addEventListener("pointercancel", handleKeyboardAimButtonCancel);
-    smallAttackButton.addEventListener("click", event => event.preventDefault());
-    bigAttackButton.addEventListener("click", event => event.preventDefault());
-    keyboardSmallAimButton.addEventListener("click", event => event.preventDefault());
-    keyboardBigAimButton.addEventListener("click", event => event.preventDefault());
+    Dom.smallAttackButton.addEventListener("pointerdown", event => handleAttackButtonDown(event, "small"));
+    Dom.bigAttackButton.addEventListener("pointerdown", event => handleAttackButtonDown(event, "big"));
+    Dom.keyboardSmallAimButton.addEventListener("pointerdown", event => handleKeyboardAimButtonDown(event, "small"));
+    Dom.keyboardBigAimButton.addEventListener("pointerdown", event => handleKeyboardAimButtonDown(event, "big"));
+    Dom.smallAttackButton.addEventListener("pointerup", event => handleAttackButtonUp(event, "small"));
+    Dom.bigAttackButton.addEventListener("pointerup", event => handleAttackButtonUp(event, "big"));
+    Dom.keyboardSmallAimButton.addEventListener("pointerup", event => handleKeyboardAimButtonUp(event, "small"));
+    Dom.keyboardBigAimButton.addEventListener("pointerup", event => handleKeyboardAimButtonUp(event, "big"));
+    Dom.smallAttackButton.addEventListener("pointercancel", handleAttackButtonCancel);
+    Dom.bigAttackButton.addEventListener("pointercancel", handleAttackButtonCancel);
+    Dom.keyboardSmallAimButton.addEventListener("pointercancel", handleKeyboardAimButtonCancel);
+    Dom.keyboardBigAimButton.addEventListener("pointercancel", handleKeyboardAimButtonCancel);
+    Dom.smallAttackButton.addEventListener("click", event => event.preventDefault());
+    Dom.bigAttackButton.addEventListener("click", event => event.preventDefault());
+    Dom.keyboardSmallAimButton.addEventListener("click", event => event.preventDefault());
+    Dom.keyboardBigAimButton.addEventListener("click", event => event.preventDefault());
     Dom.targetModeSmallIndicator.addEventListener("pointerdown", event => remindKeyboardAttackTarget("small", event));
     Dom.targetModeBigIndicator.addEventListener("pointerdown", event => remindKeyboardAttackTarget("big", event));
     Dom.targetModeSmallIndicator.addEventListener("click", event => event.preventDefault());
     Dom.targetModeBigIndicator.addEventListener("click", event => event.preventDefault());
-    controlRow.addEventListener("pointerdown", event => {
-      if (joyZone.contains(event.target)) return;
+    Dom.controlRow.addEventListener("pointerdown", event => {
+      if (Dom.joyZone.contains(event.target)) return;
       if (event.target.closest("#bigAttackButton")) previewDirectAttack("big");
     });
-    leftHandModeInput.addEventListener("change", () => setLeftHandMode(leftHandModeInput.checked));
-    sfxMuteToggle.addEventListener("change", () => HexSnakeAudio.setMuted(sfxMuteToggle.checked));
-    lowPowerModeInput.addEventListener("change", () => setLowPowerPreference(lowPowerModeInput.checked));
-    perfStatsToggle.addEventListener("change", () => setPerfStatsVisible(perfStatsToggle.checked));
-    surrenderButton.addEventListener("click", surrenderGame);
-    rulesButton.addEventListener("click", HexSnakeUI.openRulesModal);
-    rulesCloseButton.addEventListener("click", HexSnakeUI.closeRulesModal);
-    rulesContent.addEventListener("click", event => {
+    Dom.leftHandModeInput.addEventListener("change", () => setLeftHandMode(Dom.leftHandModeInput.checked));
+    Dom.sfxMuteToggle.addEventListener("change", () => HexSnakeAudio.setMuted(Dom.sfxMuteToggle.checked));
+    Dom.lowPowerModeInput.addEventListener("change", () => setLowPowerPreference(Dom.lowPowerModeInput.checked));
+    Dom.perfStatsToggle.addEventListener("change", () => setPerfStatsVisible(Dom.perfStatsToggle.checked));
+    Dom.surrenderButton.addEventListener("click", surrenderGame);
+    Dom.rulesButton.addEventListener("click", HexSnakeUI.openRulesModal);
+    Dom.rulesCloseButton.addEventListener("click", HexSnakeUI.closeRulesModal);
+    Dom.rulesContent.addEventListener("click", event => {
       if (event.target.closest("[data-open-tutorial]")) HexSnakeUI.showTutorial(0);
     });
-    rulesContent.addEventListener("keydown", event => {
+    Dom.rulesContent.addEventListener("keydown", event => {
       const tutorialCard = event.target.closest("[data-open-tutorial]");
       if (!tutorialCard || (event.key !== "Enter" && event.key !== " ")) return;
       event.preventDefault();
       HexSnakeUI.showTutorial(0);
     });
-    replayArchiveButton.addEventListener("click", HexSnakeReplay.openModal);
-    settingsReplayButton.addEventListener("click", HexSnakeReplay.openModal);
-    overlayText.addEventListener("click", event => {
-      if (!overlayText.classList.contains("is-copyable-result")) return;
+    Dom.replayArchiveButton.addEventListener("click", HexSnakeReplay.openModal);
+    Dom.settingsReplayButton.addEventListener("click", HexSnakeReplay.openModal);
+    Dom.overlayText.addEventListener("click", event => {
+      if (!Dom.overlayText.classList.contains("is-copyable-result")) return;
       event.preventDefault();
       copyCurrentResult();
     });
-    overlayText.addEventListener("keydown", event => {
-      if (!overlayText.classList.contains("is-copyable-result")) return;
+    Dom.overlayText.addEventListener("keydown", event => {
+      if (!Dom.overlayText.classList.contains("is-copyable-result")) return;
       if (event.key !== "Enter" && event.key !== " ") return;
       event.preventDefault();
       copyCurrentResult();
     });
-    controlProfileSelect.addEventListener("change", () => {
-      selectedControlProfileId = controlProfileSelect.value;
+    Dom.controlProfileSelect.addEventListener("change", () => {
+      selectedControlProfileId = Dom.controlProfileSelect.value;
       saveSelectedControlProfileId();
       const profile = selectedControlProfile();
-      if (profile) controlProfileNameInput.value = profile.name;
+      if (profile) Dom.controlProfileNameInput.value = profile.name;
       renderControlProfiles();
     });
-    controlProfileNameInput.addEventListener("input", () => setControlProfileStatus(""));
-    controlProfileSaveButton.addEventListener("click", saveCurrentControlProfile);
-    controlProfileApplyButton.addEventListener("click", applySelectedControlProfile);
-    controlProfileDeleteButton.addEventListener("click", deleteSelectedControlProfile);
-    statsButton.addEventListener("click", HexSnakeStats.openModal);
-    statsModalClose.addEventListener("click", HexSnakeStats.closeModal);
-    statsClearButton.addEventListener("click", HexSnakeStats.clear);
-    statsModal.addEventListener("pointerdown", event => {
-      if (event.target === statsModal) HexSnakeStats.closeModal();
+    Dom.controlProfileNameInput.addEventListener("input", () => setControlProfileStatus(""));
+    Dom.controlProfileSaveButton.addEventListener("click", saveCurrentControlProfile);
+    Dom.controlProfileApplyButton.addEventListener("click", applySelectedControlProfile);
+    Dom.controlProfileDeleteButton.addEventListener("click", deleteSelectedControlProfile);
+    Dom.statsButton.addEventListener("click", HexSnakeStats.openModal);
+    Dom.statsModalClose.addEventListener("click", HexSnakeStats.closeModal);
+    Dom.statsClearButton.addEventListener("click", HexSnakeStats.clear);
+    Dom.statsModal.addEventListener("pointerdown", event => {
+      if (event.target === Dom.statsModal) HexSnakeStats.closeModal();
     });
-    statsModal.querySelector(".app-stats-dialog").addEventListener("pointerdown", event => event.stopPropagation());
-    versionInfoButton.addEventListener("click", HexSnakeAbout.openModal);
-    versionModalClose.addEventListener("click", HexSnakeAbout.closeModal);
-    versionModal.addEventListener("pointerdown", event => {
-      if (event.target === versionModal) HexSnakeAbout.closeModal();
+    Dom.statsModal.querySelector(".app-stats-dialog").addEventListener("pointerdown", event => event.stopPropagation());
+    Dom.versionInfoButton.addEventListener("click", HexSnakeAbout.openModal);
+    Dom.versionModalClose.addEventListener("click", HexSnakeAbout.closeModal);
+    Dom.versionModal.addEventListener("pointerdown", event => {
+      if (event.target === Dom.versionModal) HexSnakeAbout.closeModal();
     });
-    versionModal.querySelector(".app-version-dialog").addEventListener("pointerdown", event => event.stopPropagation());
-    replayModalClose.addEventListener("click", HexSnakeReplay.closeModal);
-    replayModal.addEventListener("pointerdown", event => {
-      if (event.target === replayModal) HexSnakeReplay.closeModal();
+    Dom.versionModal.querySelector(".app-version-dialog").addEventListener("pointerdown", event => event.stopPropagation());
+    Dom.replayModalClose.addEventListener("click", HexSnakeReplay.closeModal);
+    Dom.replayModal.addEventListener("pointerdown", event => {
+      if (event.target === Dom.replayModal) HexSnakeReplay.closeModal();
     });
-    replayModal.querySelector(".replay-dialog").addEventListener("pointerdown", event => event.stopPropagation());
-    replayModal.addEventListener("click", event => {
+    Dom.replayModal.querySelector(".replay-dialog").addEventListener("pointerdown", event => event.stopPropagation());
+    Dom.replayModal.addEventListener("click", event => {
       const playButton = event.target.closest("[data-replay-play]");
       const favoriteButton = event.target.closest("[data-replay-favorite]");
       const deleteButton = event.target.closest("[data-replay-delete]");
@@ -4704,31 +4704,31 @@
         HexSnakeReplay.deleteRecord(deleteButton.dataset.replayDelete, deleteButton.dataset.replaySection);
       }
     });
-    replayPlayButton.addEventListener("click", () => {
+    Dom.replayPlayButton.addEventListener("click", () => {
       HexSnakeReplay.togglePlaybackPaused();
     });
-    replayReverseButton.addEventListener("click", () => {
+    Dom.replayReverseButton.addEventListener("click", () => {
       HexSnakeReplay.reversePlayback();
     });
-    replayPrevButton.addEventListener("click", () => {
+    Dom.replayPrevButton.addEventListener("click", () => {
       HexSnakeReplay.switchPlayback(-1);
     });
-    replayNextButton.addEventListener("click", () => {
+    Dom.replayNextButton.addEventListener("click", () => {
       HexSnakeReplay.switchPlayback(1);
     });
-    replaySpeedSelect.addEventListener("change", () => {
-      HexSnakeReplay.setPlaybackSpeed(replaySpeedSelect.value);
+    Dom.replaySpeedSelect.addEventListener("change", () => {
+      HexSnakeReplay.setPlaybackSpeed(Dom.replaySpeedSelect.value);
     });
-    replayTimeline.addEventListener("input", () => {
-      HexSnakeReplay.seekPlayback(replayTimeline.value);
+    Dom.replayTimeline.addEventListener("input", () => {
+      HexSnakeReplay.seekPlayback(Dom.replayTimeline.value);
     });
-    replayExitButton.addEventListener("click", HexSnakeReplay.exitPlayback);
-    rulesModal.addEventListener("pointerdown", event => {
-      if (event.target === rulesModal) HexSnakeUI.closeRulesModal();
+    Dom.replayExitButton.addEventListener("click", HexSnakeReplay.exitPlayback);
+    Dom.rulesModal.addEventListener("pointerdown", event => {
+      if (event.target === Dom.rulesModal) HexSnakeUI.closeRulesModal();
     });
-    rulesModal.querySelector(".rules-dialog").addEventListener("pointerdown", event => event.stopPropagation());
+    Dom.rulesModal.querySelector(".rules-dialog").addEventListener("pointerdown", event => event.stopPropagation());
 
-    keybindInputs.forEach(input => {
+    Dom.keybindInputs.forEach(input => {
       input.addEventListener("keydown", event => {
         event.preventDefault();
         const value = event.key === " " ? " " : event.key;
@@ -4747,16 +4747,16 @@
       });
     });
 
-    settingsDirButtons.forEach(button => {
+    Dom.settingsDirButtons.forEach(button => {
       button.addEventListener("click", () => {
         setPendingDirectionKeybind(Number(button.dataset.dir));
         button.focus();
       });
     });
 
-    introCloseButton.addEventListener("click", () => {
+    Dom.introCloseButton.addEventListener("click", () => {
       HexSnakeUI.renderIntroPortraits(false);
-      overlay.classList.add("show");
+      Dom.overlay.classList.add("show");
     });
 
     const tutorialActionButtonFromEvent = (event) => {
@@ -4770,7 +4770,7 @@
       return event.target?.closest?.("[data-tutorial-action]") || null;
     };
 
-    winnerPortrait.addEventListener("click", event => {
+    Dom.winnerPortrait.addEventListener("click", event => {
       if (HexSnakeState.ui.tutorialSwipeDidMove) {
         HexSnakeState.ui.tutorialSwipeDidMove = false;
         event.preventDefault();
@@ -4788,17 +4788,17 @@
       }
     });
 
-    overlay.addEventListener("pointerdown", event => {
+    Dom.overlay.addEventListener("pointerdown", event => {
       if (!HexSnakeUI.isTutorialOpen() || event.button > 0) return;
       if (tutorialActionButtonFromEvent(event)) return;
       HexSnakeState.ui.tutorialSwipeStartX = event.clientX;
       HexSnakeState.ui.tutorialSwipeStartY = event.clientY;
       HexSnakeState.ui.tutorialSwipePointerId = event.pointerId;
       HexSnakeState.ui.tutorialSwipeDidMove = false;
-      overlay.setPointerCapture?.(event.pointerId);
+      Dom.overlay.setPointerCapture?.(event.pointerId);
     }, true);
 
-    overlay.addEventListener("pointermove", event => {
+    Dom.overlay.addEventListener("pointermove", event => {
       if (!HexSnakeUI.isTutorialOpen() || HexSnakeState.ui.tutorialSwipeStartX === null) return;
       if (HexSnakeState.ui.tutorialSwipePointerId !== null && event.pointerId !== HexSnakeState.ui.tutorialSwipePointerId) return;
       const deltaX = event.clientX - HexSnakeState.ui.tutorialSwipeStartX;
@@ -4806,7 +4806,7 @@
       if (Math.abs(deltaX) > 10 && Math.abs(deltaX) > Math.abs(deltaY)) event.preventDefault();
     }, true);
 
-    overlay.addEventListener("pointerup", event => {
+    Dom.overlay.addEventListener("pointerup", event => {
       if (!HexSnakeUI.isTutorialOpen() || HexSnakeState.ui.tutorialSwipeStartX === null) return;
       if (HexSnakeState.ui.tutorialSwipePointerId !== null && event.pointerId !== HexSnakeState.ui.tutorialSwipePointerId) return;
       const deltaX = event.clientX - HexSnakeState.ui.tutorialSwipeStartX;
@@ -4815,7 +4815,7 @@
       HexSnakeState.ui.tutorialSwipeStartX = null;
       HexSnakeState.ui.tutorialSwipeStartY = null;
       HexSnakeState.ui.tutorialSwipePointerId = null;
-      if (pointerId !== null && overlay.hasPointerCapture?.(pointerId)) overlay.releasePointerCapture(pointerId);
+      if (pointerId !== null && Dom.overlay.hasPointerCapture?.(pointerId)) Dom.overlay.releasePointerCapture(pointerId);
       if (Math.max(Math.abs(deltaX), Math.abs(deltaY)) < 42) return;
       if (Math.abs(deltaX) <= Math.abs(deltaY)) return;
       HexSnakeState.ui.tutorialSwipeDidMove = true;
@@ -4826,16 +4826,16 @@
       }, 160);
     }, true);
 
-    overlay.addEventListener("pointercancel", event => {
+    Dom.overlay.addEventListener("pointercancel", event => {
       if (HexSnakeState.ui.tutorialSwipePointerId === null || event.pointerId !== HexSnakeState.ui.tutorialSwipePointerId) return;
       const pointerId = HexSnakeState.ui.tutorialSwipePointerId;
       HexSnakeState.ui.tutorialSwipeStartX = null;
       HexSnakeState.ui.tutorialSwipeStartY = null;
       HexSnakeState.ui.tutorialSwipePointerId = null;
-      if (overlay.hasPointerCapture?.(pointerId)) overlay.releasePointerCapture(pointerId);
+      if (Dom.overlay.hasPointerCapture?.(pointerId)) Dom.overlay.releasePointerCapture(pointerId);
     }, true);
 
-    startButton.addEventListener("click", () => {
+    Dom.startButton.addEventListener("click", () => {
       if (HexSnakeReplay.isPlaybackMode()) return;
       if (!HexSnakeUI.hasCharacterCatalog()) {
         window.location.reload();
@@ -4844,8 +4844,8 @@
       if (HexSnakeState.game.paused && HexSnakeState.game.running && !HexSnakeState.game.gameOver) {
         HexSnakeState.game.paused = false;
         setStatus("對戰中：吃食物累積能量，集滿可獲得炸彈。");
-        overlay.classList.remove("show");
-        HexSnakeUI.showCharacterStage({ rebuild: false, overlay: false });
+        Dom.overlay.classList.remove("show");
+        HexSnakeUI.showCharacterStage({ rebuild: false, "overlay": false });
         HexSnakeState.game.lastPlayerStep = performance.now();
         HexSnakeState.game.lastComputerStep = HexSnakeState.game.lastPlayerStep;
         HexSnakeState.game.lastTimerFrame = HexSnakeState.game.lastPlayerStep;
@@ -4857,22 +4857,22 @@
         returnToStartScreen();
         return;
       }
-      overlayTitle.textContent = "準備開局";
-      overlayText.textContent = `每吃 1 個食物獲得 2 點能量，集滿 ${HexSnakeState.config.attackNeedTotal} 點獲得 1 枚炸彈，最多 ${HexSnakeState.config.maxAmmo} 枚；HP 上限為（蛇長 + 1）× ${HexSnakeState.config.hpPerSnakeUnit}；能量與炸彈都滿時，施放消耗炸彈的招式會立刻把滿能量轉為 1 枚炸彈；小招消耗目前最高的食物庫存 ${HexSnakeState.config.smallAttackFoodCost} 點與 ${HexSnakeState.config.smallAttackBombCost} 枚炸彈，大招消耗 ${HexSnakeState.config.bigAttackBombCost} 枚炸彈與四種庫存各 2 點。`;
-      startButton.textContent = "開始";
+      Dom.overlayTitle.textContent = "準備開局";
+      Dom.overlayText.textContent = `每吃 1 個食物獲得 2 點能量，集滿 ${HexSnakeState.config.attackNeedTotal} 點獲得 1 枚炸彈，最多 ${HexSnakeState.config.maxAmmo} 枚；HP 上限為（蛇長 + 1）× ${HexSnakeState.config.hpPerSnakeUnit}；能量與炸彈都滿時，施放消耗炸彈的招式會立刻把滿能量轉為 1 枚炸彈；小招消耗目前最高的食物庫存 ${HexSnakeState.config.smallAttackFoodCost} 點與 ${HexSnakeState.config.smallAttackBombCost} 枚炸彈，大招消耗 ${HexSnakeState.config.bigAttackBombCost} 枚炸彈與四種庫存各 2 點。`;
+      Dom.startButton.textContent = "開始";
       HexSnakeUI.setOverlayChromeVisible(true);
       beginStartLogoCountdown();
     });
 
-    computerBattleButton.addEventListener("click", () => {
+    Dom.computerBattleButton.addEventListener("click", () => {
       if (HexSnakeReplay.isPlaybackMode()) return;
       if (!HexSnakeUI.hasCharacterCatalog()) {
         window.location.reload();
         return;
       }
       if (HexSnakeState.game.gameOver && !canRestartAfterGameOver()) return;
-      overlayTitle.textContent = "自動對弈";
-      overlayText.textContent = "P1 / P2 皆自動操作，控制面板可調整對弈速度或暫停。";
+      Dom.overlayTitle.textContent = "自動對弈";
+      Dom.overlayText.textContent = "P1 / P2 皆自動操作，控制面板可調整對弈速度或暫停。";
       HexSnakeUI.setOverlayChromeVisible(true);
       startGame({ computerBattle: true, resetRelayScore: true });
     });
@@ -4983,8 +4983,8 @@
     }
 
     bindSpeedScrubber({
-      select: autoBattleSpeedSelect,
-      menu: autoSpeedMenu,
+      select: Dom.autoBattleSpeedSelect,
+      menu: Dom.autoSpeedMenu,
       isActive: isPlayerAutoControlActive,
       currentIndex: () => HexSnakeState.config.autoBattleSpeeds.indexOf(HexSnakeState.game.computerBattleSpeed),
       applyIndex: applyAutoBattleSpeedIndex,
@@ -4998,8 +4998,8 @@
     });
 
     bindSpeedScrubber({
-      select: replaySpeedSelect,
-      menu: replaySpeedMenu,
+      select: Dom.replaySpeedSelect,
+      menu: Dom.replaySpeedMenu,
       isActive: () => Boolean(HexSnakeReplay.playback),
       currentIndex: replayPlaybackSpeedIndex,
       applyIndex: applyReplayPlaybackSpeedIndex,
@@ -5046,7 +5046,7 @@
           replayBoardGesture.startSpeedIndex = replayPlaybackSpeedIndex();
         }, replayBoardLongPressMs)
       };
-      playArea.setPointerCapture?.(event.pointerId);
+      Dom.playArea.setPointerCapture?.(event.pointerId);
       return true;
     }
 
@@ -5071,7 +5071,7 @@
         replayBoardGesture.mode = Math.abs(dx) >= Math.abs(dy) ? "seek" : "speed";
       }
       if (replayBoardGesture.mode === "seek") {
-        const width = Math.max(1, playArea.getBoundingClientRect().width);
+        const width = Math.max(1, Dom.playArea.getBoundingClientRect().width);
         const nextTime = replayBoardGesture.startReplayTime + HexSnakeReplay.playback.duration * (dx / width);
         HexSnakeReplay.seekPlayback(nextTime);
       } else if (replayBoardGesture.mode === "speed") {
@@ -5089,7 +5089,7 @@
       const dx = event.clientX - gesture.startX;
       const dy = event.clientY - gesture.startY;
       clearReplayBoardLongPressTimer();
-      if (playArea.hasPointerCapture?.(event.pointerId)) playArea.releasePointerCapture(event.pointerId);
+      if (Dom.playArea.hasPointerCapture?.(event.pointerId)) Dom.playArea.releasePointerCapture(event.pointerId);
       replayBoardGesture = null;
 
       if (gesture.activated) return true;
@@ -5116,30 +5116,30 @@
       event.preventDefault();
       event.stopPropagation();
       clearReplayBoardLongPressTimer();
-      if (playArea.hasPointerCapture?.(event.pointerId)) playArea.releasePointerCapture(event.pointerId);
+      if (Dom.playArea.hasPointerCapture?.(event.pointerId)) Dom.playArea.releasePointerCapture(event.pointerId);
       replayBoardGesture = null;
       return true;
     }
 
     document.addEventListener("pointerdown", event => {
-      if (!autoSpeedMenu.hidden && !autoBattlePanel.contains(event.target)) {
+      if (!Dom.autoSpeedMenu.hidden && !Dom.autoBattlePanel.contains(event.target)) {
         setAutoSpeedMenuOpen(false);
       }
-      if (!replaySpeedMenu.hidden && !replayControls.contains(event.target)) {
+      if (!Dom.replaySpeedMenu.hidden && !Dom.replayControls.contains(event.target)) {
         setReplaySpeedMenuOpen(false);
       }
     });
 
-    relayModeInput.addEventListener("change", event => {
+    Dom.relayModeInput.addEventListener("change", event => {
       event.stopPropagation();
       if (!isRelayModeAvailable()) {
-        relayModeInput.checked = false;
+        Dom.relayModeInput.checked = false;
         return;
       }
-      setRelayMode(relayModeInput.checked, relayModeInput.checked);
+      setRelayMode(Dom.relayModeInput.checked, Dom.relayModeInput.checked);
     });
 
-    autoPauseButton.addEventListener("click", event => {
+    Dom.autoPauseButton.addEventListener("click", event => {
       event.stopPropagation();
       if (!isPlayerAutoControlActive() || !HexSnakeState.game.running || HexSnakeState.game.gameOver) return;
       HexSnakeState.game.paused = !HexSnakeState.game.paused;
@@ -5151,7 +5151,7 @@
       updateAutoBattleControls();
     });
 
-    joyZone.addEventListener("pointerdown", event => {
+    Dom.joyZone.addEventListener("pointerdown", event => {
       const dirButton = event.target.closest("[data-dir-button]");
       if (dirButton) {
         event.preventDefault();
@@ -5169,12 +5169,12 @@
       HexSnakeState.game.movePointerStartY = event.clientY;
       HexSnakeState.game.movePointerMoved = false;
       HexSnakeState.game.moveStickEngaged = false;
-      joyZone.setPointerCapture(HexSnakeState.game.movePointerId);
+      Dom.joyZone.setPointerCapture(HexSnakeState.game.movePointerId);
       clearMoveStickHoldTimer();
       HexSnakeState.game.moveStickHoldTimer = setTimeout(() => engageMoveStick(event), 80);
     });
 
-    joyZone.addEventListener("pointermove", event => {
+    Dom.joyZone.addEventListener("pointermove", event => {
       if (HexSnakeState.game.controlAttackPointer && event.pointerId === HexSnakeState.game.controlAttackPointer.pointerId) {
         moveControlPadAttackPointer(event);
         return;
@@ -5186,14 +5186,14 @@
       if (event.pointerId === HexSnakeState.game.movePointerId && HexSnakeState.game.moveStickEngaged) moveStick(event);
     });
 
-    joyZone.addEventListener("pointerup", event => {
+    Dom.joyZone.addEventListener("pointerup", event => {
       if (HexSnakeState.game.controlAttackPointer && event.pointerId === HexSnakeState.game.controlAttackPointer.pointerId) {
         finishControlPadAttackPointer(event);
         return;
       }
       releaseMoveStick(event);
     });
-    joyZone.addEventListener("pointercancel", event => {
+    Dom.joyZone.addEventListener("pointercancel", event => {
       if (HexSnakeState.game.controlAttackPointer && event.pointerId === HexSnakeState.game.controlAttackPointer.pointerId) {
         cancelControlPadAttackPointer(event);
         return;
@@ -5214,20 +5214,20 @@
     window.addEventListener("pointerup", finishControlPadAttackPointer);
     window.addEventListener("pointercancel", cancelControlPadAttackPointer);
 
-    playArea.addEventListener("pointerdown", event => {
+    Dom.playArea.addEventListener("pointerdown", event => {
       if (event.target.closest(".overlay")) return;
       if (beginReplayBoardGesture(event)) return;
       beginBoardAttackPointer(event);
     });
-    playArea.addEventListener("pointermove", event => {
+    Dom.playArea.addEventListener("pointermove", event => {
       if (moveReplayBoardGesture(event)) return;
       moveBoardAttackPointer(event);
     });
-    playArea.addEventListener("pointerup", event => {
+    Dom.playArea.addEventListener("pointerup", event => {
       if (endReplayBoardGesture(event)) return;
       finishBoardAttackPointer(event);
     });
-    playArea.addEventListener("pointercancel", event => {
+    Dom.playArea.addEventListener("pointercancel", event => {
       if (cancelReplayBoardGesture(event)) return;
       cancelBoardAttackPointer(event);
     });
@@ -5276,27 +5276,27 @@
         }
         return;
       }
-      if (!versionModal.hidden) {
+      if (!Dom.versionModal.hidden) {
         if (event.key === "Escape" || event.key === "Esc") HexSnakeAbout.closeModal();
         return;
       }
-      if (!settingsContent.hidden || !gmContent.hidden || !networkContent.hidden) {
+      if (!Dom.settingsContent.hidden || !Dom.gmContent.hidden || !Dom.networkContent.hidden) {
         if (event.key === "Escape" || event.key === "Esc") {
           setSettingsOpen(false);
           setGmOpen(false);
           setNetworkOpen(false);
         }
-        if (!settingsContent.hidden && event.key === "ArrowRight") {
+        if (!Dom.settingsContent.hidden && event.key === "ArrowRight") {
           event.preventDefault();
           setGmOpen(true, { direction: "next", focus: false });
         }
-        if (!gmContent.hidden && event.key === "ArrowLeft") {
+        if (!Dom.gmContent.hidden && event.key === "ArrowLeft") {
           event.preventDefault();
           setSettingsOpen(true, { direction: "prev", focus: false });
         }
         return;
       }
-      if (!rulesModal.hidden) {
+      if (!Dom.rulesModal.hidden) {
         if (event.key === "Escape" || event.key === "Esc") HexSnakeUI.closeRulesModal();
         return;
       }
@@ -5317,11 +5317,11 @@
           return;
         }
       }
-      if (!replayModal.hidden) {
+      if (!Dom.replayModal.hidden) {
         if (event.key === "Escape" || event.key === "Esc") HexSnakeReplay.closeModal();
         return;
       }
-      if (!statsModal.hidden) {
+      if (!Dom.statsModal.hidden) {
         if (event.key === "Escape" || event.key === "Esc") HexSnakeStats.closeModal();
         return;
       }
@@ -5335,7 +5335,7 @@
         event.stopPropagation();
         return;
       }
-      if (!portraitLightbox.hidden) {
+      if (!Dom.portraitLightbox.hidden) {
         if (event.key === "Escape" || event.key === "Esc") HexSnakeUI.closePortraitLightbox();
         if (event.key === "ArrowLeft") {
           event.preventDefault();
@@ -5355,7 +5355,7 @@
         }
         return;
       }
-      if (mobileInputQuery.matches) return;
+      if (Dom.mobileInputQuery.matches) return;
       if (event.target && ["INPUT", "SELECT", "TEXTAREA"].includes(event.target.tagName)) return;
 
       const pressedKey = event.key === " " ? " " : event.key.toLowerCase();
@@ -5397,11 +5397,11 @@
         }
         HexSnakeState.game.paused = !HexSnakeState.game.paused;
         setStatus(HexSnakeState.game.paused ? "已暫停" : "對戰中：吃食物累積能量，集滿可獲得炸彈。");
-        overlayTitle.textContent = "暫停";
-        overlayText.textContent = "按繼續回到對戰。";
-        startButton.textContent = "繼續";
+        Dom.overlayTitle.textContent = "暫停";
+        Dom.overlayText.textContent = "按繼續回到對戰。";
+        Dom.startButton.textContent = "繼續";
         HexSnakeUI.setOverlayChromeVisible(true);
-        overlay.classList.toggle("show", HexSnakeState.game.paused);
+        Dom.overlay.classList.toggle("show", HexSnakeState.game.paused);
         if (!HexSnakeState.game.paused) {
           HexSnakeState.game.lastPlayerStep = performance.now();
           HexSnakeState.game.lastComputerStep = HexSnakeState.game.lastPlayerStep;
@@ -5528,34 +5528,34 @@
       HexSnakeUI.buildResourceHud();
       HexSnakeUI.buildRulesContent();
       loadSavedGmSettings();
-      setGridSize(gridSizeInput.value);
-      setFoodCount(foodCountInput.value);
-      setComputerDifficulty(computerDifficultyInput.value);
-      setInitialSpeed(initialSpeedInput.value);
+      setGridSize(Dom.gridSizeInput.value);
+      setFoodCount(Dom.foodCountInput.value);
+      setComputerDifficulty(Dom.computerDifficultyInput.value);
+      setInitialSpeed(Dom.initialSpeedInput.value);
       setGmMode(HexSnakeState.game.gmMode);
-      setInitialLength(initialLengthInput.value);
-      setInitialEnergy(initialEnergyInput.value);
-      setInitialBombs(initialBombsInput.value);
-      initialStockInputs.forEach(input => setInitialStock(input.dataset.initialStock, input.value));
+      setInitialLength(Dom.initialLengthInput.value);
+      setInitialEnergy(Dom.initialEnergyInput.value);
+      setInitialBombs(Dom.initialBombsInput.value);
+      Dom.initialStockInputs.forEach(input => setInitialStock(input.dataset.initialStock, input.value));
       updateGmPresetHighlight();
       setSettingsLocked(false);
       applyKeybinds();
       setLeftHandMode(HexSnakeStorage.get("hexSnakeLeftHandMode") === "1");
       renderControlProfiles();
-      sfxMuteToggle.checked = HexSnakeAudio.muted;
+      Dom.sfxMuteToggle.checked = HexSnakeAudio.muted;
       syncLowPowerMode();
       setPerfStatsVisible(HexSnakeState.ui.perfStatsVisible);
       updateAttackButtons();
       resetGame();
       resize();
       HexSnakeUI.renderIntroPortraits(false);
-      overlay.classList.add("show");
+      Dom.overlay.classList.add("show");
       if (HexSnakeUI.shouldShowTutorial()) HexSnakeUI.showTutorial(0);
       preloadPortraitsFor("player");
       preloadPortraitsFor("computer");
       if (isEffectComparisonMode()) {
-        overlay.classList.remove("show");
-        characterStage.hidden = true;
+        Dom.overlay.classList.remove("show");
+        Dom.characterStage.hidden = true;
         HexSnakeUI.setCharacterStageOverlayMode(false);
         setStatus("Skill effect comparison mode.");
         cancelAnimationFrame(HexSnakeState.game.rafId);
