@@ -278,3 +278,9 @@
       const sizes = deployPortraitSizes(includeFull ? ["sm", "md", "full"] : ["sm", "md"]);
       return sizes.map(size => `${avatarUrl(character, size)} ${avatarSizeWidths[size]}w`).join(", ");
     }
+
+    Object.assign(HexSnakeUI, {
+      characterChoiceFor,
+      characterFor,
+      selectedCharacterFor,
+    });

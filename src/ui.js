@@ -630,8 +630,14 @@ Object.defineProperties(HexSnakeState.config, {
   defaultSettings: {
     get: () => defaultSettings,
   },
+  colors: {
+    get: () => colors,
+  },
   directions: {
     get: () => directions,
+  },
+  foodTypeById: {
+    get: () => foodTypeById,
   },
   foodTypes: {
     get: () => foodTypes,
@@ -720,6 +726,9 @@ Object.defineProperties(HexSnakeState.config, {
   smallAttackFoodCost: {
     get: () => smallAttackFoodCost,
   },
+  sandwormRevealBeforeImpactMs: {
+    get: () => sandwormRevealBeforeImpactMs,
+  },
 });
 
 let keybinds = HexSnakeControls.loadKeybinds();
@@ -749,6 +758,13 @@ let projectiles = [];
 let blasts = [];
 let hazards = [];
 const elementalSpriteCache = new Map();
+
+Object.defineProperties(HexSnakeState.game, {
+  elementalSpriteCache: {
+    get: () => elementalSpriteCache,
+  },
+});
+
 let boardShakeUntil = 0;
 let boardShakeStartedAt = 0;
 let boardShakeStrength = 0;
@@ -3969,6 +3985,7 @@ Object.assign(HexSnakeUI, {
   consumeAttackCost,
   foodBonus,
   foodHealAmount,
+  foodTypeIds,
   formatTime,
   highestStockFoodType,
   isMovementStunned,
