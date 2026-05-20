@@ -27,7 +27,7 @@
 
 | 領域 | 狀態 | 下一步 | 驗收 / 證據 |
 | --- | --- | --- | --- |
-| Android 上架主線 | 進行中 | 實機驗證 → 正式簽章 → Play internal testing | `store/release-checklist.md` |
+| Android 上架主線 | 進行中 | Play internal testing | `store/release-checklist.md` |
 | iOS 上架主線 | blocked | 取得 macOS / Xcode / Apple signing 環境 | 尚未驗證 |
 | LAN / Wi-Fi 多人 | MVP 已完成 | Phase 2 protocol hardening | `doc/local-multiplayer-progress-plan.md` |
 | AI / 規則一致性 | 待啟動 | 先做 browser / simulator 對齊，再判斷策略套用或效能優化 | `doc/strategy-optimization-sop.md`、`reports/` |
@@ -40,8 +40,6 @@
 
 | 項目 | 狀態 | 下一步 | 完成標準 |
 | --- | --- | --- | --- |
-| Android 實機驗證 | 未完成 | 安裝 debug APK，測返回鍵、背景暫停 / 恢復、震動、音效 unlock、長時間效能 | 實機測試紀錄寫回本文件與 `store/release-checklist.md` |
-| Android 正式簽章 | 未完成 | 建立 upload keystore，填入 `android/signing.properties` 或 CI secrets | `npm run android:bundle:signed` 產出 signed release AAB |
 | Google Play internal testing | 未完成 | 建立 Play Console internal testing，補資料安全、內容分級、截圖與商店欄位 | internal testing 可發布 |
 | iOS build / TestFlight | blocked | 取得 macOS / Xcode / Apple signing 後執行 build、provisioning、TestFlight | Xcode build 與 TestFlight build 通過 |
 
@@ -82,6 +80,8 @@
 | Browser / mobile smoke | `tools/smoke-test.js`、`mobile-smoke-test.js` 已覆蓋主要 UI 與 replay | `test:smoke`、`test:mobile` |
 | Release gate | `release:check` 串接 build、text、data、assets、size、quick、mobile、smoke、offline、app readiness | `release:check` |
 | App shell 基礎封裝 | Capacitor 8、Android / iOS 專案、mobile platform adapter、APK / AAB build scripts 已建立 | `app:check`、Android build scripts |
+| Android 實機驗證 | 2026-05-20 使用者確認 debug APK 實機測試正常，返回鍵、背景暫停 / 恢復、震動、音效 unlock 與長時間效能無問題 | 後續版本若改 platform adapter 或原生設定，再重測 |
+| Android 正式簽章 | 2026-05-20 建立 `android/hex-snake-upload.jks` 與 gitignored `android/signing.properties`，`npm run android:bundle:signed` 成功產出 signed release AAB | 後續正式上傳前保護 upload keystore 與簽章密碼 |
 | 商店草稿與本機檢查 | listing、privacy policy、release checklist 與 `store:check` 已建立 | `store:check` |
 
 ## 衝突整理
@@ -97,8 +97,8 @@
 
 目前安排合理，原因如下：
 
-1. Android 實機驗證排在簽章與 Play 後台前，因為返回鍵、背景恢復、震動、音效 unlock 或長時間效能若有問題，會直接影響上架品質。
-2. 正式簽章排在 internal testing 前，因為 signed release AAB 是 Play 測試版可上傳的必要產物。
+1. Android 實機驗證與正式簽章已完成，現在可以進入 Play internal testing。
+2. Play internal testing 排在更大範圍產品開發前，因為它會暴露商店後台、資料安全、內容分級與上傳格式等真正上架阻塞。
 3. iOS 目前被環境阻塞，因此不阻擋 Android 主線；取得 macOS / Xcode 後可與 Android Play 後台並行。
 4. LAN protocol hardening 排在上架阻塞後，因為它是產品能力增強，不應卡住目前已接近可測機的 App 發布流程。
 5. AI / simulator 對齊排在策略套用與共用規則核心之前，因為尚未確認差異前，直接套策略或抽共用核心都容易把錯誤固定下來。
@@ -159,11 +159,9 @@ npm.cmd run simulate:ai-cross -- --runs 5 --jobs 1 --seed <purpose>
 
 ## 下一輪建議順序
 
-1. Android 實機安裝 debug APK，確認返回鍵、背景恢復、震動、音效 unlock 與長時間遊玩。
-2. 建立正式 upload keystore，產出 `android:bundle:signed`。
-3. 建立 Google Play internal testing，補資料安全、內容分級、截圖與商店欄位。
-4. 找 macOS / Xcode 環境執行 iOS build 與 TestFlight；若環境已備妥，可與第 2-3 步並行。
-5. 補 LAN 多人 Phase 2：sequence number、latency、reconnect、snapshot throttling、server room routing 測試。
-6. 執行高階 AI v1 browser / simulator 對齊檢查，再決定是否套用最新策略輸出或做 AI 效能優化。
-7. 推進 `game.js` facade / ES modules，再抽 browser / simulator 共用規則核心。
-8. 最後再做 replay 分享、每日挑戰與觀戰聯賽。
+1. 建立 Google Play internal testing，補資料安全、內容分級、截圖與商店欄位，並上傳 signed release AAB。
+2. 找 macOS / Xcode 環境執行 iOS build 與 TestFlight；若環境已備妥，可與第 1 步並行。
+3. 補 LAN 多人 Phase 2：sequence number、latency、reconnect、snapshot throttling、server room routing 測試。
+4. 執行高階 AI v1 browser / simulator 對齊檢查，再決定是否套用最新策略輸出或做 AI 效能優化。
+5. 推進 `game.js` facade / ES modules，再抽 browser / simulator 共用規則核心。
+6. 最後再做 replay 分享、每日挑戰與觀戰聯賽。

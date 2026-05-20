@@ -13,15 +13,16 @@
 - [x] Android release AAB 可產出。
 - [x] Android release signing 流程已建立，可用 `android/signing.properties` 或 `HEX_SNAKE_ANDROID_*` 環境變數注入 upload keystore；`npm run android:bundle:signed` 會強制檢查簽章資料。
 - [x] Mobile platform adapter 測試覆蓋 lifecycle、返回鍵、Haptics 與 Preferences mirror。
+- [x] Android 實機安裝 debug APK 通過。
+- [x] Android 實機確認返回鍵、背景暫停 / 恢復、震動與音效 unlock 無問題。
+- [x] 實機長時間遊玩與效能觀察無明顯問題。
+- [x] 正式 upload keystore 已建立，`android/signing.properties` 已填入本機簽章資料。
+- [x] `npm run android:bundle:signed` 已產出 signed release AAB。
 - [x] 商店描述草稿已建立。
 - [x] 隱私政策草稿已建立。
 
 ## Android 待辦
 
-- [ ] Android 實機安裝 debug APK。
-- [ ] 實機確認 Android 返回鍵、背景暫停 / 恢復、震動與音效 unlock。
-- [ ] 建立正式 upload keystore，填入 `android/signing.properties` 或 CI secret，並啟用 Play App Signing。
-- [ ] 執行 `npm run android:bundle:signed` 產出可上傳 Google Play 的 signed release AAB。
 - [ ] 建立 Google Play internal testing。
 - [ ] 完成 Google Play 內容分級、資料安全與商店截圖。
 
@@ -38,7 +39,8 @@
 - [x] `npm run release:check`
 - [x] `npm run android:build:debug`
 - [x] `npm run android:bundle:release`
+- [x] `npm run android:bundle:signed`
 - [x] `npm run store:check`
-- [ ] 實機長時間遊玩與低階 Android 效能觀察。
+- [x] 實機長時間遊玩與低階 Android 效能觀察。
 
-備註：2026-05-20 本機總檢通過；debug APK 位於 `android/app/build/outputs/apk/debug/app-debug.apk`，release AAB 位於 `android/app/build/outputs/bundle/release/app-release.aab`。release signing 流程已接好，但尚未提供正式 upload keystore，仍需完成簽章後才能上傳 Play Store。
+備註：2026-05-20 本機總檢、Android 實機驗證與 signed release AAB 通過；debug APK 位於 `android/app/build/outputs/apk/debug/app-debug.apk`，signed release AAB 位於 `android/app/build/outputs/bundle/release/app-release.aab`。upload keystore 位於 `android/hex-snake-upload.jks`，本機簽章設定位於 gitignored `android/signing.properties`。
