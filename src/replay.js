@@ -14,8 +14,12 @@
     let replayReturnState = null;
     let replayRafId = 0;
     let replaySurrendered = false;
-    HexSnakeState.replay.mode = replayMode;
-    HexSnakeState.replay.surrendered = replaySurrendered;
+    const GameState = HexSnakeState.game;
+    const UiState = HexSnakeState.ui;
+    const ReplayState = HexSnakeState.replay;
+    const ReplayDom = HexSnakeDOM;
+    ReplayState.mode = replayMode;
+    ReplayState.surrendered = replaySurrendered;
 
     function replayClone(value) {
       return JSON.parse(JSON.stringify(value));
@@ -35,7 +39,7 @@
     }
 
     function replayCharacterName(id) {
-      return characterById.get(id)?.name || id || "?";
+      return HexSnakeUI.characterForId(id)?.name || id || "?";
     }
 
     function replayTitleFor(record) {
@@ -47,7 +51,7 @@
 
     function replayMetaFor(record) {
       const mode = record.computerBattleMode ? (record.relayMode ? "連戰" : "自動對弈") : "P1 戰鬥";
-      return `${mode} · ${replayCharacterName(record.playerCharacterId)} vs ${replayCharacterName(record.computerCharacterId)} · ${formatTime(record.durationMs || 0)} · ${record.snapshots?.length || 0} frames`;
+      return `${mode} · ${replayCharacterName(record.playerCharacterId)} vs ${replayCharacterName(record.computerCharacterId)} · ${HexSnakeUI.formatTime(record.durationMs || 0)} · ${record.snapshots?.length || 0} frames`;
     }
 
     function normalizeReplayRecord(record) {
@@ -97,43 +101,43 @@
 
     function createReplaySnapshot(now, final = false) {
       return {
-        t: Math.round(totalElapsedMs),
+        t: Math.round(GameState.totalElapsedMs),
         final,
-        radius,
-        gridSize,
-        playerCharacterId,
-        computerCharacterId,
-        dir,
-        nextDir,
-        computerDir,
-        snake: replayClone(snake || []),
-        computerSnake: replayClone(computerSnake || []),
-        foods: replayClone(foods || []),
-        projectiles: compactTimedItems(projectiles, now, ["createdAt", "impactAt"]),
-        blasts: compactTimedItems(blasts, now, ["startedAt", "endAt"]),
-        hazards: compactTimedItems(hazards, now, ["startedAt", "endAt", "nextTickAt"]),
-        targetCell: targetCell ? { ...targetCell } : null,
-        targetActive,
-        score,
-        computerScore,
-        playerHp,
-        computerHp,
-        playerStock: replayClone(playerStock || {}),
-        computerStock: replayClone(computerStock || {}),
-        playerAmmo,
-        computerAmmo,
-        playerAmmoCharge,
-        computerAmmoCharge,
-        totalElapsedMs,
-        lastFeedElapsedMs,
-        playerStunRemaining: Math.max(0, playerStunUntil - now),
-        playerSlowRemaining: Math.max(0, playerSlowUntil - now),
-        computerStunRemaining: Math.max(0, computerStunUntil - now),
-        computerSlowRemaining: Math.max(0, computerSlowUntil - now),
-        playerCollisionParalysisMs,
-        computerCollisionParalysisMs,
-        playerUndergroundRemaining: Math.max(0, playerUndergroundUntil - now),
-        computerUndergroundRemaining: Math.max(0, computerUndergroundUntil - now)
+        radius: GameState.radius,
+        gridSize: GameState.gridSize,
+        playerCharacterId: GameState.playerCharacterId,
+        computerCharacterId: GameState.computerCharacterId,
+        dir: GameState.dir,
+        nextDir: GameState.nextDir,
+        computerDir: GameState.computerDir,
+        snake: replayClone(GameState.snake || []),
+        computerSnake: replayClone(GameState.computerSnake || []),
+        foods: replayClone(GameState.foods || []),
+        projectiles: compactTimedItems(GameState.projectiles, now, ["createdAt", "impactAt"]),
+        blasts: compactTimedItems(GameState.blasts, now, ["startedAt", "endAt"]),
+        hazards: compactTimedItems(GameState.hazards, now, ["startedAt", "endAt", "nextTickAt"]),
+        targetCell: GameState.targetCell ? { ...GameState.targetCell } : null,
+        targetActive: GameState.targetActive,
+        score: GameState.score,
+        computerScore: GameState.computerScore,
+        playerHp: GameState.playerHp,
+        computerHp: GameState.computerHp,
+        playerStock: replayClone(GameState.playerStock || {}),
+        computerStock: replayClone(GameState.computerStock || {}),
+        playerAmmo: GameState.playerAmmo,
+        computerAmmo: GameState.computerAmmo,
+        playerAmmoCharge: GameState.playerAmmoCharge,
+        computerAmmoCharge: GameState.computerAmmoCharge,
+        totalElapsedMs: GameState.totalElapsedMs,
+        lastFeedElapsedMs: GameState.lastFeedElapsedMs,
+        playerStunRemaining: Math.max(0, GameState.playerStunUntil - now),
+        playerSlowRemaining: Math.max(0, GameState.playerSlowUntil - now),
+        computerStunRemaining: Math.max(0, GameState.computerStunUntil - now),
+        computerSlowRemaining: Math.max(0, GameState.computerSlowUntil - now),
+        playerCollisionParalysisMs: GameState.playerCollisionParalysisMs,
+        computerCollisionParalysisMs: GameState.computerCollisionParalysisMs,
+        playerUndergroundRemaining: Math.max(0, GameState.playerUndergroundUntil - now),
+        computerUndergroundRemaining: Math.max(0, GameState.computerUndergroundUntil - now)
       };
     }
 
@@ -141,20 +145,20 @@
       activeReplayRecording = {
         id: `replay-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         createdAt: new Date().toISOString(),
-        playerCharacterId,
-        computerCharacterId,
-        computerBattleMode,
-        relayMode,
+        playerCharacterId: GameState.playerCharacterId,
+        computerCharacterId: GameState.computerCharacterId,
+        computerBattleMode: GameState.computerBattleMode,
+        relayMode: GameState.relayMode,
         settings: {
-          gridSize,
-          foodCount,
-          computerDifficulty,
-          initialSpeed,
-          gmMode,
-          initialLength,
-          initialEnergy,
-          initialBombs,
-          initialStock: replayClone(initialStock)
+          gridSize: GameState.gridSize,
+          foodCount: GameState.foodCount,
+          computerDifficulty: GameState.computerDifficulty,
+          initialSpeed: GameState.initialSpeed,
+          gmMode: GameState.gmMode,
+          initialLength: GameState.initialLength,
+          initialEnergy: GameState.initialEnergy,
+          initialBombs: GameState.initialBombs,
+          initialStock: replayClone(GameState.initialStock)
         },
         snapshots: []
       };
@@ -163,7 +167,7 @@
     }
 
     function recordReplaySnapshot(now, force = false) {
-      if (!activeReplayRecording || replayMode || !snake || !computerSnake) return;
+      if (!activeReplayRecording || replayMode || !GameState.snake || !GameState.computerSnake) return;
       if (!force && now - lastReplaySnapshotAt < replaySnapshotIntervalMs) return;
       activeReplayRecording.snapshots.push(createReplaySnapshot(now));
       lastReplaySnapshotAt = now;
@@ -176,8 +180,8 @@
     function replayWinnerOwner(playerLost, computerLost) {
       if (!playerLost && computerLost) return "player";
       if (playerLost && !computerLost) return "computer";
-      if (playerLost && computerLost && score > computerScore) return "player";
-      if (playerLost && computerLost && computerScore > score) return "computer";
+      if (playerLost && computerLost && GameState.score > GameState.computerScore) return "player";
+      if (playerLost && computerLost && GameState.computerScore > GameState.score) return "computer";
       return null;
     }
 
@@ -188,9 +192,9 @@
       activeReplayRecording.snapshots.push(createReplaySnapshot(now, true));
       const record = normalizeReplayRecord({
         ...activeReplayRecording,
-        durationMs: Math.round(totalElapsedMs),
-        score,
-        computerScore,
+        durationMs: Math.round(GameState.totalElapsedMs),
+        score: GameState.score,
+        computerScore: GameState.computerScore,
         winnerOwner: replayWinnerOwner(playerLost, computerLost),
         playerLost,
         computerLost,
@@ -223,7 +227,7 @@
     }
 
     function setReplayMessage(text = "") {
-      replayMessage.textContent = text;
+      ReplayDom.replayMessage.textContent = text;
     }
 
     function createReplayActionButton(label, dataset, className = "") {
@@ -278,22 +282,22 @@
     function refreshReplayModal() {
       const recent = replayLoadList(replayRecentKey).map(normalizeReplayRecord);
       const favorites = replayLoadList(replayFavoritesKey).map(normalizeReplayRecord);
-      recentReplayCount.textContent = `${recent.length} / ${replayLimit}`;
-      favoriteReplayCount.textContent = `${favorites.length} / ${replayLimit}`;
-      renderReplayList(recentReplayList, recent, false);
-      renderReplayList(favoriteReplayList, favorites, true);
+      ReplayDom.recentReplayCount.textContent = `${recent.length} / ${replayLimit}`;
+      ReplayDom.favoriteReplayCount.textContent = `${favorites.length} / ${replayLimit}`;
+      renderReplayList(ReplayDom.recentReplayList, recent, false);
+      renderReplayList(ReplayDom.favoriteReplayList, favorites, true);
     }
 
     function openReplayModal() {
-      if (running && !gameOver) return;
+      if (GameState.running && !GameState.gameOver) return;
       HexSnakeGame.clearRelayRestartTimer();
       setReplayMessage("");
       refreshReplayModal();
-      replayModal.hidden = false;
+      ReplayDom.replayModal.hidden = false;
     }
 
     function closeReplayModal() {
-      replayModal.hidden = true;
+      ReplayDom.replayModal.hidden = true;
     }
 
     function findReplayRecord(recordId) {
@@ -350,46 +354,50 @@
     function applyReplaySnapshot(snapshot, record) {
       if (!snapshot) return;
       const now = performance.now();
-      const previousPlayerCharacterId = playerCharacterId;
-      const previousComputerCharacterId = computerCharacterId;
-      playerCharacterId = snapshot.playerCharacterId || record.playerCharacterId;
-      computerCharacterId = snapshot.computerCharacterId || record.computerCharacterId;
-      gridSize = snapshot.gridSize || record.settings?.gridSize || gridSize;
-      radius = snapshot.radius ?? gridSize - 1;
+      const previousPlayerCharacterId = GameState.playerCharacterId;
+      const previousComputerCharacterId = GameState.computerCharacterId;
+      GameState.playerCharacterId = snapshot.playerCharacterId || record.playerCharacterId;
+      GameState.computerCharacterId = snapshot.computerCharacterId || record.computerCharacterId;
+      GameState.gridSize = snapshot.gridSize || record.settings?.gridSize || GameState.gridSize;
+      GameState.radius = snapshot.radius ?? GameState.gridSize - 1;
       HexSnakeGame.buildCells();
-      dir = snapshot.dir || 0;
-      nextDir = snapshot.nextDir || dir;
-      computerDir = snapshot.computerDir || 3;
-      snake = replayClone(snapshot.snake || []);
-      computerSnake = replayClone(snapshot.computerSnake || []);
-      foods = replayClone(snapshot.foods || []);
-      projectiles = restoreTimedItems(snapshot.projectiles, now, ["createdAt", "impactAt"]);
-      blasts = restoreTimedItems(snapshot.blasts, now, ["startedAt", "endAt"]);
-      hazards = restoreTimedItems(snapshot.hazards, now, ["startedAt", "endAt", "nextTickAt"]);
-      targetCell = snapshot.targetCell ? { ...snapshot.targetCell } : null;
-      targetActive = Boolean(snapshot.targetActive);
-      score = snapshot.score || 0;
-      computerScore = snapshot.computerScore || 0;
-      playerHp = snapshot.playerHp ?? maxHpForSnake(snake);
-      computerHp = snapshot.computerHp ?? maxHpForSnake(computerSnake);
-      playerStock = replayClone(snapshot.playerStock || {});
-      computerStock = replayClone(snapshot.computerStock || {});
-      playerAmmo = snapshot.playerAmmo || 0;
-      computerAmmo = snapshot.computerAmmo || 0;
-      playerAmmoCharge = snapshot.playerAmmoCharge || 0;
-      computerAmmoCharge = snapshot.computerAmmoCharge || 0;
-      totalElapsedMs = snapshot.totalElapsedMs || snapshot.t || 0;
-      lastFeedElapsedMs = snapshot.lastFeedElapsedMs || 0;
-      playerStunUntil = now + (snapshot.playerStunRemaining || 0);
-      playerSlowUntil = now + (snapshot.playerSlowRemaining || 0);
-      computerStunUntil = now + (snapshot.computerStunRemaining || 0);
-      computerSlowUntil = now + (snapshot.computerSlowRemaining || 0);
-      playerCollisionParalysisMs = snapshot.playerCollisionParalysisMs || 0;
-      computerCollisionParalysisMs = snapshot.computerCollisionParalysisMs || 0;
-      playerUndergroundUntil = now + (snapshot.playerUndergroundRemaining || 0);
-      computerUndergroundUntil = now + (snapshot.computerUndergroundRemaining || 0);
-      if (previousPlayerCharacterId !== playerCharacterId || previousComputerCharacterId !== computerCharacterId || !characterStage.innerHTML) {
-        buildCharacterStage();
+      GameState.dir = snapshot.dir || 0;
+      GameState.nextDir = snapshot.nextDir || GameState.dir;
+      GameState.computerDir = snapshot.computerDir || 3;
+      GameState.snake = replayClone(snapshot.snake || []);
+      GameState.computerSnake = replayClone(snapshot.computerSnake || []);
+      GameState.foods = replayClone(snapshot.foods || []);
+      GameState.projectiles = restoreTimedItems(snapshot.projectiles, now, ["createdAt", "impactAt"]);
+      GameState.blasts = restoreTimedItems(snapshot.blasts, now, ["startedAt", "endAt"]);
+      GameState.hazards = restoreTimedItems(snapshot.hazards, now, ["startedAt", "endAt", "nextTickAt"]);
+      GameState.targetCell = snapshot.targetCell ? { ...snapshot.targetCell } : null;
+      GameState.targetActive = Boolean(snapshot.targetActive);
+      GameState.score = snapshot.score || 0;
+      GameState.computerScore = snapshot.computerScore || 0;
+      GameState.playerHp = snapshot.playerHp ?? HexSnakeUI.maxHpForSnake(GameState.snake);
+      GameState.computerHp = snapshot.computerHp ?? HexSnakeUI.maxHpForSnake(GameState.computerSnake);
+      GameState.playerStock = replayClone(snapshot.playerStock || {});
+      GameState.computerStock = replayClone(snapshot.computerStock || {});
+      GameState.playerAmmo = snapshot.playerAmmo || 0;
+      GameState.computerAmmo = snapshot.computerAmmo || 0;
+      GameState.playerAmmoCharge = snapshot.playerAmmoCharge || 0;
+      GameState.computerAmmoCharge = snapshot.computerAmmoCharge || 0;
+      GameState.totalElapsedMs = snapshot.totalElapsedMs || snapshot.t || 0;
+      GameState.lastFeedElapsedMs = snapshot.lastFeedElapsedMs || 0;
+      GameState.playerStunUntil = now + (snapshot.playerStunRemaining || 0);
+      GameState.playerSlowUntil = now + (snapshot.playerSlowRemaining || 0);
+      GameState.computerStunUntil = now + (snapshot.computerStunRemaining || 0);
+      GameState.computerSlowUntil = now + (snapshot.computerSlowRemaining || 0);
+      GameState.playerCollisionParalysisMs = snapshot.playerCollisionParalysisMs || 0;
+      GameState.computerCollisionParalysisMs = snapshot.computerCollisionParalysisMs || 0;
+      GameState.playerUndergroundUntil = now + (snapshot.playerUndergroundRemaining || 0);
+      GameState.computerUndergroundUntil = now + (snapshot.computerUndergroundRemaining || 0);
+      if (
+        previousPlayerCharacterId !== GameState.playerCharacterId ||
+        previousComputerCharacterId !== GameState.computerCharacterId ||
+        !ReplayDom.characterStage.innerHTML
+      ) {
+        HexSnakeUI.buildCharacterStage();
       }
       HexSnakeGame.updateHud();
       draw();
@@ -405,24 +413,24 @@
       const speedLabel = replayPlaybackSpeedLabel(replayPlayback.speed);
       const playLabel = replayPlayback.paused ? "播放" : "暫停";
       const reverseLabel = replayPlayback.direction < 0 ? "正放" : "倒放";
-      replayTimeline.max = String(Math.max(0, Math.round(duration)));
-      replayTimeline.value = String(Math.max(0, Math.min(duration, Math.round(replayPlayback.time))));
-      replaySpeedSelect.textContent = speedLabel;
-      replaySpeedSelect.dataset.value = String(replayPlayback.speed);
-      replaySpeedSelect.setAttribute("aria-valuenow", String(replayPlayback.speed));
-      replaySpeedSelect.setAttribute("aria-valuetext", speedLabel);
-      replayPlayButton.textContent = replayPlayback.paused ? "▶" : "⏸";
-      replayPlayButton.setAttribute("aria-label", playLabel);
-      replayPlayButton.title = playLabel;
-      replayReverseButton.classList.toggle("is-selected", replayPlayback.direction < 0);
-      replayReverseButton.textContent = replayPlayback.direction < 0 ? "↪" : "↩";
-      replayReverseButton.setAttribute("aria-label", reverseLabel);
-      replayReverseButton.title = reverseLabel;
-      replayPrevButton.disabled = replayPlaylist.length <= 1;
-      replayNextButton.disabled = replayPlaylist.length <= 1;
-      replayTime.textContent = `${formatTime(replayPlayback.time)} / ${formatTime(duration)}`;
-      if (!replaySpeedMenu.hidden) {
-        replaySpeedMenu.querySelectorAll("[data-replay-speed]").forEach(button => {
+      ReplayDom.replayTimeline.max = String(Math.max(0, Math.round(duration)));
+      ReplayDom.replayTimeline.value = String(Math.max(0, Math.min(duration, Math.round(replayPlayback.time))));
+      ReplayDom.replaySpeedSelect.textContent = speedLabel;
+      ReplayDom.replaySpeedSelect.dataset.value = String(replayPlayback.speed);
+      ReplayDom.replaySpeedSelect.setAttribute("aria-valuenow", String(replayPlayback.speed));
+      ReplayDom.replaySpeedSelect.setAttribute("aria-valuetext", speedLabel);
+      ReplayDom.replayPlayButton.textContent = replayPlayback.paused ? "▶" : "⏸";
+      ReplayDom.replayPlayButton.setAttribute("aria-label", playLabel);
+      ReplayDom.replayPlayButton.title = playLabel;
+      ReplayDom.replayReverseButton.classList.toggle("is-selected", replayPlayback.direction < 0);
+      ReplayDom.replayReverseButton.textContent = replayPlayback.direction < 0 ? "↪" : "↩";
+      ReplayDom.replayReverseButton.setAttribute("aria-label", reverseLabel);
+      ReplayDom.replayReverseButton.title = reverseLabel;
+      ReplayDom.replayPrevButton.disabled = replayPlaylist.length <= 1;
+      ReplayDom.replayNextButton.disabled = replayPlaylist.length <= 1;
+      ReplayDom.replayTime.textContent = `${HexSnakeUI.formatTime(replayPlayback.time)} / ${HexSnakeUI.formatTime(duration)}`;
+      if (!ReplayDom.replaySpeedMenu.hidden) {
+        ReplayDom.replaySpeedMenu.querySelectorAll("[data-replay-speed]").forEach(button => {
           button.classList.toggle("is-selected", Number(button.dataset.replaySpeed) === replayPlayback.speed);
         });
       }
@@ -430,36 +438,36 @@
 
     function captureReplayReturnState() {
       return {
-        snapshot: snake && computerSnake ? createReplaySnapshot(performance.now(), true) : null,
-        overlayClassName: overlay.className,
-        overlayTitleHidden: overlayTitle.hidden,
-        overlayTextHidden: overlayText.hidden,
-        startButtonHidden: startButton.hidden,
-        computerBattleButtonHidden: computerBattleButton.hidden,
-        replayArchiveButtonHidden: replayArchiveButton.hidden,
-        introCloseButtonHidden: introCloseButton.hidden,
-        title: overlayTitle.textContent,
-        text: overlayText.textContent,
-        startText: startButton.textContent,
-        winnerPortraitHidden: winnerPortrait.hidden,
-        winnerPortraitHtml: winnerPortrait.innerHTML,
-        characterStageClassName: characterStage.className,
-        characterStageHidden: characterStage.hidden,
-        characterStageHtml: characterStage.innerHTML,
-        statusText: statusEl.textContent,
-        gameOver,
-        running,
-        paused,
-        computerBattleMode,
-        playerAutoMode,
-        computerBattleManualOverride,
-        relayMode,
-        playerCharacterId,
-        computerCharacterId,
-        playerCharacterChoice,
-        computerCharacterChoice,
-        selectedPortraitOwner,
-        introDetailsOpen
+        snapshot: GameState.snake && GameState.computerSnake ? createReplaySnapshot(performance.now(), true) : null,
+        overlayClassName: ReplayDom.overlay.className,
+        overlayTitleHidden: ReplayDom.overlayTitle.hidden,
+        overlayTextHidden: ReplayDom.overlayText.hidden,
+        startButtonHidden: ReplayDom.startButton.hidden,
+        computerBattleButtonHidden: ReplayDom.computerBattleButton.hidden,
+        replayArchiveButtonHidden: ReplayDom.replayArchiveButton.hidden,
+        introCloseButtonHidden: ReplayDom.introCloseButton.hidden,
+        title: ReplayDom.overlayTitle.textContent,
+        text: ReplayDom.overlayText.textContent,
+        startText: ReplayDom.startButton.textContent,
+        winnerPortraitHidden: ReplayDom.winnerPortrait.hidden,
+        winnerPortraitHtml: ReplayDom.winnerPortrait.innerHTML,
+        characterStageClassName: ReplayDom.characterStage.className,
+        characterStageHidden: ReplayDom.characterStage.hidden,
+        characterStageHtml: ReplayDom.characterStage.innerHTML,
+        statusText: ReplayDom.statusEl.textContent,
+        gameOver: GameState.gameOver,
+        running: GameState.running,
+        paused: GameState.paused,
+        computerBattleMode: GameState.computerBattleMode,
+        playerAutoMode: GameState.playerAutoMode,
+        computerBattleManualOverride: GameState.computerBattleManualOverride,
+        relayMode: GameState.relayMode,
+        playerCharacterId: GameState.playerCharacterId,
+        computerCharacterId: GameState.computerCharacterId,
+        playerCharacterChoice: GameState.playerCharacterChoice,
+        computerCharacterChoice: GameState.computerCharacterChoice,
+        selectedPortraitOwner: UiState.selectedPortraitOwner,
+        introDetailsOpen: UiState.introDetailsOpen
       };
     }
 
@@ -468,35 +476,35 @@
         HexSnakeGame.returnToStartScreen();
         return;
       }
-      playerCharacterId = state.playerCharacterId;
-      computerCharacterId = state.computerCharacterId;
-      playerCharacterChoice = state.playerCharacterChoice;
-      computerCharacterChoice = state.computerCharacterChoice;
-      selectedPortraitOwner = state.selectedPortraitOwner;
-      introDetailsOpen = state.introDetailsOpen;
-      running = state.running;
-      paused = state.paused;
-      gameOver = state.gameOver;
-      computerBattleMode = state.computerBattleMode;
-      playerAutoMode = Boolean(state.playerAutoMode);
-      computerBattleManualOverride = Boolean(state.computerBattleManualOverride);
-      relayMode = state.relayMode;
+      GameState.playerCharacterId = state.playerCharacterId;
+      GameState.computerCharacterId = state.computerCharacterId;
+      GameState.playerCharacterChoice = state.playerCharacterChoice;
+      GameState.computerCharacterChoice = state.computerCharacterChoice;
+      UiState.selectedPortraitOwner = state.selectedPortraitOwner;
+      UiState.introDetailsOpen = state.introDetailsOpen;
+      GameState.running = state.running;
+      GameState.paused = state.paused;
+      GameState.gameOver = state.gameOver;
+      GameState.computerBattleMode = state.computerBattleMode;
+      GameState.playerAutoMode = Boolean(state.playerAutoMode);
+      GameState.computerBattleManualOverride = Boolean(state.computerBattleManualOverride);
+      GameState.relayMode = state.relayMode;
       if (state.snapshot) applyReplaySnapshot(state.snapshot, state);
-      overlay.className = state.overlayClassName;
-      overlayTitle.hidden = state.overlayTitleHidden;
-      overlayText.hidden = state.overlayTextHidden;
-      startButton.hidden = state.startButtonHidden;
-      computerBattleButton.hidden = state.computerBattleButtonHidden;
-      replayArchiveButton.hidden = state.replayArchiveButtonHidden;
-      introCloseButton.hidden = state.introCloseButtonHidden;
-      overlayTitle.textContent = state.title;
-      overlayText.textContent = state.text;
-      startButton.textContent = state.startText;
-      winnerPortrait.hidden = state.winnerPortraitHidden;
-      winnerPortrait.innerHTML = state.winnerPortraitHtml;
-      characterStage.className = state.characterStageClassName || "character-stage";
-      characterStage.hidden = state.characterStageHidden;
-      characterStage.innerHTML = state.characterStageHtml;
+      ReplayDom.overlay.className = state.overlayClassName;
+      ReplayDom.overlayTitle.hidden = state.overlayTitleHidden;
+      ReplayDom.overlayText.hidden = state.overlayTextHidden;
+      ReplayDom.startButton.hidden = state.startButtonHidden;
+      ReplayDom.computerBattleButton.hidden = state.computerBattleButtonHidden;
+      ReplayDom.replayArchiveButton.hidden = state.replayArchiveButtonHidden;
+      ReplayDom.introCloseButton.hidden = state.introCloseButtonHidden;
+      ReplayDom.overlayTitle.textContent = state.title;
+      ReplayDom.overlayText.textContent = state.text;
+      ReplayDom.startButton.textContent = state.startText;
+      ReplayDom.winnerPortrait.hidden = state.winnerPortraitHidden;
+      ReplayDom.winnerPortrait.innerHTML = state.winnerPortraitHtml;
+      ReplayDom.characterStage.className = state.characterStageClassName || "character-stage";
+      ReplayDom.characterStage.hidden = state.characterStageHidden;
+      ReplayDom.characterStage.innerHTML = state.characterStageHtml;
       HexSnakeGame.setStatus(state.statusText);
       HexSnakeGame.updateHud();
       HexSnakeGame.updateSettingsActionMode();
@@ -538,8 +546,8 @@
     function loadReplayPlaybackRecord(record) {
       record = normalizeReplayRecord(record);
       if (!record.snapshots.length) return;
-      replaySpeedMenu.hidden = true;
-      replaySpeedSelect.setAttribute("aria-expanded", "false");
+      ReplayDom.replaySpeedMenu.hidden = true;
+      ReplayDom.replaySpeedSelect.setAttribute("aria-expanded", "false");
       replayPlayback = {
         record,
         time: 0,
@@ -560,23 +568,23 @@
       record = normalizeReplayRecord(record);
       if (!record.snapshots.length) return false;
       closeReplayModal();
-      cancelAnimationFrame(rafId);
+      cancelAnimationFrame(GameState.rafId);
       HexSnakeGame.clearRelayRestartTimer();
       replayReturnState = captureReplayReturnState();
       replayMode = true;
-      HexSnakeState.replay.mode = replayMode;
-      running = false;
-      paused = true;
-      gameOver = false;
-      computerBattleMode = false;
-      playerAutoMode = false;
-      computerBattleManualOverride = false;
+      ReplayState.mode = replayMode;
+      GameState.running = false;
+      GameState.paused = true;
+      GameState.gameOver = false;
+      GameState.computerBattleMode = false;
+      GameState.playerAutoMode = false;
+      GameState.computerBattleManualOverride = false;
       HexSnakeGame.updateAutoBattleControls();
       HexSnakeGame.setSettingsLocked(true);
-      setOverlayChromeVisible(false);
-      overlay.classList.remove("show");
-      setCharacterStageOverlayMode(false);
-      replayControls.hidden = false;
+      HexSnakeUI.setOverlayChromeVisible(false);
+      ReplayDom.overlay.classList.remove("show");
+      HexSnakeUI.setCharacterStageOverlayMode(false);
+      ReplayDom.replayControls.hidden = false;
       prepareReplayPlaylist(record);
       loadReplayPlaybackRecord(record);
       return true;
@@ -598,10 +606,10 @@
       replayPlayback = null;
       replayPlaylist = [];
       replayPlaylistIndex = -1;
-      HexSnakeState.replay.mode = replayMode;
-      replayControls.hidden = true;
-      replaySpeedMenu.hidden = true;
-      replaySpeedSelect.setAttribute("aria-expanded", "false");
+      ReplayState.mode = replayMode;
+      ReplayDom.replayControls.hidden = true;
+      ReplayDom.replaySpeedMenu.hidden = true;
+      ReplayDom.replaySpeedSelect.setAttribute("aria-expanded", "false");
       HexSnakeGame.setSettingsLocked(false);
       restoreReplayReturnState(replayReturnState);
       replayReturnState = null;
@@ -632,11 +640,11 @@
       },
       resetSurrendered() {
         replaySurrendered = false;
-        HexSnakeState.replay.surrendered = replaySurrendered;
+        ReplayState.surrendered = replaySurrendered;
       },
       markSurrendered() {
         replaySurrendered = true;
-        HexSnakeState.replay.surrendered = replaySurrendered;
+        ReplayState.surrendered = replaySurrendered;
       },
       startRecording: startReplayRecording,
       recordSnapshot: recordReplaySnapshot,

@@ -1729,6 +1729,12 @@ Object.defineProperties(HexSnakeState.ui, {
   defaultPortraitVariantMode: {
     get: () => defaultPortraitVariantMode,
   },
+  introDetailsOpen: {
+    get: () => introDetailsOpen,
+    set: (value) => {
+      introDetailsOpen = Boolean(value);
+    },
+  },
   perfStatsKey: {
     get: () => perfStatsKey,
   },
