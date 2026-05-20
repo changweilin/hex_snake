@@ -10,6 +10,7 @@ const HexSnakeState = {
 };
 
 const HexSnakeUI = {};
+const HexSnakeRenderGame = {};
 
 const HexSnakeControls = (() => {
   function normalizeKey(value, fallback) {
@@ -55,4 +56,5 @@ const HexSnakeControls = (() => {
 
 window.HexSnakeState = HexSnakeState;
 window.HexSnakeUI = HexSnakeUI;
+window.HexSnakeRenderGame = HexSnakeRenderGame;
 window.HexSnakeControls = HexSnakeControls;

@@ -3293,8 +3293,8 @@ function setPortraitCharacterForOwner(
       HexSnakeUI.clearStartLogoRandomCharacterId(selectedPortraitOwner);
     }
   }
-  HexSnakeGame.syncCharacterInputs();
-  HexSnakeGame.saveCharacterChoices();
+  HexSnakeUI.syncCharacterInputs();
+  HexSnakeUI.saveCharacterChoices();
   if (characterId !== randomCharacterChoiceId)
     HexSnakeUI.preloadPortraitsFor(selectedPortraitOwner);
   renderIntroPortraits(showDetails);

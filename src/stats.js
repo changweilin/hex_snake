@@ -283,7 +283,7 @@ const HexSnakeStats = (() => {
 
   function openModal() {
     if (HexSnakeState.game.running && !HexSnakeState.game.gameOver) return;
-    HexSnakeGame.clearRelayRestartTimer();
+    HexSnakeUI.clearRelayRestartTimer();
     refreshModal();
     HexSnakeDOM.statsModal.hidden = false;
   }

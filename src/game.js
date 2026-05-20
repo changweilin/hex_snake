@@ -5461,6 +5461,35 @@
     });
     HexSnakePlatform.lifecycle.onBackButton?.(handlePlatformBackButton);
 
+    Object.assign(HexSnakeRenderGame, {
+      attackStats,
+      attackVisualType,
+      axialToPixel,
+      bandDistanceFromTotalWidth,
+      boardLineThrough,
+      cellsNearCells,
+      characterForVisualType,
+      directionFromSourceToTarget,
+      directionScreenAngle,
+      hexPath,
+      keyOf,
+      lobsterFistPath,
+      nextWrappedCell,
+      opponentHeadTarget,
+      ownerDirection,
+      pointAlongPath,
+      sandwormUndergroundAlpha,
+      stableVariantIndex,
+      updatePerfOverlay
+    });
+
+    Object.assign(HexSnakeUI, {
+      clearRelayRestartTimer,
+      loadSavedCharacterChoices,
+      saveCharacterChoices,
+      syncCharacterInputs
+    });
+
     const HexSnakeGame = Object.freeze({
       attackHitStunChances,
       attackStats,

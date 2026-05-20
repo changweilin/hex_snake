@@ -88,7 +88,7 @@
         : characterList[Math.min(1, characterList.length - 1)].id;
       HexSnakeState.game.playerCharacterChoice = HexSnakeState.game.playerCharacterId;
       HexSnakeState.game.computerCharacterChoice = HexSnakeState.game.computerCharacterId;
-      HexSnakeGame.loadSavedCharacterChoices();
+      HexSnakeUI.loadSavedCharacterChoices();
     }
 
     function showCharacterDatabaseError(error) {
@@ -190,7 +190,7 @@
           ))
         ].join("");
       });
-      HexSnakeGame.syncCharacterInputs();
+      HexSnakeUI.syncCharacterInputs();
     }
 
     function portraitLibrary(character) {
