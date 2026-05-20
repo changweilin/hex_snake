@@ -628,6 +628,162 @@ Object.defineProperties(HexSnakeState.game, {
       gameOver = Boolean(value);
     },
   },
+  computerBattleMode: {
+    get: () => computerBattleMode,
+    set: (value) => {
+      computerBattleMode = Boolean(value);
+    },
+  },
+  playerAutoMode: {
+    get: () => playerAutoMode,
+    set: (value) => {
+      playerAutoMode = Boolean(value);
+    },
+  },
+  computerBattleManualOverride: {
+    get: () => computerBattleManualOverride,
+    set: (value) => {
+      computerBattleManualOverride = Boolean(value);
+    },
+  },
+  computerBattleSpeed: {
+    get: () => computerBattleSpeed,
+    set: (value) => {
+      computerBattleSpeed = value;
+    },
+  },
+  relayRestartTimer: {
+    get: () => relayRestartTimer,
+    set: (value) => {
+      relayRestartTimer = value;
+    },
+  },
+  gameOverRelayStartOptions: {
+    get: () => gameOverRelayStartOptions,
+    set: (value) => {
+      gameOverRelayStartOptions = value;
+    },
+  },
+  gameOverSettlementPending: {
+    get: () => gameOverSettlementPending,
+    set: (value) => {
+      gameOverSettlementPending = Boolean(value);
+    },
+  },
+  gameOverContinuousVisualDeadlineAt: {
+    get: () => gameOverContinuousVisualDeadlineAt,
+    set: (value) => {
+      gameOverContinuousVisualDeadlineAt = value;
+    },
+  },
+  gameOverLogoTransitionEndsAt: {
+    get: () => gameOverLogoTransitionEndsAt,
+    set: (value) => {
+      gameOverLogoTransitionEndsAt = value;
+    },
+  },
+  gameOverResultOwner: {
+    get: () => gameOverResultOwner,
+    set: (value) => {
+      gameOverResultOwner = value;
+    },
+  },
+  gameOverPlayerLost: {
+    get: () => gameOverPlayerLost,
+    set: (value) => {
+      gameOverPlayerLost = Boolean(value);
+    },
+  },
+  gameOverComputerLost: {
+    get: () => gameOverComputerLost,
+    set: (value) => {
+      gameOverComputerLost = Boolean(value);
+    },
+  },
+  snake: {
+    get: () => snake,
+    set: (value) => {
+      snake = value;
+    },
+  },
+  computerSnake: {
+    get: () => computerSnake,
+    set: (value) => {
+      computerSnake = value;
+    },
+  },
+  foods: {
+    get: () => foods,
+    set: (value) => {
+      foods = Array.isArray(value) ? value : [];
+    },
+  },
+  projectiles: {
+    get: () => projectiles,
+    set: (value) => {
+      projectiles = Array.isArray(value) ? value : [];
+    },
+  },
+  blasts: {
+    get: () => blasts,
+    set: (value) => {
+      blasts = Array.isArray(value) ? value : [];
+    },
+  },
+  hazards: {
+    get: () => hazards,
+    set: (value) => {
+      hazards = Array.isArray(value) ? value : [];
+    },
+  },
+  playerHp: {
+    get: () => playerHp,
+    set: (value) => {
+      playerHp = value;
+    },
+  },
+  computerHp: {
+    get: () => computerHp,
+    set: (value) => {
+      computerHp = value;
+    },
+  },
+  playerStock: {
+    get: () => playerStock,
+    set: (value) => {
+      playerStock = value;
+    },
+  },
+  computerStock: {
+    get: () => computerStock,
+    set: (value) => {
+      computerStock = value;
+    },
+  },
+  playerAmmo: {
+    get: () => playerAmmo,
+    set: (value) => {
+      playerAmmo = value;
+    },
+  },
+  computerAmmo: {
+    get: () => computerAmmo,
+    set: (value) => {
+      computerAmmo = value;
+    },
+  },
+  playerAmmoCharge: {
+    get: () => playerAmmoCharge,
+    set: (value) => {
+      playerAmmoCharge = value;
+    },
+  },
+  computerAmmoCharge: {
+    get: () => computerAmmoCharge,
+    set: (value) => {
+      computerAmmoCharge = value;
+    },
+  },
 });
 
 let lastResultShareData = null;
@@ -650,6 +806,106 @@ let playerSandwormArmorFrom = 0;
 let playerSandwormArmorUntil = 0;
 let computerSandwormArmorFrom = 0;
 let computerSandwormArmorUntil = 0;
+
+Object.defineProperties(HexSnakeState.game, {
+  playerStunUntil: {
+    get: () => playerStunUntil,
+    set: (value) => {
+      playerStunUntil = value;
+    },
+  },
+  playerSlowUntil: {
+    get: () => playerSlowUntil,
+    set: (value) => {
+      playerSlowUntil = value;
+    },
+  },
+  playerCollisionParalysisMs: {
+    get: () => playerCollisionParalysisMs,
+    set: (value) => {
+      playerCollisionParalysisMs = value;
+    },
+  },
+  playerVulnerable: {
+    get: () => playerVulnerable,
+    set: (value) => {
+      playerVulnerable = Boolean(value);
+    },
+  },
+  computerStunUntil: {
+    get: () => computerStunUntil,
+    set: (value) => {
+      computerStunUntil = value;
+    },
+  },
+  computerSlowUntil: {
+    get: () => computerSlowUntil,
+    set: (value) => {
+      computerSlowUntil = value;
+    },
+  },
+  computerCollisionParalysisMs: {
+    get: () => computerCollisionParalysisMs,
+    set: (value) => {
+      computerCollisionParalysisMs = value;
+    },
+  },
+  computerVulnerable: {
+    get: () => computerVulnerable,
+    set: (value) => {
+      computerVulnerable = Boolean(value);
+    },
+  },
+  playerUndergroundFrom: {
+    get: () => playerUndergroundFrom,
+    set: (value) => {
+      playerUndergroundFrom = value;
+    },
+  },
+  playerUndergroundUntil: {
+    get: () => playerUndergroundUntil,
+    set: (value) => {
+      playerUndergroundUntil = value;
+    },
+  },
+  computerUndergroundFrom: {
+    get: () => computerUndergroundFrom,
+    set: (value) => {
+      computerUndergroundFrom = value;
+    },
+  },
+  computerUndergroundUntil: {
+    get: () => computerUndergroundUntil,
+    set: (value) => {
+      computerUndergroundUntil = value;
+    },
+  },
+  playerSandwormArmorFrom: {
+    get: () => playerSandwormArmorFrom,
+    set: (value) => {
+      playerSandwormArmorFrom = value;
+    },
+  },
+  playerSandwormArmorUntil: {
+    get: () => playerSandwormArmorUntil,
+    set: (value) => {
+      playerSandwormArmorUntil = value;
+    },
+  },
+  computerSandwormArmorFrom: {
+    get: () => computerSandwormArmorFrom,
+    set: (value) => {
+      computerSandwormArmorFrom = value;
+    },
+  },
+  computerSandwormArmorUntil: {
+    get: () => computerSandwormArmorUntil,
+    set: (value) => {
+      computerSandwormArmorUntil = value;
+    },
+  },
+});
+
 let lastVisiblePlayerSnake = [];
 let lastVisibleComputerSnake = [];
 let lastVisiblePlayerDir = 0;
@@ -666,8 +922,136 @@ const hudFrameIntervalMs = 100;
 const replayRecordCheckIntervalMs = 100;
 let lastHudFrameAt = -Infinity;
 let lastReplayRecordCheckAt = -Infinity;
+
+Object.defineProperties(HexSnakeState.game, {
+  score: {
+    get: () => score,
+    set: (value) => {
+      score = value;
+    },
+  },
+  computerScore: {
+    get: () => computerScore,
+    set: (value) => {
+      computerScore = value;
+    },
+  },
+  totalElapsedMs: {
+    get: () => totalElapsedMs,
+    set: (value) => {
+      totalElapsedMs = value;
+    },
+  },
+  lastFeedElapsedMs: {
+    get: () => lastFeedElapsedMs,
+    set: (value) => {
+      lastFeedElapsedMs = value;
+    },
+  },
+  lastTimerFrame: {
+    get: () => lastTimerFrame,
+    set: (value) => {
+      lastTimerFrame = value;
+    },
+  },
+  lastHudFrameAt: {
+    get: () => lastHudFrameAt,
+    set: (value) => {
+      lastHudFrameAt = value;
+    },
+  },
+  lastPlayerStep: {
+    get: () => lastPlayerStep,
+    set: (value) => {
+      lastPlayerStep = value;
+    },
+  },
+  lastComputerStep: {
+    get: () => lastComputerStep,
+    set: (value) => {
+      lastComputerStep = value;
+    },
+  },
+  lastVisiblePlayerSnake: {
+    get: () => lastVisiblePlayerSnake,
+    set: (value) => {
+      lastVisiblePlayerSnake = Array.isArray(value) ? value : [];
+    },
+  },
+  lastVisibleComputerSnake: {
+    get: () => lastVisibleComputerSnake,
+    set: (value) => {
+      lastVisibleComputerSnake = Array.isArray(value) ? value : [];
+    },
+  },
+  lastVisiblePlayerDir: {
+    get: () => lastVisiblePlayerDir,
+    set: (value) => {
+      lastVisiblePlayerDir = value;
+    },
+  },
+  lastVisibleComputerDir: {
+    get: () => lastVisibleComputerDir,
+    set: (value) => {
+      lastVisibleComputerDir = value;
+    },
+  },
+  playerFoodTargetKey: {
+    get: () => playerFoodTargetKey,
+    set: (value) => {
+      playerFoodTargetKey = value;
+    },
+  },
+  computerFoodTargetKey: {
+    get: () => computerFoodTargetKey,
+    set: (value) => {
+      computerFoodTargetKey = value;
+    },
+  },
+  playerFoodTargetAt: {
+    get: () => playerFoodTargetAt,
+    set: (value) => {
+      playerFoodTargetAt = value;
+    },
+  },
+  computerFoodTargetAt: {
+    get: () => computerFoodTargetAt,
+    set: (value) => {
+      computerFoodTargetAt = value;
+    },
+  },
+  lastPlayerFoodAt: {
+    get: () => lastPlayerFoodAt,
+    set: (value) => {
+      lastPlayerFoodAt = value;
+    },
+  },
+  lastComputerFoodAt: {
+    get: () => lastComputerFoodAt,
+    set: (value) => {
+      lastComputerFoodAt = value;
+    },
+  },
+});
+
 let lastPlayerAttackMs = resetAttackCooldownTracker();
 let lastComputerAttackMs = resetAttackCooldownTracker();
+
+Object.defineProperties(HexSnakeState.game, {
+  lastPlayerAttackMs: {
+    get: () => lastPlayerAttackMs,
+    set: (value) => {
+      lastPlayerAttackMs = value;
+    },
+  },
+  lastComputerAttackMs: {
+    get: () => lastComputerAttackMs,
+    set: (value) => {
+      lastComputerAttackMs = value;
+    },
+  },
+});
+
 let rafId = 0;
 let previewDrawRafId = 0;
 let movePointerId = null;

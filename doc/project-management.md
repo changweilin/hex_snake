@@ -31,7 +31,7 @@
 | iOS 上架主線 | blocked | 取得 macOS / Xcode / Apple signing 環境 | 尚未驗證 |
 | LAN / Wi-Fi 多人 | Phase 2 自動化首輪完成 | 雙機長時間 reconnect / snapshot 驗證，之後規劃 WebRTC | `doc/local-multiplayer-progress-plan.md`、`test:network` |
 | AI / 規則一致性 | gate 已檢查，不套用 | 保留現行策略；若再推策略，先針對 dragon 負 delta 與 gu_king qualified 不足做新訓練 | `doc/strategy-optimization-sop.md`、`reports/` |
-| 架構整理 | match runtime state 首輪完成 | 下一輪繼續收斂 snakes / foods / hazards / projectiles 等 match collections，再處理 combat/resource state | `npm run audit:globals`、`npm run audit:state-boundary`、`doc/state-boundary-audit.md` |
+| 架構整理 | runtime/session state 第二輪完成 | 下一輪處理角色/難度/方向與短暫 UI timers：character ids、computer difficulty、computer dir、energy/bomb flashes、hold timers | `npm run audit:globals`、`npm run audit:state-boundary`、`doc/state-boundary-audit.md` |
 | 產品延伸 | 暫緩 | 等上架與核心穩定後再推 replay 分享、每日挑戰、觀戰聯賽 | 本文件 P3 |
 
 ## 主控看板
@@ -56,7 +56,7 @@
 
 | 項目 | 狀態 | 下一步 | 完成標準 |
 | --- | --- | --- | --- |
-| 核心 facade / ES modules | match runtime state 首輪完成 | `running`、`paused`、`gameOver` 已改走 `HexSnakeState.game` getter/setter；下一輪處理 match collections | build、quick、smoke、audit 通過 |
+| 核心 facade / ES modules | runtime/session state 第二輪完成 | score、timers、food target、auto-battle / relay、game-over settlement 已改走 `HexSnakeState.game`；下一輪處理角色/難度/方向與短暫 UI timers | build、quick、smoke、audit 通過 |
 | Browser / simulator 共用規則核心 | 未開始 | 等 AI 對齊差異明確後，先抽純函式與常數，不碰 DOM/UI state | 同 seed 關鍵差異可解釋 |
 | Render / CSS 拆分 | 未開始 | 先列 board/snake/effects 與 layout/settings/portrait/replay/HUD 搬移清單 | 桌機與手機 smoke screenshot 正常 |
 
@@ -87,7 +87,10 @@
 | `render.js` facade 第三輪 | 2026-05-20 將座標、hex path、方向/路徑、攻擊視覺與效能 overlay 等 game API 改走 `HexSnakeGame`；`audit:globals` 從 760 降至 742 cross-file reads | 下一步不再盲目搬呼叫，先清點 state 邊界 |
 | `ai.js` facade 第四輪 | 2026-05-20 將 AI 決策使用的距離、攻擊統計、傷害、轉向、施放攻擊與狀態更新等 game API 改走 `HexSnakeGame`；`audit:globals` 從 742 降至 723 cross-file reads | 下一步清點 `game.js` 對 `ui.js` 的大量狀態讀寫 |
 | State boundary audit | 2026-05-20 新增 `npm run audit:state-boundary` 與 `doc/state-boundary-audit.md`；盤點 `game.js` 對 `ui.js` 有 1535 references、261 names、423 direct writes/mutations；最大群組是 match runtime state 719 occurrences / 83 names | 下一輪先建立 match runtime state 讀寫入口，再切 combat/resource state |
-| Match runtime state 首輪 | 2026-05-20 將 `running`、`paused`、`gameOver` 包成 `HexSnakeState.game` getter/setter，並讓 `game.js` 改走 accessor；`audit:globals` 從 723 降至 721，`audit:state-boundary` 從 1535/261 降至 1402/258 | 下一輪處理 `snake`、`computerSnake`、`foods`、`hazards`、`projectiles`、`blasts` |
+| Match runtime state 首輪 | 2026-05-20 將 `running`、`paused`、`gameOver` 包成 `HexSnakeState.game` getter/setter，並讓 `game.js` 改走 accessor；`audit:globals` 從 723 降至 721，`audit:state-boundary` 從 1535/261 降至 1402/258 | 已接續完成 match collections 第二輪 |
+| Match collections 第二輪 | 2026-05-20 將 `snake`、`computerSnake`、`foods`、`hazards`、`projectiles`、`blasts` 包成 `HexSnakeState.game` getter/setter，並讓 `game.js` 直接集合存取清零；`audit:globals` 從 721 降至 715，`audit:state-boundary` 從 1402/258 降至 1249/252 | 已接續完成 combat/resource state 首輪 |
+| Combat/resource state 首輪 | 2026-05-20 將 HP、stock、ammo、stun/slow/vulnerability、collision paralysis、sandworm underground / super armor、attack cooldown trackers 包成 `HexSnakeState.game` getter/setter；`audit:globals` 從 715 降至 689，`audit:state-boundary` 從 1249/252 降至 1120/226 | 已接續完成 runtime/session state 第二輪 |
+| Runtime/session state 第二輪 | 2026-05-20 將 score、match timers、step timers、visible snake memory、food target tracking、auto-battle / relay、game-over settlement state 包成 `HexSnakeState.game` getter/setter；`audit:globals` 從 689 降至 660，`audit:state-boundary` 從 1120/226 降至 939/197 | 下一輪處理角色/難度/方向與短暫 UI timers：character ids、computer difficulty、computer dir、energy/bomb flashes、hold timers |
 | Release gate | `release:check` 串接 build、text、data、assets、size、quick、network、mobile、smoke、offline、app readiness | `release:check` |
 | App shell 基礎封裝 | Capacitor 8、Android / iOS 專案、mobile platform adapter、APK / AAB build scripts 已建立 | `app:check`、Android build scripts |
 | Android 實機驗證 | 2026-05-20 使用者確認 debug APK 實機測試正常，返回鍵、背景暫停 / 恢復、震動、音效 unlock 與長時間效能無問題 | 後續版本若改 platform adapter 或原生設定，再重測 |
@@ -112,7 +115,7 @@
 3. iOS 目前被環境阻塞，因此不阻擋 Android 主線；取得 macOS / Xcode 後可與 Android Play 後台並行。
 4. LAN protocol hardening 的 AI 可處理首輪已完成；剩餘雙機長時間驗證屬裝置測試，不阻擋下一個 AI 可直接處理項目。
 5. AI / simulator 對齊排在策略套用與共用規則核心之前，因為尚未確認差異前，直接套策略或抽共用核心都容易把錯誤固定下來。
-6. Facade / ES modules 排在共用規則核心之前，因為先清楚模組邊界，再抽共享純函式，回歸風險較低；目前 `ui.js`、`render.js`、`ai.js` 可安全移動的執行期 game API 已完成，`running`、`paused`、`gameOver` 已先接到 `HexSnakeState.game`，下一步延伸到 match collections。
+6. Facade / ES modules 排在共用規則核心之前，因為先清楚模組邊界，再抽共享純函式，回歸風險較低；目前 `ui.js`、`render.js`、`ai.js` 可安全移動的執行期 game API 已完成，`running`、`paused`、`gameOver`、match collections、combat/resource state 與 runtime/session state 已接到 `HexSnakeState.game`，下一步處理角色/難度/方向與短暫 UI timers。
 7. Replay 分享、每日挑戰、觀戰聯賽屬產品延伸，等上架、多人協議與核心穩定後再做，避免擴大同時變更面。
 
 ## 固定檢查
@@ -175,6 +178,6 @@ npm.cmd run evaluate:strategy-gate -- --character <id> --candidates <candidate-j
 1. 建立 Google Play internal testing，補資料安全、內容分級、截圖與商店欄位，並上傳 signed release AAB。
 2. 找 macOS / Xcode 環境執行 iOS build 與 TestFlight；若環境已備妥，可與第 1 步並行。
 3. LAN 多人剩餘雙機長時間 reconnect / snapshot 驗證；若通過，再規劃 WebRTC DataChannel。
-4. 繼續 `game.js` facade / ES modules：下一刀延伸 match runtime state 入口，優先收斂 `snake`、`computerSnake`、`foods`、`hazards`、`projectiles`、`blasts`，再處理 combat/resource state。
+4. 繼續 `game.js` state boundary：下一刀處理角色/難度/方向與短暫 UI timers，優先收斂 character ids、computer difficulty、computer dir、energy/bomb flashes、hold timers。
 5. 若之後要繼續 AI 訓練，先以 dragon / gu_king 為目標重跑完整 target-vs-field gate，不直接套用既有輸出。
 6. 最後再做 replay 分享、每日挑戰與觀戰聯賽。

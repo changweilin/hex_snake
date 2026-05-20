@@ -859,26 +859,26 @@
       nextDir = 0;
       computerDir = 3;
       const startLength = gmMode ? initialLength : defaultSettings.initialLength;
-      snake = createStartingSnake({ q: -offset, r: offset }, dir, startLength);
-      computerSnake = createStartingSnake({ q: offset, r: -offset }, computerDir, startLength);
-      score = 0;
-      computerScore = 0;
-      playerHp = maxHpForSnake(snake);
-      computerHp = maxHpForSnake(computerSnake);
-      playerStock = startingStock();
-      computerStock = startingStock();
-      playerAmmo = startingBombs();
-      computerAmmo = startingBombs();
-      playerAmmoCharge = startingEnergy();
-      computerAmmoCharge = startingEnergy();
+      HexSnakeState.game.snake = createStartingSnake({ q: -offset, r: offset }, dir, startLength);
+      HexSnakeState.game.computerSnake = createStartingSnake({ q: offset, r: -offset }, computerDir, startLength);
+      HexSnakeState.game.score = 0;
+      HexSnakeState.game.computerScore = 0;
+      HexSnakeState.game.playerHp = maxHpForSnake(HexSnakeState.game.snake);
+      HexSnakeState.game.computerHp = maxHpForSnake(HexSnakeState.game.computerSnake);
+      HexSnakeState.game.playerStock = startingStock();
+      HexSnakeState.game.computerStock = startingStock();
+      HexSnakeState.game.playerAmmo = startingBombs();
+      HexSnakeState.game.computerAmmo = startingBombs();
+      HexSnakeState.game.playerAmmoCharge = startingEnergy();
+      HexSnakeState.game.computerAmmoCharge = startingEnergy();
       playerEnergyFlashUntil = 0;
       computerEnergyFlashUntil = 0;
       playerBombFlashUntil = 0;
       computerBombFlashUntil = 0;
-      foods = [];
-      projectiles = [];
-      blasts = [];
-      hazards = [];
+      HexSnakeState.game.foods = [];
+      HexSnakeState.game.projectiles = [];
+      HexSnakeState.game.blasts = [];
+      HexSnakeState.game.hazards = [];
       boardShakeUntil = 0;
       boardShakeStartedAt = 0;
       boardShakeStrength = 0;
@@ -891,43 +891,43 @@
         keyboardAttackPreviewTimer = null;
       }
       updateTargetModeIndicator();
-      targetCell = { ...snake[0] };
+      targetCell = { ...HexSnakeState.game.snake[0] };
       targetActive = false;
-      totalElapsedMs = 0;
-      lastFeedElapsedMs = 0;
-      lastTimerFrame = 0;
-      lastHudFrameAt = -Infinity;
+      HexSnakeState.game.totalElapsedMs = 0;
+      HexSnakeState.game.lastFeedElapsedMs = 0;
+      HexSnakeState.game.lastTimerFrame = 0;
+      HexSnakeState.game.lastHudFrameAt = -Infinity;
       lastReplayRecordCheckAt = -Infinity;
-      lastPlayerStep = 0;
-      lastComputerStep = 0;
-      playerStunUntil = 0;
-      playerSlowUntil = 0;
-      playerCollisionParalysisMs = 0;
-      playerVulnerable = false;
-      computerStunUntil = 0;
-      computerSlowUntil = 0;
-      computerCollisionParalysisMs = 0;
-      computerVulnerable = false;
-      playerUndergroundFrom = 0;
-      playerUndergroundUntil = 0;
-      computerUndergroundFrom = 0;
-      computerUndergroundUntil = 0;
-      playerSandwormArmorFrom = 0;
-      playerSandwormArmorUntil = 0;
-      computerSandwormArmorFrom = 0;
-      computerSandwormArmorUntil = 0;
-      lastVisiblePlayerSnake = snake.map(segment => ({ ...segment }));
-      lastVisibleComputerSnake = computerSnake.map(segment => ({ ...segment }));
-      lastVisiblePlayerDir = dir;
-      lastVisibleComputerDir = computerDir;
-      playerFoodTargetKey = null;
-      computerFoodTargetKey = null;
-      playerFoodTargetAt = 0;
-      computerFoodTargetAt = 0;
-      lastPlayerFoodAt = 0;
-      lastComputerFoodAt = 0;
-      lastPlayerAttackMs = resetAttackCooldownTracker();
-      lastComputerAttackMs = resetAttackCooldownTracker();
+      HexSnakeState.game.lastPlayerStep = 0;
+      HexSnakeState.game.lastComputerStep = 0;
+      HexSnakeState.game.playerStunUntil = 0;
+      HexSnakeState.game.playerSlowUntil = 0;
+      HexSnakeState.game.playerCollisionParalysisMs = 0;
+      HexSnakeState.game.playerVulnerable = false;
+      HexSnakeState.game.computerStunUntil = 0;
+      HexSnakeState.game.computerSlowUntil = 0;
+      HexSnakeState.game.computerCollisionParalysisMs = 0;
+      HexSnakeState.game.computerVulnerable = false;
+      HexSnakeState.game.playerUndergroundFrom = 0;
+      HexSnakeState.game.playerUndergroundUntil = 0;
+      HexSnakeState.game.computerUndergroundFrom = 0;
+      HexSnakeState.game.computerUndergroundUntil = 0;
+      HexSnakeState.game.playerSandwormArmorFrom = 0;
+      HexSnakeState.game.playerSandwormArmorUntil = 0;
+      HexSnakeState.game.computerSandwormArmorFrom = 0;
+      HexSnakeState.game.computerSandwormArmorUntil = 0;
+      HexSnakeState.game.lastVisiblePlayerSnake = HexSnakeState.game.snake.map(segment => ({ ...segment }));
+      HexSnakeState.game.lastVisibleComputerSnake = HexSnakeState.game.computerSnake.map(segment => ({ ...segment }));
+      HexSnakeState.game.lastVisiblePlayerDir = dir;
+      HexSnakeState.game.lastVisibleComputerDir = computerDir;
+      HexSnakeState.game.playerFoodTargetKey = null;
+      HexSnakeState.game.computerFoodTargetKey = null;
+      HexSnakeState.game.playerFoodTargetAt = 0;
+      HexSnakeState.game.computerFoodTargetAt = 0;
+      HexSnakeState.game.lastPlayerFoodAt = 0;
+      HexSnakeState.game.lastComputerFoodAt = 0;
+      HexSnakeState.game.lastPlayerAttackMs = resetAttackCooldownTracker();
+      HexSnakeState.game.lastComputerAttackMs = resetAttackCooldownTracker();
       HexSnakeReplay.resetSurrendered();
       HexSnakeState.game.gameOver = false;
       setLastResultShareData(null);
@@ -938,7 +938,7 @@
     }
 
     function canRestartAfterGameOver() {
-      return !gameOverSettlementPending && performance.now() >= restartUnlockAt;
+      return !HexSnakeState.game.gameOverSettlementPending && performance.now() >= restartUnlockAt;
     }
 
     function resultCopyText(data) {
@@ -947,7 +947,7 @@
 
     function currentModeLabel(endedInAutoMode = false) {
       if (relayMode) return "接力賽";
-      if (computerBattleMode) return "自動對弈";
+      if (HexSnakeState.game.computerBattleMode) return "自動對弈";
       if (endedInAutoMode) return "Auto 操作";
       return "玩家操作";
     }
@@ -965,7 +965,7 @@
         plainResultText,
         scoreText,
         `角色：P1 ${playerCharacter?.name || "隨機選擇"} vs P2 ${computerCharacter?.name || "隨機選擇"}`,
-        `時間：${formatTime(totalElapsedMs)}`,
+        `時間：${formatTime(HexSnakeState.game.totalElapsedMs)}`,
         `模式：${currentModeLabel(endedInAutoMode)}`,
         `難度：${currentDifficultyLabel()}`,
         resultReason,
@@ -1024,8 +1024,8 @@
     }
 
     function skipLogoTransition() {
-      if (logoTransitionDirection() !== "in" || gameOverLogoTransitionEndsAt <= 0) return false;
-      gameOverLogoTransitionEndsAt = 0;
+      if (logoTransitionDirection() !== "in" || HexSnakeState.game.gameOverLogoTransitionEndsAt <= 0) return false;
+      HexSnakeState.game.gameOverLogoTransitionEndsAt = 0;
       showGameOverSettlement();
       return true;
     }
@@ -1039,12 +1039,12 @@
       if (HexSnakeState.game.gameOver && !canRestartAfterGameOver()) return false;
       clearGameOverSettlementTimer();
       clearRelayRestartTimer();
-      computerBattleMode = Boolean(options.computerBattle);
-      playerAutoMode = Boolean(options.playerAuto) && !computerBattleMode;
-      computerBattleManualOverride = false;
-      if (computerBattleMode || playerAutoMode) setRelayMode(relayModePreference, Boolean(options.resetRelayScore), false);
-      if (!computerBattleMode && !playerAutoMode) setRelayMode(false, false, false);
-      if (computerBattleMode || playerAutoMode) setComputerBattleSpeed(HexSnakeStorage.get("hexSnakeAutoBattleSpeed"), false);
+      HexSnakeState.game.computerBattleMode = Boolean(options.computerBattle);
+      HexSnakeState.game.playerAutoMode = Boolean(options.playerAuto) && !HexSnakeState.game.computerBattleMode;
+      HexSnakeState.game.computerBattleManualOverride = false;
+      if (HexSnakeState.game.computerBattleMode || HexSnakeState.game.playerAutoMode) setRelayMode(relayModePreference, Boolean(options.resetRelayScore), false);
+      if (!HexSnakeState.game.computerBattleMode && !HexSnakeState.game.playerAutoMode) setRelayMode(false, false, false);
+      if (HexSnakeState.game.computerBattleMode || HexSnakeState.game.playerAutoMode) setComputerBattleSpeed(HexSnakeStorage.get("hexSnakeAutoBattleSpeed"), false);
       setFoodCount(foodCountInput.value);
       setComputerDifficulty(computerDifficultyInput.value);
       setInitialSpeed(initialSpeedInput.value);
@@ -1065,11 +1065,11 @@
       overlay.classList.remove("show");
       showCharacterStage({ rebuild: false, overlay: false });
       updateAutoBattleControls();
-      lastPlayerStep = performance.now();
-      lastComputerStep = lastPlayerStep;
-      lastTimerFrame = lastPlayerStep;
+      HexSnakeState.game.lastPlayerStep = performance.now();
+      HexSnakeState.game.lastComputerStep = HexSnakeState.game.lastPlayerStep;
+      HexSnakeState.game.lastTimerFrame = HexSnakeState.game.lastPlayerStep;
       HexSnakeReplay.startRecording();
-      broadcastNetworkStart(lastPlayerStep);
+      broadcastNetworkStart(HexSnakeState.game.lastPlayerStep);
       cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(loop);
       return true;
@@ -1085,9 +1085,9 @@
     function returnToStartScreen() {
       clearGameOverSettlementTimer();
       clearRelayRestartTimer();
-      computerBattleMode = false;
-      playerAutoMode = false;
-      computerBattleManualOverride = false;
+      HexSnakeState.game.computerBattleMode = false;
+      HexSnakeState.game.playerAutoMode = false;
+      HexSnakeState.game.computerBattleManualOverride = false;
       setRelayMode(false, false, false);
       updateSettingsActionMode();
       updateAutoBattleControls();
@@ -1147,18 +1147,18 @@
 
     function placeFoods(preferredOwners = []) {
       const occupied = new Set([
-        ...snake.map(keyOf),
-        ...computerSnake.map(keyOf),
-        ...foods.map(keyOf)
+        ...HexSnakeState.game.snake.map(keyOf),
+        ...HexSnakeState.game.computerSnake.map(keyOf),
+        ...HexSnakeState.game.foods.map(keyOf)
       ]);
       let generated = 0;
-      while (foods.length < foodCount) {
+      while (HexSnakeState.game.foods.length < foodCount) {
         const openCells = cells.filter(cell => !occupied.has(keyOf(cell)));
         if (!openCells.length) return;
         const cell = openCells[Math.floor(Math.random() * openCells.length)];
         const owner = preferredOwners[generated];
         const character = owner ? characterFor(owner) : null;
-        foods.push({ q: cell.q, r: cell.r, types: randomFoodTypeIdsForCharacter(character) });
+        HexSnakeState.game.foods.push({ q: cell.q, r: cell.r, types: randomFoodTypeIdsForCharacter(character) });
         occupied.add(keyOf(cell));
         generated += 1;
       }
@@ -1285,33 +1285,33 @@
     }
 
     function updateHud() {
-      lastHudFrameAt = performance.now();
+      HexSnakeState.game.lastHudFrameAt = performance.now();
       updateSkillPrepVisibility();
-      const playerMaxHp = maxHpForSnake(snake);
-      const computerMaxHp = maxHpForSnake(computerSnake);
-      scoreEl.textContent = `HP ${Math.max(0, Math.ceil(playerHp))}/${playerMaxHp}`;
-      computerScoreEl.textContent = `HP ${Math.max(0, Math.ceil(computerHp))}/${computerMaxHp}`;
-      updateHealthBar("player", playerHp, playerMaxHp);
-      updateHealthBar("computer", computerHp, computerMaxHp);
+      const playerMaxHp = maxHpForSnake(HexSnakeState.game.snake);
+      const computerMaxHp = maxHpForSnake(HexSnakeState.game.computerSnake);
+      scoreEl.textContent = `HP ${Math.max(0, Math.ceil(HexSnakeState.game.playerHp))}/${playerMaxHp}`;
+      computerScoreEl.textContent = `HP ${Math.max(0, Math.ceil(HexSnakeState.game.computerHp))}/${computerMaxHp}`;
+      updateHealthBar("player", HexSnakeState.game.playerHp, playerMaxHp);
+      updateHealthBar("computer", HexSnakeState.game.computerHp, computerMaxHp);
       bestEl.textContent = best;
-      totalTimeEl.textContent = formatTime(totalElapsedMs);
-      lastFeedTimeEl.textContent = formatTime(lastFeedElapsedMs);
+      totalTimeEl.textContent = formatTime(HexSnakeState.game.totalElapsedMs);
+      lastFeedTimeEl.textContent = formatTime(HexSnakeState.game.lastFeedElapsedMs);
       bestTimeEl.textContent = formatTime(bestTotalMs);
       const now = performance.now();
-      const playerSpeedValue = isMovementStunned("player", now) ? 0 : movementSpeed(playerStock) / (now < playerSlowUntil ? 2 : 1);
-      const computerSpeedValue = isMovementStunned("computer", now) ? 0 : movementSpeed(computerStock) / (now < computerSlowUntil ? 2 : 1);
+      const playerSpeedValue = isMovementStunned("player", now) ? 0 : movementSpeed(HexSnakeState.game.playerStock) / (now < HexSnakeState.game.playerSlowUntil ? 2 : 1);
+      const computerSpeedValue = isMovementStunned("computer", now) ? 0 : movementSpeed(HexSnakeState.game.computerStock) / (now < HexSnakeState.game.computerSlowUntil ? 2 : 1);
       const playerSpeed = Math.round(playerSpeedValue * 10) / 10;
       const computerSpeed = Math.round(computerSpeedValue * 10) / 10;
       playerSpeedEl.textContent = `${playerSpeed}x`;
       computerSpeedEl.textContent = `${computerSpeed}x`;
       keyEls.forEach(el => el.classList.toggle("active", Number(el.dataset.dir) === nextDir));
-      updateStockHud("player", playerStock, playerAmmo, playerAmmoCharge);
-      updateStockHud("computer", computerStock, computerAmmo, computerAmmoCharge);
+      updateStockHud("player", HexSnakeState.game.playerStock, HexSnakeState.game.playerAmmo, HexSnakeState.game.playerAmmoCharge);
+      updateStockHud("computer", HexSnakeState.game.computerStock, HexSnakeState.game.computerAmmo, HexSnakeState.game.computerAmmoCharge);
       updateCooldownHud(now);
     }
 
     function updateHudThrottled(now = performance.now()) {
-      if (now - lastHudFrameAt < hudFrameIntervalMs) return;
+      if (now - HexSnakeState.game.lastHudFrameAt < hudFrameIntervalMs) return;
       updateHud();
     }
 
@@ -1336,7 +1336,7 @@
 
     function renderAutoSpeedMenu() {
       autoSpeedMenu.innerHTML = autoBattleSpeeds.map(speed => `
-        <button class="${speed === computerBattleSpeed ? "is-selected" : ""}" type="button" data-auto-speed="${speed}">${autoBattleSpeedLabel(speed)}</button>
+        <button class="${speed === HexSnakeState.game.computerBattleSpeed ? "is-selected" : ""}" type="button" data-auto-speed="${speed}">${autoBattleSpeedLabel(speed)}</button>
       `).join("");
     }
 
@@ -1369,45 +1369,45 @@
     }
 
     function setComputerBattleSpeed(value, persist = true) {
-      computerBattleSpeed = normalizeAutoBattleSpeed(value);
-      autoBattleSpeedSelect.textContent = autoBattleSpeedLabel(computerBattleSpeed);
-      autoBattleSpeedSelect.dataset.value = String(computerBattleSpeed);
-      autoBattleSpeedSelect.setAttribute("aria-valuenow", String(computerBattleSpeed));
-      autoBattleSpeedSelect.setAttribute("aria-valuetext", autoBattleSpeedLabel(computerBattleSpeed));
+      HexSnakeState.game.computerBattleSpeed = normalizeAutoBattleSpeed(value);
+      autoBattleSpeedSelect.textContent = autoBattleSpeedLabel(HexSnakeState.game.computerBattleSpeed);
+      autoBattleSpeedSelect.dataset.value = String(HexSnakeState.game.computerBattleSpeed);
+      autoBattleSpeedSelect.setAttribute("aria-valuenow", String(HexSnakeState.game.computerBattleSpeed));
+      autoBattleSpeedSelect.setAttribute("aria-valuetext", autoBattleSpeedLabel(HexSnakeState.game.computerBattleSpeed));
       renderAutoSpeedMenu();
       if (persist) {
-        HexSnakeStorage.set("hexSnakeAutoBattleSpeed", String(computerBattleSpeed));
+        HexSnakeStorage.set("hexSnakeAutoBattleSpeed", String(HexSnakeState.game.computerBattleSpeed));
       }
     }
 
     function resetAutoBattleStepTimers() {
-      lastPlayerStep = performance.now();
-      lastComputerStep = lastPlayerStep;
-      lastTimerFrame = lastPlayerStep;
+      HexSnakeState.game.lastPlayerStep = performance.now();
+      HexSnakeState.game.lastComputerStep = HexSnakeState.game.lastPlayerStep;
+      HexSnakeState.game.lastTimerFrame = HexSnakeState.game.lastPlayerStep;
     }
 
     function isPlayerAutoControlActive() {
-      return (computerBattleMode && !computerBattleManualOverride) || playerAutoMode;
+      return (HexSnakeState.game.computerBattleMode && !HexSnakeState.game.computerBattleManualOverride) || HexSnakeState.game.playerAutoMode;
     }
 
     function isRelayModeAvailable() {
-      return computerBattleMode ? !computerBattleManualOverride : playerAutoMode;
+      return HexSnakeState.game.computerBattleMode ? !HexSnakeState.game.computerBattleManualOverride : HexSnakeState.game.playerAutoMode;
     }
 
     function clearRelayRestartTimer() {
-      if (!relayRestartTimer) return;
-      clearTimeout(relayRestartTimer);
-      relayRestartTimer = null;
+      if (!HexSnakeState.game.relayRestartTimer) return;
+      clearTimeout(HexSnakeState.game.relayRestartTimer);
+      HexSnakeState.game.relayRestartTimer = null;
     }
 
     function clearGameOverSettlementTimer() {
-      gameOverSettlementPending = false;
-      gameOverRelayStartOptions = null;
-      gameOverContinuousVisualDeadlineAt = 0;
-      gameOverLogoTransitionEndsAt = 0;
-      gameOverResultOwner = null;
-      gameOverPlayerLost = false;
-      gameOverComputerLost = false;
+      HexSnakeState.game.gameOverSettlementPending = false;
+      HexSnakeState.game.gameOverRelayStartOptions = null;
+      HexSnakeState.game.gameOverContinuousVisualDeadlineAt = 0;
+      HexSnakeState.game.gameOverLogoTransitionEndsAt = 0;
+      HexSnakeState.game.gameOverResultOwner = null;
+      HexSnakeState.game.gameOverPlayerLost = false;
+      HexSnakeState.game.gameOverComputerLost = false;
       clearLogoTransition();
     }
 
@@ -1438,10 +1438,10 @@
     function updateAutoBattleControls() {
       const visible = isPlayerAutoControlActive() && HexSnakeState.game.running && !HexSnakeState.game.gameOver && !HexSnakeReplay.isPlaybackMode();
       autoBattlePanel.hidden = !visible;
-      autoBattleSpeedSelect.textContent = autoBattleSpeedLabel(computerBattleSpeed);
-      autoBattleSpeedSelect.dataset.value = String(computerBattleSpeed);
-      autoBattleSpeedSelect.setAttribute("aria-valuenow", String(computerBattleSpeed));
-      autoBattleSpeedSelect.setAttribute("aria-valuetext", autoBattleSpeedLabel(computerBattleSpeed));
+      autoBattleSpeedSelect.textContent = autoBattleSpeedLabel(HexSnakeState.game.computerBattleSpeed);
+      autoBattleSpeedSelect.dataset.value = String(HexSnakeState.game.computerBattleSpeed);
+      autoBattleSpeedSelect.setAttribute("aria-valuenow", String(HexSnakeState.game.computerBattleSpeed));
+      autoBattleSpeedSelect.setAttribute("aria-valuetext", autoBattleSpeedLabel(HexSnakeState.game.computerBattleSpeed));
       if (!visible) setAutoSpeedMenuOpen(false);
       autoPauseButton.textContent = HexSnakeState.game.paused ? "▶" : "⏸";
       autoPauseButton.setAttribute("aria-label", HexSnakeState.game.paused ? "播放" : "暫停");
@@ -1452,9 +1452,9 @@
 
     function setPlayerAutoMode(active, announce = true) {
       const nextActive = Boolean(active) && HexSnakeState.game.running && !HexSnakeState.game.gameOver && !HexSnakeReplay.isPlaybackMode();
-      if (playerAutoMode === nextActive) return;
-      playerAutoMode = nextActive;
-      if (playerAutoMode) {
+      if (HexSnakeState.game.playerAutoMode === nextActive) return;
+      HexSnakeState.game.playerAutoMode = nextActive;
+      if (HexSnakeState.game.playerAutoMode) {
         setComputerBattleSpeed(HexSnakeStorage.get("hexSnakeAutoBattleSpeed"), false);
         setRelayMode(relayModePreference, false, false);
         resetAutoBattleStepTimers();
@@ -1470,9 +1470,9 @@
     }
 
     function setComputerBattleManualOverride(active) {
-      if (!computerBattleMode || !HexSnakeState.game.running || HexSnakeState.game.gameOver || HexSnakeReplay.isPlaybackMode()) return;
-      computerBattleManualOverride = Boolean(active);
-      if (!computerBattleManualOverride) {
+      if (!HexSnakeState.game.computerBattleMode || !HexSnakeState.game.running || HexSnakeState.game.gameOver || HexSnakeReplay.isPlaybackMode()) return;
+      HexSnakeState.game.computerBattleManualOverride = Boolean(active);
+      if (!HexSnakeState.game.computerBattleManualOverride) {
         setComputerBattleSpeed(HexSnakeStorage.get("hexSnakeAutoBattleSpeed"), false);
         setRelayMode(relayModePreference, false, false);
         resetAutoBattleStepTimers();
@@ -1537,7 +1537,7 @@
     }
 
     function broadcastNetworkSnapshot(now = performance.now(), force = false, final = false) {
-      if (!isNetworkHostActive() || !snake || !computerSnake) return;
+      if (!isNetworkHostActive() || !HexSnakeState.game.snake || !HexSnakeState.game.computerSnake) return;
       const snapshotIntervalMs = Number(networkAdapter()?.snapshotIntervalMs?.()) || 100;
       if (!force && now - lastNetworkSnapshotAt < snapshotIntervalMs) return;
       lastNetworkSnapshotAt = now;
@@ -1562,7 +1562,7 @@
 
     function applyNetworkDirectionInput(direction) {
       const nextDirection = safeNetworkDirection(direction);
-      if (nextDirection === null || !computerSnake?.length) return false;
+      if (nextDirection === null || !HexSnakeState.game.computerSnake?.length) return false;
       if (!canComputerTurn(nextDirection)) return false;
       computerDir = nextDirection;
       updateHud();
@@ -1570,15 +1570,15 @@
     }
 
     function applyNetworkAttackInput(input = {}) {
-      if (!HexSnakeState.game.running || HexSnakeState.game.paused || HexSnakeState.game.gameOver || !computerSnake?.length || !snake?.length) return false;
+      if (!HexSnakeState.game.running || HexSnakeState.game.paused || HexSnakeState.game.gameOver || !HexSnakeState.game.computerSnake?.length || !HexSnakeState.game.snake?.length) return false;
       const profile = input.profile === "small" ? "small" : "big";
       const direction = safeNetworkDirection(input.direction);
       const options = safeNetworkAttackOptions(input.options);
       if (direction !== null) {
         options.aimDirection = direction;
-        options.aimOrigin = { ...computerSnake[0] };
+        options.aimOrigin = { ...HexSnakeState.game.computerSnake[0] };
       }
-      const target = safeNetworkCell(input.target) || snake[0];
+      const target = safeNetworkCell(input.target) || HexSnakeState.game.snake[0];
       const launched = launchAttack("computer", target, performance.now(), profile, options);
       if (launched) {
         setStatus(profile === "small" ? "P2 LAN attack fired." : "P2 LAN big attack fired.");
@@ -1604,9 +1604,9 @@
       HexSnakeState.game.running = false;
       HexSnakeState.game.paused = false;
       HexSnakeState.game.gameOver = final;
-      computerBattleMode = false;
-      playerAutoMode = false;
-      computerBattleManualOverride = false;
+      HexSnakeState.game.computerBattleMode = false;
+      HexSnakeState.game.playerAutoMode = false;
+      HexSnakeState.game.computerBattleManualOverride = false;
       relayMode = false;
       setSettingsLocked(!final);
       overlay.classList.remove("show");
@@ -1634,10 +1634,10 @@
 
     function sandwormUndergroundAlpha(owner, now) {
       if (characterFor(owner).id !== "sandworm") return 1;
-      const armorFrom = owner === "player" ? playerSandwormArmorFrom : computerSandwormArmorFrom;
-      const armorUntil = owner === "player" ? playerSandwormArmorUntil : computerSandwormArmorUntil;
-      const from = owner === "player" ? playerUndergroundFrom : computerUndergroundFrom;
-      const until = owner === "player" ? playerUndergroundUntil : computerUndergroundUntil;
+      const armorFrom = owner === "player" ? HexSnakeState.game.playerSandwormArmorFrom : HexSnakeState.game.computerSandwormArmorFrom;
+      const armorUntil = owner === "player" ? HexSnakeState.game.playerSandwormArmorUntil : HexSnakeState.game.computerSandwormArmorUntil;
+      const from = owner === "player" ? HexSnakeState.game.playerUndergroundFrom : HexSnakeState.game.computerUndergroundFrom;
+      const until = owner === "player" ? HexSnakeState.game.playerUndergroundUntil : HexSnakeState.game.computerUndergroundUntil;
       if (from && now >= from && now <= until) return 0;
       if (armorFrom && now >= armorFrom && now <= armorUntil) {
         const fadeTargetAt = from && from > armorFrom ? from : armorFrom + 500;
@@ -1660,8 +1660,8 @@
 
     function isOwnerSandwormArmored(owner, now) {
       if (characterFor(owner).id !== "sandworm") return false;
-      const from = owner === "player" ? playerSandwormArmorFrom : computerSandwormArmorFrom;
-      const until = owner === "player" ? playerSandwormArmorUntil : computerSandwormArmorUntil;
+      const from = owner === "player" ? HexSnakeState.game.playerSandwormArmorFrom : HexSnakeState.game.computerSandwormArmorFrom;
+      const until = owner === "player" ? HexSnakeState.game.playerSandwormArmorUntil : HexSnakeState.game.computerSandwormArmorUntil;
       return Boolean(from && now >= from && now <= until);
     }
 
@@ -1671,15 +1671,15 @@
 
     function clearOwnerAbnormalStatus(owner, now) {
       if (owner === "player") {
-        playerStunUntil = Math.min(playerStunUntil, now);
-        playerSlowUntil = Math.min(playerSlowUntil, now);
-        playerCollisionParalysisMs = 0;
-        playerVulnerable = false;
+        HexSnakeState.game.playerStunUntil = Math.min(HexSnakeState.game.playerStunUntil, now);
+        HexSnakeState.game.playerSlowUntil = Math.min(HexSnakeState.game.playerSlowUntil, now);
+        HexSnakeState.game.playerCollisionParalysisMs = 0;
+        HexSnakeState.game.playerVulnerable = false;
       } else {
-        computerStunUntil = Math.min(computerStunUntil, now);
-        computerSlowUntil = Math.min(computerSlowUntil, now);
-        computerCollisionParalysisMs = 0;
-        computerVulnerable = false;
+        HexSnakeState.game.computerStunUntil = Math.min(HexSnakeState.game.computerStunUntil, now);
+        HexSnakeState.game.computerSlowUntil = Math.min(HexSnakeState.game.computerSlowUntil, now);
+        HexSnakeState.game.computerCollisionParalysisMs = 0;
+        HexSnakeState.game.computerVulnerable = false;
       }
     }
 
@@ -1690,15 +1690,15 @@
     }
 
     function canTurn(newDir) {
-      return snake.length < 2 || (newDir + 3) % 6 !== dir;
+      return HexSnakeState.game.snake.length < 2 || (newDir + 3) % 6 !== dir;
     }
 
     function canComputerTurn(newDir) {
-      return computerSnake.length < 2 || (newDir + 3) % 6 !== computerDir;
+      return HexSnakeState.game.computerSnake.length < 2 || (newDir + 3) % 6 !== computerDir;
     }
 
     function canOwnerTurn(owner, newDir) {
-      if (owner === "player") return snake.length < 2 || (newDir + 3) % 6 !== dir;
+      if (owner === "player") return HexSnakeState.game.snake.length < 2 || (newDir + 3) % 6 !== dir;
       return canComputerTurn(newDir);
     }
 
@@ -1726,7 +1726,7 @@
     }
 
     function directionalAttackTarget(direction) {
-      let target = { ...snake[0] };
+      let target = { ...HexSnakeState.game.snake[0] };
       for (let step = 0; step < targetMaxHex; step += 1) {
         const next = nextWrappedCell(target, direction);
         target = next;
@@ -1741,7 +1741,7 @@
     function setDirection(newDir, options = {}) {
       if (!Number.isInteger(newDir) || newDir < 0 || newDir > 5) return;
       if (isNetworkGuestActive()) {
-        if (!computerSnake?.length || !canComputerTurn(newDir)) return;
+        if (!HexSnakeState.game.computerSnake?.length || !canComputerTurn(newDir)) return;
         setDirectionButtonHighlight(newDir);
         sendNetworkInput({ kind: "direction", direction: newDir });
         if (options.feedbackEvent) triggerTouchFeedback(options.feedbackEvent, options.feedbackStrength ?? 6);
@@ -1940,7 +1940,7 @@
     }
 
     function pushCircleAttack({ owner, profile, source = null, target, createdAt, impactAt, delay, radius, damage, stunChance, hidden = false, flat = false, visualType = null, ...extra }) {
-      projectiles.push({
+      HexSnakeState.game.projectiles.push({
         kind: "circle",
         owner,
         profile,
@@ -2004,7 +2004,7 @@
       const travelPath = firstHit ? path.slice(0, firstHit.index + 1) : path;
       const endCell = firstHit?.cell || path[path.length - 1] || source;
       const travelDelay = smallDelay + travelPath.length * fistStepMs;
-      projectiles.push({
+      HexSnakeState.game.projectiles.push({
         kind: "lobsterPalm",
         owner,
         profile: "big",
@@ -2026,7 +2026,7 @@
       });
       const burstHits = firstHit ? [firstHit] : [{ cell: endCell, index: Math.max(0, travelPath.length - 1) }];
       burstHits.forEach(hit => {
-        projectiles.push({
+        HexSnakeState.game.projectiles.push({
           kind: "lobsterPalmBurst",
           owner,
           profile: "big",
@@ -2089,7 +2089,7 @@
               owner,
               source,
               direction,
-              targetSnake: owner === "player" ? computerSnake : snake,
+              targetSnake: owner === "player" ? HexSnakeState.game.computerSnake : HexSnakeState.game.snake,
               now,
               smallDelay: small.delay,
               fistStepMs,
@@ -2106,7 +2106,7 @@
           } else {
             const maxSteps = Math.max(1, Math.ceil((radius * 2 + 1) / 2));
             maxTravelDelay = Math.max(maxTravelDelay, small.delay + maxSteps * fistStepMs);
-            projectiles.push({
+            HexSnakeState.game.projectiles.push({
               kind: "lobsterPalmSetup",
               owner,
               profile: "big",
@@ -2137,11 +2137,11 @@
         const lineOrigin = options.aimOrigin || target;
         const lineCells = boardLineThrough(lineOrigin, direction);
         const lineShape = bandShapeFromTotalWidth(small.radius);
-        const excludedCells = (owner === "player" ? snake : computerSnake).map(segment => ({ q: segment.q, r: segment.r }));
+        const excludedCells = (owner === "player" ? HexSnakeState.game.snake : HexSnakeState.game.computerSnake).map(segment => ({ q: segment.q, r: segment.r }));
         const durationMs = baseAttackDelayMs * smallAttackDelayScale * Math.max(1, ultimateSetting(character.id, "durationBaseTicks", 4));
         const tickMs = Math.max(1, small.delay);
         const damage = bigDamage * ultimateSetting(character.id, "damageMultiplier", 0.24);
-        projectiles.push({
+        HexSnakeState.game.projectiles.push({
           kind: "lineHazardSetup",
           owner,
           profile: "big",
@@ -2168,13 +2168,13 @@
       }
 
       if (character.id === "quetzal") {
-        const trail = (owner === "player" ? snake : computerSnake).map(segment => ({ q: segment.q, r: segment.r }));
+        const trail = (owner === "player" ? HexSnakeState.game.snake : HexSnakeState.game.computerSnake).map(segment => ({ q: segment.q, r: segment.r }));
         const duration = 3000;
         const extensionDamageMultiplier = Math.max(0, Math.min(1, (stock.protein || 0) / maxFoodStock));
         const outwardWidth = extensionDamageMultiplier > 0 ? 1 : 0;
         const tickMs = ultimateSetting(character.id, "tickMs", baseStepMs);
         const slowDurationMs = ultimateSetting(character.id, "slowDurationMs", 2000);
-        hazards.push({
+        HexSnakeState.game.hazards.push({
           kind: "swamp",
           owner,
           cells: trail,
@@ -2206,15 +2206,15 @@
         const undergroundUntil = undergroundFrom + ultimateSetting(character.id, "invisibleDurationMs", 1500);
         const delay = small.delay * ultimateSetting(character.id, "impactDelayMultiplier", 3);
         if (owner === "player") {
-          playerSandwormArmorFrom = armorFrom;
-          playerSandwormArmorUntil = Math.max(playerSandwormArmorUntil, armorUntil);
-          playerUndergroundFrom = undergroundFrom;
-          playerUndergroundUntil = Math.max(playerUndergroundUntil, undergroundUntil);
+          HexSnakeState.game.playerSandwormArmorFrom = armorFrom;
+          HexSnakeState.game.playerSandwormArmorUntil = Math.max(HexSnakeState.game.playerSandwormArmorUntil, armorUntil);
+          HexSnakeState.game.playerUndergroundFrom = undergroundFrom;
+          HexSnakeState.game.playerUndergroundUntil = Math.max(HexSnakeState.game.playerUndergroundUntil, undergroundUntil);
         } else {
-          computerSandwormArmorFrom = armorFrom;
-          computerSandwormArmorUntil = Math.max(computerSandwormArmorUntil, armorUntil);
-          computerUndergroundFrom = undergroundFrom;
-          computerUndergroundUntil = Math.max(computerUndergroundUntil, undergroundUntil);
+          HexSnakeState.game.computerSandwormArmorFrom = armorFrom;
+          HexSnakeState.game.computerSandwormArmorUntil = Math.max(HexSnakeState.game.computerSandwormArmorUntil, armorUntil);
+          HexSnakeState.game.computerUndergroundFrom = undergroundFrom;
+          HexSnakeState.game.computerUndergroundUntil = Math.max(HexSnakeState.game.computerUndergroundUntil, undergroundUntil);
         }
         pushCircleAttack({
           owner,
@@ -2247,7 +2247,7 @@
         const volleys = 1;
         for (let index = 0; index < volleys; index += 1) {
           const impactDelay = firstImpactDelay + index * 2000;
-          projectiles.push({
+          HexSnakeState.game.projectiles.push({
             kind: "headCircle",
             owner,
             profile: "big",
@@ -2274,7 +2274,7 @@
       if (character.id === "gu_king") {
         const volleyIntervalMs = small.delay;
         const firstImpactDelay = small.delay;
-        const targetSnake = owner === "player" ? computerSnake : snake;
+        const targetSnake = owner === "player" ? HexSnakeState.game.computerSnake : HexSnakeState.game.snake;
         const damage = bigDamage * ultimateSetting(character.id, "damageMultiplier", 1.414);
         let waveTarget = { q: target.q, r: target.r };
         for (let index = 0; index < 3; index += 1) {
@@ -2302,9 +2302,9 @@
     }
 
     function launchAttack(owner, target, now, profile = "big", options = {}) {
-      const stock = owner === "player" ? playerStock : computerStock;
+      const stock = owner === "player" ? HexSnakeState.game.playerStock : HexSnakeState.game.computerStock;
       const lastAttack = lastAttackMsFor(owner, profile);
-      const source = owner === "player" ? snake[0] : computerSnake[0];
+      const source = owner === "player" ? HexSnakeState.game.snake[0] : HexSnakeState.game.computerSnake[0];
       const character = characterFor(owner);
       const isSmall = profile === "small";
       if (!canAttack(owner, profile)) return false;
@@ -2328,7 +2328,7 @@
         ? stats.delay
         : scheduleCharacterBigAttack(owner, character, source, target, now, stock, stunChance, { ...options, vulnerabilityChance, hitStunChances });
       if (isSmall) {
-        projectiles.push({
+        HexSnakeState.game.projectiles.push({
           kind: "circle",
           owner,
           profile,
@@ -2436,12 +2436,12 @@
     }
 
     function isOwnerVulnerable(owner) {
-      return owner === "player" ? playerVulnerable : computerVulnerable;
+      return owner === "player" ? HexSnakeState.game.playerVulnerable : HexSnakeState.game.computerVulnerable;
     }
 
     function setOwnerVulnerable(owner, vulnerable) {
-      if (owner === "player") playerVulnerable = vulnerable;
-      else computerVulnerable = vulnerable;
+      if (owner === "player") HexSnakeState.game.playerVulnerable = vulnerable;
+      else HexSnakeState.game.computerVulnerable = vulnerable;
     }
 
     function applyBlastDamage(owner, damage, now = performance.now()) {
@@ -2450,16 +2450,16 @@
       const finalDamage = isOwnerVulnerable(owner) ? damage * 2 : damage;
       if (isOwnerVulnerable(owner)) setOwnerVulnerable(owner, false);
       if (owner === "player") {
-        playerHp = Math.max(0, playerHp - finalDamage);
+        HexSnakeState.game.playerHp = Math.max(0, HexSnakeState.game.playerHp - finalDamage);
       } else {
-        computerHp = Math.max(0, computerHp - finalDamage);
+        HexSnakeState.game.computerHp = Math.max(0, HexSnakeState.game.computerHp - finalDamage);
       }
     }
 
     function interruptCasting(owner) {
-      const beforeCount = projectiles.length;
-      projectiles = projectiles.filter(projectile => projectile.owner !== owner || projectile.ignoreCasterInterrupt);
-      return projectiles.length !== beforeCount;
+      const beforeCount = HexSnakeState.game.projectiles.length;
+      HexSnakeState.game.projectiles = HexSnakeState.game.projectiles.filter(projectile => projectile.owner !== owner || projectile.ignoreCasterInterrupt);
+      return HexSnakeState.game.projectiles.length !== beforeCount;
     }
 
     function applyAttackStun(owner, chance = baseAttackStunChance, now = performance.now(), options = {}) {
@@ -2469,16 +2469,16 @@
         return false;
       }
       const interrupted = options.interrupt !== false && interruptCasting(owner);
-      const currentStunUntil = owner === "player" ? playerStunUntil : computerStunUntil;
+      const currentStunUntil = owner === "player" ? HexSnakeState.game.playerStunUntil : HexSnakeState.game.computerStunUntil;
       const stunBase = options.stack ? Math.max(now, currentStunUntil) : now;
       const stunUntil = stunBase + attackStunMs;
       const slowUntil = stunUntil + attackSlowMs;
       if (owner === "player") {
-        playerStunUntil = Math.max(playerStunUntil, stunUntil);
-        playerSlowUntil = Math.max(playerSlowUntil, slowUntil);
+        HexSnakeState.game.playerStunUntil = Math.max(HexSnakeState.game.playerStunUntil, stunUntil);
+        HexSnakeState.game.playerSlowUntil = Math.max(HexSnakeState.game.playerSlowUntil, slowUntil);
       } else {
-        computerStunUntil = Math.max(computerStunUntil, stunUntil);
-        computerSlowUntil = Math.max(computerSlowUntil, slowUntil);
+        HexSnakeState.game.computerStunUntil = Math.max(HexSnakeState.game.computerStunUntil, stunUntil);
+        HexSnakeState.game.computerSlowUntil = Math.max(HexSnakeState.game.computerSlowUntil, slowUntil);
       }
       showStatusCallout(owner, interrupted ? "暈眩！招式中斷" : "暈眩！", { interrupted });
       return true;
@@ -2490,14 +2490,14 @@
         clearOwnerAbnormalStatus(owner, now);
         return false;
       }
-      const currentSlowUntil = owner === "player" ? playerSlowUntil : computerSlowUntil;
+      const currentSlowUntil = owner === "player" ? HexSnakeState.game.playerSlowUntil : HexSnakeState.game.computerSlowUntil;
       const slowUntil = options.stack === false && currentSlowUntil > now
         ? currentSlowUntil
         : Math.max(currentSlowUntil, now + durationMs);
       if (owner === "player") {
-        playerSlowUntil = slowUntil;
+        HexSnakeState.game.playerSlowUntil = slowUntil;
       } else {
-        computerSlowUntil = slowUntil;
+        HexSnakeState.game.computerSlowUntil = slowUntil;
       }
       return true;
     }
@@ -2522,17 +2522,17 @@
       const stunUntil = now + collisionStunMs * severity;
       const slowUntil = stunUntil + collisionSlowMs * severity;
       if (owner === "player") {
-        playerStunUntil = Math.max(playerStunUntil, stunUntil);
-        playerSlowUntil = Math.max(playerSlowUntil, slowUntil);
-        playerCollisionParalysisMs += collisionStunMs * severity;
+        HexSnakeState.game.playerStunUntil = Math.max(HexSnakeState.game.playerStunUntil, stunUntil);
+        HexSnakeState.game.playerSlowUntil = Math.max(HexSnakeState.game.playerSlowUntil, slowUntil);
+        HexSnakeState.game.playerCollisionParalysisMs += collisionStunMs * severity;
         if (interrupted) showStatusCallout(owner, severity > 1 ? "重度麻痺！招式中斷" : "麻痺！招式中斷", { interrupted });
-        return playerCollisionParalysisMs > maxCollisionParalysisMs;
+        return HexSnakeState.game.playerCollisionParalysisMs > maxCollisionParalysisMs;
       } else {
-        computerStunUntil = Math.max(computerStunUntil, stunUntil);
-        computerSlowUntil = Math.max(computerSlowUntil, slowUntil);
-        computerCollisionParalysisMs += collisionStunMs * severity;
+        HexSnakeState.game.computerStunUntil = Math.max(HexSnakeState.game.computerStunUntil, stunUntil);
+        HexSnakeState.game.computerSlowUntil = Math.max(HexSnakeState.game.computerSlowUntil, slowUntil);
+        HexSnakeState.game.computerCollisionParalysisMs += collisionStunMs * severity;
         if (interrupted) showStatusCallout(owner, severity > 1 ? "重度麻痺！招式中斷" : "麻痺！招式中斷", { interrupted });
-        return computerCollisionParalysisMs > maxCollisionParalysisMs;
+        return HexSnakeState.game.computerCollisionParalysisMs > maxCollisionParalysisMs;
       }
     }
 
@@ -2545,11 +2545,11 @@
       const stunUntil = now + collisionStunMs;
       const slowUntil = stunUntil + collisionSlowMs;
       if (owner === "player") {
-        playerStunUntil = Math.max(playerStunUntil, stunUntil);
-        playerSlowUntil = Math.max(playerSlowUntil, slowUntil);
+        HexSnakeState.game.playerStunUntil = Math.max(HexSnakeState.game.playerStunUntil, stunUntil);
+        HexSnakeState.game.playerSlowUntil = Math.max(HexSnakeState.game.playerSlowUntil, slowUntil);
       } else {
-        computerStunUntil = Math.max(computerStunUntil, stunUntil);
-        computerSlowUntil = Math.max(computerSlowUntil, slowUntil);
+        HexSnakeState.game.computerStunUntil = Math.max(HexSnakeState.game.computerStunUntil, stunUntil);
+        HexSnakeState.game.computerSlowUntil = Math.max(HexSnakeState.game.computerSlowUntil, slowUntil);
       }
       if (interrupted) showStatusCallout(owner, "麻痺！招式中斷", { interrupted });
       return true;
@@ -2562,9 +2562,9 @@
     }
 
     function resolveProjectiles(now) {
-      const landed = projectiles.filter(projectile => now >= projectile.impactAt);
+      const landed = HexSnakeState.game.projectiles.filter(projectile => now >= projectile.impactAt);
       if (!landed.length) return;
-      projectiles = projectiles.filter(projectile => now < projectile.impactAt);
+      HexSnakeState.game.projectiles = HexSnakeState.game.projectiles.filter(projectile => now < projectile.impactAt);
 
       landed.forEach(projectile => {
         let playerDamage = 0;
@@ -2572,7 +2572,7 @@
         let playerStunChance = projectile.stunChance;
         let computerStunChance = projectile.stunChance;
         if (projectile.kind === "lineHazardSetup") {
-          hazards.push({
+          HexSnakeState.game.hazards.push({
             kind: "lineHazard",
             owner: projectile.owner,
             cells: projectile.lineCells,
@@ -2601,7 +2601,7 @@
               owner: projectile.owner,
               source,
               direction: Number.isInteger(projectile.direction) ? projectile.direction : ownerDirection(projectile.owner),
-              targetSnake: projectile.owner === "player" ? computerSnake : snake,
+              targetSnake: projectile.owner === "player" ? HexSnakeState.game.computerSnake : HexSnakeState.game.snake,
               now,
               smallDelay: projectile.smallDelay,
               fistStepMs: projectile.fistStepMs,
@@ -2621,24 +2621,24 @@
           return;
         } else if (projectile.kind === "lobsterPalmBurst") {
           const defenderOwner = projectile.owner === "player" ? "computer" : "player";
-          const defenderSnake = defenderOwner === "player" ? snake : computerSnake;
+          const defenderSnake = defenderOwner === "player" ? HexSnakeState.game.snake : HexSnakeState.game.computerSnake;
           const contactDamage = damageSnake(defenderSnake, projectile.target, projectile.radius, projectile.damage);
           if (defenderOwner === "player") playerDamage += contactDamage;
           else computerDamage += contactDamage;
-          playerDamage += damageSnake(snake, projectile.target, projectile.burstRadius, projectile.burstDamage);
-          computerDamage += damageSnake(computerSnake, projectile.target, projectile.burstRadius, projectile.burstDamage);
-          const playerHeadHit = (defenderOwner === "player" && projectile.damage > 0 && circleAttackHitsHead(snake, projectile.target, projectile.radius))
-            || (projectile.burstDamage > 0 && circleAttackHitsHead(snake, projectile.target, projectile.burstRadius));
-          const computerHeadHit = (defenderOwner === "computer" && projectile.damage > 0 && circleAttackHitsHead(computerSnake, projectile.target, projectile.radius))
-            || (projectile.burstDamage > 0 && circleAttackHitsHead(computerSnake, projectile.target, projectile.burstRadius));
+          playerDamage += damageSnake(HexSnakeState.game.snake, projectile.target, projectile.burstRadius, projectile.burstDamage);
+          computerDamage += damageSnake(HexSnakeState.game.computerSnake, projectile.target, projectile.burstRadius, projectile.burstDamage);
+          const playerHeadHit = (defenderOwner === "player" && projectile.damage > 0 && circleAttackHitsHead(HexSnakeState.game.snake, projectile.target, projectile.radius))
+            || (projectile.burstDamage > 0 && circleAttackHitsHead(HexSnakeState.game.snake, projectile.target, projectile.burstRadius));
+          const computerHeadHit = (defenderOwner === "computer" && projectile.damage > 0 && circleAttackHitsHead(HexSnakeState.game.computerSnake, projectile.target, projectile.radius))
+            || (projectile.burstDamage > 0 && circleAttackHitsHead(HexSnakeState.game.computerSnake, projectile.target, projectile.burstRadius));
           playerStunChance = stunChanceForHeadHit(playerHeadHit, projectile);
           computerStunChance = stunChanceForHeadHit(computerHeadHit, projectile);
           addProjectileBlastVisual(projectile, now);
         } else if (projectile.kind === "line") {
-          playerDamage = damageSnakeCells(snake, projectile.lineCells, projectile.width, projectile.damage, projectile.excludedCells, 0, projectile.outerDamageMultiplier ?? 1, projectile.fullDamageWidth ?? 0);
-          computerDamage = damageSnakeCells(computerSnake, projectile.lineCells, projectile.width, projectile.damage, projectile.excludedCells, 0, projectile.outerDamageMultiplier ?? 1, projectile.fullDamageWidth ?? 0);
-          playerStunChance = lineProjectileStunChance(snake, projectile);
-          computerStunChance = lineProjectileStunChance(computerSnake, projectile);
+          playerDamage = damageSnakeCells(HexSnakeState.game.snake, projectile.lineCells, projectile.width, projectile.damage, projectile.excludedCells, 0, projectile.outerDamageMultiplier ?? 1, projectile.fullDamageWidth ?? 0);
+          computerDamage = damageSnakeCells(HexSnakeState.game.computerSnake, projectile.lineCells, projectile.width, projectile.damage, projectile.excludedCells, 0, projectile.outerDamageMultiplier ?? 1, projectile.fullDamageWidth ?? 0);
+          playerStunChance = lineProjectileStunChance(HexSnakeState.game.snake, projectile);
+          computerStunChance = lineProjectileStunChance(HexSnakeState.game.computerSnake, projectile);
           addProjectileBlastVisual(projectile, now);
         } else {
           const radiationDamage = projectile.kind === "headCircle" && projectile.radiationDurationMs
@@ -2646,18 +2646,18 @@
             : 0;
           const { explosionTarget, radius } = addProjectileBlastVisual(projectile, now, { radiationDamage });
           const damage = projectile.damage || 1;
-          playerDamage = damageSnake(snake, explosionTarget, radius, damage);
-          computerDamage = damageSnake(computerSnake, explosionTarget, radius, damage);
-          playerStunChance = stunChanceForHeadHit(circleAttackHitsHead(snake, explosionTarget, radius), projectile);
-          computerStunChance = stunChanceForHeadHit(circleAttackHitsHead(computerSnake, explosionTarget, radius), projectile);
+          playerDamage = damageSnake(HexSnakeState.game.snake, explosionTarget, radius, damage);
+          computerDamage = damageSnake(HexSnakeState.game.computerSnake, explosionTarget, radius, damage);
+          playerStunChance = stunChanceForHeadHit(circleAttackHitsHead(HexSnakeState.game.snake, explosionTarget, radius), projectile);
+          computerStunChance = stunChanceForHeadHit(circleAttackHitsHead(HexSnakeState.game.computerSnake, explosionTarget, radius), projectile);
           if (projectile.sandwormParalyzeOnBody || projectile.sandwormKillOnHead) {
             if (projectile.owner !== "player") {
-              if (projectile.sandwormKillOnHead && snakeHeadHitAtCenter(snake, explosionTarget)) playerDamage = Math.max(playerDamage, playerHp);
-              else if (projectile.sandwormParalyzeOnBody && snakeBodyHitAtCenter(snake, explosionTarget)) applyCollisionParalysis("player", now);
+              if (projectile.sandwormKillOnHead && snakeHeadHitAtCenter(HexSnakeState.game.snake, explosionTarget)) playerDamage = Math.max(playerDamage, HexSnakeState.game.playerHp);
+              else if (projectile.sandwormParalyzeOnBody && snakeBodyHitAtCenter(HexSnakeState.game.snake, explosionTarget)) applyCollisionParalysis("player", now);
             }
             if (projectile.owner !== "computer") {
-              if (projectile.sandwormKillOnHead && snakeHeadHitAtCenter(computerSnake, explosionTarget)) computerDamage = Math.max(computerDamage, computerHp);
-              else if (projectile.sandwormParalyzeOnBody && snakeBodyHitAtCenter(computerSnake, explosionTarget)) applyCollisionParalysis("computer", now);
+              if (projectile.sandwormKillOnHead && snakeHeadHitAtCenter(HexSnakeState.game.computerSnake, explosionTarget)) computerDamage = Math.max(computerDamage, HexSnakeState.game.computerHp);
+              else if (projectile.sandwormParalyzeOnBody && snakeBodyHitAtCenter(HexSnakeState.game.computerSnake, explosionTarget)) applyCollisionParalysis("computer", now);
             }
           }
         }
@@ -2673,8 +2673,8 @@
         if (projectile.owner !== "player" && playerDamage > 0 && projectile.vulnerabilityChance > 0) applyVulnerability("player", projectile.vulnerabilityChance, now);
         if (projectile.owner !== "computer" && computerDamage > 0 && projectile.vulnerabilityChance > 0) applyVulnerability("computer", projectile.vulnerabilityChance, now);
       });
-      blasts = blasts.filter(blast => now <= blast.endAt);
-      if (playerHp <= 0 || computerHp <= 0) endGame(playerHp <= 0, computerHp <= 0);
+      HexSnakeState.game.blasts = HexSnakeState.game.blasts.filter(blast => now <= blast.endAt);
+      if (HexSnakeState.game.playerHp <= 0 || HexSnakeState.game.computerHp <= 0) endGame(HexSnakeState.game.playerHp <= 0, HexSnakeState.game.computerHp <= 0);
     }
 
     function addProjectileBlastVisual(projectile, now, options = {}) {
@@ -2682,7 +2682,7 @@
       if (projectile.kind === "lobsterPalm") return {};
       if (projectile.kind === "lobsterPalmBurst") {
         const visualType = burstVisualType(projectile);
-        blasts.push({
+        HexSnakeState.game.blasts.push({
           kind: "circle",
           target: projectile.target,
           owner: projectile.owner,
@@ -2697,7 +2697,7 @@
       }
       if (projectile.kind === "lineHazardSetup") {
         const visualType = projectile.visualType || attackVisualType(projectile.owner, projectile.profile);
-        blasts.push({
+        HexSnakeState.game.blasts.push({
           kind: "line",
           lineCells: projectile.lineCells,
           excludedCells: projectile.excludedCells,
@@ -2715,7 +2715,7 @@
       }
       if (projectile.kind === "line") {
         const visualType = projectile.visualType || attackVisualType(projectile.owner, projectile.profile);
-        blasts.push({
+        HexSnakeState.game.blasts.push({
           kind: "line",
           lineCells: projectile.lineCells,
           excludedCells: projectile.excludedCells,
@@ -2739,7 +2739,7 @@
       const explosionTarget = projectile.explosionTarget || projectile.target;
       const radius = projectile.radius || baseBlastHexRadius;
       const visualType = projectile.visualType || attackVisualType(projectile.owner, projectile.profile);
-      blasts.push({
+      HexSnakeState.game.blasts.push({
         kind: "circle",
         target: explosionTarget,
         owner: projectile.owner,
@@ -2751,7 +2751,7 @@
       });
       triggerBoardShake(visualType, now);
       if (projectile.kind === "headCircle" && projectile.radiationDurationMs) {
-        hazards.push({
+        HexSnakeState.game.hazards.push({
           kind: "radiation",
           owner: projectile.owner,
           target: { q: explosionTarget.q, r: explosionTarget.r },
@@ -2774,26 +2774,26 @@
     }
 
     function advanceGameOverVisuals(now) {
-      const landed = projectiles.filter(projectile => now >= projectile.impactAt);
+      const landed = HexSnakeState.game.projectiles.filter(projectile => now >= projectile.impactAt);
       if (landed.length) {
-        projectiles = projectiles.filter(projectile => now < projectile.impactAt);
+        HexSnakeState.game.projectiles = HexSnakeState.game.projectiles.filter(projectile => now < projectile.impactAt);
         landed.forEach(projectile => addProjectileImpactVisual(projectile, now));
       }
-      blasts = blasts.filter(blast => now <= blast.endAt);
-      hazards = hazards.filter(hazard => now <= hazard.endAt);
-      hazards.forEach(hazard => {
+      HexSnakeState.game.blasts = HexSnakeState.game.blasts.filter(blast => now <= blast.endAt);
+      HexSnakeState.game.hazards = HexSnakeState.game.hazards.filter(hazard => now <= hazard.endAt);
+      HexSnakeState.game.hazards.forEach(hazard => {
         if (now < hazard.startedAt || hazard.shaken) return;
         triggerBoardShake(hazard.visualType || attackVisualType(hazard.owner, "big"), now);
         hazard.shaken = true;
       });
-      const projectilesActive = projectiles.some(projectile => now < projectile.impactAt);
-      const blastsActive = blasts.some(blast => now <= blast.endAt);
-      const continuousSkillVisualsActive = hazards.some(hazard => now <= hazard.endAt);
+      const projectilesActive = HexSnakeState.game.projectiles.some(projectile => now < projectile.impactAt);
+      const blastsActive = HexSnakeState.game.blasts.some(blast => now <= blast.endAt);
+      const continuousSkillVisualsActive = HexSnakeState.game.hazards.some(hazard => now <= hazard.endAt);
       const boardShakeActive = now < boardShakeUntil;
       if (
         continuousSkillVisualsActive
-        && gameOverContinuousVisualDeadlineAt
-        && now >= gameOverContinuousVisualDeadlineAt
+        && HexSnakeState.game.gameOverContinuousVisualDeadlineAt
+        && now >= HexSnakeState.game.gameOverContinuousVisualDeadlineAt
         && !projectilesActive
         && !blastsActive
         && !boardShakeActive
@@ -2804,18 +2804,18 @@
     }
 
     function showGameOverSettlement() {
-      gameOverSettlementPending = false;
-      gameOverLogoTransitionEndsAt = 0;
+      HexSnakeState.game.gameOverSettlementPending = false;
+      HexSnakeState.game.gameOverLogoTransitionEndsAt = 0;
       if (!HexSnakeState.game.gameOver || HexSnakeState.game.running || HexSnakeReplay.isPlaybackMode()) return;
       hideCharacterStage();
       clearLogoTransition();
-      renderWinnerPortrait(gameOverResultOwner, gameOverPlayerLost, gameOverComputerLost);
+      renderWinnerPortrait(HexSnakeState.game.gameOverResultOwner, HexSnakeState.game.gameOverPlayerLost, HexSnakeState.game.gameOverComputerLost);
       overlay.classList.add("show");
-      if (gameOverRelayStartOptions) {
-        const nextOptions = gameOverRelayStartOptions;
-        gameOverRelayStartOptions = null;
-        relayRestartTimer = setTimeout(() => {
-          relayRestartTimer = null;
+      if (HexSnakeState.game.gameOverRelayStartOptions) {
+        const nextOptions = HexSnakeState.game.gameOverRelayStartOptions;
+        HexSnakeState.game.gameOverRelayStartOptions = null;
+        HexSnakeState.game.relayRestartTimer = setTimeout(() => {
+          HexSnakeState.game.relayRestartTimer = null;
           if (!relayMode) return;
           startGame(nextOptions);
         }, Math.max(900, gameOverRestartDelayMs + 80));
@@ -2823,8 +2823,8 @@
     }
 
     function resolveHazards(now) {
-      const activeHazards = hazards.filter(hazard => now <= hazard.endAt);
-      hazards = activeHazards;
+      const activeHazards = HexSnakeState.game.hazards.filter(hazard => now <= hazard.endAt);
+      HexSnakeState.game.hazards = activeHazards;
       activeHazards.forEach(hazard => {
         if (now < hazard.startedAt || now < hazard.nextTickAt) return;
         if (!hazard.shaken) {
@@ -2834,17 +2834,17 @@
         hazard.nextTickAt = now + hazard.tickMs;
         const damageExcludedCells = hazard.damageExcludedCells || hazard.excludedCells || [];
         let playerDamage = hazard.kind === "radiation"
-          ? damageSnake(snake, hazard.target, hazard.radius, hazard.damage)
-          : damageSnakeCells(snake, hazard.cells, hazard.width, hazard.damage, hazard.owner === "player" ? damageExcludedCells : [], hazard.minDistance || 0, hazard.outerDamageMultiplier ?? 1, hazard.fullDamageWidth || 0);
+          ? damageSnake(HexSnakeState.game.snake, hazard.target, hazard.radius, hazard.damage)
+          : damageSnakeCells(HexSnakeState.game.snake, hazard.cells, hazard.width, hazard.damage, hazard.owner === "player" ? damageExcludedCells : [], hazard.minDistance || 0, hazard.outerDamageMultiplier ?? 1, hazard.fullDamageWidth || 0);
         let computerDamage = hazard.kind === "radiation"
-          ? damageSnake(computerSnake, hazard.target, hazard.radius, hazard.damage)
-          : damageSnakeCells(computerSnake, hazard.cells, hazard.width, hazard.damage, hazard.owner === "computer" ? damageExcludedCells : [], hazard.minDistance || 0, hazard.outerDamageMultiplier ?? 1, hazard.fullDamageWidth || 0);
+          ? damageSnake(HexSnakeState.game.computerSnake, hazard.target, hazard.radius, hazard.damage)
+          : damageSnakeCells(HexSnakeState.game.computerSnake, hazard.cells, hazard.width, hazard.damage, hazard.owner === "computer" ? damageExcludedCells : [], hazard.minDistance || 0, hazard.outerDamageMultiplier ?? 1, hazard.fullDamageWidth || 0);
         const playerStunChance = stunChanceForHeadHit(
-          hazardHitsHead(snake, hazard, hazard.owner === "player" ? damageExcludedCells : []),
+          hazardHitsHead(HexSnakeState.game.snake, hazard, hazard.owner === "player" ? damageExcludedCells : []),
           hazard
         );
         const computerStunChance = stunChanceForHeadHit(
-          hazardHitsHead(computerSnake, hazard, hazard.owner === "computer" ? damageExcludedCells : []),
+          hazardHitsHead(HexSnakeState.game.computerSnake, hazard, hazard.owner === "computer" ? damageExcludedCells : []),
           hazard
         );
         const canApplyStun = (hazard.stunTicksRemaining ?? Infinity) > 0;
@@ -2870,11 +2870,11 @@
           hazard.stunTicksRemaining = Math.max(0, hazard.stunTicksRemaining - 1);
         }
       });
-      if (playerHp <= 0 || computerHp <= 0) endGame(playerHp <= 0, computerHp <= 0);
+      if (HexSnakeState.game.playerHp <= 0 || HexSnakeState.game.computerHp <= 0) endGame(HexSnakeState.game.playerHp <= 0, HexSnakeState.game.computerHp <= 0);
     }
 
     function advanceOwnerMovement(owner, next, eatenFood) {
-      const parts = owner === "player" ? snake : computerSnake;
+      const parts = owner === "player" ? HexSnakeState.game.snake : HexSnakeState.game.computerSnake;
       const ate = Boolean(eatenFood);
       parts.unshift(next);
       if (!ate) {
@@ -2883,23 +2883,23 @@
       }
 
       if (owner === "player") {
-        score += 1;
+        HexSnakeState.game.score += 1;
         collectFood("player", eatenFood);
-        best = Math.max(best, score);
+        best = Math.max(best, HexSnakeState.game.score);
         HexSnakeStorage.set("hexSnakeBest", String(best));
-        lastFeedElapsedMs = 0;
-        lastPlayerFoodAt = performance.now();
-        playerFoodTargetKey = null;
-        playerFoodTargetAt = 0;
-        playerHp = Math.min(maxHpForSnake(snake), playerHp + foodHealAmount());
+        HexSnakeState.game.lastFeedElapsedMs = 0;
+        HexSnakeState.game.lastPlayerFoodAt = performance.now();
+        HexSnakeState.game.playerFoodTargetKey = null;
+        HexSnakeState.game.playerFoodTargetAt = 0;
+        HexSnakeState.game.playerHp = Math.min(maxHpForSnake(HexSnakeState.game.snake), HexSnakeState.game.playerHp + foodHealAmount());
       } else {
-        computerScore += 1;
-        lastComputerFoodAt = performance.now();
-        computerFoodTargetKey = null;
-        computerFoodTargetAt = 0;
+        HexSnakeState.game.computerScore += 1;
+        HexSnakeState.game.lastComputerFoodAt = performance.now();
+        HexSnakeState.game.computerFoodTargetKey = null;
+        HexSnakeState.game.computerFoodTargetAt = 0;
         if (computerCanGrow()) {
           collectFood("computer", eatenFood);
-          computerHp = Math.min(maxHpForSnake(computerSnake), computerHp + foodHealAmount());
+          HexSnakeState.game.computerHp = Math.min(maxHpForSnake(HexSnakeState.game.computerSnake), HexSnakeState.game.computerHp + foodHealAmount());
         } else {
           parts.pop();
         }
@@ -2912,7 +2912,7 @@
       const consumed = consumedFoods.filter(Boolean);
       if (!attemptedFood && !consumed.length) return;
       const eatenKeys = new Set(consumed.map(food => food.key));
-      if (eatenKeys.size) foods = foods.filter(food => !eatenKeys.has(keyOf(food)));
+      if (eatenKeys.size) HexSnakeState.game.foods = HexSnakeState.game.foods.filter(food => !eatenKeys.has(keyOf(food)));
       placeFoods(consumed.map(food => food.owner));
     }
 
@@ -2924,16 +2924,16 @@
       dir = nextDir;
       if (!isNetworkHostActive()) computerDir = chooseComputerDirection();
 
-      const next = nextWrappedCell(snake[0], dir);
-      const computerNext = nextWrappedCell(computerSnake[0], computerDir);
+      const next = nextWrappedCell(HexSnakeState.game.snake[0], dir);
+      const computerNext = nextWrappedCell(HexSnakeState.game.computerSnake[0], computerDir);
       const nextKey = keyOf(next);
       const computerNextKey = keyOf(computerNext);
-      const eatenFood = foods.find(food => next.q === food.q && next.r === food.r);
-      const computerEatenFood = foods.find(food => computerNext.q === food.q && computerNext.r === food.r);
+      const eatenFood = HexSnakeState.game.foods.find(food => next.q === food.q && next.r === food.r);
+      const computerEatenFood = HexSnakeState.game.foods.find(food => computerNext.q === food.q && computerNext.r === food.r);
       const eating = Boolean(eatenFood);
       const computerEating = Boolean(computerEatenFood);
-      const body = eating ? snake : snake.slice(0, -1);
-      const computerBody = computerEating ? computerSnake : computerSnake.slice(0, -1);
+      const body = eating ? HexSnakeState.game.snake : HexSnakeState.game.snake.slice(0, -1);
+      const computerBody = computerEating ? HexSnakeState.game.computerSnake : HexSnakeState.game.computerSnake.slice(0, -1);
       const playerSelfHit = body.some(segment => keyOf(segment) === nextKey);
       const computerSelfHit = computerBody.some(segment => keyOf(segment) === computerNextKey);
       let playerOpponentHit = computerBody.some(segment => keyOf(segment) === nextKey);
@@ -2948,18 +2948,18 @@
           computerOpponentHit = true;
         }
       }
-      if (nextKey === keyOf(computerSnake[0]) && computerNextKey === keyOf(snake[0])) {
+      if (nextKey === keyOf(HexSnakeState.game.computerSnake[0]) && computerNextKey === keyOf(HexSnakeState.game.snake[0])) {
         playerOpponentHit = true;
         computerOpponentHit = true;
       }
 
       let playerCollision = collisionSeverity(playerSelfHit, playerOpponentHit);
       let computerCollision = collisionSeverity(computerSelfHit, computerOpponentHit);
-      if (computerCollision && !playerCollision && computerSnake.some(segment => keyOf(segment) === nextKey)) {
+      if (computerCollision && !playerCollision && HexSnakeState.game.computerSnake.some(segment => keyOf(segment) === nextKey)) {
         playerOpponentHit = true;
         playerCollision = collisionSeverity(playerSelfHit, playerOpponentHit);
       }
-      if (playerCollision && !computerCollision && snake.some(segment => keyOf(segment) === computerNextKey)) {
+      if (playerCollision && !computerCollision && HexSnakeState.game.snake.some(segment => keyOf(segment) === computerNextKey)) {
         computerOpponentHit = true;
         computerCollision = collisionSeverity(computerSelfHit, computerOpponentHit);
       }
@@ -2988,13 +2988,13 @@
         setDirectionButtonHighlight(nextDir);
       }
       dir = nextDir;
-      const next = nextWrappedCell(snake[0], dir);
+      const next = nextWrappedCell(HexSnakeState.game.snake[0], dir);
       const nextKey = keyOf(next);
-      const eatenFood = foods.find(food => next.q === food.q && next.r === food.r);
+      const eatenFood = HexSnakeState.game.foods.find(food => next.q === food.q && next.r === food.r);
       const eating = Boolean(eatenFood);
-      const body = eating ? snake : snake.slice(0, -1);
+      const body = eating ? HexSnakeState.game.snake : HexSnakeState.game.snake.slice(0, -1);
       const playerSelfHit = body.some(segment => keyOf(segment) === nextKey);
-      const playerOpponentHit = computerSnake.some(segment => keyOf(segment) === nextKey);
+      const playerOpponentHit = HexSnakeState.game.computerSnake.some(segment => keyOf(segment) === nextKey);
       const playerCollision = collisionSeverity(playerSelfHit, playerOpponentHit);
 
       if (playerCollision) {
@@ -3013,13 +3013,13 @@
 
     function stepComputerOnly(now = performance.now()) {
       if (!isNetworkHostActive()) computerDir = chooseComputerDirection();
-      const computerNext = nextWrappedCell(computerSnake[0], computerDir);
+      const computerNext = nextWrappedCell(HexSnakeState.game.computerSnake[0], computerDir);
       const computerNextKey = keyOf(computerNext);
-      const computerEatenFood = foods.find(food => computerNext.q === food.q && computerNext.r === food.r);
+      const computerEatenFood = HexSnakeState.game.foods.find(food => computerNext.q === food.q && computerNext.r === food.r);
       const computerEating = Boolean(computerEatenFood);
-      const computerBody = computerEating ? computerSnake : computerSnake.slice(0, -1);
+      const computerBody = computerEating ? HexSnakeState.game.computerSnake : HexSnakeState.game.computerSnake.slice(0, -1);
       const computerSelfHit = computerBody.some(segment => keyOf(segment) === computerNextKey);
-      const computerOpponentHit = snake.some(segment => keyOf(segment) === computerNextKey);
+      const computerOpponentHit = HexSnakeState.game.snake.some(segment => keyOf(segment) === computerNextKey);
       const computerCollision = collisionSeverity(computerSelfHit, computerOpponentHit);
 
       if (computerCollision) {
@@ -3039,46 +3039,46 @@
     function endGame(playerLost = true, computerLost = false) {
       if (HexSnakeState.game.gameOver) return;
       clearGameOverSettlementTimer();
-      const shouldContinueRelay = relayMode && (computerBattleMode || playerAutoMode);
+      const shouldContinueRelay = relayMode && (HexSnakeState.game.computerBattleMode || HexSnakeState.game.playerAutoMode);
       const endedInAutoMode = isPlayerAutoControlActive();
       const shouldUseGameOverLogo = !endedInAutoMode && !shouldContinueRelay && !HexSnakeReplay.isPlaybackMode();
-      const nextRelayStartOptions = computerBattleMode
+      const nextRelayStartOptions = HexSnakeState.game.computerBattleMode
         ? { computerBattle: true }
         : { playerAuto: true };
       const gameOverAt = performance.now();
       HexSnakeReplay.finishRecording(playerLost, computerLost);
       HexSnakeState.game.running = false;
-      playerAutoMode = false;
-      computerBattleManualOverride = false;
+      HexSnakeState.game.playerAutoMode = false;
+      HexSnakeState.game.computerBattleManualOverride = false;
       HexSnakeState.game.gameOver = true;
       if (shouldUseGameOverLogo) showCharacterStage({ rebuild: false, overlay: true });
       else hideCharacterStage();
-      gameOverContinuousVisualDeadlineAt = gameOverAt + gameOverContinuousVisualMaxWaitMs;
-      gameOverLogoTransitionEndsAt = shouldUseGameOverLogo ? gameOverAt + logoTransitionDurationMs : 0;
+      HexSnakeState.game.gameOverContinuousVisualDeadlineAt = gameOverAt + gameOverContinuousVisualMaxWaitMs;
+      HexSnakeState.game.gameOverLogoTransitionEndsAt = shouldUseGameOverLogo ? gameOverAt + logoTransitionDurationMs : 0;
       updateAutoBattleControls();
       restartUnlockAt = gameOverAt + (shouldUseGameOverLogo ? logoTransitionDurationMs : gameOverRestartDelayMs);
       setSettingsLocked(false);
-      if (totalElapsedMs > bestTotalMs) {
-        bestTotalMs = totalElapsedMs;
+      if (HexSnakeState.game.totalElapsedMs > bestTotalMs) {
+        bestTotalMs = HexSnakeState.game.totalElapsedMs;
         HexSnakeStorage.set("hexSnakeBestTotalMs", String(Math.floor(bestTotalMs)));
       }
       updateHud();
       broadcastNetworkSnapshot(gameOverAt, true, true);
-      const winnerOwner = (!playerLost && computerLost) || (playerLost && computerLost && score > computerScore)
+      const winnerOwner = (!playerLost && computerLost) || (playerLost && computerLost && HexSnakeState.game.score > HexSnakeState.game.computerScore)
         ? "player"
-        : (playerLost && !computerLost) || (playerLost && computerLost && computerScore > score)
+        : (playerLost && !computerLost) || (playerLost && computerLost && HexSnakeState.game.computerScore > HexSnakeState.game.score)
           ? "computer"
           : null;
       const plainResultText = winnerOwner === "player" ? "P1 勝利" : winnerOwner === "computer" ? "P2 勝利" : "平手";
       try {
         HexSnakeStats.recordMatch({
           winnerOwner,
-          playerScore: score,
-          computerScore,
-          durationMs: Math.round(totalElapsedMs),
+          playerScore: HexSnakeState.game.score,
+          computerScore: HexSnakeState.game.computerScore,
+          durationMs: Math.round(HexSnakeState.game.totalElapsedMs),
           playerCharacterId,
           computerCharacterId,
-          mode: relayMode ? "relay" : computerBattleMode ? "autoBattle" : endedInAutoMode ? "playerAuto" : "player",
+          mode: relayMode ? "relay" : HexSnakeState.game.computerBattleMode ? "autoBattle" : endedInAutoMode ? "playerAuto" : "player",
           difficulty: computerDifficulty,
           surrendered: Boolean(HexSnakeState.replay.surrendered)
         });
@@ -3090,9 +3090,9 @@
         : winnerOwner === "computer"
           ? `本局結果：<span class="owner-name is-p2">P2</span> 勝利`
           : "本局結果：平手";
-      const scoreText = `比分：P1 ${score}：${computerScore} P2`;
+      const scoreText = `比分：P1 ${HexSnakeState.game.score}：${HexSnakeState.game.computerScore} P2`;
       const resultReason = playerLost && computerLost
-        ? score === computerScore
+        ? HexSnakeState.game.score === HexSnakeState.game.computerScore
           ? "雙方同時結束，分數相同。"
           : "雙方同時結束，以分數較高者勝出。"
         : winnerOwner === "player"
@@ -3111,9 +3111,9 @@
       overlayTitle.innerHTML = resultTitleHtml;
       HexSnakeAudio.playCharacter("player", winnerOwner === "player" ? "victory" : "defeat", { gainScale: winnerOwner ? 1 : 0.82 });
       HexSnakeAudio.playCharacter("computer", winnerOwner === "computer" ? "victory" : "defeat", { delay: winnerOwner ? 0.08 : 0.12, gainScale: winnerOwner ? 1 : 0.82 });
-      gameOverResultOwner = winnerOwner;
-      gameOverPlayerLost = playerLost;
-      gameOverComputerLost = computerLost;
+      HexSnakeState.game.gameOverResultOwner = winnerOwner;
+      HexSnakeState.game.gameOverPlayerLost = playerLost;
+      HexSnakeState.game.gameOverComputerLost = computerLost;
       showResultCallout("player", winnerOwner === "player" ? "victory" : "defeat");
       showResultCallout("computer", winnerOwner === "computer" ? "victory" : "defeat");
       if (shouldContinueRelay) {
@@ -3123,8 +3123,8 @@
         updateRelayControls();
       }
       startButton.textContent = "重新開始";
-      gameOverSettlementPending = true;
-      gameOverRelayStartOptions = shouldContinueRelay ? nextRelayStartOptions : null;
+      HexSnakeState.game.gameOverSettlementPending = true;
+      HexSnakeState.game.gameOverRelayStartOptions = shouldContinueRelay ? nextRelayStartOptions : null;
       overlayText.textContent = shouldContinueRelay
         ? `${scoreText}。${resultReason} 接力賽：P1 ${relayPlayerWins} 勝，P2 ${relayComputerWins} 勝，平手 ${relayDraws}。`
         : `${scoreText}。${resultReason}`;
@@ -3149,34 +3149,34 @@
       updatePerfOverlay(HexSnakePlatform.display.recordFrame(now || performance.now()));
       if (!HexSnakeState.game.running) {
         const frameNow = now || performance.now();
-        const visualsActive = gameOverSettlementPending && advanceGameOverVisuals(frameNow);
+        const visualsActive = HexSnakeState.game.gameOverSettlementPending && advanceGameOverVisuals(frameNow);
         draw();
-        if (gameOverSettlementPending && gameOverLogoTransitionEndsAt) {
-          if (frameNow < gameOverLogoTransitionEndsAt) {
+        if (HexSnakeState.game.gameOverSettlementPending && HexSnakeState.game.gameOverLogoTransitionEndsAt) {
+          if (frameNow < HexSnakeState.game.gameOverLogoTransitionEndsAt) {
             rafId = requestAnimationFrame(loop);
           } else {
             showGameOverSettlement();
           }
         } else if (visualsActive) {
           rafId = requestAnimationFrame(loop);
-        } else if (gameOverSettlementPending) {
+        } else if (HexSnakeState.game.gameOverSettlementPending) {
           showGameOverSettlement();
         }
         return;
       }
       if (!HexSnakeState.game.paused) {
-        const delta = lastTimerFrame ? now - lastTimerFrame : 0;
-        const timeScale = isPlayerAutoControlActive() ? computerBattleSpeed : 1;
-        totalElapsedMs += delta * timeScale;
-        lastFeedElapsedMs += delta * timeScale;
-        lastTimerFrame = now;
-        if (totalElapsedMs >= maxMatchMs) {
-          totalElapsedMs = maxMatchMs;
+        const delta = HexSnakeState.game.lastTimerFrame ? now - HexSnakeState.game.lastTimerFrame : 0;
+        const timeScale = isPlayerAutoControlActive() ? HexSnakeState.game.computerBattleSpeed : 1;
+        HexSnakeState.game.totalElapsedMs += delta * timeScale;
+        HexSnakeState.game.lastFeedElapsedMs += delta * timeScale;
+        HexSnakeState.game.lastTimerFrame = now;
+        if (HexSnakeState.game.totalElapsedMs >= maxMatchMs) {
+          HexSnakeState.game.totalElapsedMs = maxMatchMs;
           endGame(true, true);
           return;
         }
       } else {
-        lastTimerFrame = now;
+        HexSnakeState.game.lastTimerFrame = now;
       }
       if (!HexSnakeState.game.paused) {
         refreshSandwormProtections(now);
@@ -3186,27 +3186,27 @@
         updateAiVisibilityMemory(now);
       }
       if (HexSnakeState.game.running && !HexSnakeState.game.paused) {
-        const playerDue = !isMovementStunned("player", now) && now - lastPlayerStep >= moveIntervalFor("player", now);
-        const computerDue = !isMovementStunned("computer", now) && now - lastComputerStep >= moveIntervalFor("computer", now);
+        const playerDue = !isMovementStunned("player", now) && now - HexSnakeState.game.lastPlayerStep >= moveIntervalFor("player", now);
+        const computerDue = !isMovementStunned("computer", now) && now - HexSnakeState.game.lastComputerStep >= moveIntervalFor("computer", now);
         if (playerDue && computerDue) {
-          const playerDueAt = lastPlayerStep + moveIntervalFor("player", now);
-          const computerDueAt = lastComputerStep + moveIntervalFor("computer", now);
+          const playerDueAt = HexSnakeState.game.lastPlayerStep + moveIntervalFor("player", now);
+          const computerDueAt = HexSnakeState.game.lastComputerStep + moveIntervalFor("computer", now);
           const headCollisionOrder = Math.abs(playerDueAt - computerDueAt) < 0.001
             ? "simultaneous"
             : playerDueAt < computerDueAt ? "playerFirst" : "computerFirst";
           step(headCollisionOrder, now);
-          lastPlayerStep = now;
-          lastComputerStep = now;
+          HexSnakeState.game.lastPlayerStep = now;
+          HexSnakeState.game.lastComputerStep = now;
         } else if (playerDue) {
           stepPlayerOnly(now);
-          lastPlayerStep = now;
+          HexSnakeState.game.lastPlayerStep = now;
         } else if (computerDue) {
           stepComputerOnly(now);
-          lastComputerStep = now;
+          HexSnakeState.game.lastComputerStep = now;
         }
       }
-      blasts = blasts.filter(blast => now <= blast.endAt);
-      hazards = hazards.filter(hazard => now <= hazard.endAt);
+      HexSnakeState.game.blasts = HexSnakeState.game.blasts.filter(blast => now <= blast.endAt);
+      HexSnakeState.game.hazards = HexSnakeState.game.hazards.filter(hazard => now <= hazard.endAt);
       updateHudThrottled(now);
       recordReplaySnapshotThrottled(now);
       broadcastNetworkSnapshot(now);
@@ -3393,7 +3393,7 @@
       const distance = Math.min(54, rawDistance);
       const angle = Math.atan2(dy, dx);
       targetStick.style.transform = `translate(${Math.cos(angle) * distance}px, ${Math.sin(angle) * distance}px)`;
-      const playerPixel = axialToPixel(snake[0]);
+      const playerPixel = axialToPixel(HexSnakeState.game.snake[0]);
       const maxPixelRange = targetMaxHex * cellSize;
       const ratio = Math.min(1, rawDistance / Math.max(1, rect.width * 0.44));
       const targetPixel = {
@@ -3409,7 +3409,7 @@
       targetPointerId = null;
       targetStick.style.transform = "translate(0, 0)";
       if (targetActive && HexSnakeState.game.running && !HexSnakeState.game.paused && !HexSnakeState.game.gameOver) {
-        if (launchAttack("player", targetCell || snake[0], performance.now())) {
+        if (launchAttack("player", targetCell || HexSnakeState.game.snake[0], performance.now())) {
           setStatus("P1 施放炸彈，2 秒後落地。");
         } else {
           setStatus(`大招需要 ${bigAttackBombCost} 枚炸彈，且四種庫存各至少 2。`);
@@ -3419,22 +3419,22 @@
     }
 
     function opponentHeadTarget() {
-      return computerSnake?.[0] || snake?.[0] || targetCell;
+      return HexSnakeState.game.computerSnake?.[0] || HexSnakeState.game.snake?.[0] || targetCell;
     }
 
     function opponentCentroidTarget() {
-      if (!computerSnake?.length) return opponentHeadTarget();
-      const average = computerSnake.reduce((total, segment) => ({
-        q: total.q + segment.q / computerSnake.length,
-        r: total.r + segment.r / computerSnake.length
+      if (!HexSnakeState.game.computerSnake?.length) return opponentHeadTarget();
+      const average = HexSnakeState.game.computerSnake.reduce((total, segment) => ({
+        q: total.q + segment.q / HexSnakeState.game.computerSnake.length,
+        r: total.r + segment.r / HexSnakeState.game.computerSnake.length
       }), { q: 0, r: 0 });
       return nearestInsideCell(roundAxial(average.q, average.r));
     }
 
     function opponentNearestFoodTarget() {
       const head = opponentHeadTarget();
-      if (!foods.length || !head) return head;
-      return [...foods].sort((a, b) => hexDistance(head, a) - hexDistance(head, b))[0] || head;
+      if (!HexSnakeState.game.foods.length || !head) return head;
+      return [...HexSnakeState.game.foods].sort((a, b) => hexDistance(head, a) - hexDistance(head, b))[0] || head;
     }
 
     function keyboardTargetMode(profile = "small") {
@@ -3460,12 +3460,12 @@
     }
 
     function keyboardAttackOptions(profile = "small", target = null) {
-      if (!keyboardAttackUsesDirection(profile) || !snake?.length) return {};
+      if (!keyboardAttackUsesDirection(profile) || !HexSnakeState.game.snake?.length) return {};
       const character = characterFor("player");
       const direction = keyboardAttackDirection(profile);
       return {
         aimDirection: direction,
-        aimOrigin: character.id === "moray" ? (target || opponentHeadTarget()) : snake[0]
+        aimOrigin: character.id === "moray" ? (target || opponentHeadTarget()) : HexSnakeState.game.snake[0]
       };
     }
 
@@ -3572,7 +3572,7 @@
       };
       if (keyboardAttackUsesDirection(profile)) {
         preview.direction = keyboardAttackDirection(profile);
-        preview.origin = characterFor("player").id === "moray" ? target : snake?.[0];
+        preview.origin = characterFor("player").id === "moray" ? target : HexSnakeState.game.snake?.[0];
       }
       keyboardAttackPreview = preview;
       targetCell = target;
@@ -3663,18 +3663,18 @@
 
     function playerGestureAttackDirection(pointer, fallbackTarget) {
       if (pointer?.moved) {
-        return directionFromSourceToTarget(pointer.startCell, pointer.currentCell, directionFromSourceToTarget(snake[0], fallbackTarget, ownerDirection("player")));
+        return directionFromSourceToTarget(pointer.startCell, pointer.currentCell, directionFromSourceToTarget(HexSnakeState.game.snake[0], fallbackTarget, ownerDirection("player")));
       }
-      return directionFromSourceToTarget(snake[0], fallbackTarget, ownerDirection("player"));
+      return directionFromSourceToTarget(HexSnakeState.game.snake[0], fallbackTarget, ownerDirection("player"));
     }
 
     function playerDirectAttackOptions(profile = "small", pointer = null) {
       const target = playerDirectAttackTarget(profile, pointer);
       const character = characterFor("player");
-      if (profile === "big" && bigAttackUsesDrawnDirection(character.id) && snake?.length) {
+      if (profile === "big" && bigAttackUsesDrawnDirection(character.id) && HexSnakeState.game.snake?.length) {
         return {
           aimDirection: playerGestureAttackDirection(pointer, target),
-          aimOrigin: character.id === "moray" && pointer?.moved ? target : snake[0]
+          aimOrigin: character.id === "moray" && pointer?.moved ? target : HexSnakeState.game.snake[0]
         };
       }
       return {};
@@ -3697,9 +3697,9 @@
       if (HexSnakeReplay.isPlaybackMode()) return "正在播放重播，不能施放招式。";
       if (!HexSnakeState.game.running || HexSnakeState.game.gameOver) return "尚未開局；開始後再點棋盤可施放招式。";
       if (HexSnakeState.game.paused) return "遊戲暫停中，請先繼續再施放招式。";
-      if (!target || !snake?.length) return `${moveName} 施放失敗：沒有有效目標格。`;
+      if (!target || !HexSnakeState.game.snake?.length) return `${moveName} 施放失敗：沒有有效目標格。`;
 
-      const stock = playerStock;
+      const stock = HexSnakeState.game.playerStock;
       const foodCost = attackFoodCost(profile);
       if (profile === "small") {
         const highestType = highestStockFoodType(stock);
@@ -3729,12 +3729,12 @@
       }
       if (isNetworkGuestActive()) {
         const safeProfile = profile === "small" ? "small" : "big";
-        const ownHeadKey = computerSnake?.[0] ? keyOf(computerSnake[0]) : "";
+        const ownHeadKey = HexSnakeState.game.computerSnake?.[0] ? keyOf(HexSnakeState.game.computerSnake[0]) : "";
         const targetIsOwnHead = target && keyOf(target) === ownHeadKey;
-        const networkTarget = target && !targetIsOwnHead ? target : snake?.[0];
+        const networkTarget = target && !targetIsOwnHead ? target : HexSnakeState.game.snake?.[0];
         const networkOptions = { ...options };
-        if (networkOptions.aimOrigin && snake?.[0] && keyOf(networkOptions.aimOrigin) === keyOf(snake[0])) {
-          networkOptions.aimOrigin = computerSnake?.[0] ? { ...computerSnake[0] } : networkOptions.aimOrigin;
+        if (networkOptions.aimOrigin && HexSnakeState.game.snake?.[0] && keyOf(networkOptions.aimOrigin) === keyOf(HexSnakeState.game.snake[0])) {
+          networkOptions.aimOrigin = HexSnakeState.game.computerSnake?.[0] ? { ...HexSnakeState.game.computerSnake[0] } : networkOptions.aimOrigin;
         }
         sendNetworkInput({
           kind: "attack",
@@ -3788,13 +3788,13 @@
       if (!HexSnakeState.game.running || HexSnakeState.game.gameOver) {
         if (!autoStartGame()) return false;
       }
-      return launchPlayerAttack(opponentHeadTarget(), profile, { aimDirection: direction, aimOrigin: snake[0] });
+      return launchPlayerAttack(opponentHeadTarget(), profile, { aimDirection: direction, aimOrigin: HexSnakeState.game.snake[0] });
     }
 
     function performModuleAttack() {
       const module = characterStage.querySelector('[data-module="player"]');
       if (module) module.classList.remove("is-charging");
-      launchPlayerAttack(targetCell || snake[0]);
+      launchPlayerAttack(targetCell || HexSnakeState.game.snake[0]);
     }
 
     function clearModuleHold() {
@@ -3818,9 +3818,9 @@
       setOverlayChromeVisible(true);
       overlay.classList.toggle("show", HexSnakeState.game.paused);
       if (!HexSnakeState.game.paused) {
-        lastPlayerStep = performance.now();
-        lastComputerStep = lastPlayerStep;
-        lastTimerFrame = lastPlayerStep;
+        HexSnakeState.game.lastPlayerStep = performance.now();
+        HexSnakeState.game.lastComputerStep = HexSnakeState.game.lastPlayerStep;
+        HexSnakeState.game.lastTimerFrame = HexSnakeState.game.lastPlayerStep;
       }
       updateAutoBattleControls();
     }
@@ -3828,7 +3828,7 @@
     function surrenderGame() {
       if (HexSnakeReplay.isPlaybackMode()) return;
       if (!HexSnakeState.game.running || HexSnakeState.game.gameOver) {
-        if (computerBattleMode && relayMode) {
+        if (HexSnakeState.game.computerBattleMode && relayMode) {
           setRelayMode(false, false, false);
           setStatus("接力賽已停止。");
         }
@@ -4020,8 +4020,8 @@
 
     function toggleNetworkSettings() {
       if (HexSnakeState.game.running && !HexSnakeState.game.gameOver && !HexSnakeReplay.isPlaybackMode()) {
-        if (computerBattleMode) setComputerBattleManualOverride(!computerBattleManualOverride);
-        else setPlayerAutoMode(!playerAutoMode);
+        if (HexSnakeState.game.computerBattleMode) setComputerBattleManualOverride(!HexSnakeState.game.computerBattleManualOverride);
+        else setPlayerAutoMode(!HexSnakeState.game.playerAutoMode);
         return;
       }
       if (networkToggle.disabled || HexSnakeState.game.running) return;
@@ -4552,7 +4552,7 @@
     });
 
     function defaultPlayerAttackTarget() {
-      return targetCell || computerSnake[0] || snake[0];
+      return targetCell || HexSnakeState.game.computerSnake[0] || HexSnakeState.game.snake[0];
     }
 
     function attackButtonPointerTarget(profile) {
@@ -4564,7 +4564,7 @@
 
     function attackButtonPointerOptions(profile) {
       if (profile === "big" && bigAttackUsesDrawnDirection(characterFor("player").id)) {
-        return { aimDirection: ownerDirection("player"), aimOrigin: snake[0] };
+        return { aimDirection: ownerDirection("player"), aimOrigin: HexSnakeState.game.snake[0] };
       }
       return {};
     }
@@ -4873,9 +4873,9 @@
         setStatus("對戰中：吃食物累積能量，集滿可獲得炸彈。");
         overlay.classList.remove("show");
         showCharacterStage({ rebuild: false, overlay: false });
-        lastPlayerStep = performance.now();
-        lastComputerStep = lastPlayerStep;
-        lastTimerFrame = lastPlayerStep;
+        HexSnakeState.game.lastPlayerStep = performance.now();
+        HexSnakeState.game.lastComputerStep = HexSnakeState.game.lastPlayerStep;
+        HexSnakeState.game.lastTimerFrame = HexSnakeState.game.lastPlayerStep;
         updateAutoBattleControls();
         return;
       }
@@ -4906,7 +4906,7 @@
 
     function applyAutoBattleSpeedIndex(index) {
       const nextIndex = Math.max(0, Math.min(autoBattleSpeeds.length - 1, index));
-      if (autoBattleSpeeds[nextIndex] === computerBattleSpeed) return;
+      if (autoBattleSpeeds[nextIndex] === HexSnakeState.game.computerBattleSpeed) return;
       setComputerBattleSpeed(autoBattleSpeeds[nextIndex]);
       resetAutoBattleStepTimers();
       updateAutoBattleControls();
@@ -5013,7 +5013,7 @@
       select: autoBattleSpeedSelect,
       menu: autoSpeedMenu,
       isActive: isPlayerAutoControlActive,
-      currentIndex: () => autoBattleSpeeds.indexOf(computerBattleSpeed),
+      currentIndex: () => autoBattleSpeeds.indexOf(HexSnakeState.game.computerBattleSpeed),
       applyIndex: applyAutoBattleSpeedIndex,
       setMenuOpen: setAutoSpeedMenuOpen,
       menuButtonSelector: "[data-auto-speed]",
@@ -5171,9 +5171,9 @@
       if (!isPlayerAutoControlActive() || !HexSnakeState.game.running || HexSnakeState.game.gameOver) return;
       HexSnakeState.game.paused = !HexSnakeState.game.paused;
       if (!HexSnakeState.game.paused) {
-        lastPlayerStep = performance.now();
-        lastComputerStep = lastPlayerStep;
-        lastTimerFrame = lastPlayerStep;
+        HexSnakeState.game.lastPlayerStep = performance.now();
+        HexSnakeState.game.lastComputerStep = HexSnakeState.game.lastPlayerStep;
+        HexSnakeState.game.lastTimerFrame = HexSnakeState.game.lastPlayerStep;
       }
       updateAutoBattleControls();
     });
@@ -5430,9 +5430,9 @@
         setOverlayChromeVisible(true);
         overlay.classList.toggle("show", HexSnakeState.game.paused);
         if (!HexSnakeState.game.paused) {
-          lastPlayerStep = performance.now();
-          lastComputerStep = lastPlayerStep;
-          lastTimerFrame = lastPlayerStep;
+          HexSnakeState.game.lastPlayerStep = performance.now();
+          HexSnakeState.game.lastComputerStep = HexSnakeState.game.lastPlayerStep;
+          HexSnakeState.game.lastTimerFrame = HexSnakeState.game.lastPlayerStep;
         }
         updateAutoBattleControls();
         return;
@@ -5442,7 +5442,7 @@
         if (!HexSnakeState.game.running || HexSnakeState.game.gameOver) {
           if (!autoStartGame()) return;
         }
-        if (launchAttack("player", targetCell || snake[0], performance.now())) {
+        if (launchAttack("player", targetCell || HexSnakeState.game.snake[0], performance.now())) {
           setStatus("P1 施放炸彈，2 秒後落地。");
         } else {
           setStatus(`大招需要 ${bigAttackBombCost} 枚炸彈，且四種庫存各至少 2。`);
@@ -5475,11 +5475,11 @@
       if (rafId) return;
       const now = performance.now();
       if (HexSnakeState.game.running && !HexSnakeState.game.gameOver) {
-        lastPlayerStep = now;
-        lastComputerStep = now;
-        lastTimerFrame = now;
+        HexSnakeState.game.lastPlayerStep = now;
+        HexSnakeState.game.lastComputerStep = now;
+        HexSnakeState.game.lastTimerFrame = now;
       }
-      if (HexSnakeState.game.running || gameOverSettlementPending) {
+      if (HexSnakeState.game.running || HexSnakeState.game.gameOverSettlementPending) {
         rafId = requestAnimationFrame(loop);
       } else if (isEffectComparisonMode()) {
         rafId = requestAnimationFrame(comparisonLoop);
