@@ -2,6 +2,8 @@
 
 更新日期：2026-05-19
 
+> 進度主控入口：[`doc/project-management.md`](doc/project-management.md)。本文件保留 App 化前優化背景與完成紀錄；跨文件優先順序、目前狀態與下一步以主控文件為準。
+
 ## 1. 目的
 
 本文件整理「擴充 App 版之前」建議先完成的工作。目標不是立刻包 Android / iOS，而是先把 Web 版整理成更適合 App 化的狀態：

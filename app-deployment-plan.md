@@ -2,6 +2,8 @@
 
 更新日期：2026-05-19
 
+> 進度主控入口：[`doc/project-management.md`](doc/project-management.md)。本文件保留 App / PWA / Capacitor 導入背景與歷史細節；跨文件優先順序、目前狀態與下一步以主控文件為準。
+
 ## 1. 目標
 
 將目前的 Hex Snake Web 遊戲擴充為可安裝、可離線、可上架的 App 版本，同時維持 Web 版與 App 版共用同一套遊戲核心、角色資料、平衡參數與素材流程，避免後續維護分裂。
@@ -487,9 +489,10 @@ Web 適合作為快速驗證場，App 適合作為穩定發布版。
 - 已完成：新增 `store/listing-draft.md`、`store/privacy-policy-draft.md`、`store/release-checklist.md`，先整理商店描述、隱私政策草稿、截圖資產與待辦。
 - 已完成：新增 `store:check` / `tools/check-store-readiness.js`，檢查商店草稿文件與本地截圖資產。
 - 已完成：`app:check` 會檢查 Android artifact scripts、`store:check` 與 `tools/build-android-artifact.js`，避免 release bundle 與商店檢查流程遺漏。
+- 已完成：Android release signing 流程已接到 Gradle，可透過 `android/signing.properties` 或 `HEX_SNAKE_ANDROID_*` 環境變數提供 upload keystore；`android:bundle:signed` 會強制要求簽章資料。
 - 已驗證：`android:bundle:debug` 產出 `android/app/build/outputs/bundle/debug/app-debug.aab`，`android:bundle:release` 產出 `android/app/build/outputs/bundle/release/app-release.aab`。
-- 已驗證：`store:check` 通過，目前仍有 16 個上架前 checklist 項目需要實機、簽章或商店後台環境完成。
-- 待後續：設定正式 Android signing keystore / Play App Signing、建立 Google Play internal testing 版本；iOS signing 與 TestFlight 仍需 macOS / Xcode 環境。
+- 已驗證：`store:check` 通過，目前仍有上架前 checklist 項目需要實機、正式 upload keystore 或商店後台環境完成。
+- 待後續：建立正式 Android upload keystore / Play App Signing，執行 `android:bundle:signed` 產出可上傳 AAB，並建立 Google Play internal testing 版本；iOS signing 與 TestFlight 仍需 macOS / Xcode 環境。
 
 ## 8. 主要風險與對策
 

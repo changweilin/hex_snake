@@ -15,6 +15,8 @@
 
 前端入口為 `index.html`，遊戲初始化於 `src/main.js`，並透過載入器動態注入 `src/` 目錄中的模組化腳本（`state`, `dom`, `ui`, `characters`, `audio`, `replay`, `ai`, `render`, `game`）。
 
+專案進度、發布控管與下一步統一維護於 [`doc/project-management.md`](doc/project-management.md)。
+
 ## 2) 核心功能特性 (Features)
 
 ### 遊戲體驗
@@ -97,6 +99,31 @@ npm start
 
 `npm start` 會以 `dist/` 作為靜態根目錄（`--dist`）。
 
+### Android App 建置與簽章
+
+```bash
+npm run android:build:debug
+npm run android:bundle:release
+```
+
+- debug APK：`android/app/build/outputs/apk/debug/app-debug.apk`
+- release AAB：`android/app/build/outputs/bundle/release/app-release.aab`
+
+正式上傳 Google Play 前，需提供 Android upload keystore。可複製 `android/signing.properties.example` 為 `android/signing.properties`，或在 CI 設定下列環境變數：
+
+```text
+HEX_SNAKE_ANDROID_KEYSTORE_FILE
+HEX_SNAKE_ANDROID_KEYSTORE_PASSWORD
+HEX_SNAKE_ANDROID_KEY_ALIAS
+HEX_SNAKE_ANDROID_KEY_PASSWORD
+```
+
+`android/signing.properties` 與 keystore 檔案已被 `.gitignore` 排除。需要強制檢查簽章資料時執行：
+
+```bash
+npm run android:bundle:signed
+```
+
 ### 常用指令
 
 ```bash
@@ -163,6 +190,7 @@ npm run reports:dashboard:serve
 │  ├─ tune-*.js
 │  └─ ...
 ├─ doc/                    # 專案操作與策略文件
+│  ├─ project-management.md # 專案進度與發布主控入口
 │  ├─ follow-up-execution-list.md
 │  ├─ legacy-global-dependencies.md
 │  ├─ strategy-optimization-sop.md
@@ -186,4 +214,3 @@ npm run reports:dashboard:serve
 
 完整條文請參考官方版本：<https://www.apache.org/licenses/LICENSE-2.0>  
 建議在專案根目錄新增 `LICENSE` 檔，並放入 Apache 2.0 全文以完整對外釋出。
-

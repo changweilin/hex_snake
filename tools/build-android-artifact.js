@@ -10,6 +10,12 @@ const packageInfo = JSON.parse(fs.readFileSync(path.join(root, "package.json"), 
 
 const artifactTypes = new Set(["apk", "bundle"]);
 const variants = new Set(["debug", "release"]);
+const signingEnv = {
+  storeFile: "HEX_SNAKE_ANDROID_KEYSTORE_FILE",
+  storePassword: "HEX_SNAKE_ANDROID_KEYSTORE_PASSWORD",
+  keyAlias: "HEX_SNAKE_ANDROID_KEY_ALIAS",
+  keyPassword: "HEX_SNAKE_ANDROID_KEY_PASSWORD"
+};
 
 function fail(message) {
   console.error(message);
@@ -23,7 +29,8 @@ function existingPath(...candidates) {
 function parseArgs(args) {
   const options = {
     type: "apk",
-    variant: "debug"
+    variant: "debug",
+    requireSigning: false
   };
 
   for (const arg of args) {
@@ -31,6 +38,8 @@ function parseArgs(args) {
       options.type = arg.slice("--type=".length).toLowerCase();
     } else if (arg.startsWith("--variant=")) {
       options.variant = arg.slice("--variant=".length).toLowerCase();
+    } else if (arg === "--require-signing") {
+      options.requireSigning = true;
     } else if (artifactTypes.has(arg.toLowerCase())) {
       options.type = arg.toLowerCase();
     } else if (variants.has(arg.toLowerCase())) {
@@ -122,11 +131,49 @@ function newestArtifact(options) {
     .sort((left, right) => fs.statSync(right).mtimeMs - fs.statSync(left).mtimeMs)[0] || "";
 }
 
-function hasReleaseSigningConfig() {
-  const gradlePath = path.join(androidDir, "app", "build.gradle");
-  if (!fs.existsSync(gradlePath)) return false;
-  const text = fs.readFileSync(gradlePath, "utf8");
-  return /\bsigningConfigs\b/.test(text) && /\bsigningConfig\b/.test(text);
+function parseProperties(text) {
+  return text.split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(line => line && !line.startsWith("#") && line.includes("="))
+    .reduce((props, line) => {
+      const index = line.indexOf("=");
+      props[line.slice(0, index).trim()] = line.slice(index + 1).trim();
+      return props;
+    }, {});
+}
+
+function resolveSigningStoreFile(storeFile) {
+  if (!storeFile) return "";
+  return path.isAbsolute(storeFile) ? storeFile : path.join(androidDir, storeFile);
+}
+
+function releaseSigningStatus() {
+  const propertiesPath = path.join(androidDir, "signing.properties");
+  const props = fs.existsSync(propertiesPath)
+    ? parseProperties(fs.readFileSync(propertiesPath, "utf8"))
+    : {};
+
+  Object.entries(signingEnv).forEach(([key, envName]) => {
+    if (process.env[envName]) props[key] = process.env[envName];
+  });
+
+  const missing = Object.keys(signingEnv).filter(key => !props[key]);
+  const storeFile = resolveSigningStoreFile(props.storeFile);
+  const missingStoreFile = props.storeFile && !fs.existsSync(storeFile);
+  return {
+    ready: missing.length === 0 && !missingStoreFile,
+    missing,
+    missingStoreFile,
+    propertiesPath,
+    storeFile
+  };
+}
+
+function releaseSigningProblem(signingStatus) {
+  return [
+    signingStatus.missing.length ? `missing ${signingStatus.missing.join(", ")}` : "",
+    signingStatus.missingStoreFile ? `keystore not found: ${signingStatus.storeFile}` : ""
+  ].filter(Boolean).join("; ");
 }
 
 function buildLabel({ type, variant }) {
@@ -178,6 +225,14 @@ function main(args = process.argv.slice(2)) {
   console.log(`JAVA_HOME=${javaHome}`);
   console.log(`ANDROID_HOME=${androidSdk}`);
 
+  if (options.variant === "release" && options.requireSigning) {
+    const signingStatus = releaseSigningStatus();
+    if (!signingStatus.ready) {
+      const details = releaseSigningProblem(signingStatus);
+      fail(`Release signing is required but not ready${details ? ` (${details})` : ""}. Copy android/signing.properties.example to android/signing.properties or set HEX_SNAKE_ANDROID_* environment variables.`);
+    }
+  }
+
   runGradle(task, env);
 
   const artifactPath = newestArtifact(options);
@@ -188,8 +243,18 @@ function main(args = process.argv.slice(2)) {
   const artifactBytes = fs.statSync(artifactPath).size;
   console.log(`Android ${buildLabel(options)}: ${path.relative(root, artifactPath)} (${formatMb(artifactBytes)})`);
 
-  if (options.variant === "release" && !hasReleaseSigningConfig()) {
-    console.warn("Release signingConfig is not configured yet. Configure signing before Play Store upload.");
+  if (options.variant === "release") {
+    const signingStatus = releaseSigningStatus();
+    if (signingStatus.ready) {
+      console.log(`Release signingConfig is active: ${path.relative(root, signingStatus.storeFile)}`);
+    } else {
+      if (options.requireSigning) {
+        const details = releaseSigningProblem(signingStatus);
+        fail(`Release signing is required but not ready${details ? ` (${details})` : ""}. Copy android/signing.properties.example to android/signing.properties or set HEX_SNAKE_ANDROID_* environment variables.`);
+      }
+      console.warn("Release signingConfig is not configured yet. Configure signing before Play Store upload.");
+      console.warn("Use `npm run android:bundle:signed` to require signing credentials for a Play-ready AAB.");
+    }
   }
 }
 

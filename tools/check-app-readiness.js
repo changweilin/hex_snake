@@ -24,6 +24,7 @@ const requiredScripts = [
   "android:build:debug",
   "android:bundle:debug",
   "android:bundle:release",
+  "android:bundle:signed",
   "release:check"
 ];
 const requiredDistFiles = [
@@ -122,6 +123,7 @@ function checkCapacitorShell(packageInfo) {
 
   [
     "android/app/build.gradle",
+    "android/signing.properties.example",
     "android/app/src/main/AndroidManifest.xml",
     "android/app/src/main/java/com/whitedragon/hexsnake/MainActivity.java",
     "ios/App/App.xcodeproj/project.pbxproj",
@@ -131,6 +133,12 @@ function checkCapacitorShell(packageInfo) {
 
   assertTextIncludes("android/app/build.gradle", `applicationId "${config.appId}"`, "the Capacitor app id");
   assertTextIncludes("android/app/build.gradle", `versionName "${packageInfo.version}"`, "package versionName");
+  assertTextIncludes("android/app/build.gradle", "signing.properties", "local release signing properties");
+  assertTextIncludes("android/app/build.gradle", "HEX_SNAKE_ANDROID_KEYSTORE_FILE", "release signing environment variables");
+  assertTextIncludes("android/app/build.gradle", "signingConfig signingConfigs.release", "conditional release signingConfig");
+  assertTextIncludes("android/.gitignore", "signing.properties", "ignored local signing properties");
+  assertTextIncludes("android/.gitignore", "*.jks", "ignored Java keystores");
+  assertTextIncludes("tools/build-android-artifact.js", "--require-signing", "signed release gate");
   assertTextIncludes("ios/App/App.xcodeproj/project.pbxproj", `PRODUCT_BUNDLE_IDENTIFIER = ${config.appId};`, "the Capacitor bundle id");
   assertTextIncludes("ios/App/App.xcodeproj/project.pbxproj", `MARKETING_VERSION = ${packageInfo.version};`, "package marketing version");
 

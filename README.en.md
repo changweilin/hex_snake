@@ -97,6 +97,31 @@ npm start
 
 `npm start` serves from `dist/` using `--dist`.
 
+### Android App Builds and Signing
+
+```bash
+npm run android:build:debug
+npm run android:bundle:release
+```
+
+- debug APK: `android/app/build/outputs/apk/debug/app-debug.apk`
+- release AAB: `android/app/build/outputs/bundle/release/app-release.aab`
+
+Before uploading to Google Play, provide an Android upload keystore. Copy `android/signing.properties.example` to `android/signing.properties`, or set these CI environment variables:
+
+```text
+HEX_SNAKE_ANDROID_KEYSTORE_FILE
+HEX_SNAKE_ANDROID_KEYSTORE_PASSWORD
+HEX_SNAKE_ANDROID_KEY_ALIAS
+HEX_SNAKE_ANDROID_KEY_PASSWORD
+```
+
+`android/signing.properties` and keystore files are ignored by git. To require signing credentials for a Play-ready build, run:
+
+```bash
+npm run android:bundle:signed
+```
+
 ### Useful Scripts
 
 ```bash
@@ -187,4 +212,3 @@ This project is licensed under the **Apache License 2.0**.
 Please include the full Apache 2.0 text in a `LICENSE` file at the repository root for complete compliance.
 
 Official license text: https://www.apache.org/licenses/LICENSE-2.0
-

@@ -2,6 +2,8 @@
 
 Created: 2026-05-20
 
+> Progress control entry: [`project-management.md`](project-management.md). This file keeps the LAN/Wi-Fi multiplayer implementation details; cross-project priority and current next actions are managed in the central project management file.
+
 ## Scope
 
 Build local LAN/Wi-Fi multiplayer first. Bluetooth is intentionally out of scope.

@@ -1,5 +1,30 @@
 apply plugin: 'com.android.application'
 
+def loadReleaseSigningProps() {
+    def props = new Properties()
+    def signingFile = rootProject.file("signing.properties")
+    if (signingFile.exists()) {
+        signingFile.withInputStream { stream -> props.load(stream) }
+    }
+
+    def envMap = [
+        storeFile: "HEX_SNAKE_ANDROID_KEYSTORE_FILE",
+        storePassword: "HEX_SNAKE_ANDROID_KEYSTORE_PASSWORD",
+        keyAlias: "HEX_SNAKE_ANDROID_KEY_ALIAS",
+        keyPassword: "HEX_SNAKE_ANDROID_KEY_PASSWORD"
+    ]
+    envMap.each { key, envName ->
+        def value = System.getenv(envName)
+        if (value != null && value.trim()) props.setProperty(key, value)
+    }
+    return props
+}
+
+def releaseSigningProps = loadReleaseSigningProps()
+def hasReleaseSigningProps = ["storeFile", "storePassword", "keyAlias", "keyPassword"].every {
+    releaseSigningProps.getProperty(it)?.trim()
+}
+
 android {
     namespace = "com.whitedragon.hexsnake"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -16,9 +41,24 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        if (hasReleaseSigningProps) {
+            release {
+                def configuredStoreFile = releaseSigningProps.getProperty("storeFile")
+                def keystoreFile = new File(configuredStoreFile)
+                storeFile = keystoreFile.isAbsolute() ? keystoreFile : rootProject.file(configuredStoreFile)
+                storePassword = releaseSigningProps.getProperty("storePassword")
+                keyAlias = releaseSigningProps.getProperty("keyAlias")
+                keyPassword = releaseSigningProps.getProperty("keyPassword")
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
+            if (hasReleaseSigningProps) {
+                signingConfig signingConfigs.release
+            }
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }

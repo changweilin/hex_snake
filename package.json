@@ -38,6 +38,7 @@
     "android:build:debug": "npm run cap:sync && node tools/build-android-artifact.js --type=apk --variant=debug",
     "android:bundle:debug": "npm run cap:sync && node tools/build-android-artifact.js --type=bundle --variant=debug",
     "android:bundle:release": "npm run cap:sync && node tools/build-android-artifact.js --type=bundle --variant=release",
+    "android:bundle:signed": "npm run cap:sync && node tools/build-android-artifact.js --type=bundle --variant=release --require-signing",
     "release:check": "node tools/run-release-check.js",
     "reports:dashboard": "node tools/build-report-dashboard.js",
     "reports:dashboard:serve": "node tools/report-dashboard-server.js",
