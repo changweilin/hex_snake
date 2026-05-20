@@ -1,4 +1,5 @@
 let minGridSize = 6;
+const UiDom = HexSnakeDOM;
 let maxGridSize = 12;
 let minFoodCount = 1;
 let maxFoodCount = 4;
@@ -222,27 +223,27 @@ function applyBalanceConfig(config) {
   computerCharacterId = defaultSettings.computerCharacterId;
   playerCharacterChoice = playerCharacterId;
   computerCharacterChoice = computerCharacterId;
-  gridSizeInput.min = minGridSize;
-  gridSizeInput.max = maxGridSize;
-  gridSizeInput.value = defaultSettings.gridSize;
-  foodCountInput.min = minFoodCount;
-  foodCountInput.max = maxFoodCount;
-  foodCountInput.value = defaultSettings.foodCount;
-  initialSpeedInput.min = minInitialSpeed;
-  initialSpeedInput.max = maxInitialSpeed;
-  initialSpeedInput.value = defaultSettings.initialSpeed;
-  initialLengthInput.min = minInitialLength;
-  initialLengthInput.max = maxInitialLength;
-  initialLengthInput.value = defaultSettings.initialLength;
-  initialEnergyInput.max = attackNeedTotal;
-  initialEnergyInput.value = defaultSettings.initialEnergy;
-  initialBombsInput.max = maxAmmo;
-  initialBombsInput.value = defaultSettings.initialBombs;
-  initialStockInputs.forEach((input) => {
+  UiDom.gridSizeInput.min = minGridSize;
+  UiDom.gridSizeInput.max = maxGridSize;
+  UiDom.gridSizeInput.value = defaultSettings.gridSize;
+  UiDom.foodCountInput.min = minFoodCount;
+  UiDom.foodCountInput.max = maxFoodCount;
+  UiDom.foodCountInput.value = defaultSettings.foodCount;
+  UiDom.initialSpeedInput.min = minInitialSpeed;
+  UiDom.initialSpeedInput.max = maxInitialSpeed;
+  UiDom.initialSpeedInput.value = defaultSettings.initialSpeed;
+  UiDom.initialLengthInput.min = minInitialLength;
+  UiDom.initialLengthInput.max = maxInitialLength;
+  UiDom.initialLengthInput.value = defaultSettings.initialLength;
+  UiDom.initialEnergyInput.max = attackNeedTotal;
+  UiDom.initialEnergyInput.value = defaultSettings.initialEnergy;
+  UiDom.initialBombsInput.max = maxAmmo;
+  UiDom.initialBombsInput.value = defaultSettings.initialBombs;
+  UiDom.initialStockInputs.forEach((input) => {
     input.max = maxFoodStock;
     input.value = defaultSettings.initialStock[input.dataset.initialStock] || 0;
   });
-  computerDifficultyInput.value = defaultSettings.computerDifficulty;
+  UiDom.computerDifficultyInput.value = defaultSettings.computerDifficulty;
   refreshTutorialSlides();
 }
 
@@ -2134,22 +2135,22 @@ function clearLogoTransitionTimers() {
 
 function clearLogoTransition() {
   clearLogoTransitionTimers();
-  overlay.classList.remove(...logoTransitionClassNames());
-  if (winnerPortrait.querySelector("[data-logo-transition]")) {
-    winnerPortrait.hidden = true;
-    winnerPortrait.innerHTML = "";
+  UiDom.overlay.classList.remove(...logoTransitionClassNames());
+  if (UiDom.winnerPortrait.querySelector("[data-logo-transition]")) {
+    UiDom.winnerPortrait.hidden = true;
+    UiDom.winnerPortrait.innerHTML = "";
   }
 }
 
 function isLogoTransitionActive() {
   return (
-    overlay.classList.contains("logo-transition") ||
+    UiDom.overlay.classList.contains("logo-transition") ||
     Boolean(logoTransitionTimer)
   );
 }
 
 function logoTransitionDirection() {
-  const node = winnerPortrait.querySelector("[data-logo-transition]");
+  const node = UiDom.winnerPortrait.querySelector("[data-logo-transition]");
   return node ? node.getAttribute("data-logo-transition") : null;
 }
 
@@ -2261,25 +2262,25 @@ function logoTransitionMessageMarkup(message = "") {
 function showLogoTransition(direction = "out", options = {}) {
   clearLogoTransitionTimers();
   const safeDirection = direction === "in" ? "in" : "out";
-  overlay.classList.remove(
+  UiDom.overlay.classList.remove(
     "intro-details",
     "tutorial-open",
     ...logoTransitionClassNames(),
   );
-  overlay.classList.add(
+  UiDom.overlay.classList.add(
     "show",
     "is-session-modal",
     "logo-transition",
     `logo-transition-${safeDirection}`,
   );
-  overlayTitle.hidden = true;
-  overlayText.hidden = true;
-  startButton.hidden = true;
-  computerBattleButton.hidden = true;
-  replayArchiveButton.hidden = true;
-  introCloseButton.hidden = true;
-  winnerPortrait.hidden = false;
-  winnerPortrait.innerHTML = `
+  UiDom.overlayTitle.hidden = true;
+  UiDom.overlayText.hidden = true;
+  UiDom.startButton.hidden = true;
+  UiDom.computerBattleButton.hidden = true;
+  UiDom.replayArchiveButton.hidden = true;
+  UiDom.introCloseButton.hidden = true;
+  UiDom.winnerPortrait.hidden = false;
+  UiDom.winnerPortrait.innerHTML = `
         <div class="logo-transition-card" data-logo-transition="${safeDirection}" aria-live="polite">
           <div class="logo-spiral-shell" aria-hidden="true">
             ${logoSpiralMarkup(safeDirection)}
@@ -2296,7 +2297,7 @@ function showLogoTransition(direction = "out", options = {}) {
 function playStartLogoCountdown() {
   if (isLogoTransitionActive()) return Promise.resolve(false);
   showLogoTransition("out", { countdown: true });
-  const countdownEl = winnerPortrait.querySelector("[data-logo-countdown]");
+  const countdownEl = UiDom.winnerPortrait.querySelector("[data-logo-countdown]");
   const startedAt = performance.now();
   logoCountdownTimer = setInterval(() => {
     const remaining = Math.max(
@@ -2408,8 +2409,8 @@ refreshTutorialSlides();
 let tutorialMoveCue = null;
 
 function tutorialCaptureCrop(type) {
-  const width = canvas.width || 1;
-  const height = canvas.height || 1;
+  const width = UiDom.canvas.width || 1;
+  const height = UiDom.canvas.height || 1;
   const shortSide = Math.min(width, height);
   if (type === "move") {
     return {
@@ -2438,9 +2439,9 @@ function tutorialCaptureCrop(type) {
 function tutorialCropPoint(cell, type) {
   const crop = tutorialCaptureCrop(type);
   const point = HexSnakeGame.axialToPixel(cell);
-  const rect = playArea.getBoundingClientRect();
-  const scaleX = rect.width ? canvas.width / rect.width : 1;
-  const scaleY = rect.height ? canvas.height / rect.height : 1;
+  const rect = UiDom.playArea.getBoundingClientRect();
+  const scaleX = rect.width ? UiDom.canvas.width / rect.width : 1;
+  const scaleY = rect.height ? UiDom.canvas.height / rect.height : 1;
   const canvasPoint = {
     x: point.x * scaleX,
     y: point.y * scaleY,
@@ -2485,7 +2486,7 @@ function tutorialMoveFoodCell() {
 }
 
 function tutorialCaptureUrl(type) {
-  if (!canvas.width || !canvas.height) return "";
+  if (!UiDom.canvas.width || !UiDom.canvas.height) return "";
   const now = performance.now();
   const originalBlasts = blasts;
   const originalFoods = foods;
@@ -2557,7 +2558,7 @@ function tutorialCaptureUrl(type) {
     outCtx.fillStyle = "#111720";
     outCtx.fillRect(0, 0, targetWidth, targetHeight);
     outCtx.drawImage(
-      canvas,
+      UiDom.canvas,
       crop.x,
       crop.y,
       crop.w,
@@ -2767,8 +2768,8 @@ function tutorialVisualMarkup(slide) {
 function renderTutorialSlide() {
   refreshTutorialSlides();
   const slide = tutorialSlides[tutorialStepIndex] || tutorialSlides[0];
-  winnerPortrait.hidden = false;
-  winnerPortrait.innerHTML = `
+  UiDom.winnerPortrait.hidden = false;
+  UiDom.winnerPortrait.innerHTML = `
         <div class="tutorial-card" role="group" tabindex="0" aria-label="新手教學 ${tutorialStepIndex + 1} / ${tutorialSlides.length}">
             <div class="tutorial-progress">${tutorialSlides.map((_, index) => `<span class="${index === tutorialStepIndex ? "is-active" : ""}"></span>`).join("")}</div>
           ${tutorialVisualMarkup(slide)}
@@ -2807,19 +2808,19 @@ function renderTutorialSlide() {
           </div>
         </div>
       `;
-  winnerPortrait.querySelector(".tutorial-card")?.focus();
+  UiDom.winnerPortrait.querySelector(".tutorial-card")?.focus();
 }
 
 function setTutorialChrome() {
-  overlay.classList.remove("intro-details");
-  overlay.classList.remove("is-session-modal");
-  overlay.classList.add("tutorial-open");
-  overlayTitle.hidden = true;
-  overlayText.hidden = true;
-  startButton.hidden = true;
-  computerBattleButton.hidden = true;
-  replayArchiveButton.hidden = true;
-  introCloseButton.hidden = true;
+  UiDom.overlay.classList.remove("intro-details");
+  UiDom.overlay.classList.remove("is-session-modal");
+  UiDom.overlay.classList.add("tutorial-open");
+  UiDom.overlayTitle.hidden = true;
+  UiDom.overlayText.hidden = true;
+  UiDom.startButton.hidden = true;
+  UiDom.computerBattleButton.hidden = true;
+  UiDom.replayArchiveButton.hidden = true;
+  UiDom.introCloseButton.hidden = true;
 }
 
 function showTutorial(startIndex = 0) {
@@ -2830,17 +2831,17 @@ function showTutorial(startIndex = 0) {
     Math.min(tutorialSlides.length - 1, startIndex),
   );
   setTutorialChrome();
-  overlay.classList.add("show");
-  characterStage.hidden = true;
+  UiDom.overlay.classList.add("show");
+  UiDom.characterStage.hidden = true;
   setCharacterStageOverlayMode(false);
   renderTutorialSlide();
 }
 
 function finishTutorial(markSeen = true) {
   if (markSeen) HexSnakeStorage.set(tutorialSeenKey, "1");
-  overlay.classList.remove("tutorial-open");
+  UiDom.overlay.classList.remove("tutorial-open");
   renderIntroPortraits(false);
-  overlay.classList.add("show");
+  UiDom.overlay.classList.add("show");
 }
 
 function shouldShowTutorial() {
@@ -2849,8 +2850,8 @@ function shouldShowTutorial() {
 
 function isTutorialOpen() {
   return (
-    overlay.classList.contains("show") &&
-    overlay.classList.contains("tutorial-open")
+    UiDom.overlay.classList.contains("show") &&
+    UiDom.overlay.classList.contains("tutorial-open")
   );
 }
 
@@ -3000,19 +3001,19 @@ function setResultShareStatus(text = "", state = "") {
 
 function updateResultSharePanel() {
   const replayMode = typeof HexSnakeReplay !== "undefined" && HexSnakeReplay.isPlaybackMode();
-  const visible = Boolean(lastResultShareData) && gameOver && !replayMode && !overlayTitle.hidden;
-  overlayText.classList.toggle("is-copyable-result", visible && !resultShareInProgress);
+  const visible = Boolean(lastResultShareData) && gameOver && !replayMode && !UiDom.overlayTitle.hidden;
+  UiDom.overlayText.classList.toggle("is-copyable-result", visible && !resultShareInProgress);
   if (visible) {
-    overlayText.setAttribute("role", "button");
-    overlayText.setAttribute("tabindex", "0");
-    overlayText.setAttribute("title", "點擊複製對戰結果");
-    overlayText.setAttribute("aria-label", `${overlayText.textContent.trim()}。點擊複製對戰結果。`);
+    UiDom.overlayText.setAttribute("role", "button");
+    UiDom.overlayText.setAttribute("tabindex", "0");
+    UiDom.overlayText.setAttribute("title", "點擊複製對戰結果");
+    UiDom.overlayText.setAttribute("aria-label", `${UiDom.overlayText.textContent.trim()}。點擊複製對戰結果。`);
   } else {
-    overlayText.classList.remove("is-copyable-result");
-    overlayText.removeAttribute("role");
-    overlayText.removeAttribute("tabindex");
-    overlayText.removeAttribute("title");
-    overlayText.removeAttribute("aria-label");
+    UiDom.overlayText.classList.remove("is-copyable-result");
+    UiDom.overlayText.removeAttribute("role");
+    UiDom.overlayText.removeAttribute("tabindex");
+    UiDom.overlayText.removeAttribute("title");
+    UiDom.overlayText.removeAttribute("aria-label");
     setResultShareStatus("");
   }
 }
@@ -3024,60 +3025,60 @@ function setLastResultShareData(data) {
 }
 
 function setOverlayChromeVisible(visible) {
-  overlay.classList.remove(
+  UiDom.overlay.classList.remove(
     "intro-details",
     "tutorial-open",
     "is-session-modal",
     ...logoTransitionClassNames(),
   );
-  overlayTitle.hidden = !visible;
-  overlayText.hidden = !visible;
-  startButton.hidden = !visible;
-  computerBattleButton.hidden = !visible || (running && !gameOver);
-  replayArchiveButton.hidden = !visible;
-  introCloseButton.hidden = true;
+  UiDom.overlayTitle.hidden = !visible;
+  UiDom.overlayText.hidden = !visible;
+  UiDom.startButton.hidden = !visible;
+  UiDom.computerBattleButton.hidden = !visible || (running && !gameOver);
+  UiDom.replayArchiveButton.hidden = !visible;
+  UiDom.introCloseButton.hidden = true;
   updateResultSharePanel();
 }
 
 function setIntroLobbyChrome() {
-  overlay.classList.remove(
+  UiDom.overlay.classList.remove(
     "intro-details",
     "tutorial-open",
     ...logoTransitionClassNames(),
   );
-  overlay.classList.add("is-session-modal");
-  overlayTitle.hidden = true;
-  overlayText.hidden = true;
-  startButton.hidden = false;
-  computerBattleButton.hidden = false;
-  replayArchiveButton.hidden = false;
-  introCloseButton.hidden = true;
-  startButton.textContent = "開始";
+  UiDom.overlay.classList.add("is-session-modal");
+  UiDom.overlayTitle.hidden = true;
+  UiDom.overlayText.hidden = true;
+  UiDom.startButton.hidden = false;
+  UiDom.computerBattleButton.hidden = false;
+  UiDom.replayArchiveButton.hidden = false;
+  UiDom.introCloseButton.hidden = true;
+  UiDom.startButton.textContent = "開始";
   updateResultSharePanel();
 }
 
 function setIntroDetailsChrome() {
-  overlay.classList.add("intro-details");
-  overlay.classList.remove(
+  UiDom.overlay.classList.add("intro-details");
+  UiDom.overlay.classList.remove(
     "tutorial-open",
     "is-session-modal",
     ...logoTransitionClassNames(),
   );
-  overlayTitle.hidden = true;
-  overlayText.hidden = true;
-  startButton.hidden = true;
-  computerBattleButton.hidden = true;
-  replayArchiveButton.hidden = true;
-  introCloseButton.hidden = false;
+  UiDom.overlayTitle.hidden = true;
+  UiDom.overlayText.hidden = true;
+  UiDom.startButton.hidden = true;
+  UiDom.computerBattleButton.hidden = true;
+  UiDom.replayArchiveButton.hidden = true;
+  UiDom.introCloseButton.hidden = false;
   updateResultSharePanel();
 }
 
 function setCharacterStageOverlayMode(active) {
-  characterStage.classList.toggle("is-overlay-visible", Boolean(active));
+  UiDom.characterStage.classList.toggle("is-overlay-visible", Boolean(active));
 }
 
 function buildCharacterStage(options = {}) {
-  characterStage.innerHTML = ["player", "computer"]
+  UiDom.characterStage.innerHTML = ["player", "computer"]
     .map((owner) => {
       const character = options.startLogoCharacters
         ? startLogoCharacterFor(owner)
@@ -3098,24 +3099,24 @@ function buildCharacterStage(options = {}) {
 }
 
 function showCharacterStage(options = {}) {
-  if (options.rebuild !== false || !characterStage.innerHTML) {
+  if (options.rebuild !== false || !UiDom.characterStage.innerHTML) {
     buildCharacterStage(options);
   }
-  characterStage.hidden = false;
+  UiDom.characterStage.hidden = false;
   setCharacterStageOverlayMode(options.overlay);
 }
 
 function hideCharacterStage() {
-  characterStage.hidden = true;
+  UiDom.characterStage.hidden = true;
   setCharacterStageOverlayMode(false);
 }
 
 function renderWinnerPortrait(owner, playerLost = false, computerLost = false) {
   setOverlayChromeVisible(true);
   if (!owner && !playerLost && !computerLost) {
-    winnerPortrait.hidden = true;
-    winnerPortrait.innerHTML = "";
-    characterStage.hidden = false;
+    UiDom.winnerPortrait.hidden = true;
+    UiDom.winnerPortrait.innerHTML = "";
+    UiDom.characterStage.hidden = false;
     setCharacterStageOverlayMode(false);
     return;
   }
@@ -3133,10 +3134,10 @@ function renderWinnerPortrait(owner, playerLost = false, computerLost = false) {
       ? "P2 勝利"
       : "P2 敗北"
     : "P2 平手";
-  overlay.classList.add("is-session-modal");
-  winnerPortrait.hidden = false;
+  UiDom.overlay.classList.add("is-session-modal");
+  UiDom.winnerPortrait.hidden = false;
   hideCharacterStage();
-  winnerPortrait.innerHTML = `
+  UiDom.winnerPortrait.innerHTML = `
         <div class="portrait-pair result-pair">
           <div class="result-entry ${owner === "player" ? "is-winner" : ""} ${playerPose === "defeat" ? "is-defeated" : ""}" data-owner="player" data-result-owner="player" title="選擇 P1 角色" style="${characterStyle(playerCharacter, "player")}">
             <div class="fighter-portrait result-portrait ${owner === "player" ? "is-winner" : ""} ${playerPose === "defeat" ? "is-defeated" : ""}" data-owner="player" data-owner-mark="${ownerMeta("player").mark}">
@@ -3161,11 +3162,11 @@ function renderIntroPortraits(showDetails = introDetailsOpen) {
   if (showDetails) setIntroDetailsChrome();
   else setIntroLobbyChrome();
   const selectedCharacter = selectedCharacterFor(selectedPortraitOwner);
-  winnerPortrait.hidden = false;
+  UiDom.winnerPortrait.hidden = false;
   hideCharacterStage();
-  characterStage.innerHTML = "";
+  UiDom.characterStage.innerHTML = "";
   if (!showDetails) {
-    winnerPortrait.innerHTML = `
+    UiDom.winnerPortrait.innerHTML = `
           <div class="intro-avatar-gate">
             ${["player", "computer"]
               .map((owner) => {
@@ -3207,7 +3208,7 @@ function renderIntroPortraits(showDetails = introDetailsOpen) {
         `;
     return;
   }
-  winnerPortrait.innerHTML = `
+  UiDom.winnerPortrait.innerHTML = `
         <div class="portrait-select" data-portrait-select>
           <div class="portrait-pair">
           ${["player", "computer"]
@@ -3329,19 +3330,19 @@ function applySelectedPortraitCharacter(delta) {
 
 function renderPortraitLightbox() {
   const character = characterFor(portraitLightboxOwner);
-  portraitLightboxImage.src = portraitUrl(character, "intro", "md");
-  portraitLightboxImage.srcset = portraitSrcset(character, "intro");
-  portraitLightboxImage.sizes = portraitSizesAttribute("full");
-  portraitLightboxImage.alt = character.name;
-  portraitLightboxImage.dataset.characterId = character.id;
-  portraitLightboxImage.dataset.portraitVariant = portraitVariantMode;
-  portraitLightboxCaption.textContent = `${ownerMeta(portraitLightboxOwner).label} / ${character.name} / ${portraitVariantLabels[portraitVariantMode] || portraitVariantMode}`;
+  UiDom.portraitLightboxImage.src = portraitUrl(character, "intro", "md");
+  UiDom.portraitLightboxImage.srcset = portraitSrcset(character, "intro");
+  UiDom.portraitLightboxImage.sizes = portraitSizesAttribute("full");
+  UiDom.portraitLightboxImage.alt = character.name;
+  UiDom.portraitLightboxImage.dataset.characterId = character.id;
+  UiDom.portraitLightboxImage.dataset.portraitVariant = portraitVariantMode;
+  UiDom.portraitLightboxCaption.textContent = `${ownerMeta(portraitLightboxOwner).label} / ${character.name} / ${portraitVariantLabels[portraitVariantMode] || portraitVariantMode}`;
   updatePortraitVariantButtons();
 }
 
 function updatePortraitVariantButtons() {
   const currentIndex = portraitVariantModes.indexOf(portraitVariantMode);
-  portraitLightboxVariantButtons.forEach((button) => {
+  UiDom.portraitLightboxVariantButtons.forEach((button) => {
     const delta = button.dataset.portraitLightboxDirection === "up" ? -1 : 1;
     const nextMode =
       portraitVariantModes[
@@ -3358,21 +3359,21 @@ function updatePortraitVariantButtons() {
 
 function rerenderPortraitSurfaces() {
   if (isLogoTransitionActive()) return;
-  if (!characterStage.hidden) buildCharacterStage();
-  if (!portraitLightbox.hidden) renderPortraitLightbox();
-  if (overlay.classList.contains("show") && !winnerPortrait.hidden) {
-    const resultPortraits = winnerPortrait.querySelectorAll(
+  if (!UiDom.characterStage.hidden) buildCharacterStage();
+  if (!UiDom.portraitLightbox.hidden) renderPortraitLightbox();
+  if (UiDom.overlay.classList.contains("show") && !UiDom.winnerPortrait.hidden) {
+    const resultPortraits = UiDom.winnerPortrait.querySelectorAll(
       "[data-result-owner]",
     );
     if (resultPortraits.length) {
-      const playerResult = winnerPortrait.querySelector(
+      const playerResult = UiDom.winnerPortrait.querySelector(
         '[data-result-owner="player"]',
       );
-      const computerResult = winnerPortrait.querySelector(
+      const computerResult = UiDom.winnerPortrait.querySelector(
         '[data-result-owner="computer"]',
       );
       const winner =
-        winnerPortrait.querySelector(".result-entry.is-winner")?.dataset
+        UiDom.winnerPortrait.querySelector(".result-entry.is-winner")?.dataset
           .resultOwner || null;
       renderWinnerPortrait(
         winner,
@@ -3421,7 +3422,7 @@ function openPortraitLightbox(owner) {
   portraitLightboxOwner = owner === "computer" ? "computer" : "player";
   selectedPortraitOwner = portraitLightboxOwner;
   renderPortraitLightbox();
-  portraitLightbox.hidden = false;
+  UiDom.portraitLightbox.hidden = false;
 }
 
 function shiftPortraitLightbox(delta) {
@@ -3436,14 +3437,14 @@ function shiftPortraitLightbox(delta) {
 }
 
 function closePortraitLightbox() {
-  portraitLightbox.hidden = true;
-  portraitLightboxImage.removeAttribute("src");
-  portraitLightboxImage.removeAttribute("srcset");
-  portraitLightboxImage.removeAttribute("sizes");
-  portraitLightboxImage.alt = "";
-  delete portraitLightboxImage.dataset.characterId;
-  delete portraitLightboxImage.dataset.portraitVariant;
-  portraitLightboxCaption.textContent = "";
+  UiDom.portraitLightbox.hidden = true;
+  UiDom.portraitLightboxImage.removeAttribute("src");
+  UiDom.portraitLightboxImage.removeAttribute("srcset");
+  UiDom.portraitLightboxImage.removeAttribute("sizes");
+  UiDom.portraitLightboxImage.alt = "";
+  delete UiDom.portraitLightboxImage.dataset.characterId;
+  delete UiDom.portraitLightboxImage.dataset.portraitVariant;
+  UiDom.portraitLightboxCaption.textContent = "";
 }
 
 function resultLineForCharacter(character, pose) {
@@ -3453,7 +3454,7 @@ function resultLineForCharacter(character, pose) {
 }
 
 function setFighterPose(owner, pose, duration = 0) {
-  const module = characterStage.querySelector(`[data-module="${owner}"]`);
+  const module = UiDom.characterStage.querySelector(`[data-module="${owner}"]`);
   if (!module) return;
   const character = characterFor(owner);
   updateFighterPortraitImage(module, character, pose);
@@ -3466,7 +3467,7 @@ function setFighterPose(owner, pose, duration = 0) {
 }
 
 function showFighterCallout(owner, text, options = {}) {
-  const callout = characterStage.querySelector(
+  const callout = UiDom.characterStage.querySelector(
     `[data-attack-callout="${owner}"]`,
   );
   if (!callout || !text) return;
@@ -3542,7 +3543,7 @@ function clearFighterCallouts() {
 }
 
 function buildResourceHud() {
-  resourceBoard.innerHTML = "";
+  UiDom.resourceBoard.innerHTML = "";
   resourceEls = new Map();
   [
     { owner: "player", title: "P1", color: colors.head },
@@ -3584,13 +3585,13 @@ function buildResourceHud() {
           `;
       panel.append(row);
     });
-    resourceBoard.append(panel);
+    UiDom.resourceBoard.append(panel);
   });
-  resourceBoard.querySelectorAll("[data-count], [data-fill]").forEach((el) => {
+  UiDom.resourceBoard.querySelectorAll("[data-count], [data-fill]").forEach((el) => {
     if (el.dataset.count) resourceEls.set(`${el.dataset.count}-count`, el);
     if (el.dataset.fill) resourceEls.set(`${el.dataset.fill}-fill`, el);
   });
-  resourceBoard
+  UiDom.resourceBoard
     .querySelectorAll(
       "[data-energy-chip], [data-energy-track], [data-energy-fill], [data-energy-value], [data-bomb-chip], [data-bomb-track], [data-bomb-fill], [data-bomb-value]",
     )
