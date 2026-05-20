@@ -700,6 +700,78 @@ Object.defineProperties(HexSnakeState.game, {
       gameOverComputerLost = Boolean(value);
     },
   },
+  playerCharacterChoice: {
+    get: () => playerCharacterChoice,
+    set: (value) => {
+      playerCharacterChoice = value;
+    },
+  },
+  computerCharacterChoice: {
+    get: () => computerCharacterChoice,
+    set: (value) => {
+      computerCharacterChoice = value;
+    },
+  },
+  playerCharacterId: {
+    get: () => playerCharacterId,
+    set: (value) => {
+      playerCharacterId = value;
+    },
+  },
+  computerCharacterId: {
+    get: () => computerCharacterId,
+    set: (value) => {
+      computerCharacterId = value;
+    },
+  },
+  computerDifficulty: {
+    get: () => computerDifficulty,
+    set: (value) => {
+      computerDifficulty = value;
+    },
+  },
+  dir: {
+    get: () => dir,
+    set: (value) => {
+      dir = value;
+    },
+  },
+  nextDir: {
+    get: () => nextDir,
+    set: (value) => {
+      nextDir = value;
+    },
+  },
+  computerDir: {
+    get: () => computerDir,
+    set: (value) => {
+      computerDir = value;
+    },
+  },
+  playerEnergyFlashUntil: {
+    get: () => playerEnergyFlashUntil,
+    set: (value) => {
+      playerEnergyFlashUntil = value;
+    },
+  },
+  computerEnergyFlashUntil: {
+    get: () => computerEnergyFlashUntil,
+    set: (value) => {
+      computerEnergyFlashUntil = value;
+    },
+  },
+  playerBombFlashUntil: {
+    get: () => playerBombFlashUntil,
+    set: (value) => {
+      playerBombFlashUntil = value;
+    },
+  },
+  computerBombFlashUntil: {
+    get: () => computerBombFlashUntil,
+    set: (value) => {
+      computerBombFlashUntil = value;
+    },
+  },
   snake: {
     get: () => snake,
     set: (value) => {
@@ -1079,6 +1151,58 @@ let selectedPortraitOwner = "player";
 let highlightedAttackProfile = null;
 let attackHighlightReleaseTimer = null;
 let moveStickReboundTimer = null;
+
+Object.defineProperties(HexSnakeState.game, {
+  keyboardAttackPreviewTimer: {
+    get: () => keyboardAttackPreviewTimer,
+    set: (value) => {
+      keyboardAttackPreviewTimer = value;
+    },
+  },
+  moduleHoldTimer: {
+    get: () => moduleHoldTimer,
+    set: (value) => {
+      moduleHoldTimer = value;
+    },
+  },
+  moveStickHoldTimer: {
+    get: () => moveStickHoldTimer,
+    set: (value) => {
+      moveStickHoldTimer = value;
+    },
+  },
+  moveStickReboundTimer: {
+    get: () => moveStickReboundTimer,
+    set: (value) => {
+      moveStickReboundTimer = value;
+    },
+  },
+  attackPointerLongPressTimer: {
+    get: () => attackPointerLongPressTimer,
+    set: (value) => {
+      attackPointerLongPressTimer = value;
+    },
+  },
+  attackHighlightReleaseTimer: {
+    get: () => attackHighlightReleaseTimer,
+    set: (value) => {
+      attackHighlightReleaseTimer = value;
+    },
+  },
+  portraitPoseTimers: {
+    get: () => portraitPoseTimers,
+    set: (value) => {
+      portraitPoseTimers = value && typeof value === "object" ? value : {};
+    },
+  },
+  attackCalloutTimers: {
+    get: () => attackCalloutTimers,
+    set: (value) => {
+      attackCalloutTimers = value && typeof value === "object" ? value : {};
+    },
+  },
+});
+
 let introDetailsOpen = false;
 let tutorialStepIndex = 0;
 const tutorialSeenKey = "hexSnakeTutorialSeen";

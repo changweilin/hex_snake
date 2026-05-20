@@ -80,9 +80,9 @@
     function cloneGameSettings(value = {}) {
       const presetMode = Object.prototype.hasOwnProperty.call(value, "gmPresetMode") ? value.gmPresetMode : gmPresetMode;
       return {
-        computerDifficulty: ["novice", "low", "medium", "high", "extreme"].includes(value.computerDifficulty) ? value.computerDifficulty : computerDifficulty,
-        playerCharacterChoice: normalizeCharacterChoice("player", value.playerCharacterChoice ?? playerCharacterChoice),
-        computerCharacterChoice: normalizeCharacterChoice("computer", value.computerCharacterChoice ?? computerCharacterChoice),
+        computerDifficulty: ["novice", "low", "medium", "high", "extreme"].includes(value.computerDifficulty) ? value.computerDifficulty : HexSnakeState.game.computerDifficulty,
+        playerCharacterChoice: normalizeCharacterChoice("player", value.playerCharacterChoice ?? HexSnakeState.game.playerCharacterChoice),
+        computerCharacterChoice: normalizeCharacterChoice("computer", value.computerCharacterChoice ?? HexSnakeState.game.computerCharacterChoice),
         gmMode: Boolean(value.gmMode ?? gmMode),
         gmPresetMode: normalizeGmPresetMode(presetMode),
         gridSize: clampGridSize(value.gridSize ?? gridSize),
@@ -202,18 +202,18 @@
     }
 
     function applyProfileCharacterChoices(settings) {
-      playerCharacterChoice = normalizeCharacterChoice("player", settings.playerCharacterChoice);
-      computerCharacterChoice = normalizeCharacterChoice("computer", settings.computerCharacterChoice);
-      if (playerCharacterChoice === randomCharacterChoiceId) {
+      HexSnakeState.game.playerCharacterChoice = normalizeCharacterChoice("player", settings.playerCharacterChoice);
+      HexSnakeState.game.computerCharacterChoice = normalizeCharacterChoice("computer", settings.computerCharacterChoice);
+      if (HexSnakeState.game.playerCharacterChoice === randomCharacterChoiceId) {
         ensureStartLogoRandomCharacterId("player");
       } else {
-        playerCharacterId = characterById.has(playerCharacterChoice) ? playerCharacterChoice : defaultSettings.playerCharacterId;
+        HexSnakeState.game.playerCharacterId = characterById.has(HexSnakeState.game.playerCharacterChoice) ? HexSnakeState.game.playerCharacterChoice : defaultSettings.playerCharacterId;
         clearStartLogoRandomCharacterId("player");
       }
-      if (computerCharacterChoice === randomCharacterChoiceId) {
+      if (HexSnakeState.game.computerCharacterChoice === randomCharacterChoiceId) {
         ensureStartLogoRandomCharacterId("computer");
       } else {
-        computerCharacterId = characterById.has(computerCharacterChoice) ? computerCharacterChoice : defaultSettings.computerCharacterId;
+        HexSnakeState.game.computerCharacterId = characterById.has(HexSnakeState.game.computerCharacterChoice) ? HexSnakeState.game.computerCharacterChoice : defaultSettings.computerCharacterId;
         clearStartLogoRandomCharacterId("computer");
       }
       syncCharacterInputs();
@@ -307,20 +307,20 @@
     function loadSavedCharacterChoices() {
       const savedPlayer = HexSnakeStorage.get("hexSnakePlayerCharacterId");
       const savedComputer = HexSnakeStorage.get("hexSnakeComputerCharacterId");
-      if (savedPlayer === randomCharacterChoiceId || characterById.has(savedPlayer)) playerCharacterChoice = savedPlayer;
-      if (savedComputer === randomCharacterChoiceId || characterById.has(savedComputer)) computerCharacterChoice = savedComputer;
-      playerCharacterId = characterById.has(playerCharacterChoice) ? playerCharacterChoice : characters[0].id;
-      computerCharacterId = characterById.has(computerCharacterChoice) ? computerCharacterChoice : characters[Math.min(1, characters.length - 1)].id;
+      if (savedPlayer === randomCharacterChoiceId || characterById.has(savedPlayer)) HexSnakeState.game.playerCharacterChoice = savedPlayer;
+      if (savedComputer === randomCharacterChoiceId || characterById.has(savedComputer)) HexSnakeState.game.computerCharacterChoice = savedComputer;
+      HexSnakeState.game.playerCharacterId = characterById.has(HexSnakeState.game.playerCharacterChoice) ? HexSnakeState.game.playerCharacterChoice : characters[0].id;
+      HexSnakeState.game.computerCharacterId = characterById.has(HexSnakeState.game.computerCharacterChoice) ? HexSnakeState.game.computerCharacterChoice : characters[Math.min(1, characters.length - 1)].id;
     }
 
     function saveCharacterChoices() {
-      HexSnakeStorage.set("hexSnakePlayerCharacterId", playerCharacterChoice);
-      HexSnakeStorage.set("hexSnakeComputerCharacterId", computerCharacterChoice);
+      HexSnakeStorage.set("hexSnakePlayerCharacterId", HexSnakeState.game.playerCharacterChoice);
+      HexSnakeStorage.set("hexSnakeComputerCharacterId", HexSnakeState.game.computerCharacterChoice);
     }
 
     function syncCharacterInputs() {
-      playerCharacterInput.value = playerCharacterChoice;
-      computerCharacterInput.value = computerCharacterChoice;
+      playerCharacterInput.value = HexSnakeState.game.playerCharacterChoice;
+      computerCharacterInput.value = HexSnakeState.game.computerCharacterChoice;
     }
 
     function resolveCharacterChoice(owner, choice) {
@@ -330,14 +330,14 @@
     }
 
     function resolveCharacterChoicesForStart() {
-      playerCharacterChoice = playerCharacterInput.value === randomCharacterChoiceId || characterById.has(playerCharacterInput.value)
+      HexSnakeState.game.playerCharacterChoice = playerCharacterInput.value === randomCharacterChoiceId || characterById.has(playerCharacterInput.value)
         ? playerCharacterInput.value
         : defaultSettings.playerCharacterId;
-      computerCharacterChoice = computerCharacterInput.value === randomCharacterChoiceId || characterById.has(computerCharacterInput.value)
+      HexSnakeState.game.computerCharacterChoice = computerCharacterInput.value === randomCharacterChoiceId || characterById.has(computerCharacterInput.value)
         ? computerCharacterInput.value
         : defaultSettings.computerCharacterId;
-      playerCharacterId = resolveCharacterChoice("player", playerCharacterChoice);
-      computerCharacterId = resolveCharacterChoice("computer", computerCharacterChoice);
+      HexSnakeState.game.playerCharacterId = resolveCharacterChoice("player", HexSnakeState.game.playerCharacterChoice);
+      HexSnakeState.game.computerCharacterId = resolveCharacterChoice("computer", HexSnakeState.game.computerCharacterChoice);
       syncCharacterInputs();
       saveCharacterChoices();
     }
@@ -394,18 +394,18 @@
     }
 
     function setAttackButtonHighlight(profile = null) {
-      if (attackHighlightReleaseTimer) {
-        clearTimeout(attackHighlightReleaseTimer);
-        attackHighlightReleaseTimer = null;
+      if (HexSnakeState.game.attackHighlightReleaseTimer) {
+        clearTimeout(HexSnakeState.game.attackHighlightReleaseTimer);
+        HexSnakeState.game.attackHighlightReleaseTimer = null;
       }
       highlightedAttackProfile = ["small", "big", "smallAim", "bigAim"].includes(profile) ? profile : null;
       updateAttackButtons();
     }
 
     function releaseAttackButtonHighlight(delayMs = 90) {
-      if (attackHighlightReleaseTimer) clearTimeout(attackHighlightReleaseTimer);
-      attackHighlightReleaseTimer = setTimeout(() => {
-        attackHighlightReleaseTimer = null;
+      if (HexSnakeState.game.attackHighlightReleaseTimer) clearTimeout(HexSnakeState.game.attackHighlightReleaseTimer);
+      HexSnakeState.game.attackHighlightReleaseTimer = setTimeout(() => {
+        HexSnakeState.game.attackHighlightReleaseTimer = null;
         highlightedAttackProfile = null;
         updateAttackButtons();
       }, delayMs);
@@ -544,8 +544,8 @@
     }
 
     function setComputerDifficulty(value) {
-      computerDifficulty = ["novice", "low", "medium", "high", "extreme"].includes(value) ? value : "medium";
-      computerDifficultyInput.value = computerDifficulty;
+      HexSnakeState.game.computerDifficulty = ["novice", "low", "medium", "high", "extreme"].includes(value) ? value : "medium";
+      computerDifficultyInput.value = HexSnakeState.game.computerDifficulty;
     }
 
     function setInitialSpeed(value) {
@@ -587,7 +587,7 @@
       HexSnakeStorage.setJson("hexSnakeGmSettings", {
         gridSize,
         foodCount,
-        computerDifficulty,
+        computerDifficulty: HexSnakeState.game.computerDifficulty,
         initialSpeed,
         gmMode,
         initialLength,
@@ -846,21 +846,21 @@
     function resetGame() {
       clearGameOverSettlementTimer();
       renderWinnerPortrait(null);
-      Object.values(portraitPoseTimers).forEach(clearTimeout);
-      portraitPoseTimers = {};
-      Object.values(attackCalloutTimers).forEach(clearTimeout);
-      attackCalloutTimers = {};
+      Object.values(HexSnakeState.game.portraitPoseTimers).forEach(clearTimeout);
+      HexSnakeState.game.portraitPoseTimers = {};
+      Object.values(HexSnakeState.game.attackCalloutTimers).forEach(clearTimeout);
+      HexSnakeState.game.attackCalloutTimers = {};
       lockedFighterCallouts.clear();
       preloadPortraitsFor("player");
       preloadPortraitsFor("computer");
       buildCharacterStage();
       const offset = Math.min(2, Math.max(1, radius - 3));
-      dir = 0;
-      nextDir = 0;
-      computerDir = 3;
+      HexSnakeState.game.dir = 0;
+      HexSnakeState.game.nextDir = 0;
+      HexSnakeState.game.computerDir = 3;
       const startLength = gmMode ? initialLength : defaultSettings.initialLength;
-      HexSnakeState.game.snake = createStartingSnake({ q: -offset, r: offset }, dir, startLength);
-      HexSnakeState.game.computerSnake = createStartingSnake({ q: offset, r: -offset }, computerDir, startLength);
+      HexSnakeState.game.snake = createStartingSnake({ q: -offset, r: offset }, HexSnakeState.game.dir, startLength);
+      HexSnakeState.game.computerSnake = createStartingSnake({ q: offset, r: -offset }, HexSnakeState.game.computerDir, startLength);
       HexSnakeState.game.score = 0;
       HexSnakeState.game.computerScore = 0;
       HexSnakeState.game.playerHp = maxHpForSnake(HexSnakeState.game.snake);
@@ -871,10 +871,10 @@
       HexSnakeState.game.computerAmmo = startingBombs();
       HexSnakeState.game.playerAmmoCharge = startingEnergy();
       HexSnakeState.game.computerAmmoCharge = startingEnergy();
-      playerEnergyFlashUntil = 0;
-      computerEnergyFlashUntil = 0;
-      playerBombFlashUntil = 0;
-      computerBombFlashUntil = 0;
+      HexSnakeState.game.playerEnergyFlashUntil = 0;
+      HexSnakeState.game.computerEnergyFlashUntil = 0;
+      HexSnakeState.game.playerBombFlashUntil = 0;
+      HexSnakeState.game.computerBombFlashUntil = 0;
       HexSnakeState.game.foods = [];
       HexSnakeState.game.projectiles = [];
       HexSnakeState.game.blasts = [];
@@ -882,13 +882,13 @@
       boardShakeUntil = 0;
       boardShakeStartedAt = 0;
       boardShakeStrength = 0;
-      keyboardAttackAim.small = { targetModeIndex: 0, direction: dir };
-      keyboardAttackAim.big = { targetModeIndex: 0, direction: dir };
+      keyboardAttackAim.small = { targetModeIndex: 0, direction: HexSnakeState.game.dir };
+      keyboardAttackAim.big = { targetModeIndex: 0, direction: HexSnakeState.game.dir };
       keyboardAttackPreview = null;
       keyboardAimHeldKeys.clear();
-      if (keyboardAttackPreviewTimer) {
-        clearTimeout(keyboardAttackPreviewTimer);
-        keyboardAttackPreviewTimer = null;
+      if (HexSnakeState.game.keyboardAttackPreviewTimer) {
+        clearTimeout(HexSnakeState.game.keyboardAttackPreviewTimer);
+        HexSnakeState.game.keyboardAttackPreviewTimer = null;
       }
       updateTargetModeIndicator();
       targetCell = { ...HexSnakeState.game.snake[0] };
@@ -918,8 +918,8 @@
       HexSnakeState.game.computerSandwormArmorUntil = 0;
       HexSnakeState.game.lastVisiblePlayerSnake = HexSnakeState.game.snake.map(segment => ({ ...segment }));
       HexSnakeState.game.lastVisibleComputerSnake = HexSnakeState.game.computerSnake.map(segment => ({ ...segment }));
-      HexSnakeState.game.lastVisiblePlayerDir = dir;
-      HexSnakeState.game.lastVisibleComputerDir = computerDir;
+      HexSnakeState.game.lastVisiblePlayerDir = HexSnakeState.game.dir;
+      HexSnakeState.game.lastVisibleComputerDir = HexSnakeState.game.computerDir;
       HexSnakeState.game.playerFoodTargetKey = null;
       HexSnakeState.game.computerFoodTargetKey = null;
       HexSnakeState.game.playerFoodTargetAt = 0;
@@ -953,7 +953,7 @@
     }
 
     function currentDifficultyLabel() {
-      return computerDifficultyInput.selectedOptions[0]?.textContent?.trim() || computerDifficulty;
+      return computerDifficultyInput.selectedOptions[0]?.textContent?.trim() || HexSnakeState.game.computerDifficulty;
     }
 
     function buildResultShareData({ winnerOwner, plainResultText, scoreText, resultReason, endedInAutoMode }) {
@@ -1168,8 +1168,8 @@
       const totalEl = resourceEls.get(owner);
       if (totalEl) {
         const now = performance.now();
-        const energyFlashing = now < (owner === "player" ? playerEnergyFlashUntil : computerEnergyFlashUntil);
-        const bombFlashing = now < (owner === "player" ? playerBombFlashUntil : computerBombFlashUntil);
+        const energyFlashing = now < (owner === "player" ? HexSnakeState.game.playerEnergyFlashUntil : HexSnakeState.game.computerEnergyFlashUntil);
+        const bombFlashing = now < (owner === "player" ? HexSnakeState.game.playerBombFlashUntil : HexSnakeState.game.computerBombFlashUntil);
         const energyRatio = Math.max(0, Math.min(1, ammoCharge / Math.max(1, attackNeedTotal)));
         const bombRatio = Math.max(0, Math.min(1, ammo / Math.max(1, maxAmmo)));
         totalEl.innerHTML = `
@@ -1190,8 +1190,8 @@
         `;
       }
       const now = performance.now();
-      const energyFlashing = now < (owner === "player" ? playerEnergyFlashUntil : computerEnergyFlashUntil);
-      const bombFlashing = now < (owner === "player" ? playerBombFlashUntil : computerBombFlashUntil);
+      const energyFlashing = now < (owner === "player" ? HexSnakeState.game.playerEnergyFlashUntil : HexSnakeState.game.computerEnergyFlashUntil);
+      const bombFlashing = now < (owner === "player" ? HexSnakeState.game.playerBombFlashUntil : HexSnakeState.game.computerBombFlashUntil);
       const energyRatio = Math.max(0, Math.min(1, ammoCharge / Math.max(1, attackNeedTotal)));
       const bombRatio = Math.max(0, Math.min(1, ammo / Math.max(1, maxAmmo)));
       const energyChip = resourceEls.get(`${owner}-energyChip`);
@@ -1304,7 +1304,7 @@
       const computerSpeed = Math.round(computerSpeedValue * 10) / 10;
       playerSpeedEl.textContent = `${playerSpeed}x`;
       computerSpeedEl.textContent = `${computerSpeed}x`;
-      keyEls.forEach(el => el.classList.toggle("active", Number(el.dataset.dir) === nextDir));
+      keyEls.forEach(el => el.classList.toggle("active", Number(el.dataset.dir) === HexSnakeState.game.nextDir));
       updateStockHud("player", HexSnakeState.game.playerStock, HexSnakeState.game.playerAmmo, HexSnakeState.game.playerAmmoCharge);
       updateStockHud("computer", HexSnakeState.game.computerStock, HexSnakeState.game.computerAmmo, HexSnakeState.game.computerAmmoCharge);
       updateCooldownHud(now);
@@ -1564,7 +1564,7 @@
       const nextDirection = safeNetworkDirection(direction);
       if (nextDirection === null || !HexSnakeState.game.computerSnake?.length) return false;
       if (!canComputerTurn(nextDirection)) return false;
-      computerDir = nextDirection;
+      HexSnakeState.game.computerDir = nextDirection;
       updateHud();
       return true;
     }
@@ -1690,15 +1690,15 @@
     }
 
     function canTurn(newDir) {
-      return HexSnakeState.game.snake.length < 2 || (newDir + 3) % 6 !== dir;
+      return HexSnakeState.game.snake.length < 2 || (newDir + 3) % 6 !== HexSnakeState.game.dir;
     }
 
     function canComputerTurn(newDir) {
-      return HexSnakeState.game.computerSnake.length < 2 || (newDir + 3) % 6 !== computerDir;
+      return HexSnakeState.game.computerSnake.length < 2 || (newDir + 3) % 6 !== HexSnakeState.game.computerDir;
     }
 
     function canOwnerTurn(owner, newDir) {
-      if (owner === "player") return HexSnakeState.game.snake.length < 2 || (newDir + 3) % 6 !== dir;
+      if (owner === "player") return HexSnakeState.game.snake.length < 2 || (newDir + 3) % 6 !== HexSnakeState.game.dir;
       return canComputerTurn(newDir);
     }
 
@@ -1748,8 +1748,8 @@
         return;
       }
       if (canTurn(newDir)) {
-        const changed = nextDir !== newDir;
-        nextDir = newDir;
+        const changed = HexSnakeState.game.nextDir !== newDir;
+        HexSnakeState.game.nextDir = newDir;
         setDirectionButtonHighlight(newDir);
         if (changed) triggerTouchFeedback(options.feedbackEvent, options.feedbackStrength ?? 6);
         updateHud();
@@ -1787,7 +1787,7 @@
     }
 
     function ownerDirection(owner) {
-      return owner === "player" ? nextDir : computerDir;
+      return owner === "player" ? HexSnakeState.game.nextDir : HexSnakeState.game.computerDir;
     }
 
     function directionVector(direction) {
@@ -2318,10 +2318,10 @@
       consumeAttackCost(owner, stock, profile);
       if (owner === "player") {
         setLastAttackMsFor(owner, profile, now);
-        playerBombFlashUntil = now + 1200;
+        HexSnakeState.game.playerBombFlashUntil = now + 1200;
       } else {
         setLastAttackMsFor(owner, profile, now);
-        computerBombFlashUntil = now + 1200;
+        HexSnakeState.game.computerBombFlashUntil = now + 1200;
       }
       HexSnakeAudio.playCharacter(owner, isSmall ? "small" : "big");
       const poseDuration = isSmall
@@ -2918,14 +2918,14 @@
 
     function step(headCollisionOrder = "simultaneous", now = performance.now()) {
       if (isPlayerAutoControlActive()) {
-        nextDir = chooseAutoDirection("player");
-        setDirectionButtonHighlight(nextDir);
+        HexSnakeState.game.nextDir = chooseAutoDirection("player");
+        setDirectionButtonHighlight(HexSnakeState.game.nextDir);
       }
-      dir = nextDir;
-      if (!isNetworkHostActive()) computerDir = chooseComputerDirection();
+      HexSnakeState.game.dir = HexSnakeState.game.nextDir;
+      if (!isNetworkHostActive()) HexSnakeState.game.computerDir = chooseComputerDirection();
 
-      const next = nextWrappedCell(HexSnakeState.game.snake[0], dir);
-      const computerNext = nextWrappedCell(HexSnakeState.game.computerSnake[0], computerDir);
+      const next = nextWrappedCell(HexSnakeState.game.snake[0], HexSnakeState.game.dir);
+      const computerNext = nextWrappedCell(HexSnakeState.game.computerSnake[0], HexSnakeState.game.computerDir);
       const nextKey = keyOf(next);
       const computerNextKey = keyOf(computerNext);
       const eatenFood = HexSnakeState.game.foods.find(food => next.q === food.q && next.r === food.r);
@@ -2984,11 +2984,11 @@
 
     function stepPlayerOnly(now = performance.now()) {
       if (isPlayerAutoControlActive()) {
-        nextDir = chooseAutoDirection("player");
-        setDirectionButtonHighlight(nextDir);
+        HexSnakeState.game.nextDir = chooseAutoDirection("player");
+        setDirectionButtonHighlight(HexSnakeState.game.nextDir);
       }
-      dir = nextDir;
-      const next = nextWrappedCell(HexSnakeState.game.snake[0], dir);
+      HexSnakeState.game.dir = HexSnakeState.game.nextDir;
+      const next = nextWrappedCell(HexSnakeState.game.snake[0], HexSnakeState.game.dir);
       const nextKey = keyOf(next);
       const eatenFood = HexSnakeState.game.foods.find(food => next.q === food.q && next.r === food.r);
       const eating = Boolean(eatenFood);
@@ -3012,8 +3012,8 @@
     }
 
     function stepComputerOnly(now = performance.now()) {
-      if (!isNetworkHostActive()) computerDir = chooseComputerDirection();
-      const computerNext = nextWrappedCell(HexSnakeState.game.computerSnake[0], computerDir);
+      if (!isNetworkHostActive()) HexSnakeState.game.computerDir = chooseComputerDirection();
+      const computerNext = nextWrappedCell(HexSnakeState.game.computerSnake[0], HexSnakeState.game.computerDir);
       const computerNextKey = keyOf(computerNext);
       const computerEatenFood = HexSnakeState.game.foods.find(food => computerNext.q === food.q && computerNext.r === food.r);
       const computerEating = Boolean(computerEatenFood);
@@ -3076,10 +3076,10 @@
           playerScore: HexSnakeState.game.score,
           computerScore: HexSnakeState.game.computerScore,
           durationMs: Math.round(HexSnakeState.game.totalElapsedMs),
-          playerCharacterId,
-          computerCharacterId,
+          playerCharacterId: HexSnakeState.game.playerCharacterId,
+          computerCharacterId: HexSnakeState.game.computerCharacterId,
           mode: relayMode ? "relay" : HexSnakeState.game.computerBattleMode ? "autoBattle" : endedInAutoMode ? "playerAuto" : "player",
-          difficulty: computerDifficulty,
+          difficulty: HexSnakeState.game.computerDifficulty,
           surrendered: Boolean(HexSnakeState.replay.surrendered)
         });
       } catch (error) {
@@ -3328,23 +3328,23 @@
     }
 
     function clearMoveStickHoldTimer() {
-      if (!moveStickHoldTimer) return;
-      clearTimeout(moveStickHoldTimer);
-      moveStickHoldTimer = null;
+      if (!HexSnakeState.game.moveStickHoldTimer) return;
+      clearTimeout(HexSnakeState.game.moveStickHoldTimer);
+      HexSnakeState.game.moveStickHoldTimer = null;
     }
 
     function clearMoveStickRebound() {
-      if (moveStickReboundTimer) {
-        clearTimeout(moveStickReboundTimer);
-        moveStickReboundTimer = null;
+      if (HexSnakeState.game.moveStickReboundTimer) {
+        clearTimeout(HexSnakeState.game.moveStickReboundTimer);
+        HexSnakeState.game.moveStickReboundTimer = null;
       }
       stick.classList.remove("is-rebounding");
     }
 
     function clearAttackPointerLongPressTimer() {
-      if (!attackPointerLongPressTimer) return;
-      clearTimeout(attackPointerLongPressTimer);
-      attackPointerLongPressTimer = null;
+      if (!HexSnakeState.game.attackPointerLongPressTimer) return;
+      clearTimeout(HexSnakeState.game.attackPointerLongPressTimer);
+      HexSnakeState.game.attackPointerLongPressTimer = null;
     }
 
     function pointerNearMoveCenter(event) {
@@ -3371,9 +3371,9 @@
       setDirectionButtonHighlight(null);
       stick.classList.add("is-rebounding");
       stick.style.transform = "translate(0, 0)";
-      if (moveStickReboundTimer) clearTimeout(moveStickReboundTimer);
-      moveStickReboundTimer = setTimeout(() => {
-        moveStickReboundTimer = null;
+      if (HexSnakeState.game.moveStickReboundTimer) clearTimeout(HexSnakeState.game.moveStickReboundTimer);
+      HexSnakeState.game.moveStickReboundTimer = setTimeout(() => {
+        HexSnakeState.game.moveStickReboundTimer = null;
         stick.classList.remove("is-rebounding");
       }, 180);
     }
@@ -3470,9 +3470,9 @@
     }
 
     function clearKeyboardAttackPreviewTimer() {
-      if (!keyboardAttackPreviewTimer) return;
-      clearTimeout(keyboardAttackPreviewTimer);
-      keyboardAttackPreviewTimer = null;
+      if (!HexSnakeState.game.keyboardAttackPreviewTimer) return;
+      clearTimeout(HexSnakeState.game.keyboardAttackPreviewTimer);
+      HexSnakeState.game.keyboardAttackPreviewTimer = null;
     }
 
     function keyboardAttackHintLabel(profile = "small") {
@@ -3581,8 +3581,8 @@
       updateTargetModeIndicator();
       requestPreviewDraw();
       clearKeyboardAttackPreviewTimer();
-      keyboardAttackPreviewTimer = setTimeout(() => {
-        keyboardAttackPreviewTimer = null;
+      HexSnakeState.game.keyboardAttackPreviewTimer = setTimeout(() => {
+        HexSnakeState.game.keyboardAttackPreviewTimer = null;
         if (keyboardAttackPreview === preview) keyboardAttackPreview = null;
         targetActive = false;
         requestPreviewDraw();
@@ -3798,8 +3798,8 @@
     }
 
     function clearModuleHold() {
-      clearTimeout(moduleHoldTimer);
-      moduleHoldTimer = null;
+      clearTimeout(HexSnakeState.game.moduleHoldTimer);
+      HexSnakeState.game.moduleHoldTimer = null;
       const module = characterStage.querySelector('[data-module="player"]');
       if (module) module.classList.remove("is-charging");
     }
@@ -3863,7 +3863,7 @@
       };
       previewDirectAttack("small", attackPointer);
       clearAttackPointerLongPressTimer();
-      attackPointerLongPressTimer = setTimeout(() => {
+      HexSnakeState.game.attackPointerLongPressTimer = setTimeout(() => {
         if (!attackPointer || attackPointer.pointerId !== event.pointerId) return;
         attackPointer.longPressed = true;
         attackPointer.previewProfile = "big";
@@ -4463,10 +4463,10 @@
       input.addEventListener("change", () => {
         if (HexSnakeState.game.running) return;
         const changedOwner = input === computerCharacterInput ? "computer" : "player";
-        playerCharacterChoice = playerCharacterInput.value === randomCharacterChoiceId || characterById.has(playerCharacterInput.value) ? playerCharacterInput.value : defaultSettings.playerCharacterId;
-        computerCharacterChoice = computerCharacterInput.value === randomCharacterChoiceId || characterById.has(computerCharacterInput.value) ? computerCharacterInput.value : defaultSettings.computerCharacterId;
-        if (characterById.has(playerCharacterChoice)) playerCharacterId = playerCharacterChoice;
-        if (characterById.has(computerCharacterChoice)) computerCharacterId = computerCharacterChoice;
+        HexSnakeState.game.playerCharacterChoice = playerCharacterInput.value === randomCharacterChoiceId || characterById.has(playerCharacterInput.value) ? playerCharacterInput.value : defaultSettings.playerCharacterId;
+        HexSnakeState.game.computerCharacterChoice = computerCharacterInput.value === randomCharacterChoiceId || characterById.has(computerCharacterInput.value) ? computerCharacterInput.value : defaultSettings.computerCharacterId;
+        if (characterById.has(HexSnakeState.game.playerCharacterChoice)) HexSnakeState.game.playerCharacterId = HexSnakeState.game.playerCharacterChoice;
+        if (characterById.has(HexSnakeState.game.computerCharacterChoice)) HexSnakeState.game.computerCharacterId = HexSnakeState.game.computerCharacterChoice;
         syncCharacterInputs();
         saveCharacterChoices();
         preloadPortraitsFor("player");
@@ -4479,7 +4479,7 @@
         startButton.textContent = "開始";
         renderIntroPortraits(true);
         overlay.classList.add("show");
-        const selectedId = changedOwner === "computer" ? computerCharacterChoice : playerCharacterChoice;
+        const selectedId = changedOwner === "computer" ? HexSnakeState.game.computerCharacterChoice : HexSnakeState.game.playerCharacterChoice;
         if (characterById.has(selectedId)) {
           HexSnakeAudio.playCharacter(changedOwner, "select", { character: characterById.get(selectedId), unlock: true });
         }
@@ -4527,10 +4527,10 @@
       setGmMode(defaultSettings.gmMode);
       resetGmParameters();
       applyGmSettingsChanged({ presetMode: "real" });
-      playerCharacterId = defaultSettings.playerCharacterId;
-      computerCharacterId = defaultSettings.computerCharacterId;
-      playerCharacterChoice = playerCharacterId;
-      computerCharacterChoice = computerCharacterId;
+      HexSnakeState.game.playerCharacterId = defaultSettings.playerCharacterId;
+      HexSnakeState.game.computerCharacterId = defaultSettings.computerCharacterId;
+      HexSnakeState.game.playerCharacterChoice = HexSnakeState.game.playerCharacterId;
+      HexSnakeState.game.computerCharacterChoice = HexSnakeState.game.computerCharacterId;
       syncCharacterInputs();
       saveCharacterChoices();
       keybinds = structuredClone(defaultKeybinds);
@@ -5198,7 +5198,7 @@
       moveStickEngaged = false;
       joyZone.setPointerCapture(movePointerId);
       clearMoveStickHoldTimer();
-      moveStickHoldTimer = setTimeout(() => engageMoveStick(event), 80);
+      HexSnakeState.game.moveStickHoldTimer = setTimeout(() => engageMoveStick(event), 80);
     });
 
     joyZone.addEventListener("pointermove", event => {
