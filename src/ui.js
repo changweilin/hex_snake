@@ -1230,7 +1230,7 @@ function tutorialCaptureCrop(type) {
 
 function tutorialCropPoint(cell, type) {
   const crop = tutorialCaptureCrop(type);
-  const point = axialToPixel(cell);
+  const point = HexSnakeGame.axialToPixel(cell);
   const rect = playArea.getBoundingClientRect();
   const scaleX = rect.width ? canvas.width / rect.width : 1;
   const scaleY = rect.height ? canvas.height / rect.height : 1;
@@ -1274,7 +1274,7 @@ function tutorialMoveArrowMarkup(cue) {
 
 function tutorialMoveFoodCell() {
   const head = snake?.[0] || { q: 0, r: 0 };
-  return nextWrappedCell(nextWrappedCell(head, 1), 1);
+  return HexSnakeGame.nextWrappedCell(HexSnakeGame.nextWrappedCell(head, 1), 1);
 }
 
 function tutorialCaptureUrl(type) {
@@ -1291,7 +1291,7 @@ function tutorialCaptureUrl(type) {
   try {
     if (type === "move" && snake?.[0]) {
       dir = 1;
-      snake = createStartingSnake(
+      snake = HexSnakeGame.createStartingSnake(
         { q: 0, r: 0 },
         dir,
         Math.max(3, defaultSettings.initialLength),
@@ -1309,7 +1309,7 @@ function tutorialCaptureUrl(type) {
     if (type === "small" && computerSnake?.[0]) {
       const hitHead = { q: 0, r: 0 };
       computerDir = 2;
-      computerSnake = createStartingSnake(
+      computerSnake = HexSnakeGame.createStartingSnake(
         hitHead,
         computerDir,
         Math.max(4, defaultSettings.initialLength + 1),
@@ -1317,7 +1317,7 @@ function tutorialCaptureUrl(type) {
       lastVisibleComputerSnake = computerSnake.map((segment) => ({
         ...segment,
       }));
-      snake = createStartingSnake(
+      snake = HexSnakeGame.createStartingSnake(
         { q: -2, r: 1 },
         1,
         Math.max(3, defaultSettings.initialLength),
@@ -1331,7 +1331,7 @@ function tutorialCaptureUrl(type) {
           target: { q: computerSnake[0].q, r: computerSnake[0].r },
           owner: "player",
           radius: Math.max(3.1, blastRadius(playerStock || initialStock) + 1.1),
-          visualType: attackVisualType("player", "small"),
+          visualType: HexSnakeGame.attackVisualType("player", "small"),
           startedAt: now - blastDurationMs * 0.02,
           endAt: now + blastDurationMs * 0.98,
         },
@@ -1361,7 +1361,7 @@ function tutorialCaptureUrl(type) {
       targetHeight,
     );
     if (type === "small") {
-      const hitPoint = axialToPixel({ q: 0, r: 0 });
+      const hitPoint = HexSnakeGame.axialToPixel({ q: 0, r: 0 });
       const x = hitPoint.x - crop.x;
       const y = hitPoint.y - crop.y;
       const radiusPx = cellSize * 3.35;
@@ -1770,8 +1770,8 @@ function buildRulesContent() {
 }
 
 function openRulesModal() {
-  setSettingsOpen(false);
-  setGmOpen(false);
+  HexSnakeGame.setSettingsOpen(false);
+  HexSnakeGame.setGmOpen(false);
   rulesModal.hidden = false;
   rulesButton.setAttribute("aria-expanded", "true");
   rulesCloseButton.focus();
@@ -2085,12 +2085,12 @@ function setPortraitCharacterForOwner(
       clearStartLogoRandomCharacterId(selectedPortraitOwner);
     }
   }
-  syncCharacterInputs();
-  saveCharacterChoices();
+  HexSnakeGame.syncCharacterInputs();
+  HexSnakeGame.saveCharacterChoices();
   if (characterId !== randomCharacterChoiceId)
     preloadPortraitsFor(selectedPortraitOwner);
   renderIntroPortraits(showDetails);
-  resize();
+  HexSnakeGame.resize();
   if (characterId !== randomCharacterChoiceId) {
     HexSnakeAudio.playCharacter(owner, "select", {
       character: characterById.get(characterId),
@@ -2400,20 +2400,20 @@ function startingStock() {
   return Object.fromEntries(
     foodTypes.map((type) => [
       type.id,
-      clampInitialStock(initialStock[type.id]),
+      HexSnakeGame.clampInitialStock(initialStock[type.id]),
     ]),
   );
 }
 
 function startingEnergy() {
   return gmMode
-    ? clampInitialEnergy(initialEnergy)
+    ? HexSnakeGame.clampInitialEnergy(initialEnergy)
     : defaultSettings.initialEnergy;
 }
 
 function startingBombs() {
   return gmMode
-    ? clampInitialBombs(initialBombs)
+    ? HexSnakeGame.clampInitialBombs(initialBombs)
     : defaultSettings.initialBombs;
 }
 
@@ -2482,7 +2482,7 @@ function moveInterval(stock) {
 function moveIntervalFor(owner, now) {
   const stock = owner === "player" ? playerStock : computerStock;
   const slowUntil = owner === "player" ? playerSlowUntil : computerSlowUntil;
-  const speedScale = isPlayerAutoControlActive() ? computerBattleSpeed : 1;
+  const speedScale = HexSnakeGame.isPlayerAutoControlActive() ? computerBattleSpeed : 1;
   return (moveInterval(stock) * (now < slowUntil ? 2 : 1)) / speedScale;
 }
 

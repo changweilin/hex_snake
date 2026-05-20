@@ -4,7 +4,7 @@
         return;
       }
       const frameStats = HexSnakePlatform.display.recordFrame(now || performance.now());
-      if (typeof updatePerfOverlay === "function") updatePerfOverlay(frameStats);
+      if (typeof HexSnakeGame.updatePerfOverlay === "function") HexSnakeGame.updatePerfOverlay(frameStats);
       drawEffectComparisonBoard(now);
       rafId = requestAnimationFrame(comparisonLoop);
     }
@@ -25,9 +25,9 @@
       drawElementalBackdrop(now);
 
       cells.forEach(cell => {
-        const { x, y } = axialToPixel(cell);
+        const { x, y } = HexSnakeGame.axialToPixel(cell);
         const shade = (cell.q - cell.r + radius) % 2 === 0 ? colors.cell : colors.cellAlt;
-        hexPath(x, y, cellSize * 0.94);
+        HexSnakeGame.hexPath(x, y, cellSize * 0.94);
         ctx.fillStyle = shade;
         ctx.fill();
         ctx.strokeStyle = colors.cellLine;
@@ -37,7 +37,7 @@
 
       foods.forEach(food => {
         const type = foodTypeIds(food).map(typeId => foodTypeById.get(typeId)).filter(Boolean);
-        const { x, y } = axialToPixel(food);
+        const { x, y } = HexSnakeGame.axialToPixel(food);
         drawFoodToken(x, y, type);
       });
 
@@ -60,7 +60,7 @@
           character: computerCharacter,
           owner: "computer",
           direction: computerDir,
-          alpha: sandwormUndergroundAlpha("computer", now)
+          alpha: HexSnakeGame.sandwormUndergroundAlpha("computer", now)
         });
       }
 
@@ -76,7 +76,7 @@
           character: playerCharacter,
           owner: "player",
           direction: dir,
-          alpha: sandwormUndergroundAlpha("player", now)
+          alpha: HexSnakeGame.sandwormUndergroundAlpha("player", now)
         });
       }
 
@@ -375,7 +375,7 @@
       const seed = options.seed ?? 0;
       for (let i = 0; i < count; i += 1) {
         const cell = cellsForEffect[Math.floor(stableUnitSeed(seed, i, "cell") * cellsForEffect.length) % cellsForEffect.length];
-        const base = axialToPixel(cell);
+        const base = HexSnakeGame.axialToPixel(cell);
         const jitterRadius = cellSize * (options.jitter ?? 0.72);
         const jitterAngle = stableUnitSeed(seed, i, "angle") * Math.PI * 2;
         const drift = (progress - 0.5) * cellSize * (options.drift ?? 0.34);
@@ -395,18 +395,18 @@
       ctx.save();
       ctx.globalCompositeOperation = options.blend || "lighter";
       cellsForEffect.forEach((cell, index) => {
-        const { x, y } = axialToPixel(cell);
+        const { x, y } = HexSnakeGame.axialToPixel(cell);
         const local = (progress + index * 0.037) % 1;
         const radiusPx = cellSize * (options.radiusScale ?? 0.96);
         const gradient = ctx.createRadialGradient(x, y, radiusPx * 0.08, x, y, radiusPx);
         gradient.addColorStop(0, hexToRgba(element.glow, 0.2 * alpha));
         gradient.addColorStop(0.46, hexToRgba(element.primary, 0.15 * alpha));
         gradient.addColorStop(1, hexToRgba(element.deep, 0));
-        hexPath(x, y, cellSize * 0.96);
+        HexSnakeGame.hexPath(x, y, cellSize * 0.96);
         ctx.fillStyle = gradient;
         ctx.fill();
         if (index % 2 === 0) {
-          const motif = spriteMotifsFor(character)[stableVariantIndex(cell, index + Math.floor(local * 100), spriteMotifsFor(character).length)];
+          const motif = spriteMotifsFor(character)[HexSnakeGame.stableVariantIndex(cell, index + Math.floor(local * 100), spriteMotifsFor(character).length)];
           const angle = local * Math.PI * 2 + index;
           drawElementSprite(x, y, cellSize * 1.24, angle, character, motif, alpha * 0.2, "source-over");
         }
@@ -1971,8 +1971,8 @@
       const element = elementColorsFor(character);
       const cells = blast.lineCells || [];
       if (!cells.length) return;
-      const start = axialToPixel(cells[0]);
-      const end = axialToPixel(cells[cells.length - 1]);
+      const start = HexSnakeGame.axialToPixel(cells[0]);
+      const end = HexSnakeGame.axialToPixel(cells[cells.length - 1]);
       const dx = end.x - start.x;
       const dy = end.y - start.y;
       const length = Math.hypot(dx, dy) || 1;
@@ -1998,7 +1998,7 @@
       ctx.lineCap = "round";
       ctx.stroke();
       cells.forEach((cell, index) => {
-        const point = axialToPixel(cell);
+        const point = HexSnakeGame.axialToPixel(cell);
         if (index % 2 === 0) drawPulseRing(point.x, point.y, cellSize * (0.78 + progress * 0.55), progress, element.deep, element.glow, 0.9);
         drawLightningBetween(
           { x: point.x - nx * cellSize * 0.62, y: point.y - ny * cellSize * 0.62 },
@@ -2762,7 +2762,7 @@
 
     function drawProjectileCore(x, y, projectile, progress, character, travelAngle = 0) {
       const radiusPx = cellSize * Math.max(0.7, projectile.radius || 1);
-      const type = projectile.visualType || attackVisualType(projectile.owner, projectile.profile);
+      const type = projectile.visualType || HexSnakeGame.attackVisualType(projectile.owner, projectile.profile);
       const isBig = projectile.profile === "big" || isUltimateVisualType(type);
       const element = elementColorsFor(character);
       ctx.save();
@@ -2819,8 +2819,8 @@
     }
 
     function cachedEffectCells(effect, cacheKey, sourceCells, width, excludedCells = [], minDistance = 0) {
-      if (!effect) return cellsNearCells(sourceCells, width, excludedCells, minDistance);
-      if (!effect[cacheKey]) effect[cacheKey] = cellsNearCells(sourceCells, width, excludedCells, minDistance);
+      if (!effect) return HexSnakeGame.cellsNearCells(sourceCells, width, excludedCells, minDistance);
+      if (!effect[cacheKey]) effect[cacheKey] = HexSnakeGame.cellsNearCells(sourceCells, width, excludedCells, minDistance);
       return effect[cacheKey];
     }
 
@@ -2828,11 +2828,11 @@
       const now = performance.now();
       projectiles.forEach(projectile => {
         if (projectile.createdAt && now < projectile.createdAt) return;
-        const blastCharacter = characterForVisualType(projectile.owner, projectile.visualType);
+        const blastCharacter = HexSnakeGame.characterForVisualType(projectile.owner, projectile.visualType);
         if (projectile.hidden) {
           const progress = Math.min(1, Math.max(0, (now - projectile.createdAt) / (projectile.delay || baseAttackDelayMs)));
           const timeToImpact = projectile.impactAt - now;
-          const target = axialToPixel(projectile.target);
+          const target = HexSnakeGame.axialToPixel(projectile.target);
           if ((projectile.visualType || "").startsWith("sandworm")) {
             if (timeToImpact > sandwormRevealBeforeImpactMs) return;
             const warningProgress = Math.max(0, 1 - timeToImpact / sandwormRevealBeforeImpactMs);
@@ -2853,7 +2853,7 @@
         }
         if (projectile.kind === "lobsterPalm") {
           const progress = Math.min(1, Math.max(0, (now - projectile.createdAt) / (projectile.delay || baseAttackDelayMs)));
-          const point = pointAlongPath(projectile.source || projectile.target, projectile.pathCells || [projectile.target], progress);
+          const point = HexSnakeGame.pointAlongPath(projectile.source || projectile.target, projectile.pathCells || [projectile.target], progress);
           drawPathTextureTrail(projectile.source || projectile.target, projectile.pathCells || [projectile.target], progress, blastCharacter, {
             visualType: projectile.visualType,
             seed: projectile.createdAt,
@@ -2887,8 +2887,8 @@
               spin: linePlan.spin,
               drift: linePlan.drift
             });
-            const start = axialToPixel(projectile.source || projectile.lineCells[0]);
-            const end = axialToPixel(projectile.target || projectile.lineCells[projectile.lineCells.length - 1]);
+            const start = HexSnakeGame.axialToPixel(projectile.source || projectile.lineCells[0]);
+            const end = HexSnakeGame.axialToPixel(projectile.target || projectile.lineCells[projectile.lineCells.length - 1]);
             const x = start.x + (end.x - start.x) * progress;
             const y = start.y + (end.y - start.y) * progress;
             const radiusPx = cellSize * Math.max(1.25, (projectile.width || 1) + 1.05);
@@ -2906,9 +2906,9 @@
             drift: linePlan.drift
           });
           lineTextureCells.forEach(cell => {
-            const { x, y } = axialToPixel(cell);
+            const { x, y } = HexSnakeGame.axialToPixel(cell);
             drawElementAura(x, y, cellSize * 0.7, progress + cell.q * 0.02, blastCharacter, 0.22);
-            hexPath(x, y, cellSize * 0.88);
+            HexSnakeGame.hexPath(x, y, cellSize * 0.88);
             ctx.fillStyle = hexToRgba(blastCharacter.accent || blastCharacter.color, alpha);
             ctx.fill();
             ctx.strokeStyle = hexToRgba(blastCharacter.line, alpha + 0.16);
@@ -2918,13 +2918,13 @@
           });
           const visibleCells = projectile.lineCells.slice(0, Math.max(0, Math.floor(projectile.lineCells.length * progress)));
           for (let i = 1; i < visibleCells.length; i += 1) {
-            drawLightningBetween(axialToPixel(visibleCells[i - 1]), axialToPixel(visibleCells[i]), progress + i * 0.07, blastCharacter.accent, 1.3, 5);
+            drawLightningBetween(HexSnakeGame.axialToPixel(visibleCells[i - 1]), HexSnakeGame.axialToPixel(visibleCells[i]), progress + i * 0.07, blastCharacter.accent, 1.3, 5);
           }
           return;
         }
         if (projectile.kind === "headCircle") {
           const progress = Math.min(1, Math.max(0, (now - projectile.createdAt) / (projectile.delay || baseAttackDelayMs)));
-          const target = axialToPixel(projectile.followHead ? ownerHead(projectile.owner) : projectile.target);
+          const target = HexSnakeGame.axialToPixel(projectile.followHead ? ownerHead(projectile.owner) : projectile.target);
           const type = projectile.visualType || "";
           const headCirclePlan = effectVisualPlanFor(type, type.startsWith("dragon-spirit") ? "warning" : "radiation", blastCharacter);
           const warningRadius = cellSize * Math.max(1.35, projectile.radius || 1) * 1.04;
@@ -2945,8 +2945,8 @@
           }
           return;
         }
-        const start = axialToPixel(projectile.source || projectile.target);
-        const end = axialToPixel(projectile.target);
+        const start = HexSnakeGame.axialToPixel(projectile.source || projectile.target);
+        const end = HexSnakeGame.axialToPixel(projectile.target);
         const progress = Math.min(1, Math.max(0, (now - projectile.createdAt) / (projectile.delay || baseAttackDelayMs)));
         const x = start.x + (end.x - start.x) * progress;
         const y = start.y + (end.y - start.y) * progress;
@@ -2981,7 +2981,7 @@
       const profile = activeAttackPreviewProfile();
       if (!targetActive && !canAttack("player", profile)) return;
       if (profile === "big" && characterFor("player").id === "sandworm") return;
-      const { x, y } = axialToPixel(targetCell);
+      const { x, y } = HexSnakeGame.axialToPixel(targetCell);
       ctx.beginPath();
       const previewRadius = Math.max(1, blastRadius(playerStock) + (profile === "small" ? -1 : 0));
       ctx.arc(x, y, cellSize * previewRadius * 1.52, 0, Math.PI * 2);
@@ -2992,7 +2992,7 @@
       ctx.setLineDash([6, 6]);
       ctx.stroke();
       ctx.setLineDash([]);
-      hexPath(x, y, cellSize * 0.55);
+      HexSnakeGame.hexPath(x, y, cellSize * 0.55);
       ctx.strokeStyle = colors.target;
       ctx.lineWidth = 2;
       ctx.stroke();
@@ -3007,7 +3007,7 @@
           character,
           direction: keyboardAttackPreview.direction,
           origin: keyboardAttackPreview.origin || snake[0],
-          target: keyboardAttackPreview.target || opponentHeadTarget(),
+          target: keyboardAttackPreview.target || HexSnakeGame.opponentHeadTarget(),
           fromKeyboard: true
         };
       }
@@ -3016,17 +3016,17 @@
           character,
           direction: controlAttackPointer.direction,
           origin: snake[0],
-          target: opponentHeadTarget(),
+          target: HexSnakeGame.opponentHeadTarget(),
           fromControlPad: true
         };
       }
       if (!attackPointer) return null;
       const target = character.id === "moray" && attackPointer.moved
         ? attackPointer.currentCell
-        : opponentHeadTarget();
+        : HexSnakeGame.opponentHeadTarget();
       const direction = attackPointer.moved
-        ? directionFromSourceToTarget(attackPointer.startCell, attackPointer.currentCell, directionFromSourceToTarget(snake[0], target, ownerDirection("player")))
-        : directionFromSourceToTarget(snake[0], target, ownerDirection("player"));
+        ? HexSnakeGame.directionFromSourceToTarget(attackPointer.startCell, attackPointer.currentCell, HexSnakeGame.directionFromSourceToTarget(snake[0], target, HexSnakeGame.ownerDirection("player")))
+        : HexSnakeGame.directionFromSourceToTarget(snake[0], target, HexSnakeGame.ownerDirection("player"));
       const origin = character.id === "moray" && attackPointer.moved ? target : snake[0];
       return {
         character,
@@ -3040,28 +3040,28 @@
 
     function directionalPreviewPath(origin, direction, character) {
       if (!origin || !Number.isInteger(direction)) return [];
-      if (character.id === "moray") return boardLineThrough(origin, direction);
+      if (character.id === "moray") return HexSnakeGame.boardLineThrough(origin, direction);
       const targetSnake = computerSnake || [];
       const predictedPath = character.id === "lobster"
-        ? lobsterFistPath(snake[0], direction, targetSnake)
+        ? HexSnakeGame.lobsterFistPath(snake[0], direction, targetSnake)
         : [];
       if (predictedPath.length) return predictedPath;
       const path = [];
       let cursor = { q: origin.q, r: origin.r };
       for (let step = 0; step < targetMaxHex; step += 1) {
-        cursor = nextWrappedCell(cursor, direction);
+        cursor = HexSnakeGame.nextWrappedCell(cursor, direction);
         path.push({ q: cursor.q, r: cursor.r });
       }
       return path;
     }
 
     function directionalPreviewKey(preview, character) {
-      const originKey = preview.origin ? keyOf(preview.origin) : "none";
-      const targetKey = preview.target ? keyOf(preview.target) : "none";
-      const dragStartKey = preview.dragStart ? keyOf(preview.dragStart) : "none";
-      const dragTargetKey = preview.dragTarget ? keyOf(preview.dragTarget) : "none";
-      const playerSnakeKey = snake?.map(keyOf).join("|") || "";
-      const computerSnakeKey = computerSnake?.map(keyOf).join("|") || "";
+      const originKey = preview.origin ? HexSnakeGame.keyOf(preview.origin) : "none";
+      const targetKey = preview.target ? HexSnakeGame.keyOf(preview.target) : "none";
+      const dragStartKey = preview.dragStart ? HexSnakeGame.keyOf(preview.dragStart) : "none";
+      const dragTargetKey = preview.dragTarget ? HexSnakeGame.keyOf(preview.dragTarget) : "none";
+      const playerSnakeKey = snake?.map(HexSnakeGame.keyOf).join("|") || "";
+      const computerSnakeKey = computerSnake?.map(HexSnakeGame.keyOf).join("|") || "";
       const stockKey = foodTypes.map(type => `${type.id}:${playerStock?.[type.id] || 0}`).join("|");
       return [
         character.id,
@@ -3083,10 +3083,10 @@
       if (directionalPreviewCacheKey === cacheKey && directionalPreviewCache) return directionalPreviewCache;
       const path = directionalPreviewPath(preview.origin, preview.direction, character);
       const width = character.id === "moray" && path.length
-        ? Math.max(0, bandDistanceFromTotalWidth(attackStats(playerStock, "small").radius))
+        ? Math.max(0, HexSnakeGame.bandDistanceFromTotalWidth(HexSnakeGame.attackStats(playerStock, "small").radius))
         : 0;
       const cellsForPreview = character.id === "moray" && path.length
-        ? cellsNearCells(path, width, snake)
+        ? HexSnakeGame.cellsNearCells(path, width, snake)
         : path;
       directionalPreviewCacheKey = cacheKey;
       directionalPreviewCache = { path, cellsForPreview };
@@ -3096,7 +3096,7 @@
     function directionBetweenCells(source, target, fallbackDirection = 0) {
       if (!source || !target) return fallbackDirection;
       for (let direction = 0; direction < directions.length; direction += 1) {
-        if (keyOf(nextWrappedCell(source, direction)) === keyOf(target)) return direction;
+        if (HexSnakeGame.keyOf(HexSnakeGame.nextWrappedCell(source, direction)) === HexSnakeGame.keyOf(target)) return direction;
       }
       return fallbackDirection;
     }
@@ -3108,8 +3108,8 @@
 
     function drawDirectionalPreviewArrow(cell, direction, lineColor, canCast) {
       if (!cell || !Number.isInteger(direction)) return;
-      const point = axialToPixel(cell);
-      const angle = directionScreenAngle(direction);
+      const point = HexSnakeGame.axialToPixel(cell);
+      const angle = HexSnakeGame.directionScreenAngle(direction);
       ctx.save();
       ctx.translate(point.x, point.y);
       ctx.rotate(angle * Math.PI / 180);
@@ -3152,8 +3152,8 @@
 
     function drawDragDirectionLine(preview, lineColor, fillColor, canCast, now = performance.now()) {
       if (!["lobster", "moray"].includes(preview.character.id) || !preview.dragStart || !preview.dragTarget) return;
-      const start = axialToPixel(preview.dragStart);
-      const end = axialToPixel(preview.dragTarget);
+      const start = HexSnakeGame.axialToPixel(preview.dragStart);
+      const end = HexSnakeGame.axialToPixel(preview.dragTarget);
       const dx = end.x - start.x;
       const dy = end.y - start.y;
       const distance = Math.hypot(dx, dy);
@@ -3199,9 +3199,9 @@
       ctx.save();
       ctx.globalCompositeOperation = "lighter";
       cellsForPreview.forEach((cell, index) => {
-        const { x, y } = axialToPixel(cell);
+        const { x, y } = HexSnakeGame.axialToPixel(cell);
         const distanceFade = Math.max(0.22, 1 - index / Math.max(6, cellsForPreview.length + 2));
-        hexPath(x, y, cellSize * (character.id === "moray" ? 0.92 : 0.72));
+        HexSnakeGame.hexPath(x, y, cellSize * (character.id === "moray" ? 0.92 : 0.72));
         ctx.fillStyle = hexToRgba(fillColor, (0.12 + pulse * 0.08) * distanceFade);
         ctx.fill();
         ctx.strokeStyle = hexToRgba(lineColor, (0.38 + pulse * 0.18) * distanceFade);
@@ -3209,11 +3209,11 @@
         ctx.stroke();
       });
 
-      const sourcePoint = axialToPixel(preview.origin);
+      const sourcePoint = HexSnakeGame.axialToPixel(preview.origin);
       ctx.beginPath();
       ctx.moveTo(sourcePoint.x, sourcePoint.y);
       path.forEach(cell => {
-        const point = axialToPixel(cell);
+        const point = HexSnakeGame.axialToPixel(cell);
         ctx.lineTo(point.x, point.y);
       });
       ctx.strokeStyle = hexToRgba(lineColor, canCast ? 0.82 : 0.46);
@@ -3244,9 +3244,9 @@
         if (now < hazard.startedAt || now > hazard.endAt) return;
         const progress = (now - hazard.startedAt) / Math.max(1, hazard.endAt - hazard.startedAt);
         const alpha = 0.24 * (1 - progress * 0.55);
-        const blastCharacter = characterForVisualType(hazard.owner, hazard.visualType);
+        const blastCharacter = HexSnakeGame.characterForVisualType(hazard.owner, hazard.visualType);
         if (hazard.kind === "radiation") {
-          const { x, y } = axialToPixel(hazard.target);
+          const { x, y } = HexSnakeGame.axialToPixel(hazard.target);
           const radiusPx = cellSize * Math.max(1, hazard.radius || hazard.width || 1) * 1.52;
           const radiationPlan = effectVisualPlanFor(hazard.visualType, "radiation", blastCharacter);
           drawElementCircleTexture(x, y, radiusPx, progress, blastCharacter, radiationPlan.textureAlpha, {
@@ -3278,14 +3278,14 @@
           spin: hazardPlan.spin
         });
         hazardCells.forEach(cell => {
-          const { x, y } = axialToPixel(cell);
+          const { x, y } = HexSnakeGame.axialToPixel(cell);
           if ((hazard.visualType || "").startsWith("quetzal")) {
-            const variant = stableVariantIndex(cell, hazard.startedAt || 0, 64);
+            const variant = HexSnakeGame.stableVariantIndex(cell, hazard.startedAt || 0, 64);
             drawSwampForestBloom(x, y, cellSize * 1.34, progress + (cell.q + cell.r) * 0.035, blastCharacter, 0.94 * (1 - progress * 0.08), variant);
             return;
           }
           drawElementAura(x, y, cellSize * 0.86, progress + (cell.q - cell.r) * 0.03, blastCharacter, 0.24);
-          hexPath(x, y, cellSize * 0.9);
+          HexSnakeGame.hexPath(x, y, cellSize * 0.9);
           ctx.fillStyle = hexToRgba(blastCharacter.accent || blastCharacter.color, alpha + 0.08);
           ctx.fill();
           ctx.strokeStyle = hexToRgba(blastCharacter.line, alpha + 0.34);
@@ -3313,20 +3313,20 @@
       if ((blast.visualType || "").startsWith("dragon")) {
         const cells = blast.lineCells || [];
         cells.forEach((cell, index) => {
-          const { x, y } = axialToPixel(cell);
+          const { x, y } = HexSnakeGame.axialToPixel(cell);
           drawElementAura(x, y, cellSize * 1.04, progress + index * 0.04, character, 0.36 * alpha);
           if (index % 2 === 0) drawPulseRing(x, y, cellSize * 0.84, progress, character.color, character.line, 0.86);
         });
         if (cells.length) {
-          const head = axialToPixel(cells[Math.min(cells.length - 1, Math.floor(cells.length * (0.58 + progress * 0.42)))]);
+          const head = HexSnakeGame.axialToPixel(cells[Math.min(cells.length - 1, Math.floor(cells.length * (0.58 + progress * 0.42)))]);
           drawEnergyBeamBurst(head.x, head.y, cellSize * Math.max(1.9, (blast.width || 1) + 1.2), progress, character, alpha);
         }
         return;
       }
       textureCells.forEach(cell => {
-        const { x, y } = axialToPixel(cell);
+        const { x, y } = HexSnakeGame.axialToPixel(cell);
         drawElementAura(x, y, cellSize * 0.86, progress + cell.r * 0.04, character, 0.32 * alpha);
-        hexPath(x, y, cellSize * 0.94);
+        HexSnakeGame.hexPath(x, y, cellSize * 0.94);
         ctx.fillStyle = hexToRgba(character.accent || character.color, 0.5 * alpha);
         ctx.fill();
         ctx.strokeStyle = hexToRgba("#ffffff", 0.82 * alpha);
@@ -3406,9 +3406,9 @@
     }
 
     function drawCircleBlast(blast, progress, alpha, character) {
-      const { x, y } = axialToPixel(blast.target);
+      const { x, y } = HexSnakeGame.axialToPixel(blast.target);
       const radiusPx = cellSize * (blast.radius || baseBlastHexRadius) * 1.52;
-      const type = blast.visualType || attackVisualType(blast.owner, "big");
+      const type = blast.visualType || HexSnakeGame.attackVisualType(blast.owner, "big");
       drawCircleImpactAt(x, y, radiusPx, progress, alpha, character, type, blast.hand || "right");
     }
 
@@ -3417,7 +3417,7 @@
       blasts.forEach(blast => {
         const progress = Math.min(1, (now - blast.startedAt) / blastDurationMs);
         const alpha = 1 - progress;
-        const blastCharacter = characterForVisualType(blast.owner, blast.visualType);
+        const blastCharacter = HexSnakeGame.characterForVisualType(blast.owner, blast.visualType);
         if (blast.kind === "line") {
           drawLineBlast(blast, progress, alpha, blastCharacter);
           return;
@@ -3542,7 +3542,7 @@
     function drawOwnerStatus(owner, now) {
       const parts = ownerSnake(owner);
       if (!parts || !parts.length) return;
-      const head = axialToPixel(parts[0]);
+      const head = HexSnakeGame.axialToPixel(parts[0]);
       const character = characterFor(owner);
       const stunned = now < ownerStunUntil(owner);
       const slowed = now < ownerSlowUntil(owner);
@@ -3560,7 +3560,7 @@
         ctx.stroke();
         ctx.setLineDash([]);
         for (let i = 1; i < Math.min(parts.length, 4); i += 1) {
-          const cell = axialToPixel(parts[i]);
+          const cell = HexSnakeGame.axialToPixel(parts[i]);
           ctx.beginPath();
           ctx.moveTo(cell.x - cellSize * 0.26, cell.y - cellSize * 0.16);
           ctx.quadraticCurveTo(cell.x, cell.y + cellSize * 0.2, cell.x + cellSize * 0.26, cell.y - cellSize * 0.1);
@@ -3909,8 +3909,8 @@
       ctx.save();
       ctx.globalAlpha *= palette.alpha ?? 1;
       parts.forEach((segment, index) => {
-        const { x, y } = axialToPixel(segment);
-        hexPath(x, y, cellSize * (index === 0 ? 0.82 : 0.76));
+        const { x, y } = HexSnakeGame.axialToPixel(segment);
+        HexSnakeGame.hexPath(x, y, cellSize * (index === 0 ? 0.82 : 0.76));
         ctx.fillStyle = index === 0 ? palette.head : palette.body;
         ctx.fill();
         ctx.strokeStyle = index === 0 ? palette.headLine : palette.bodyLine;
@@ -3931,7 +3931,7 @@
       ctx.strokeStyle = palette.ownerColor || palette.headLine;
       ctx.lineWidth = index === 0 ? Math.max(2, cellSize * 0.1) : Math.max(1.2, cellSize * 0.055);
       ctx.setLineDash(palette.owner === "computer" ? [Math.max(3, cellSize * 0.14), Math.max(2, cellSize * 0.1)] : []);
-      hexPath(x, y, cellSize * (index === 0 ? 0.9 : 0.82));
+      HexSnakeGame.hexPath(x, y, cellSize * (index === 0 ? 0.9 : 0.82));
       ctx.stroke();
       ctx.setLineDash([]);
       ctx.restore();
