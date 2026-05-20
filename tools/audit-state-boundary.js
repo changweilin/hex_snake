@@ -131,6 +131,76 @@ function collectTopLevelDeclarations(source) {
   return declarations;
 }
 
+function previousNonWhitespace(stripped, index) {
+  for (let cursor = index - 1; cursor >= 0; cursor -= 1) {
+    if (!/\s/.test(stripped[cursor])) return stripped[cursor];
+  }
+  return "";
+}
+
+function isObjectPropertyKey(stripped, index, name) {
+  const before = previousNonWhitespace(stripped, index);
+  const after = stripped.slice(index + name.length);
+  return /[{,(]/.test(before) && /^\s*:/.test(after);
+}
+
+function findMatchingBrace(stripped, openIndex) {
+  let depth = 0;
+  for (let index = openIndex; index < stripped.length; index += 1) {
+    const char = stripped[index];
+    if (char === "{") depth += 1;
+    else if (char === "}") {
+      depth -= 1;
+      if (depth === 0) return index;
+    }
+  }
+  return -1;
+}
+
+function extractBindingNames(bindingSource) {
+  const names = new Set();
+  const pattern = /[A-Za-z_$][\w$]*/g;
+  for (const match of bindingSource.matchAll(pattern)) {
+    names.add(match[0]);
+  }
+  return names;
+}
+
+function collectFunctionLocalRanges(stripped) {
+  const ranges = [];
+  const functionPattern = /\bfunction\b[^{]*\(([^)]*)\)\s*\{/g;
+
+  for (const match of stripped.matchAll(functionPattern)) {
+    const openIndex = match.index + match[0].lastIndexOf("{");
+    const closeIndex = findMatchingBrace(stripped, openIndex);
+    if (closeIndex < 0) continue;
+    const locals = extractBindingNames(match[1]);
+    const body = stripped.slice(openIndex + 1, closeIndex);
+
+    const simpleDeclarationPattern = /\b(?:const|let|var|function)\s+([A-Za-z_$][\w$]*)/g;
+    for (const declaration of body.matchAll(simpleDeclarationPattern)) {
+      locals.add(declaration[1]);
+    }
+
+    const destructuringDeclarationPattern = /\b(?:const|let|var)\s+([^;=\n]+?)\s*=/g;
+    for (const declaration of body.matchAll(destructuringDeclarationPattern)) {
+      extractBindingNames(declaration[1]).forEach(name => locals.add(name));
+    }
+
+    ranges.push({
+      start: match.index,
+      end: closeIndex,
+      locals,
+    });
+  }
+
+  return ranges;
+}
+
+function isLocallyBound(localRanges, index, name) {
+  return localRanges.some(range => index >= range.start && index <= range.end && range.locals.has(name));
+}
+
 function classifyReference(stripped, index, name) {
   const before = stripped.slice(Math.max(0, index - 8), index);
   const after = stripped.slice(index + name.length, index + name.length + 24);
@@ -163,6 +233,7 @@ function collectReferences(source, declarations) {
   const starts = lineStartsFor(source);
   const lines = source.split(/\r?\n/);
   const names = new Set(declarations.keys());
+  const localRanges = collectFunctionLocalRanges(stripped);
   const seen = new Set();
   const references = [];
   const pattern = /[A-Za-z_$][\w$]*/g;
@@ -171,6 +242,8 @@ function collectReferences(source, declarations) {
     const name = match[0];
     if (!names.has(name)) continue;
     if (stripped[match.index - 1] === ".") continue;
+    if (isObjectPropertyKey(stripped, match.index, name)) continue;
+    if (isLocallyBound(localRanges, match.index, name)) continue;
 
     const line = lineNumberFor(starts, match.index);
     const category = classifyReference(stripped, match.index, name);
@@ -258,21 +331,23 @@ function main() {
   if (writeRefs.length) lines.push(...formatExamples(writeRefs, 40));
   else lines.push("- None detected.");
 
-  lines.push(
-    "",
-    "## Suggested Order",
-    "",
-    "1. Move match runtime state behind a small `HexSnakeState` or game-owned accessor layer first: `running`, `paused`, `gameOver`, snakes, foods, hazards, projectiles, timers.",
-    "2. Then move combat/resource state as a separate pass: hp, stock, ammo, stun/slow/vulnerability, cooldown and attack trackers.",
-    "3. Keep presentation/actions in UI-oriented APIs: portrait, overlay, callout, tutorial, rules, replay, result share, and DOM rendering actions.",
-    "4. Leave load-time initialization alone until the legacy bundle order changes or those initializers move behind explicit bootstrap calls.",
-    "5. After each boundary pass, run `npm.cmd run audit:globals`, `npm.cmd run build`, `npm.cmd run test:quick`, and `npm.cmd run test:smoke`.",
-    "",
-    "## Representative References",
-    "",
-    ...formatExamples(references, 80),
-    "",
-  );
+  lines.push("", "## Suggested Order", "");
+  if (references.length) {
+    lines.push(
+      "1. Move match runtime state behind a small `HexSnakeState` or game-owned accessor layer first: `running`, `paused`, `gameOver`, snakes, foods, hazards, projectiles, timers.",
+      "2. Then move combat/resource state as a separate pass: hp, stock, ammo, stun/slow/vulnerability, cooldown and attack trackers.",
+      "3. Keep presentation/actions in UI-oriented APIs: portrait, overlay, callout, tutorial, rules, replay, result share, and DOM rendering actions.",
+      "4. Leave load-time initialization alone until the legacy bundle order changes or those initializers move behind explicit bootstrap calls.",
+      "5. After each boundary pass, run `npm.cmd run audit:globals`, `npm.cmd run build`, `npm.cmd run test:quick`, and `npm.cmd run test:smoke`.",
+    );
+  } else {
+    lines.push(
+      "1. `game.js` no longer has direct heuristic references to top-level `ui.js` declarations.",
+      "2. Use `npm.cmd run audit:globals` to plan the next broader legacy-global reduction pass.",
+      "3. Keep `npm.cmd run audit:state-boundary` in release-adjacent checks so new direct state reads are caught early.",
+    );
+  }
+  lines.push("", "## Representative References", "", ...formatExamples(references, 80), "");
 
   fs.writeFileSync(outPath, lines.join("\n"), "utf8");
   console.log(`Wrote ${path.relative(root, outPath)} (${references.length} references, ${uniqueNames.size} names).`);

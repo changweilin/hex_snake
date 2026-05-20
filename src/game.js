@@ -2756,8 +2756,8 @@
           kind: "radiation",
           owner: projectile.owner,
           target: { q: explosionTarget.q, r: explosionTarget.r },
-          radius,
-          width: radius,
+          radius: explosionRadius,
+          width: explosionRadius,
           visualType: projectile.visualType === "dragon-spirit-big" ? "dragon-spirit-radiation" : "lobster-radiation",
           damage: options.radiationDamage ?? 0,
           stunChance: 0,
@@ -2767,7 +2767,7 @@
           endAt: now + projectile.radiationDurationMs
         });
       }
-      return { explosionTarget, radius, visualType };
+      return { explosionTarget, radius: explosionRadius, visualType };
     }
 
     function addProjectileImpactVisual(projectile, now) {
