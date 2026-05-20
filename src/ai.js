@@ -1513,3 +1513,23 @@
       } : {};
       if (HexSnakeGame.launchAttack("player", attackTarget, now, profile, options)) HexSnakeGame.flashAttackButton(profile, 150);
     }
+
+    const HexSnakeAI = Object.freeze({
+      bigAttackUsesDrawnDirection,
+      chooseAutoDirection,
+      chooseComputerDirection,
+      computerCanGrow,
+      isOwnerUnderground,
+      loadHighAiStrategyConfig,
+      maybeAutoBattlePlayerAttack,
+      maybeComputerAttack,
+      ownerCollisionParalysis,
+      ownerHead,
+      ownerSlowUntil,
+      ownerSnake,
+      ownerStunUntil,
+      shouldUseControlPadAttackDirection,
+      ultimateDamageMultiplier,
+      ultimateSetting,
+      updateAiVisibilityMemory
+    });

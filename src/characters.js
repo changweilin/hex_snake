@@ -280,7 +280,25 @@
     }
 
     Object.assign(HexSnakeUI, {
+      avatarSrcset,
+      avatarUrl,
+      buildCharacterOptions,
       characterChoiceFor,
       characterFor,
+      clearStartLogoRandomCharacterId,
+      consumeStartLogoRandomCharacterId,
+      ensureStartLogoRandomCharacterId,
+      isRandomCharacterChoice,
+      loadCharacterDatabase,
+      ownerMeta,
+      portraitSizesAttribute,
+      portraitSrcset,
+      portraitUrl,
+      preloadAllPortraits,
+      preloadPortraitsFor,
+      randomCharacter,
+      randomPortraitMarkup,
       selectedCharacterFor,
+      showCharacterDatabaseError,
+      startLogoCharacterFor,
     });

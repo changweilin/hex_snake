@@ -2,6 +2,7 @@
     const RenderDom = HexSnakeDOM;
     const RenderState = HexSnakeState.game;
     const RenderUI = HexSnakeUI;
+    const RenderAI = HexSnakeAI;
 
     function comparisonLoop(now) {
       if (HexSnakePlatform.lifecycle.isPaused()) {
@@ -2929,7 +2930,7 @@
         }
         if (projectile.kind === "headCircle") {
           const progress = Math.min(1, Math.max(0, (now - projectile.createdAt) / (projectile.delay || RenderConfig.baseAttackDelayMs)));
-          const target = HexSnakeGame.axialToPixel(projectile.followHead ? ownerHead(projectile.owner) : projectile.target);
+          const target = HexSnakeGame.axialToPixel(projectile.followHead ? RenderAI.ownerHead(projectile.owner) : projectile.target);
           const type = projectile.visualType || "";
           const headCirclePlan = effectVisualPlanFor(type, type.startsWith("dragon-spirit") ? "warning" : "radiation", blastCharacter);
           const warningRadius = RenderState.cellSize * Math.max(1.35, projectile.radius || 1) * 1.04;
@@ -3006,7 +3007,7 @@
     function directionalPreviewState() {
       if (!RenderState.snake?.length) return null;
       const character = RenderUI.characterFor("player");
-      if (activeAttackPreviewProfile() !== "big" || !bigAttackUsesDrawnDirection(character.id)) return null;
+      if (activeAttackPreviewProfile() !== "big" || !RenderAI.bigAttackUsesDrawnDirection(character.id)) return null;
       if (RenderState.keyboardAttackPreview?.profile === "big" && Number.isInteger(RenderState.keyboardAttackPreview.direction)) {
         return {
           character,
@@ -3545,13 +3546,13 @@
     }
 
     function drawOwnerStatus(owner, now) {
-      const parts = ownerSnake(owner);
+      const parts = RenderAI.ownerSnake(owner);
       if (!parts || !parts.length) return;
       const head = HexSnakeGame.axialToPixel(parts[0]);
       const character = RenderUI.characterFor(owner);
-      const stunned = now < ownerStunUntil(owner);
-      const slowed = now < ownerSlowUntil(owner);
-      const collisionLocked = ownerCollisionParalysis(owner) > 0 && stunned;
+      const stunned = now < RenderAI.ownerStunUntil(owner);
+      const slowed = now < RenderAI.ownerSlowUntil(owner);
+      const collisionLocked = RenderAI.ownerCollisionParalysis(owner) > 0 && stunned;
       if (!stunned && !slowed && !collisionLocked) return;
 
       RenderDom.ctx.save();

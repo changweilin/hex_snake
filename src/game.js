@@ -1,5 +1,6 @@
     const { keyLabel, normalizeAutoBattleSpeed, normalizeKey } = HexSnakeControls;
     const Dom = HexSnakeDOM;
+    const GameAI = HexSnakeAI;
 
     function saveKeybinds() {
       HexSnakeStorage.setJson("hexSnakeKeybinds", HexSnakeState.game.keybinds);
@@ -181,21 +182,21 @@
       HexSnakeState.game.playerCharacterChoice = normalizeCharacterChoice("player", settings.playerCharacterChoice);
       HexSnakeState.game.computerCharacterChoice = normalizeCharacterChoice("computer", settings.computerCharacterChoice);
       if (HexSnakeUI.isRandomCharacterChoiceId(HexSnakeState.game.playerCharacterChoice)) {
-        ensureStartLogoRandomCharacterId("player");
+        HexSnakeUI.ensureStartLogoRandomCharacterId("player");
       } else {
         HexSnakeState.game.playerCharacterId = HexSnakeUI.hasCharacterId(HexSnakeState.game.playerCharacterChoice) ? HexSnakeState.game.playerCharacterChoice : HexSnakeState.config.defaultSettings.playerCharacterId;
-        clearStartLogoRandomCharacterId("player");
+        HexSnakeUI.clearStartLogoRandomCharacterId("player");
       }
       if (HexSnakeUI.isRandomCharacterChoiceId(HexSnakeState.game.computerCharacterChoice)) {
-        ensureStartLogoRandomCharacterId("computer");
+        HexSnakeUI.ensureStartLogoRandomCharacterId("computer");
       } else {
         HexSnakeState.game.computerCharacterId = HexSnakeUI.hasCharacterId(HexSnakeState.game.computerCharacterChoice) ? HexSnakeState.game.computerCharacterChoice : HexSnakeState.config.defaultSettings.computerCharacterId;
-        clearStartLogoRandomCharacterId("computer");
+        HexSnakeUI.clearStartLogoRandomCharacterId("computer");
       }
       syncCharacterInputs();
       saveCharacterChoices();
-      preloadPortraitsFor("player");
-      preloadPortraitsFor("computer");
+      HexSnakeUI.preloadPortraitsFor("player");
+      HexSnakeUI.preloadPortraitsFor("computer");
       HexSnakeUI.buildCharacterStage();
     }
 
@@ -301,7 +302,7 @@
 
     function resolveCharacterChoice(owner, choice) {
       const fallbackId = HexSnakeUI.characterFallbackId(owner);
-      if (HexSnakeUI.isRandomCharacterChoiceId(choice)) return consumeStartLogoRandomCharacterId(owner) || randomCharacter().id;
+      if (HexSnakeUI.isRandomCharacterChoiceId(choice)) return HexSnakeUI.consumeStartLogoRandomCharacterId(owner) || HexSnakeUI.randomCharacter().id;
       return HexSnakeUI.hasCharacterId(choice) ? choice : fallbackId;
     }
 
@@ -407,7 +408,7 @@
     function selectAttackProfile(profile) {
       HexSnakeState.game.selectedAttackProfile = profile === "big" ? "big" : "small";
       updateAttackButtons();
-      const moveName = HexSnakeState.game.selectedAttackProfile === "big" ? characterFor("player").bigMove : characterFor("player").smallMove;
+      const moveName = HexSnakeState.game.selectedAttackProfile === "big" ? HexSnakeUI.characterFor("player").bigMove : HexSnakeUI.characterFor("player").smallMove;
       setStatus(`已選擇 ${moveName}。點棋盤即可攻擊。`);
     }
 
@@ -828,8 +829,8 @@
       Object.values(HexSnakeState.game.attackCalloutTimers).forEach(clearTimeout);
       HexSnakeState.game.attackCalloutTimers = {};
       HexSnakeUI.clearFighterCallouts();
-      preloadPortraitsFor("player");
-      preloadPortraitsFor("computer");
+      HexSnakeUI.preloadPortraitsFor("player");
+      HexSnakeUI.preloadPortraitsFor("computer");
       HexSnakeUI.buildCharacterStage();
       const offset = Math.min(2, Math.max(1, HexSnakeState.game.radius - 3));
       HexSnakeState.game.dir = 0;
@@ -934,8 +935,8 @@
     }
 
     function buildResultShareData({ winnerOwner, plainResultText, scoreText, resultReason, endedInAutoMode }) {
-      const playerCharacter = characterFor("player");
-      const computerCharacter = characterFor("computer");
+      const playerCharacter = HexSnakeUI.characterFor("player");
+      const computerCharacter = HexSnakeUI.characterFor("computer");
       const url = window.location.href.split("#")[0];
       const lines = [
         "Hex Snake 對戰結果",
@@ -1033,7 +1034,7 @@
       saveGmSettings();
       resolveCharacterChoicesForStart();
       resetGame();
-      HexSnakeAudio.warmup([characterFor("player"), characterFor("computer")]);
+      HexSnakeAudio.warmup([HexSnakeUI.characterFor("player"), HexSnakeUI.characterFor("computer")]);
       HexSnakeAudio.playCharacter("player", "start", { unlock: true });
       HexSnakeAudio.playCharacter("computer", "start", { delay: 0.08, gainScale: 0.75 });
       HexSnakeState.game.running = true;
@@ -1134,7 +1135,7 @@
         if (!openCells.length) return;
         const cell = openCells[Math.floor(Math.random() * openCells.length)];
         const owner = preferredOwners[generated];
-        const character = owner ? characterFor(owner) : null;
+        const character = owner ? HexSnakeUI.characterFor(owner) : null;
         HexSnakeState.game.foods.push({ q: cell.q, r: cell.r, types: randomFoodTypeIdsForCharacter(character) });
         occupied.add(keyOf(cell));
         generated += 1;
@@ -1605,7 +1606,7 @@
     networkAdapter()?.onGameMessage?.(handleNetworkGameMessage);
 
     function sandwormUndergroundAlpha(owner, now) {
-      if (characterFor(owner).id !== "sandworm") return 1;
+      if (HexSnakeUI.characterFor(owner).id !== "sandworm") return 1;
       const armorFrom = owner === "player" ? HexSnakeState.game.playerSandwormArmorFrom : HexSnakeState.game.computerSandwormArmorFrom;
       const armorUntil = owner === "player" ? HexSnakeState.game.playerSandwormArmorUntil : HexSnakeState.game.computerSandwormArmorUntil;
       const from = owner === "player" ? HexSnakeState.game.playerUndergroundFrom : HexSnakeState.game.computerUndergroundFrom;
@@ -1631,14 +1632,14 @@
     }
 
     function isOwnerSandwormArmored(owner, now) {
-      if (characterFor(owner).id !== "sandworm") return false;
+      if (HexSnakeUI.characterFor(owner).id !== "sandworm") return false;
       const from = owner === "player" ? HexSnakeState.game.playerSandwormArmorFrom : HexSnakeState.game.computerSandwormArmorFrom;
       const until = owner === "player" ? HexSnakeState.game.playerSandwormArmorUntil : HexSnakeState.game.computerSandwormArmorUntil;
       return Boolean(from && now >= from && now <= until);
     }
 
     function isOwnerDamageImmune(owner, now) {
-      return isOwnerUnderground(owner, now);
+      return GameAI.isOwnerUnderground(owner, now);
     }
 
     function clearOwnerAbnormalStatus(owner, now) {
@@ -1891,13 +1892,13 @@
     }
 
     function attackVisualType(owner, profile = "big", characterId = null) {
-      const character = characterFor(owner);
+      const character = HexSnakeUI.characterFor(owner);
       return `${characterId || character.id}-${profile}`;
     }
 
     function characterForVisualType(owner, visualType = null) {
       const visualCharacterId = typeof visualType === "string" ? visualType.split("-")[0] : null;
-      return HexSnakeUI.characterForId(visualCharacterId) || characterFor(owner);
+      return HexSnakeUI.characterForId(visualCharacterId) || HexSnakeUI.characterFor(owner);
     }
 
     function burstVisualType(projectile) {
@@ -2023,7 +2024,7 @@
     }
 
     function lobsterPalmVulnerabilityChance(stock) {
-      return HexSnakeUI.attackStunChance(stock, ultimateSetting("lobster", "vulnerabilityChance", 0.3));
+      return HexSnakeUI.attackStunChance(stock, GameAI.ultimateSetting("lobster", "vulnerabilityChance", 0.3));
     }
 
     function attackHitStunChances(stock) {
@@ -2041,12 +2042,12 @@
         : directionFromSourceToTarget(source, target, ownerDirection(owner));
 
       if (character.id === "lobster") {
-        const fistStepMs = ultimateSetting(character.id, "fistStepMs", 36);
-        const volleys = Math.max(1, Math.round(ultimateSetting(character.id, "volleyCount", 2)));
-        const contactDamage = bigDamage * ultimateSetting(character.id, "contactDamageMultiplier", 0.6);
-        const contactRadius = Math.max(0.25, ultimateSetting(character.id, "contactRadius", 1));
-        const burstRadius = small.radius * ultimateSetting(character.id, "burstRadiusMultiplier", 1.6);
-        const burstDamage = bigDamage * ultimateSetting(character.id, "burstDamageMultiplier", 1.6);
+        const fistStepMs = GameAI.ultimateSetting(character.id, "fistStepMs", 36);
+        const volleys = Math.max(1, Math.round(GameAI.ultimateSetting(character.id, "volleyCount", 2)));
+        const contactDamage = bigDamage * GameAI.ultimateSetting(character.id, "contactDamageMultiplier", 0.6);
+        const contactRadius = Math.max(0.25, GameAI.ultimateSetting(character.id, "contactRadius", 1));
+        const burstRadius = small.radius * GameAI.ultimateSetting(character.id, "burstRadiusMultiplier", 1.6);
+        const burstDamage = bigDamage * GameAI.ultimateSetting(character.id, "burstDamageMultiplier", 1.6);
         const palmVulnerabilityChance = Number.isFinite(options.vulnerabilityChance)
           ? options.vulnerabilityChance
           : lobsterPalmVulnerabilityChance(stock);
@@ -2110,9 +2111,9 @@
         const lineCells = boardLineThrough(lineOrigin, direction);
         const lineShape = bandShapeFromTotalWidth(small.radius);
         const excludedCells = (owner === "player" ? HexSnakeState.game.snake : HexSnakeState.game.computerSnake).map(segment => ({ q: segment.q, r: segment.r }));
-        const durationMs = HexSnakeState.config.baseAttackDelayMs * HexSnakeState.config.smallAttackDelayScale * Math.max(1, ultimateSetting(character.id, "durationBaseTicks", 4));
+        const durationMs = HexSnakeState.config.baseAttackDelayMs * HexSnakeState.config.smallAttackDelayScale * Math.max(1, GameAI.ultimateSetting(character.id, "durationBaseTicks", 4));
         const tickMs = Math.max(1, small.delay);
-        const damage = bigDamage * ultimateSetting(character.id, "damageMultiplier", 0.24);
+        const damage = bigDamage * GameAI.ultimateSetting(character.id, "damageMultiplier", 0.24);
         HexSnakeState.game.projectiles.push({
           kind: "lineHazardSetup",
           owner,
@@ -2144,8 +2145,8 @@
         const duration = 3000;
         const extensionDamageMultiplier = Math.max(0, Math.min(1, (stock.protein || 0) / HexSnakeState.config.maxFoodStock));
         const outwardWidth = extensionDamageMultiplier > 0 ? 1 : 0;
-        const tickMs = ultimateSetting(character.id, "tickMs", HexSnakeState.config.baseStepMs);
-        const slowDurationMs = ultimateSetting(character.id, "slowDurationMs", 2000);
+        const tickMs = GameAI.ultimateSetting(character.id, "tickMs", HexSnakeState.config.baseStepMs);
+        const slowDurationMs = GameAI.ultimateSetting(character.id, "slowDurationMs", 2000);
         HexSnakeState.game.hazards.push({
           kind: "swamp",
           owner,
@@ -2156,7 +2157,7 @@
           minDistance: 0,
           outerDamageMultiplier: extensionDamageMultiplier,
           visualType: attackVisualType(owner, "big"),
-          damage: bigDamage * ultimateDamageMultiplier(character.id),
+          damage: bigDamage * GameAI.ultimateDamageMultiplier(character.id),
           stunChance,
           headStunChance: options.hitStunChances?.head ?? stunChance,
           stunTicksRemaining: 1,
@@ -2172,11 +2173,11 @@
       }
 
       if (character.id === "sandworm") {
-        const armorFrom = now + small.delay * ultimateSetting(character.id, "superArmorDelayMultiplier", 1);
-        const armorUntil = armorFrom + ultimateSetting(character.id, "superArmorDurationMs", 3000);
-        const undergroundFrom = now + small.delay * ultimateSetting(character.id, "invisibleDelayMultiplier", 2);
-        const undergroundUntil = undergroundFrom + ultimateSetting(character.id, "invisibleDurationMs", 1500);
-        const delay = small.delay * ultimateSetting(character.id, "impactDelayMultiplier", 3);
+        const armorFrom = now + small.delay * GameAI.ultimateSetting(character.id, "superArmorDelayMultiplier", 1);
+        const armorUntil = armorFrom + GameAI.ultimateSetting(character.id, "superArmorDurationMs", 3000);
+        const undergroundFrom = now + small.delay * GameAI.ultimateSetting(character.id, "invisibleDelayMultiplier", 2);
+        const undergroundUntil = undergroundFrom + GameAI.ultimateSetting(character.id, "invisibleDurationMs", 1500);
+        const delay = small.delay * GameAI.ultimateSetting(character.id, "impactDelayMultiplier", 3);
         if (owner === "player") {
           HexSnakeState.game.playerSandwormArmorFrom = armorFrom;
           HexSnakeState.game.playerSandwormArmorUntil = Math.max(HexSnakeState.game.playerSandwormArmorUntil, armorUntil);
@@ -2197,7 +2198,7 @@
           impactAt: now + delay,
           delay,
           radius: Math.max(0.5, small.radius * 0.5),
-          damage: bigDamage * ultimateSetting(character.id, "damageMultiplier", 7),
+          damage: bigDamage * GameAI.ultimateSetting(character.id, "damageMultiplier", 7),
           stunChance,
           headStunChance: options.hitStunChances?.head ?? stunChance,
           hidden: true,
@@ -2209,12 +2210,12 @@
       }
 
       if (character.id === "dragon") {
-        const spiritRadius = small.radius * ultimateSetting(character.id, "radiusMultiplier", 2);
-        const impactDamage = bigDamage * ultimateSetting(character.id, "impactDamageMultiplier", 1.08);
-        const radiationTotalDamage = bigDamage * ultimateSetting(character.id, "radiationDamageMultiplier", 2);
-        const radiationDurationMs = ultimateSetting(character.id, "radiationDurationMs", 4000);
-        const radiationTickMs = ultimateSetting(character.id, "radiationTickMs", 500);
-        const firstImpactDelay = small.delay * ultimateSetting(character.id, "firstImpactDelayMultiplier", 2);
+        const spiritRadius = small.radius * GameAI.ultimateSetting(character.id, "radiusMultiplier", 2);
+        const impactDamage = bigDamage * GameAI.ultimateSetting(character.id, "impactDamageMultiplier", 1.08);
+        const radiationTotalDamage = bigDamage * GameAI.ultimateSetting(character.id, "radiationDamageMultiplier", 2);
+        const radiationDurationMs = GameAI.ultimateSetting(character.id, "radiationDurationMs", 4000);
+        const radiationTickMs = GameAI.ultimateSetting(character.id, "radiationTickMs", 500);
+        const firstImpactDelay = small.delay * GameAI.ultimateSetting(character.id, "firstImpactDelayMultiplier", 2);
         const visualType = "dragon-spirit-big";
         const volleys = 1;
         for (let index = 0; index < volleys; index += 1) {
@@ -2247,7 +2248,7 @@
         const volleyIntervalMs = small.delay;
         const firstImpactDelay = small.delay;
         const targetSnake = owner === "player" ? HexSnakeState.game.computerSnake : HexSnakeState.game.snake;
-        const damage = bigDamage * ultimateSetting(character.id, "damageMultiplier", 1.414);
+        const damage = bigDamage * GameAI.ultimateSetting(character.id, "damageMultiplier", 1.414);
         let waveTarget = { q: target.q, r: target.r };
         for (let index = 0; index < 3; index += 1) {
           const impactDelay = firstImpactDelay + index * volleyIntervalMs;
@@ -2269,7 +2270,7 @@
       }
 
       const big = attackStats(stock, "big");
-      pushCircleAttack({ owner, profile: "big", target, createdAt: now, impactAt: now + big.delay, delay: big.delay, radius: big.radius, damage: big.damage * ultimateDamageMultiplier(character.id), stunChance, headStunChance: options.hitStunChances?.head ?? stunChance });
+      pushCircleAttack({ owner, profile: "big", target, createdAt: now, impactAt: now + big.delay, delay: big.delay, radius: big.radius, damage: big.damage * GameAI.ultimateDamageMultiplier(character.id), stunChance, headStunChance: options.hitStunChances?.head ?? stunChance });
       return big.delay;
     }
 
@@ -2277,7 +2278,7 @@
       const stock = owner === "player" ? HexSnakeState.game.playerStock : HexSnakeState.game.computerStock;
       const lastAttack = HexSnakeUI.lastAttackMsFor(owner, profile);
       const source = owner === "player" ? HexSnakeState.game.snake[0] : HexSnakeState.game.computerSnake[0];
-      const character = characterFor(owner);
+      const character = HexSnakeUI.characterFor(owner);
       const isSmall = profile === "small";
       if (!HexSnakeUI.canAttack(owner, profile)) return false;
       if (now - lastAttack < HexSnakeUI.attackProfileCooldown(stock, profile, character.id)) return false;
@@ -2567,7 +2568,7 @@
           });
           return;
         } else if (projectile.kind === "lobsterPalmSetup") {
-          const source = ownerHead(projectile.owner);
+          const source = GameAI.ownerHead(projectile.owner);
           if (source) {
             scheduleLobsterPalmVolley({
               owner: projectile.owner,
@@ -2704,7 +2705,7 @@
         return { visualType };
       }
       if (projectile.kind === "headCircle" && projectile.followHead) {
-        const head = ownerHead(projectile.owner);
+        const head = GameAI.ownerHead(projectile.owner);
         projectile.explosionTarget = { q: head.q, r: head.r };
         projectile.target = { q: projectile.explosionTarget.q, r: projectile.explosionTarget.r };
       }
@@ -2869,7 +2870,7 @@
         HexSnakeState.game.lastComputerFoodAt = performance.now();
         HexSnakeState.game.computerFoodTargetKey = null;
         HexSnakeState.game.computerFoodTargetAt = 0;
-        if (computerCanGrow()) {
+        if (GameAI.computerCanGrow()) {
           HexSnakeUI.collectFood("computer", eatenFood);
           HexSnakeState.game.computerHp = Math.min(HexSnakeUI.maxHpForSnake(HexSnakeState.game.computerSnake), HexSnakeState.game.computerHp + HexSnakeUI.foodHealAmount());
         } else {
@@ -2890,11 +2891,11 @@
 
     function step(headCollisionOrder = "simultaneous", now = performance.now()) {
       if (isPlayerAutoControlActive()) {
-        HexSnakeState.game.nextDir = chooseAutoDirection("player");
+        HexSnakeState.game.nextDir = GameAI.chooseAutoDirection("player");
         setDirectionButtonHighlight(HexSnakeState.game.nextDir);
       }
       HexSnakeState.game.dir = HexSnakeState.game.nextDir;
-      if (!isNetworkHostActive()) HexSnakeState.game.computerDir = chooseComputerDirection();
+      if (!isNetworkHostActive()) HexSnakeState.game.computerDir = GameAI.chooseComputerDirection();
 
       const next = nextWrappedCell(HexSnakeState.game.snake[0], HexSnakeState.game.dir);
       const computerNext = nextWrappedCell(HexSnakeState.game.computerSnake[0], HexSnakeState.game.computerDir);
@@ -2949,14 +2950,14 @@
       const computerConsumedFood = !computerCollision ? advanceOwnerMovement("computer", computerNext, computerEatenFood) : null;
       replaceConsumedFoods([playerConsumedFood, computerConsumedFood], eating || computerEating);
 
-      if (!playerCollision && HexSnakeState.game.running && !HexSnakeState.game.paused) maybeAutoBattlePlayerAttack(now);
-      if (!computerCollision && HexSnakeState.game.running && !HexSnakeState.game.paused && !isNetworkHostActive()) maybeComputerAttack(now);
+      if (!playerCollision && HexSnakeState.game.running && !HexSnakeState.game.paused) GameAI.maybeAutoBattlePlayerAttack(now);
+      if (!computerCollision && HexSnakeState.game.running && !HexSnakeState.game.paused && !isNetworkHostActive()) GameAI.maybeComputerAttack(now);
       updateHud();
     }
 
     function stepPlayerOnly(now = performance.now()) {
       if (isPlayerAutoControlActive()) {
-        HexSnakeState.game.nextDir = chooseAutoDirection("player");
+        HexSnakeState.game.nextDir = GameAI.chooseAutoDirection("player");
         setDirectionButtonHighlight(HexSnakeState.game.nextDir);
       }
       HexSnakeState.game.dir = HexSnakeState.game.nextDir;
@@ -2979,12 +2980,12 @@
 
       const consumedFood = advanceOwnerMovement("player", next, eatenFood);
       replaceConsumedFoods([consumedFood], eating);
-      if (HexSnakeState.game.running && !HexSnakeState.game.paused) maybeAutoBattlePlayerAttack(now);
+      if (HexSnakeState.game.running && !HexSnakeState.game.paused) GameAI.maybeAutoBattlePlayerAttack(now);
       updateHud();
     }
 
     function stepComputerOnly(now = performance.now()) {
-      if (!isNetworkHostActive()) HexSnakeState.game.computerDir = chooseComputerDirection();
+      if (!isNetworkHostActive()) HexSnakeState.game.computerDir = GameAI.chooseComputerDirection();
       const computerNext = nextWrappedCell(HexSnakeState.game.computerSnake[0], HexSnakeState.game.computerDir);
       const computerNextKey = keyOf(computerNext);
       const computerEatenFood = HexSnakeState.game.foods.find(food => computerNext.q === food.q && computerNext.r === food.r);
@@ -3004,7 +3005,7 @@
 
       const consumedFood = advanceOwnerMovement("computer", computerNext, computerEatenFood);
       replaceConsumedFoods([consumedFood], computerEating);
-      if (HexSnakeState.game.running && !HexSnakeState.game.paused && !isNetworkHostActive()) maybeComputerAttack(now);
+      if (HexSnakeState.game.running && !HexSnakeState.game.paused && !isNetworkHostActive()) GameAI.maybeComputerAttack(now);
       updateHud();
     }
 
@@ -3103,7 +3104,7 @@
       Dom.overlayText.hidden = true;
       if (shouldUseGameOverLogo) {
         const winnerLabel = winnerOwner === "player" ? "P1" : winnerOwner === "computer" ? "P2" : null;
-        const winnerCharacter = winnerOwner ? characterFor(winnerOwner) : null;
+        const winnerCharacter = winnerOwner ? HexSnakeUI.characterFor(winnerOwner) : null;
         const winnerMessage = winnerOwner
           ? `\u606d\u559c ${winnerLabel}\uff08${winnerCharacter?.name || "\u96a8\u6a5f\u9078\u64c7"}\uff09\u7372\u52dd`
           : "\u672c\u5c40\u5e73\u624b";
@@ -3155,7 +3156,7 @@
         resolveProjectiles(now);
         resolveHazards(now);
         refreshSandwormProtections(now);
-        updateAiVisibilityMemory(now);
+        GameAI.updateAiVisibilityMemory(now);
       }
       if (HexSnakeState.game.running && !HexSnakeState.game.paused) {
         const playerDue = !HexSnakeUI.isMovementStunned("player", now) && now - HexSnakeState.game.lastPlayerStep >= HexSnakeUI.moveIntervalFor("player", now);
@@ -3216,7 +3217,7 @@
         event.stopPropagation();
         return true;
       }
-      if (!shouldUseControlPadAttackDirection()) return false;
+      if (!GameAI.shouldUseControlPadAttackDirection()) return false;
       if (!HexSnakeState.game.running || HexSnakeState.game.gameOver) {
         if (!autoStartGame()) return true;
       }
@@ -3423,7 +3424,7 @@
     }
 
     function keyboardAttackUsesDirection(profile = "small") {
-      return profile === "big" && bigAttackUsesDrawnDirection(characterFor("player").id);
+      return profile === "big" && GameAI.bigAttackUsesDrawnDirection(HexSnakeUI.characterFor("player").id);
     }
 
     function keyboardAttackDirection(profile = "big") {
@@ -3433,7 +3434,7 @@
 
     function keyboardAttackOptions(profile = "small", target = null) {
       if (!keyboardAttackUsesDirection(profile) || !HexSnakeState.game.snake?.length) return {};
-      const character = characterFor("player");
+      const character = HexSnakeUI.characterFor("player");
       const direction = keyboardAttackDirection(profile);
       return {
         aimDirection: direction,
@@ -3544,7 +3545,7 @@
       };
       if (keyboardAttackUsesDirection(profile)) {
         preview.direction = keyboardAttackDirection(profile);
-        preview.origin = characterFor("player").id === "moray" ? target : HexSnakeState.game.snake?.[0];
+        preview.origin = HexSnakeUI.characterFor("player").id === "moray" ? target : HexSnakeState.game.snake?.[0];
       }
       HexSnakeState.game.keyboardAttackPreview = preview;
       HexSnakeState.game.targetCell = target;
@@ -3623,11 +3624,11 @@
     }
 
     function playerDirectAttackTarget(profile = "small", pointer = null) {
-      const character = characterFor("player");
+      const character = HexSnakeUI.characterFor("player");
       if (profile === "big" && pointer && character.id === "moray") {
         return pointer.currentCell || pointer.startCell || opponentHeadTarget();
       }
-      if (profile === "big" && pointer && !bigAttackUsesDrawnDirection(character.id)) {
+      if (profile === "big" && pointer && !GameAI.bigAttackUsesDrawnDirection(character.id)) {
         return pointer.currentCell || pointer.startCell || opponentHeadTarget();
       }
       return opponentHeadTarget();
@@ -3642,8 +3643,8 @@
 
     function playerDirectAttackOptions(profile = "small", pointer = null) {
       const target = playerDirectAttackTarget(profile, pointer);
-      const character = characterFor("player");
-      if (profile === "big" && bigAttackUsesDrawnDirection(character.id) && HexSnakeState.game.snake?.length) {
+      const character = HexSnakeUI.characterFor("player");
+      if (profile === "big" && GameAI.bigAttackUsesDrawnDirection(character.id) && HexSnakeState.game.snake?.length) {
         return {
           aimDirection: playerGestureAttackDirection(pointer, target),
           aimOrigin: character.id === "moray" && pointer?.moved ? target : HexSnakeState.game.snake[0]
@@ -3665,7 +3666,7 @@
     }
 
     function playerAttackFailureReason(target, profile = HexSnakeState.game.selectedAttackProfile, now = performance.now()) {
-      const moveName = profile === "small" ? characterFor("player").smallMove : characterFor("player").bigMove;
+      const moveName = profile === "small" ? HexSnakeUI.characterFor("player").smallMove : HexSnakeUI.characterFor("player").bigMove;
       if (HexSnakeReplay.isPlaybackMode()) return "正在播放重播，不能施放招式。";
       if (!HexSnakeState.game.running || HexSnakeState.game.gameOver) return "尚未開局；開始後再點棋盤可施放招式。";
       if (HexSnakeState.game.paused) return "遊戲暫停中，請先繼續再施放招式。";
@@ -3740,7 +3741,7 @@
           HexSnakeState.game.targetActive = false;
           draw();
         }, 180);
-        const moveName = profile === "small" ? characterFor("player").smallMove : characterFor("player").bigMove;
+        const moveName = profile === "small" ? HexSnakeUI.characterFor("player").smallMove : HexSnakeUI.characterFor("player").bigMove;
         setStatus(`${moveName} 發動。`);
         return true;
       }
@@ -4441,13 +4442,13 @@
         if (HexSnakeUI.hasCharacterId(HexSnakeState.game.computerCharacterChoice)) HexSnakeState.game.computerCharacterId = HexSnakeState.game.computerCharacterChoice;
         syncCharacterInputs();
         saveCharacterChoices();
-        preloadPortraitsFor("player");
-        preloadPortraitsFor("computer");
+        HexSnakeUI.preloadPortraitsFor("player");
+        HexSnakeUI.preloadPortraitsFor("computer");
         HexSnakeUI.buildCharacterStage();
         resetGame();
         resize();
         Dom.overlayTitle.textContent = "角色已更新";
-        Dom.overlayText.textContent = `P1 選擇 ${selectedCharacterFor("player")?.name || "隨機選擇"}，P2 選擇 ${selectedCharacterFor("computer")?.name || "隨機選擇"}。`;
+        Dom.overlayText.textContent = `P1 選擇 ${HexSnakeUI.selectedCharacterFor("player")?.name || "隨機選擇"}，P2 選擇 ${HexSnakeUI.selectedCharacterFor("computer")?.name || "隨機選擇"}。`;
         Dom.startButton.textContent = "開始";
         HexSnakeUI.renderIntroPortraits(true);
         Dom.overlay.classList.add("show");
@@ -4529,14 +4530,14 @@
     }
 
     function attackButtonPointerTarget(profile) {
-      if (profile === "big" && bigAttackUsesDrawnDirection(characterFor("player").id)) {
+      if (profile === "big" && GameAI.bigAttackUsesDrawnDirection(HexSnakeUI.characterFor("player").id)) {
         return directionalAttackTarget(ownerDirection("player"));
       }
       return defaultPlayerAttackTarget();
     }
 
     function attackButtonPointerOptions(profile) {
-      if (profile === "big" && bigAttackUsesDrawnDirection(characterFor("player").id)) {
+      if (profile === "big" && GameAI.bigAttackUsesDrawnDirection(HexSnakeUI.characterFor("player").id)) {
         return { aimDirection: ownerDirection("player"), aimOrigin: HexSnakeState.game.snake[0] };
       }
       return {};
@@ -5516,14 +5517,14 @@
 
     async function bootstrap() {
       await HexSnakeUI.loadBalanceConfig();
-      await loadHighAiStrategyConfig();
+      await GameAI.loadHighAiStrategyConfig();
       try {
-        await loadCharacterDatabase();
+        await HexSnakeUI.loadCharacterDatabase();
       } catch (error) {
-        showCharacterDatabaseError(error);
+        HexSnakeUI.showCharacterDatabaseError(error);
         return;
       }
-      buildCharacterOptions();
+      HexSnakeUI.buildCharacterOptions();
       HexSnakeUI.buildCharacterStage();
       HexSnakeUI.buildResourceHud();
       HexSnakeUI.buildRulesContent();
@@ -5551,8 +5552,8 @@
       HexSnakeUI.renderIntroPortraits(false);
       Dom.overlay.classList.add("show");
       if (HexSnakeUI.shouldShowTutorial()) HexSnakeUI.showTutorial(0);
-      preloadPortraitsFor("player");
-      preloadPortraitsFor("computer");
+      HexSnakeUI.preloadPortraitsFor("player");
+      HexSnakeUI.preloadPortraitsFor("computer");
       if (isEffectComparisonMode()) {
         Dom.overlay.classList.remove("show");
         Dom.characterStage.hidden = true;
@@ -5562,9 +5563,9 @@
         HexSnakeState.game.rafId = requestAnimationFrame(comparisonLoop);
       }
       if ("requestIdleCallback" in window) {
-        requestIdleCallback(preloadAllPortraits, { timeout: 1500 });
+        requestIdleCallback(HexSnakeUI.preloadAllPortraits, { timeout: 1500 });
       } else {
-        setTimeout(preloadAllPortraits, 250);
+        setTimeout(HexSnakeUI.preloadAllPortraits, 250);
       }
     }
 
