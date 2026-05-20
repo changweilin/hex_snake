@@ -31,7 +31,7 @@
 | iOS 上架主線 | blocked | 取得 macOS / Xcode / Apple signing 環境 | 尚未驗證 |
 | LAN / Wi-Fi 多人 | Phase 2 自動化首輪完成 | 雙機長時間 reconnect / snapshot 驗證，之後規劃 WebRTC | `doc/local-multiplayer-progress-plan.md`、`test:network` |
 | AI / 規則一致性 | gate 已檢查，不套用 | 保留現行策略；若再推策略，先針對 dragon 負 delta 與 gu_king qualified 不足做新訓練 | `doc/strategy-optimization-sop.md`、`reports/` |
-| 架構整理 | state boundary cleanup 完成 | `game.js` 對 `ui.js` top-level declaration 的 state-boundary audit 已歸零；下一步進 ES module split 前 dependency map / 切分順序 | `npm run audit:globals`、`npm run audit:state-boundary`、`doc/state-boundary-audit.md` |
+| 架構整理 | ES module Phase 1 borders 完成 | low-risk module borders 首輪已完成；下一步做 Phase 2 helper extraction，先移出 `keyLabel`、`loadKeybinds`、`normalizeAutoBattleSpeed` 的 `ui.js -> game.js` late dependency | `npm run audit:globals`、`npm run audit:state-boundary`、`doc/state-boundary-audit.md`、`doc/es-module-split-map.md` |
 | 產品延伸 | 暫緩 | 等上架與核心穩定後再推 replay 分享、每日挑戰、觀戰聯賽 | 本文件 P3 |
 
 ## 主控看板
@@ -56,7 +56,7 @@
 
 | 項目 | 狀態 | 下一步 | 完成標準 |
 | --- | --- | --- | --- |
-| 核心 facade / ES modules | state boundary cleanup 完成 | `state-boundary-audit` 已精修 object key / local binding false-positive 並歸零；同步修正 projectile radiation 使用舊 `radius` 名稱的殘留 | build、quick、smoke、audit 通過 |
+| 核心 facade / ES modules | Phase 1 borders 完成 | platform web/mobile、`state.js`、`dom.js`、`network.js`、`about.js` 已建立 script-compatible window/facade borders；`dom.js` 新增 `HexSnakeDOM` facade；下一步做 helper extraction | build、quick、smoke、audit 通過 |
 | Browser / simulator 共用規則核心 | 未開始 | 等 AI 對齊差異明確後，先抽純函式與常數，不碰 DOM/UI state | 同 seed 關鍵差異可解釋 |
 | Render / CSS 拆分 | 未開始 | 先列 board/snake/effects 與 layout/settings/portrait/replay/HUD 搬移清單 | 桌機與手機 smoke screenshot 正常 |
 
@@ -100,6 +100,8 @@
 | Attack/input pointer state | 2026-05-20 將 `selectedAttackProfile`、`highlightedAttackProfile`、`attackPointer`、`controlAttackPointer`、`attackButtonPointerId`、`best` 與 `bestTotalMs` 接到 `HexSnakeState.game`；`audit:globals` 從 562 降至 556，`audit:state-boundary` 從 361/97 降至 280/90，direct writes 從 22 降至 0 | 下一輪處理 read-only config/constants API 與 helper facade |
 | Read-only config/helper facade | 2026-05-20 新增 `HexSnakeState.config`，將 default settings/keybinds、directions/food types、auto speed、attack/resource constants 改走 getter，並將 attack/resource helper calls 接到 `HexSnakeUI` facade；`audit:globals` 從 556 降至 486，`audit:state-boundary` 從 280/90 降至 67/20，function refs 清零 | 下一輪檢查剩餘 67 refs 是否為 object keys / accessor property false-positive，必要時精修 audit |
 | State boundary cleanup | 2026-05-20 精修 `audit-state-boundary`，排除 object key、函式參數與區域 binding false-positive；同步修正 projectile radiation branch 的 `radius` -> `explosionRadius` 殘留；`audit:state-boundary` 從 67/20 降至 0/0 | 下一輪進 ES module split 前 dependency map，先決定 `ui.js` / `game.js` 切分順序 |
+| ES module split dependency map | 2026-05-20 新增 `doc/es-module-split-map.md`，將 `audit:globals` 的 486 cross-file reads 分成 foundation、leaf services、catalog/media/stats、runtime helpers、core knot，並排定 Phase 1-5 | 下一輪 AI 可直接處理 Phase 1 low-risk module borders：`state.js`、`dom.js`、`network.js`、`about.js` |
+| ES module Phase 1 module borders | 2026-05-20 為 platform web/mobile、`state.js`、`dom.js`、`network.js`、`about.js` 補上 script-compatible window/facade borders；`dom.js` 新增 `HexSnakeDOM` facade；`audit:globals` 維持 486，`audit:state-boundary` 維持 0/0 | 下一輪做 Phase 2 helper extraction：先移出 `keyLabel`、`loadKeybinds`、`normalizeAutoBattleSpeed` |
 | Release gate | `release:check` 串接 build、text、data、assets、size、quick、network、mobile、smoke、offline、app readiness | `release:check` |
 | App shell 基礎封裝 | Capacitor 8、Android / iOS 專案、mobile platform adapter、APK / AAB build scripts 已建立 | `app:check`、Android build scripts |
 | Android 實機驗證 | 2026-05-20 使用者確認 debug APK 實機測試正常，返回鍵、背景暫停 / 恢復、震動、音效 unlock 與長時間效能無問題 | 後續版本若改 platform adapter 或原生設定，再重測 |
@@ -124,7 +126,7 @@
 3. iOS 目前被環境阻塞，因此不阻擋 Android 主線；取得 macOS / Xcode 後可與 Android Play 後台並行。
 4. LAN protocol hardening 的 AI 可處理首輪已完成；剩餘雙機長時間驗證屬裝置測試，不阻擋下一個 AI 可直接處理項目。
 5. AI / simulator 對齊排在策略套用與共用規則核心之前，因為尚未確認差異前，直接套策略或抽共用核心都容易把錯誤固定下來。
-6. Facade / ES modules 排在共用規則核心之前，因為先清楚模組邊界，再抽共享純函式，回歸風險較低；目前 `ui.js`、`render.js`、`ai.js` 可安全移動的執行期 game API 已完成，`running`、`paused`、`gameOver`、match collections、combat/resource state、runtime/session state、角色/方向/timer state、controls/settings state、presentation/actions API、presentation state、character catalog API、misc/render runtime state、attack/input pointer state、read-only config/helper facade 與 state-boundary audit cleanup 已完成，下一步進 ES module split 前 dependency map。
+6. Facade / ES modules 排在共用規則核心之前，因為先清楚模組邊界，再抽共享純函式，回歸風險較低；目前 `ui.js`、`render.js`、`ai.js` 可安全移動的執行期 game API 已完成，`running`、`paused`、`gameOver`、match collections、combat/resource state、runtime/session state、角色/方向/timer state、controls/settings state、presentation/actions API、presentation state、character catalog API、misc/render runtime state、attack/input pointer state、read-only config/helper facade、state-boundary audit cleanup、ES module split dependency map 與 Phase 1 module borders 已完成，下一步做 Phase 2 helper extraction。
 7. Replay 分享、每日挑戰、觀戰聯賽屬產品延伸，等上架、多人協議與核心穩定後再做，避免擴大同時變更面。
 
 ## 固定檢查
@@ -187,6 +189,6 @@ npm.cmd run evaluate:strategy-gate -- --character <id> --candidates <candidate-j
 1. 建立 Google Play internal testing，補資料安全、內容分級、截圖與商店欄位，並上傳 signed release AAB。
 2. 找 macOS / Xcode 環境執行 iOS build 與 TestFlight；若環境已備妥，可與第 1 步並行。
 3. LAN 多人剩餘雙機長時間 reconnect / snapshot 驗證；若通過，再規劃 WebRTC DataChannel。
-4. 進 ES module split 前 dependency map：`state-boundary-audit` 已歸零，下一刀用 `audit:globals` 的 486 cross-file reads 決定切分順序，優先選低環依賴、可獨立驗證的模組。
+4. 執行 ES module split Phase 2：先移出 `keyLabel`、`loadKeybinds`、`normalizeAutoBattleSpeed` 的 `ui.js -> game.js` late dependency，再用 `HexSnakeDOM` facade 分批降低 `game.js -> dom.js` direct reads。
 5. 若之後要繼續 AI 訓練，先以 dragon / gu_king 為目標重跑完整 target-vs-field gate，不直接套用既有輸出。
 6. 最後再做 replay 分享、每日挑戰與觀戰聯賽。

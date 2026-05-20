@@ -58,3 +58,5 @@ const HexSnakeAbout = (() => {
     refresh: renderVersionInfo
   });
 })();
+
+window.HexSnakeAbout = HexSnakeAbout;

@@ -231,4 +231,5 @@ const HexSnakePlatform = (() => {
   });
 })();
 
+window.HexSnakeStorage = HexSnakeStorage;
 window.HexSnakePlatform = HexSnakePlatform;

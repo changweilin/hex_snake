@@ -10,3 +10,6 @@ const HexSnakeState = {
 };
 
 const HexSnakeUI = {};
+
+window.HexSnakeState = HexSnakeState;
+window.HexSnakeUI = HexSnakeUI;

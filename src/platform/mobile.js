@@ -383,5 +383,6 @@ const HexSnakePlatform = (() => {
   });
 })();
 
+window.HexSnakeStorage = HexSnakeStorage;
 window.HexSnakePlatform = HexSnakePlatform;
 window.HexSnakeMobilePlatform = HexSnakePlatform;
