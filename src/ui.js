@@ -716,7 +716,7 @@ Object.defineProperties(HexSnakeState.config, {
   },
 });
 
-let keybinds = loadKeybinds();
+let keybinds = HexSnakeControls.loadKeybinds();
 let selectedAttackProfile = "small";
 const keyboardTargetModes = ["head", "centroid", "food"];
 const keyboardTargetModeLabels = {
@@ -774,7 +774,7 @@ let paused = false;
 let computerBattleMode = false;
 let playerAutoMode = false;
 let computerBattleManualOverride = false;
-let computerBattleSpeed = normalizeAutoBattleSpeed(
+let computerBattleSpeed = HexSnakeControls.normalizeAutoBattleSpeed(
   HexSnakeStorage.get("hexSnakeAutoBattleSpeed"),
 );
 let relayModePreference = HexSnakeStorage.get("hexSnakeRelayMode") === "1";
@@ -2243,9 +2243,9 @@ function foodIconGroupMarkup(typeIds, label) {
 let tutorialSlides = [];
 
 function buildTutorialSlides() {
-  const directionKeyText = keybinds.directions.map(keyLabel).join("/");
-  const smallKey = keyLabel(keybinds.smallAttack);
-  const bigKey = keyLabel(keybinds.bigAttack);
+  const directionKeyText = keybinds.directions.map(HexSnakeControls.keyLabel).join("/");
+  const smallKey = HexSnakeControls.keyLabel(keybinds.smallAttack);
+  const bigKey = HexSnakeControls.keyLabel(keybinds.bigAttack);
   const bigFoodCost = attackFoodCost("big");
   return [
     {

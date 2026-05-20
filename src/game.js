@@ -1,29 +1,5 @@
-    function normalizeKey(value, fallback) {
-      if (value === " " || value === "Space") return " ";
-      const trimmed = String(value || "").trim();
-      if (!trimmed) return fallback;
-      return trimmed.slice(0, 1).toLowerCase();
-    }
-
-    function keyLabel(key) {
-      return key === " " ? "Space" : key.toUpperCase();
-    }
-
-    function loadKeybinds() {
-      try {
-        const saved = HexSnakeStorage.getJson("hexSnakeKeybinds", null);
-        if (!saved || !Array.isArray(saved.directions)) return structuredClone(HexSnakeState.config.defaultKeybinds);
-        return {
-          smallAttack: normalizeKey(saved.smallAttack, HexSnakeState.config.defaultKeybinds.smallAttack),
-          bigAttack: normalizeKey(saved.bigAttack, HexSnakeState.config.defaultKeybinds.bigAttack),
-          pause: normalizeKey(saved.pause, HexSnakeState.config.defaultKeybinds.pause),
-          surrender: normalizeKey(saved.surrender, HexSnakeState.config.defaultKeybinds.surrender),
-          directions: HexSnakeState.config.defaultKeybinds.directions.map((fallback, index) => normalizeKey(saved.directions[index], fallback))
-        };
-      } catch {
-        return structuredClone(HexSnakeState.config.defaultKeybinds);
-      }
-    }
+    const { keyLabel, normalizeAutoBattleSpeed, normalizeKey } = HexSnakeControls;
+    const Dom = HexSnakeDOM;
 
     function saveKeybinds() {
       HexSnakeStorage.setJson("hexSnakeKeybinds", HexSnakeState.game.keybinds);
@@ -421,8 +397,8 @@
       bigAttackButton.classList.toggle("is-selected", HexSnakeState.game.highlightedAttackProfile === "big");
       keyboardSmallAimButton.classList.toggle("is-selected", HexSnakeState.game.highlightedAttackProfile === "smallAim");
       keyboardBigAimButton.classList.toggle("is-selected", HexSnakeState.game.highlightedAttackProfile === "bigAim");
-      targetModeSmallIndicator.classList.toggle("is-active", HexSnakeState.game.highlightedAttackProfile === "smallAim");
-      targetModeBigIndicator.classList.toggle("is-active", HexSnakeState.game.highlightedAttackProfile === "bigAim");
+      Dom.targetModeSmallIndicator.classList.toggle("is-active", HexSnakeState.game.highlightedAttackProfile === "smallAim");
+      Dom.targetModeBigIndicator.classList.toggle("is-active", HexSnakeState.game.highlightedAttackProfile === "bigAim");
       smallAttackButton.classList.toggle("secondary", HexSnakeState.game.highlightedAttackProfile !== "small");
       bigAttackButton.classList.toggle("secondary", HexSnakeState.game.highlightedAttackProfile !== "big");
       updateTargetModeIndicator();
@@ -1229,7 +1205,7 @@
     }
 
     function updateHealthBar(owner, hp, maxHp) {
-      const bar = owner === "player" ? playerHealthBar : computerHealthBar;
+      const bar = owner === "player" ? Dom.playerHealthBar : Dom.computerHealthBar;
       if (!bar) return;
       const safeMax = Math.max(1, maxHp);
       const safeHp = Math.max(0, Math.min(safeMax, hp));
@@ -1268,17 +1244,17 @@
     }
 
     function updateCooldownHud(now = performance.now()) {
-      updateCooldownIndicator("small", cooldownSmallIndicator, cooldownSmallValue, now);
-      updateCooldownIndicator("big", cooldownBigIndicator, cooldownBigValue, now);
+      updateCooldownIndicator("small", Dom.cooldownSmallIndicator, Dom.cooldownSmallValue, now);
+      updateCooldownIndicator("big", Dom.cooldownBigIndicator, Dom.cooldownBigValue, now);
     }
 
     function updateSkillPrepVisibility() {
       const visible = !HexSnakeReplay.isPlaybackMode() && !isPlayerAutoControlActive();
       const skillPrepHud = [
-        targetModeSmallIndicator,
-        targetModeBigIndicator,
-        cooldownSmallIndicator,
-        cooldownBigIndicator
+        Dom.targetModeSmallIndicator,
+        Dom.targetModeBigIndicator,
+        Dom.cooldownSmallIndicator,
+        Dom.cooldownBigIndicator
       ];
       skillPrepHud.forEach(element => {
         if (element) element.hidden = !visible;
@@ -1290,21 +1266,21 @@
       updateSkillPrepVisibility();
       const playerMaxHp = HexSnakeUI.maxHpForSnake(HexSnakeState.game.snake);
       const computerMaxHp = HexSnakeUI.maxHpForSnake(HexSnakeState.game.computerSnake);
-      scoreEl.textContent = `HP ${Math.max(0, Math.ceil(HexSnakeState.game.playerHp))}/${playerMaxHp}`;
-      computerScoreEl.textContent = `HP ${Math.max(0, Math.ceil(HexSnakeState.game.computerHp))}/${computerMaxHp}`;
+      Dom.scoreEl.textContent = `HP ${Math.max(0, Math.ceil(HexSnakeState.game.playerHp))}/${playerMaxHp}`;
+      Dom.computerScoreEl.textContent = `HP ${Math.max(0, Math.ceil(HexSnakeState.game.computerHp))}/${computerMaxHp}`;
       updateHealthBar("player", HexSnakeState.game.playerHp, playerMaxHp);
       updateHealthBar("computer", HexSnakeState.game.computerHp, computerMaxHp);
-      bestEl.textContent = HexSnakeState.game.best;
-      totalTimeEl.textContent = HexSnakeUI.formatTime(HexSnakeState.game.totalElapsedMs);
-      lastFeedTimeEl.textContent = HexSnakeUI.formatTime(HexSnakeState.game.lastFeedElapsedMs);
-      bestTimeEl.textContent = HexSnakeUI.formatTime(HexSnakeState.game.bestTotalMs);
+      Dom.bestEl.textContent = HexSnakeState.game.best;
+      Dom.totalTimeEl.textContent = HexSnakeUI.formatTime(HexSnakeState.game.totalElapsedMs);
+      Dom.lastFeedTimeEl.textContent = HexSnakeUI.formatTime(HexSnakeState.game.lastFeedElapsedMs);
+      Dom.bestTimeEl.textContent = HexSnakeUI.formatTime(HexSnakeState.game.bestTotalMs);
       const now = performance.now();
       const playerSpeedValue = HexSnakeUI.isMovementStunned("player", now) ? 0 : HexSnakeUI.movementSpeed(HexSnakeState.game.playerStock) / (now < HexSnakeState.game.playerSlowUntil ? 2 : 1);
       const computerSpeedValue = HexSnakeUI.isMovementStunned("computer", now) ? 0 : HexSnakeUI.movementSpeed(HexSnakeState.game.computerStock) / (now < HexSnakeState.game.computerSlowUntil ? 2 : 1);
       const playerSpeed = Math.round(playerSpeedValue * 10) / 10;
       const computerSpeed = Math.round(computerSpeedValue * 10) / 10;
-      playerSpeedEl.textContent = `${playerSpeed}x`;
-      computerSpeedEl.textContent = `${computerSpeed}x`;
+      Dom.playerSpeedEl.textContent = `${playerSpeed}x`;
+      Dom.computerSpeedEl.textContent = `${computerSpeed}x`;
       keyEls.forEach(el => el.classList.toggle("active", Number(el.dataset.dir) === HexSnakeState.game.nextDir));
       updateStockHud("player", HexSnakeState.game.playerStock, HexSnakeState.game.playerAmmo, HexSnakeState.game.playerAmmoCharge);
       updateStockHud("computer", HexSnakeState.game.computerStock, HexSnakeState.game.computerAmmo, HexSnakeState.game.computerAmmoCharge);
@@ -1323,12 +1299,7 @@
     }
 
     function setStatus(text) {
-      statusEl.textContent = text;
-    }
-
-    function normalizeAutoBattleSpeed(value) {
-      const parsed = Number(value);
-      return HexSnakeState.config.autoBattleSpeeds.includes(parsed) ? parsed : 1;
+      Dom.statusEl.textContent = text;
     }
 
     function autoBattleSpeedLabel(value) {
@@ -3559,8 +3530,8 @@
     }
 
     function updateTargetModeIndicator() {
-      updateTargetModeIndicatorFor("small", targetModeSmallIndicator, targetModeSmallIcon);
-      updateTargetModeIndicatorFor("big", targetModeBigIndicator, targetModeBigIcon);
+      updateTargetModeIndicatorFor("small", Dom.targetModeSmallIndicator, Dom.targetModeSmallIcon);
+      updateTargetModeIndicatorFor("big", Dom.targetModeBigIndicator, Dom.targetModeBigIcon);
     }
 
     function showKeyboardAttackHint(profile = "small") {
@@ -3644,7 +3615,7 @@
     function remindKeyboardAttackTarget(profile = currentKeyboardAimProfile(), event = null) {
       event?.preventDefault?.();
       event?.stopPropagation?.();
-      const indicator = profile === "big" ? targetModeBigIndicator : targetModeSmallIndicator;
+      const indicator = profile === "big" ? Dom.targetModeBigIndicator : Dom.targetModeSmallIndicator;
       indicator.classList.add("is-active");
       triggerTouchFeedback(event, profile === "big" ? 12 : 8);
       showKeyboardAttackHint(profile);
@@ -4650,10 +4621,10 @@
     bigAttackButton.addEventListener("click", event => event.preventDefault());
     keyboardSmallAimButton.addEventListener("click", event => event.preventDefault());
     keyboardBigAimButton.addEventListener("click", event => event.preventDefault());
-    targetModeSmallIndicator.addEventListener("pointerdown", event => remindKeyboardAttackTarget("small", event));
-    targetModeBigIndicator.addEventListener("pointerdown", event => remindKeyboardAttackTarget("big", event));
-    targetModeSmallIndicator.addEventListener("click", event => event.preventDefault());
-    targetModeBigIndicator.addEventListener("click", event => event.preventDefault());
+    Dom.targetModeSmallIndicator.addEventListener("pointerdown", event => remindKeyboardAttackTarget("small", event));
+    Dom.targetModeBigIndicator.addEventListener("pointerdown", event => remindKeyboardAttackTarget("big", event));
+    Dom.targetModeSmallIndicator.addEventListener("click", event => event.preventDefault());
+    Dom.targetModeBigIndicator.addEventListener("click", event => event.preventDefault());
     controlRow.addEventListener("pointerdown", event => {
       if (joyZone.contains(event.target)) return;
       if (event.target.closest("#bigAttackButton")) previewDirectAttack("big");
