@@ -979,6 +979,18 @@ Object.defineProperties(HexSnakeState.game, {
       boardShakeStrength = value;
     },
   },
+  boardShakeFrequency: {
+    get: () => boardShakeFrequency,
+    set: (value) => {
+      boardShakeFrequency = value;
+    },
+  },
+  boardShakeStyle: {
+    get: () => boardShakeStyle,
+    set: (value) => {
+      boardShakeStyle = value || "impact";
+    },
+  },
   initialSpeed: {
     get: () => initialSpeed,
     set: (value) => {
