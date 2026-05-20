@@ -4028,33 +4028,67 @@
     }
 
     let settingsPageSwipe = null;
+    let settingsPageSuppressClickUntil = 0;
+    const settingsPageSwipeStartDistance = 12;
     const settingsPageSwipeDistance = 64;
 
     function beginSettingsPageSwipe(event, page) {
       if (event.button !== undefined && event.button !== 0) return;
-      if (!event.target.closest(".settings-page-bar") && event.target.closest("button, input, select, textarea, a")) return;
       settingsPageSwipe = {
         pointerId: event.pointerId,
         page,
-        x: event.clientX,
-        y: event.clientY
+        startX: event.clientX,
+        startY: event.clientY,
+        dragging: false
       };
+      try {
+        event.currentTarget.setPointerCapture?.(event.pointerId);
+      } catch {
+        // Pointer capture is best effort; the gesture still works without it.
+      }
+    }
+
+    function moveSettingsPageSwipe(event) {
+      if (!settingsPageSwipe || event.pointerId !== settingsPageSwipe.pointerId) return;
+      const dx = event.clientX - settingsPageSwipe.startX;
+      const dy = event.clientY - settingsPageSwipe.startY;
+      if (!settingsPageSwipe.dragging) {
+        const horizontal = Math.abs(dx) >= settingsPageSwipeStartDistance && Math.abs(dx) > Math.abs(dy) * 1.15;
+        if (!horizontal) return;
+        settingsPageSwipe.dragging = true;
+      }
+      settingsPageSuppressClickUntil = performance.now() + 450;
+      event.preventDefault();
+      event.stopPropagation();
     }
 
     function finishSettingsPageSwipe(event) {
       if (!settingsPageSwipe || event.pointerId !== settingsPageSwipe.pointerId) return;
       const swipe = settingsPageSwipe;
       settingsPageSwipe = null;
-      const dx = event.clientX - swipe.x;
-      const dy = event.clientY - swipe.y;
-      if (Math.abs(dx) < settingsPageSwipeDistance || Math.abs(dx) < Math.abs(dy) * 1.25) return;
+      const dx = event.clientX - swipe.startX;
+      const dy = event.clientY - swipe.startY;
+      const shouldSwitch = Math.abs(dx) >= settingsPageSwipeDistance && Math.abs(dx) > Math.abs(dy) * 1.25;
+      if (!swipe.dragging && !shouldSwitch) return;
+      settingsPageSuppressClickUntil = performance.now() + 450;
+      event.preventDefault();
+      event.stopPropagation();
+      if (!shouldSwitch) return;
       if (swipe.page === "settings" && dx < 0) setGmOpen(true, { direction: "next", focus: false });
       if (swipe.page === "gm" && dx > 0) setSettingsOpen(true, { direction: "prev", focus: false });
     }
 
     function cancelSettingsPageSwipe(event) {
       if (!settingsPageSwipe || event.pointerId !== settingsPageSwipe.pointerId) return;
+      if (settingsPageSwipe.dragging) settingsPageSuppressClickUntil = performance.now() + 450;
       settingsPageSwipe = null;
+    }
+
+    function suppressSettingsPageClickAfterDrag(event) {
+      if (performance.now() > settingsPageSuppressClickUntil) return;
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation?.();
     }
 
     function handlePlatformBackButton() {
@@ -4130,22 +4164,24 @@
         setSettingsOpen(false);
         return;
       }
-      event.stopPropagation();
       beginSettingsPageSwipe(event, "settings");
-    });
-    settingsContent.addEventListener("pointerup", finishSettingsPageSwipe);
-    settingsContent.addEventListener("pointercancel", cancelSettingsPageSwipe);
+    }, { capture: true });
+    settingsContent.addEventListener("pointermove", moveSettingsPageSwipe, { capture: true, passive: false });
+    settingsContent.addEventListener("pointerup", finishSettingsPageSwipe, { capture: true });
+    settingsContent.addEventListener("pointercancel", cancelSettingsPageSwipe, { capture: true });
+    settingsContent.addEventListener("click", suppressSettingsPageClickAfterDrag, { capture: true });
 
     gmContent.addEventListener("pointerdown", event => {
       if (event.target === gmContent) {
         setGmOpen(false);
         return;
       }
-      event.stopPropagation();
       beginSettingsPageSwipe(event, "gm");
-    });
-    gmContent.addEventListener("pointerup", finishSettingsPageSwipe);
-    gmContent.addEventListener("pointercancel", cancelSettingsPageSwipe);
+    }, { capture: true });
+    gmContent.addEventListener("pointermove", moveSettingsPageSwipe, { capture: true, passive: false });
+    gmContent.addEventListener("pointerup", finishSettingsPageSwipe, { capture: true });
+    gmContent.addEventListener("pointercancel", cancelSettingsPageSwipe, { capture: true });
+    gmContent.addEventListener("click", suppressSettingsPageClickAfterDrag, { capture: true });
 
     networkContent.addEventListener("pointerdown", event => {
       if (event.target === networkContent) {

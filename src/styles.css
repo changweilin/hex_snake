@@ -3313,6 +3313,7 @@
       background: rgba(32, 38, 51, 0.98);
       border: 1px solid rgba(255, 255, 255, 0.14);
       box-shadow: 0 28px 90px rgba(0, 0, 0, 0.5);
+      touch-action: pan-y;
     }
 
     #settingsContent .settings-dialog,
@@ -3362,6 +3363,7 @@
       overscroll-behavior: contain;
       scrollbar-gutter: stable;
       -webkit-overflow-scrolling: touch;
+      touch-action: pan-y;
     }
 
     .settings-utility-actions {
