@@ -608,6 +608,28 @@ let gameOverResultOwner = null;
 let gameOverPlayerLost = false;
 let gameOverComputerLost = false;
 let gameOver = false;
+
+Object.defineProperties(HexSnakeState.game, {
+  running: {
+    get: () => running,
+    set: (value) => {
+      running = Boolean(value);
+    },
+  },
+  paused: {
+    get: () => paused,
+    set: (value) => {
+      paused = Boolean(value);
+    },
+  },
+  gameOver: {
+    get: () => gameOver,
+    set: (value) => {
+      gameOver = Boolean(value);
+    },
+  },
+});
+
 let lastResultShareData = null;
 let resultShareInProgress = false;
 let lastPlayerStep = 0;

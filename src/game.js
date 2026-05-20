@@ -183,11 +183,11 @@
       controlProfileSelect.value = selectedControlProfileId;
       const selected = selectedControlProfile();
       if (selected && !controlProfileNameInput.value.trim()) controlProfileNameInput.value = selected.name;
-      controlProfileApplyButton.disabled = !selectedControlProfileId || running;
-      controlProfileDeleteButton.disabled = !selectedControlProfileId || running;
-      controlProfileSaveButton.disabled = running;
-      controlProfileNameInput.disabled = running;
-      controlProfileSelect.disabled = running || !controlProfiles.length;
+      controlProfileApplyButton.disabled = !selectedControlProfileId || HexSnakeState.game.running;
+      controlProfileDeleteButton.disabled = !selectedControlProfileId || HexSnakeState.game.running;
+      controlProfileSaveButton.disabled = HexSnakeState.game.running;
+      controlProfileNameInput.disabled = HexSnakeState.game.running;
+      controlProfileSelect.disabled = HexSnakeState.game.running || !controlProfiles.length;
       setControlProfileStatus(message, state);
     }
 
@@ -250,7 +250,7 @@
     }
 
     function saveCurrentControlProfile() {
-      if (running) return;
+      if (HexSnakeState.game.running) return;
       const name = (controlProfileNameInput.value.trim() || selectedControlProfile()?.name || uniqueControlProfileName()).slice(0, 16);
       const now = new Date().toISOString();
       const existingIndex = controlProfiles.findIndex(profile => profile.id === selectedControlProfileId);
@@ -271,7 +271,7 @@
     }
 
     function applySelectedControlProfile() {
-      if (running) return;
+      if (HexSnakeState.game.running) return;
       const profile = selectedControlProfile();
       if (!profile) return renderControlProfiles("請先選擇配置檔。", "error");
       keybinds = cloneKeybinds(profile.config.keybinds);
@@ -294,7 +294,7 @@
     }
 
     function deleteSelectedControlProfile() {
-      if (running) return;
+      if (HexSnakeState.game.running) return;
       if (!selectedControlProfileId) return;
       controlProfiles = controlProfiles.filter(profile => profile.id !== selectedControlProfileId);
       selectedControlProfileId = resolvedControlProfileId("", true);
@@ -636,7 +636,7 @@
     }
 
     function updateGmControlState() {
-      const disabled = running;
+      const disabled = HexSnakeState.game.running;
       initialLengthInput.disabled = disabled;
       initialEnergyInput.disabled = disabled;
       initialBombsInput.disabled = disabled;
@@ -708,7 +708,7 @@
     }
 
     function updateSettingsActionMode() {
-      const showSurrender = running && !gameOver && !HexSnakeReplay.isPlaybackMode();
+      const showSurrender = HexSnakeState.game.running && !HexSnakeState.game.gameOver && !HexSnakeReplay.isPlaybackMode();
       if (showSurrender) {
         setSettingsOpen(false);
         setGmOpen(false);
@@ -929,9 +929,9 @@
       lastPlayerAttackMs = resetAttackCooldownTracker();
       lastComputerAttackMs = resetAttackCooldownTracker();
       HexSnakeReplay.resetSurrendered();
-      gameOver = false;
+      HexSnakeState.game.gameOver = false;
       setLastResultShareData(null);
-      paused = false;
+      HexSnakeState.game.paused = false;
       placeFoods();
       updateHud();
       setStatus("準備就緒。右搖桿移動，左搖桿瞄準攻擊。");
@@ -1003,8 +1003,8 @@
         setStatus("LAN guest is waiting for Host to start.");
         return false;
       }
-      if (HexSnakeReplay.isPlaybackMode() || running || startLogoCountdownPending || isLogoTransitionActive()) return false;
-      if (gameOver) {
+      if (HexSnakeReplay.isPlaybackMode() || HexSnakeState.game.running || startLogoCountdownPending || isLogoTransitionActive()) return false;
+      if (HexSnakeState.game.gameOver) {
         if (!canRestartAfterGameOver()) return false;
         returnToStartScreen();
       }
@@ -1014,8 +1014,8 @@
       setStatus("開局倒數中：3 秒後開始。");
       playStartLogoCountdown().then(ready => {
         startLogoCountdownPending = false;
-        if (!ready || running || gameOver || HexSnakeReplay.isPlaybackMode()) {
-          if (!running && !gameOver) setSettingsLocked(false);
+        if (!ready || HexSnakeState.game.running || HexSnakeState.game.gameOver || HexSnakeReplay.isPlaybackMode()) {
+          if (!HexSnakeState.game.running && !HexSnakeState.game.gameOver) setSettingsLocked(false);
           return;
         }
         startGame();
@@ -1036,7 +1036,7 @@
         return false;
       }
       if (HexSnakeReplay.isPlaybackMode()) return false;
-      if (gameOver && !canRestartAfterGameOver()) return false;
+      if (HexSnakeState.game.gameOver && !canRestartAfterGameOver()) return false;
       clearGameOverSettlementTimer();
       clearRelayRestartTimer();
       computerBattleMode = Boolean(options.computerBattle);
@@ -1059,7 +1059,7 @@
       HexSnakeAudio.warmup([characterFor("player"), characterFor("computer")]);
       HexSnakeAudio.playCharacter("player", "start", { unlock: true });
       HexSnakeAudio.playCharacter("computer", "start", { delay: 0.08, gainScale: 0.75 });
-      running = true;
+      HexSnakeState.game.running = true;
       setSettingsLocked(true);
       setStatus("對戰中：吃食物累積能量，集滿可獲得炸彈。");
       overlay.classList.remove("show");
@@ -1076,8 +1076,8 @@
     }
 
     function autoStartGame() {
-      if (running && !gameOver) return true;
-      if (gameOver) return false;
+      if (HexSnakeState.game.running && !HexSnakeState.game.gameOver) return true;
+      if (HexSnakeState.game.gameOver) return false;
       beginStartLogoCountdown();
       return false;
     }
@@ -1102,7 +1102,7 @@
     }
 
     function openGameOverCharacterSelect(owner) {
-      if (!gameOver) return;
+      if (!HexSnakeState.game.gameOver) return;
       const nextOwner = owner === "computer" ? "computer" : "player";
       returnToStartScreen();
       selectedPortraitOwner = nextOwner;
@@ -1429,29 +1429,29 @@
     }
 
     function updateRelayControls() {
-      const visible = !HexSnakeReplay.isPlaybackMode() && (relayMode || (running && !gameOver && isRelayModeAvailable()));
+      const visible = !HexSnakeReplay.isPlaybackMode() && (relayMode || (HexSnakeState.game.running && !HexSnakeState.game.gameOver && isRelayModeAvailable()));
       relayPanel.hidden = !visible;
       relayModeInput.checked = relayMode;
       relayScore.innerHTML = `<span class="owner-name is-p1">P1</span> ${relayPlayerWins} 勝 / <span class="owner-name is-p2">P2</span> ${relayComputerWins} 勝 / 平手 ${relayDraws}`;
     }
 
     function updateAutoBattleControls() {
-      const visible = isPlayerAutoControlActive() && running && !gameOver && !HexSnakeReplay.isPlaybackMode();
+      const visible = isPlayerAutoControlActive() && HexSnakeState.game.running && !HexSnakeState.game.gameOver && !HexSnakeReplay.isPlaybackMode();
       autoBattlePanel.hidden = !visible;
       autoBattleSpeedSelect.textContent = autoBattleSpeedLabel(computerBattleSpeed);
       autoBattleSpeedSelect.dataset.value = String(computerBattleSpeed);
       autoBattleSpeedSelect.setAttribute("aria-valuenow", String(computerBattleSpeed));
       autoBattleSpeedSelect.setAttribute("aria-valuetext", autoBattleSpeedLabel(computerBattleSpeed));
       if (!visible) setAutoSpeedMenuOpen(false);
-      autoPauseButton.textContent = paused ? "▶" : "⏸";
-      autoPauseButton.setAttribute("aria-label", paused ? "播放" : "暫停");
-      autoPauseButton.title = paused ? "播放" : "暫停";
+      autoPauseButton.textContent = HexSnakeState.game.paused ? "▶" : "⏸";
+      autoPauseButton.setAttribute("aria-label", HexSnakeState.game.paused ? "播放" : "暫停");
+      autoPauseButton.title = HexSnakeState.game.paused ? "播放" : "暫停";
       updateRelayControls();
       updateSkillPrepVisibility();
     }
 
     function setPlayerAutoMode(active, announce = true) {
-      const nextActive = Boolean(active) && running && !gameOver && !HexSnakeReplay.isPlaybackMode();
+      const nextActive = Boolean(active) && HexSnakeState.game.running && !HexSnakeState.game.gameOver && !HexSnakeReplay.isPlaybackMode();
       if (playerAutoMode === nextActive) return;
       playerAutoMode = nextActive;
       if (playerAutoMode) {
@@ -1470,7 +1470,7 @@
     }
 
     function setComputerBattleManualOverride(active) {
-      if (!computerBattleMode || !running || gameOver || HexSnakeReplay.isPlaybackMode()) return;
+      if (!computerBattleMode || !HexSnakeState.game.running || HexSnakeState.game.gameOver || HexSnakeReplay.isPlaybackMode()) return;
       computerBattleManualOverride = Boolean(active);
       if (!computerBattleManualOverride) {
         setComputerBattleSpeed(HexSnakeStorage.get("hexSnakeAutoBattleSpeed"), false);
@@ -1570,7 +1570,7 @@
     }
 
     function applyNetworkAttackInput(input = {}) {
-      if (!running || paused || gameOver || !computerSnake?.length || !snake?.length) return false;
+      if (!HexSnakeState.game.running || HexSnakeState.game.paused || HexSnakeState.game.gameOver || !computerSnake?.length || !snake?.length) return false;
       const profile = input.profile === "small" ? "small" : "big";
       const direction = safeNetworkDirection(input.direction);
       const options = safeNetworkAttackOptions(input.options);
@@ -1601,9 +1601,9 @@
     function applyNetworkSnapshotMessage(message = {}) {
       if (!isNetworkGuestActive() || !message.snapshot) return;
       const final = message.type === "end";
-      running = false;
-      paused = false;
-      gameOver = final;
+      HexSnakeState.game.running = false;
+      HexSnakeState.game.paused = false;
+      HexSnakeState.game.gameOver = final;
       computerBattleMode = false;
       playerAutoMode = false;
       computerBattleManualOverride = false;
@@ -2806,7 +2806,7 @@
     function showGameOverSettlement() {
       gameOverSettlementPending = false;
       gameOverLogoTransitionEndsAt = 0;
-      if (!gameOver || running || HexSnakeReplay.isPlaybackMode()) return;
+      if (!HexSnakeState.game.gameOver || HexSnakeState.game.running || HexSnakeReplay.isPlaybackMode()) return;
       hideCharacterStage();
       clearLogoTransition();
       renderWinnerPortrait(gameOverResultOwner, gameOverPlayerLost, gameOverComputerLost);
@@ -2977,8 +2977,8 @@
       const computerConsumedFood = !computerCollision ? advanceOwnerMovement("computer", computerNext, computerEatenFood) : null;
       replaceConsumedFoods([playerConsumedFood, computerConsumedFood], eating || computerEating);
 
-      if (!playerCollision && running && !paused) maybeAutoBattlePlayerAttack(now);
-      if (!computerCollision && running && !paused && !isNetworkHostActive()) maybeComputerAttack(now);
+      if (!playerCollision && HexSnakeState.game.running && !HexSnakeState.game.paused) maybeAutoBattlePlayerAttack(now);
+      if (!computerCollision && HexSnakeState.game.running && !HexSnakeState.game.paused && !isNetworkHostActive()) maybeComputerAttack(now);
       updateHud();
     }
 
@@ -3007,7 +3007,7 @@
 
       const consumedFood = advanceOwnerMovement("player", next, eatenFood);
       replaceConsumedFoods([consumedFood], eating);
-      if (running && !paused) maybeAutoBattlePlayerAttack(now);
+      if (HexSnakeState.game.running && !HexSnakeState.game.paused) maybeAutoBattlePlayerAttack(now);
       updateHud();
     }
 
@@ -3032,12 +3032,12 @@
 
       const consumedFood = advanceOwnerMovement("computer", computerNext, computerEatenFood);
       replaceConsumedFoods([consumedFood], computerEating);
-      if (running && !paused && !isNetworkHostActive()) maybeComputerAttack(now);
+      if (HexSnakeState.game.running && !HexSnakeState.game.paused && !isNetworkHostActive()) maybeComputerAttack(now);
       updateHud();
     }
 
     function endGame(playerLost = true, computerLost = false) {
-      if (gameOver) return;
+      if (HexSnakeState.game.gameOver) return;
       clearGameOverSettlementTimer();
       const shouldContinueRelay = relayMode && (computerBattleMode || playerAutoMode);
       const endedInAutoMode = isPlayerAutoControlActive();
@@ -3047,10 +3047,10 @@
         : { playerAuto: true };
       const gameOverAt = performance.now();
       HexSnakeReplay.finishRecording(playerLost, computerLost);
-      running = false;
+      HexSnakeState.game.running = false;
       playerAutoMode = false;
       computerBattleManualOverride = false;
-      gameOver = true;
+      HexSnakeState.game.gameOver = true;
       if (shouldUseGameOverLogo) showCharacterStage({ rebuild: false, overlay: true });
       else hideCharacterStage();
       gameOverContinuousVisualDeadlineAt = gameOverAt + gameOverContinuousVisualMaxWaitMs;
@@ -3147,7 +3147,7 @@
         return;
       }
       updatePerfOverlay(HexSnakePlatform.display.recordFrame(now || performance.now()));
-      if (!running) {
+      if (!HexSnakeState.game.running) {
         const frameNow = now || performance.now();
         const visualsActive = gameOverSettlementPending && advanceGameOverVisuals(frameNow);
         draw();
@@ -3164,7 +3164,7 @@
         }
         return;
       }
-      if (!paused) {
+      if (!HexSnakeState.game.paused) {
         const delta = lastTimerFrame ? now - lastTimerFrame : 0;
         const timeScale = isPlayerAutoControlActive() ? computerBattleSpeed : 1;
         totalElapsedMs += delta * timeScale;
@@ -3178,14 +3178,14 @@
       } else {
         lastTimerFrame = now;
       }
-      if (!paused) {
+      if (!HexSnakeState.game.paused) {
         refreshSandwormProtections(now);
         resolveProjectiles(now);
         resolveHazards(now);
         refreshSandwormProtections(now);
         updateAiVisibilityMemory(now);
       }
-      if (running && !paused) {
+      if (HexSnakeState.game.running && !HexSnakeState.game.paused) {
         const playerDue = !isMovementStunned("player", now) && now - lastPlayerStep >= moveIntervalFor("player", now);
         const computerDue = !isMovementStunned("computer", now) && now - lastComputerStep >= moveIntervalFor("computer", now);
         if (playerDue && computerDue) {
@@ -3245,7 +3245,7 @@
         return true;
       }
       if (!shouldUseControlPadAttackDirection()) return false;
-      if (!running || gameOver) {
+      if (!HexSnakeState.game.running || HexSnakeState.game.gameOver) {
         if (!autoStartGame()) return true;
       }
       event.preventDefault();
@@ -3381,7 +3381,7 @@
     function moveTargetStick(event) {
       if (HexSnakeReplay.isPlaybackMode()) return;
       if (isLogoTransitionActive()) return;
-      if (!running || gameOver) {
+      if (!HexSnakeState.game.running || HexSnakeState.game.gameOver) {
         if (!autoStartGame()) return;
       }
       const rect = targetZone.getBoundingClientRect();
@@ -3408,7 +3408,7 @@
     function releaseTargetStick() {
       targetPointerId = null;
       targetStick.style.transform = "translate(0, 0)";
-      if (targetActive && running && !paused && !gameOver) {
+      if (targetActive && HexSnakeState.game.running && !HexSnakeState.game.paused && !HexSnakeState.game.gameOver) {
         if (launchAttack("player", targetCell || snake[0], performance.now())) {
           setStatus("P1 施放炸彈，2 秒後落地。");
         } else {
@@ -3591,7 +3591,7 @@
     }
 
     function cycleKeyboardAttackAim(profile = "small") {
-      if (!running || gameOver) {
+      if (!HexSnakeState.game.running || HexSnakeState.game.gameOver) {
         if (!autoStartGame()) return false;
       }
       const aim = keyboardAttackAim[profile] || keyboardAttackAim.small;
@@ -3695,8 +3695,8 @@
     function playerAttackFailureReason(target, profile = selectedAttackProfile, now = performance.now()) {
       const moveName = profile === "small" ? characterFor("player").smallMove : characterFor("player").bigMove;
       if (HexSnakeReplay.isPlaybackMode()) return "正在播放重播，不能施放招式。";
-      if (!running || gameOver) return "尚未開局；開始後再點棋盤可施放招式。";
-      if (paused) return "遊戲暫停中，請先繼續再施放招式。";
+      if (!HexSnakeState.game.running || HexSnakeState.game.gameOver) return "尚未開局；開始後再點棋盤可施放招式。";
+      if (HexSnakeState.game.paused) return "遊戲暫停中，請先繼續再施放招式。";
       if (!target || !snake?.length) return `${moveName} 施放失敗：沒有有效目標格。`;
 
       const stock = playerStock;
@@ -3746,13 +3746,13 @@
         setStatus(safeProfile === "small" ? "Sent P2 LAN attack." : "Sent P2 LAN big attack.");
         return true;
       }
-      if (!running || gameOver) {
+      if (!HexSnakeState.game.running || HexSnakeState.game.gameOver) {
         if (!autoStartGame()) {
           setStatus(playerAttackFailureReason(target, profile));
           return false;
         }
       }
-      if (paused) {
+      if (HexSnakeState.game.paused) {
         setStatus(playerAttackFailureReason(target, profile));
         return false;
       }
@@ -3785,7 +3785,7 @@
         flashAttackButton(safeProfile);
         return true;
       }
-      if (!running || gameOver) {
+      if (!HexSnakeState.game.running || HexSnakeState.game.gameOver) {
         if (!autoStartGame()) return false;
       }
       return launchPlayerAttack(opponentHeadTarget(), profile, { aimDirection: direction, aimOrigin: snake[0] });
@@ -3806,18 +3806,18 @@
 
     function togglePause() {
       if (HexSnakeReplay.isPlaybackMode()) return;
-      if (!running || gameOver) {
+      if (!HexSnakeState.game.running || HexSnakeState.game.gameOver) {
         beginStartLogoCountdown();
         return;
       }
-      paused = !paused;
-      setStatus(paused ? "已暫停" : "對戰中：吃食物累積能量，集滿可獲得炸彈。");
+      HexSnakeState.game.paused = !HexSnakeState.game.paused;
+      setStatus(HexSnakeState.game.paused ? "已暫停" : "對戰中：吃食物累積能量，集滿可獲得炸彈。");
       overlayTitle.textContent = "暫停";
       overlayText.textContent = "按開始或快捷鍵繼續。";
       startButton.textContent = "繼續";
       setOverlayChromeVisible(true);
-      overlay.classList.toggle("show", paused);
-      if (!paused) {
+      overlay.classList.toggle("show", HexSnakeState.game.paused);
+      if (!HexSnakeState.game.paused) {
         lastPlayerStep = performance.now();
         lastComputerStep = lastPlayerStep;
         lastTimerFrame = lastPlayerStep;
@@ -3827,7 +3827,7 @@
 
     function surrenderGame() {
       if (HexSnakeReplay.isPlaybackMode()) return;
-      if (!running || gameOver) {
+      if (!HexSnakeState.game.running || HexSnakeState.game.gameOver) {
         if (computerBattleMode && relayMode) {
           setRelayMode(false, false, false);
           setStatus("接力賽已停止。");
@@ -3954,7 +3954,7 @@
       networkToggle.setAttribute("aria-expanded", String(!networkContent.hidden));
       settingsToggle.closest(".settings-section").classList.toggle("open", settingsPagesOpen || !networkContent.hidden);
       updateSettingsPageBars();
-      if (!running || gameOver || HexSnakeReplay.isPlaybackMode()) {
+      if (!HexSnakeState.game.running || HexSnakeState.game.gameOver || HexSnakeReplay.isPlaybackMode()) {
         networkToggle.classList.toggle("is-active", !networkContent.hidden);
       }
     }
@@ -3980,7 +3980,7 @@
     }
 
     function toggleSettings() {
-      if (settingsToggle.disabled || running) return;
+      if (settingsToggle.disabled || HexSnakeState.game.running) return;
       const settingsPagesOpen = !settingsContent.hidden || !gmContent.hidden;
       if (settingsPagesOpen) {
         setSettingsOpen(false);
@@ -3993,7 +3993,7 @@
     function setGmOpen(open, options = {}) {
       const previousPage = currentSettingsPage();
       gmContent.hidden = !open;
-      if (open && !running) {
+      if (open && !HexSnakeState.game.running) {
         closeRulesPanelForOverlay();
         settingsContent.hidden = true;
         networkContent.hidden = true;
@@ -4019,12 +4019,12 @@
     }
 
     function toggleNetworkSettings() {
-      if (running && !gameOver && !HexSnakeReplay.isPlaybackMode()) {
+      if (HexSnakeState.game.running && !HexSnakeState.game.gameOver && !HexSnakeReplay.isPlaybackMode()) {
         if (computerBattleMode) setComputerBattleManualOverride(!computerBattleManualOverride);
         else setPlayerAutoMode(!playerAutoMode);
         return;
       }
-      if (networkToggle.disabled || running) return;
+      if (networkToggle.disabled || HexSnakeState.game.running) return;
       setNetworkOpen(networkToggle.getAttribute("aria-expanded") !== "true");
     }
 
@@ -4136,8 +4136,8 @@
         HexSnakeReplay.exitPlayback();
         return true;
       }
-      if (running && !gameOver) {
-        if (!paused) {
+      if (HexSnakeState.game.running && !HexSnakeState.game.gameOver) {
+        if (!HexSnakeState.game.paused) {
           togglePause();
           return true;
         }
@@ -4373,7 +4373,7 @@
     });
 
     gridSizeInput.addEventListener("change", () => {
-      if (running) return;
+      if (HexSnakeState.game.running) return;
       setGridSize(gridSizeInput.value);
       applyGmSettingsChanged();
       cancelAnimationFrame(rafId);
@@ -4387,7 +4387,7 @@
     });
 
     foodCountInput.addEventListener("change", () => {
-      if (running) return;
+      if (HexSnakeState.game.running) return;
       setFoodCount(foodCountInput.value);
       applyGmSettingsChanged();
       resetGame();
@@ -4400,7 +4400,7 @@
     });
 
     computerDifficultyInput.addEventListener("change", () => {
-      if (running) return;
+      if (HexSnakeState.game.running) return;
       setComputerDifficulty(computerDifficultyInput.value);
       saveGmSettings();
       resetGame();
@@ -4413,7 +4413,7 @@
     });
 
     initialSpeedInput.addEventListener("change", () => {
-      if (running) return;
+      if (HexSnakeState.game.running) return;
       setInitialSpeed(initialSpeedInput.value);
       applyGmSettingsChanged();
       resetGame();
@@ -4426,7 +4426,7 @@
     });
 
     initialLengthInput.addEventListener("change", () => {
-      if (running) return;
+      if (HexSnakeState.game.running) return;
       setInitialLength(initialLengthInput.value);
       applyGmSettingsChanged();
       resetGame();
@@ -4434,7 +4434,7 @@
     });
 
     initialEnergyInput.addEventListener("change", () => {
-      if (running) return;
+      if (HexSnakeState.game.running) return;
       setInitialEnergy(initialEnergyInput.value);
       applyGmSettingsChanged();
       resetGame();
@@ -4442,7 +4442,7 @@
     });
 
     initialBombsInput.addEventListener("change", () => {
-      if (running) return;
+      if (HexSnakeState.game.running) return;
       setInitialBombs(initialBombsInput.value);
       applyGmSettingsChanged();
       resetGame();
@@ -4451,7 +4451,7 @@
 
     initialStockInputs.forEach(input => {
       input.addEventListener("change", () => {
-        if (running) return;
+        if (HexSnakeState.game.running) return;
         setInitialStock(input.dataset.initialStock, input.value);
         applyGmSettingsChanged();
         resetGame();
@@ -4461,7 +4461,7 @@
 
     [playerCharacterInput, computerCharacterInput].forEach(input => {
       input.addEventListener("change", () => {
-        if (running) return;
+        if (HexSnakeState.game.running) return;
         const changedOwner = input === computerCharacterInput ? "computer" : "player";
         playerCharacterChoice = playerCharacterInput.value === randomCharacterChoiceId || characterById.has(playerCharacterInput.value) ? playerCharacterInput.value : defaultSettings.playerCharacterId;
         computerCharacterChoice = computerCharacterInput.value === randomCharacterChoiceId || characterById.has(computerCharacterInput.value) ? computerCharacterInput.value : defaultSettings.computerCharacterId;
@@ -4493,7 +4493,7 @@
     });
 
     realModeButton.addEventListener("click", () => {
-      if (running) return;
+      if (HexSnakeState.game.running) return;
       setGmMode(true);
       resetGmParameters();
       applyGmSettingsChanged({ presetMode: "real" });
@@ -4501,28 +4501,28 @@
     });
 
     midGameModeButton.addEventListener("click", () => {
-      if (running) return;
+      if (HexSnakeState.game.running) return;
       applyMidGameModePreset();
       applyGmSettingsChanged({ presetMode: "mid" });
       refreshGmPreview();
     });
 
     ultimateModeButton.addEventListener("click", () => {
-      if (running) return;
+      if (HexSnakeState.game.running) return;
       applyUltimateModePreset();
       applyGmSettingsChanged({ presetMode: "battle" });
       refreshGmPreview();
     });
 
     lateGameModeButton.addEventListener("click", () => {
-      if (running) return;
+      if (HexSnakeState.game.running) return;
       applyLateGameModePreset();
       applyGmSettingsChanged({ presetMode: "late" });
       refreshGmPreview();
     });
 
     resetSettingsButton.addEventListener("click", () => {
-      if (running) return;
+      if (HexSnakeState.game.running) return;
       setComputerDifficulty(defaultSettings.computerDifficulty);
       setGmMode(defaultSettings.gmMode);
       resetGmParameters();
@@ -4868,8 +4868,8 @@
         window.location.reload();
         return;
       }
-      if (paused && running && !gameOver) {
-        paused = false;
+      if (HexSnakeState.game.paused && HexSnakeState.game.running && !HexSnakeState.game.gameOver) {
+        HexSnakeState.game.paused = false;
         setStatus("對戰中：吃食物累積能量，集滿可獲得炸彈。");
         overlay.classList.remove("show");
         showCharacterStage({ rebuild: false, overlay: false });
@@ -4879,7 +4879,7 @@
         updateAutoBattleControls();
         return;
       }
-      if (gameOver) {
+      if (HexSnakeState.game.gameOver) {
         if (!canRestartAfterGameOver()) return;
         returnToStartScreen();
         return;
@@ -4897,7 +4897,7 @@
         window.location.reload();
         return;
       }
-      if (gameOver && !canRestartAfterGameOver()) return;
+      if (HexSnakeState.game.gameOver && !canRestartAfterGameOver()) return;
       overlayTitle.textContent = "自動對弈";
       overlayText.textContent = "P1 / P2 皆自動操作，控制面板可調整對弈速度或暫停。";
       setOverlayChromeVisible(true);
@@ -5168,9 +5168,9 @@
 
     autoPauseButton.addEventListener("click", event => {
       event.stopPropagation();
-      if (!isPlayerAutoControlActive() || !running || gameOver) return;
-      paused = !paused;
-      if (!paused) {
+      if (!isPlayerAutoControlActive() || !HexSnakeState.game.running || HexSnakeState.game.gameOver) return;
+      HexSnakeState.game.paused = !HexSnakeState.game.paused;
+      if (!HexSnakeState.game.paused) {
         lastPlayerStep = performance.now();
         lastComputerStep = lastPlayerStep;
         lastTimerFrame = lastPlayerStep;
@@ -5418,18 +5418,18 @@
 
       const key = event.key.toLowerCase();
       if (key === " ") {
-        if (!running || gameOver) {
+        if (!HexSnakeState.game.running || HexSnakeState.game.gameOver) {
           beginStartLogoCountdown();
           return;
         }
-        paused = !paused;
-        setStatus(paused ? "已暫停" : "對戰中：吃食物累積能量，集滿可獲得炸彈。");
+        HexSnakeState.game.paused = !HexSnakeState.game.paused;
+        setStatus(HexSnakeState.game.paused ? "已暫停" : "對戰中：吃食物累積能量，集滿可獲得炸彈。");
         overlayTitle.textContent = "暫停";
         overlayText.textContent = "按繼續回到對戰。";
         startButton.textContent = "繼續";
         setOverlayChromeVisible(true);
-        overlay.classList.toggle("show", paused);
-        if (!paused) {
+        overlay.classList.toggle("show", HexSnakeState.game.paused);
+        if (!HexSnakeState.game.paused) {
           lastPlayerStep = performance.now();
           lastComputerStep = lastPlayerStep;
           lastTimerFrame = lastPlayerStep;
@@ -5439,7 +5439,7 @@
       }
 
       if (key === "q") {
-        if (!running || gameOver) {
+        if (!HexSnakeState.game.running || HexSnakeState.game.gameOver) {
           if (!autoStartGame()) return;
         }
         if (launchAttack("player", targetCell || snake[0], performance.now())) {
@@ -5474,12 +5474,12 @@
     HexSnakePlatform.lifecycle.onResume(() => {
       if (rafId) return;
       const now = performance.now();
-      if (running && !gameOver) {
+      if (HexSnakeState.game.running && !HexSnakeState.game.gameOver) {
         lastPlayerStep = now;
         lastComputerStep = now;
         lastTimerFrame = now;
       }
-      if (running || gameOverSettlementPending) {
+      if (HexSnakeState.game.running || gameOverSettlementPending) {
         rafId = requestAnimationFrame(loop);
       } else if (isEffectComparisonMode()) {
         rafId = requestAnimationFrame(comparisonLoop);

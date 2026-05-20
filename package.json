@@ -29,6 +29,7 @@
     "test:mobile-platform": "node tools/mobile-platform-adapter-test.js",
     "test:offline": "node tools/offline-smoke-test.js",
     "audit:globals": "node tools/audit-legacy-globals.js",
+    "audit:state-boundary": "node tools/audit-state-boundary.js",
     "check:assets": "node tools/check-assets.js",
     "check:size": "node tools/check-dist-size.js",
     "app:check": "node tools/check-app-readiness.js",
