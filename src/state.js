@@ -3,6 +3,7 @@ const HexSnakeState = {
     muted: false,
     unlocked: false
   },
+  config: {},
   game: {},
   replay: {},
   ui: {}

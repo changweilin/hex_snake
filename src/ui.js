@@ -571,6 +571,151 @@ const defaultKeybinds = {
   surrender: "t",
   directions: directions.map((direction) => direction.key),
 };
+
+Object.defineProperties(HexSnakeState.config, {
+  autoBattleSpeeds: {
+    get: () => autoBattleSpeeds,
+  },
+  attackNeedTotal: {
+    get: () => attackNeedTotal,
+  },
+  attackSlowMs: {
+    get: () => attackSlowMs,
+  },
+  attackStunMs: {
+    get: () => attackStunMs,
+  },
+  baseAttackDelayMs: {
+    get: () => baseAttackDelayMs,
+  },
+  baseAttackStunChance: {
+    get: () => baseAttackStunChance,
+  },
+  baseBlastHexRadius: {
+    get: () => baseBlastHexRadius,
+  },
+  baseStepMs: {
+    get: () => baseStepMs,
+  },
+  balancedDualChance: {
+    get: () => balancedDualChance,
+  },
+  blackSpecialChance: {
+    get: () => blackSpecialChance,
+  },
+  blastDurationMs: {
+    get: () => blastDurationMs,
+  },
+  bodyHitMaxStunChanceBonus: {
+    get: () => bodyHitMaxStunChanceBonus,
+  },
+  bodyHitStunChance: {
+    get: () => bodyHitStunChance,
+  },
+  bodyHitStunChanceBonusPerPoint: {
+    get: () => bodyHitStunChanceBonusPerPoint,
+  },
+  collisionSlowMs: {
+    get: () => collisionSlowMs,
+  },
+  collisionStunMs: {
+    get: () => collisionStunMs,
+  },
+  defaultKeybinds: {
+    get: () => defaultKeybinds,
+  },
+  defaultSettings: {
+    get: () => defaultSettings,
+  },
+  directions: {
+    get: () => directions,
+  },
+  foodTypes: {
+    get: () => foodTypes,
+  },
+  gameOverContinuousVisualMaxWaitMs: {
+    get: () => gameOverContinuousVisualMaxWaitMs,
+  },
+  gameOverRestartDelayMs: {
+    get: () => gameOverRestartDelayMs,
+  },
+  hudFrameIntervalMs: {
+    get: () => hudFrameIntervalMs,
+  },
+  headHitMaxStunChanceBonus: {
+    get: () => headHitMaxStunChanceBonus,
+  },
+  headHitStunChance: {
+    get: () => headHitStunChance,
+  },
+  headHitStunChanceBonusPerPoint: {
+    get: () => headHitStunChanceBonusPerPoint,
+  },
+  hpPerSnakeUnit: {
+    get: () => hpPerSnakeUnit,
+  },
+  keyboardTargetModeLabels: {
+    get: () => keyboardTargetModeLabels,
+  },
+  keyboardTargetModes: {
+    get: () => keyboardTargetModes,
+  },
+  maxFoodCount: {
+    get: () => maxFoodCount,
+  },
+  maxFoodStock: {
+    get: () => maxFoodStock,
+  },
+  maxAmmo: {
+    get: () => maxAmmo,
+  },
+  maxCollisionParalysisMs: {
+    get: () => maxCollisionParalysisMs,
+  },
+  maxGridSize: {
+    get: () => maxGridSize,
+  },
+  maxInitialLength: {
+    get: () => maxInitialLength,
+  },
+  maxInitialSpeed: {
+    get: () => maxInitialSpeed,
+  },
+  maxMatchMs: {
+    get: () => maxMatchMs,
+  },
+  minFoodCount: {
+    get: () => minFoodCount,
+  },
+  minGridSize: {
+    get: () => minGridSize,
+  },
+  minInitialLength: {
+    get: () => minInitialLength,
+  },
+  minInitialSpeed: {
+    get: () => minInitialSpeed,
+  },
+  otherFoodWeight: {
+    get: () => otherFoodWeight,
+  },
+  preferredFoodWeight: {
+    get: () => preferredFoodWeight,
+  },
+  bigAttackBombCost: {
+    get: () => bigAttackBombCost,
+  },
+  smallAttackBombCost: {
+    get: () => smallAttackBombCost,
+  },
+  smallAttackDelayScale: {
+    get: () => smallAttackDelayScale,
+  },
+  smallAttackFoodCost: {
+    get: () => smallAttackFoodCost,
+  },
+});
+
 let keybinds = loadKeybinds();
 let selectedAttackProfile = "small";
 const keyboardTargetModes = ["head", "centroid", "food"];
@@ -790,6 +935,12 @@ Object.defineProperties(HexSnakeState.game, {
     get: () => cells,
     set: (value) => {
       cells = Array.isArray(value) ? value : [];
+    },
+  },
+  resourceEls: {
+    get: () => resourceEls,
+    set: (value) => {
+      resourceEls = value instanceof Map ? value : new Map();
     },
   },
   cellSize: {
@@ -3766,3 +3917,33 @@ function formatTime(ms) {
   const seconds = totalSeconds % 60;
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
+
+Object.assign(HexSnakeUI, {
+  ammoFor,
+  attackBombCost,
+  attackCooldownRemainingMs,
+  attackDamage,
+  attackDelay,
+  attackFoodCost,
+  attackProfileCooldown,
+  attackStunChance,
+  blastRadius,
+  canAttack,
+  collectFood,
+  consumeAttackCost,
+  foodBonus,
+  foodHealAmount,
+  formatTime,
+  highestStockFoodType,
+  isMovementStunned,
+  lastAttackMsFor,
+  loadBalanceConfig,
+  maxHpForSnake,
+  moveIntervalFor,
+  movementSpeed,
+  resetAttackCooldownTracker,
+  setLastAttackMsFor,
+  startingBombs,
+  startingEnergy,
+  startingStock,
+});

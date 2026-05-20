@@ -12,16 +12,16 @@
     function loadKeybinds() {
       try {
         const saved = HexSnakeStorage.getJson("hexSnakeKeybinds", null);
-        if (!saved || !Array.isArray(saved.directions)) return structuredClone(defaultKeybinds);
+        if (!saved || !Array.isArray(saved.directions)) return structuredClone(HexSnakeState.config.defaultKeybinds);
         return {
-          smallAttack: normalizeKey(saved.smallAttack, defaultKeybinds.smallAttack),
-          bigAttack: normalizeKey(saved.bigAttack, defaultKeybinds.bigAttack),
-          pause: normalizeKey(saved.pause, defaultKeybinds.pause),
-          surrender: normalizeKey(saved.surrender, defaultKeybinds.surrender),
-          directions: defaultKeybinds.directions.map((fallback, index) => normalizeKey(saved.directions[index], fallback))
+          smallAttack: normalizeKey(saved.smallAttack, HexSnakeState.config.defaultKeybinds.smallAttack),
+          bigAttack: normalizeKey(saved.bigAttack, HexSnakeState.config.defaultKeybinds.bigAttack),
+          pause: normalizeKey(saved.pause, HexSnakeState.config.defaultKeybinds.pause),
+          surrender: normalizeKey(saved.surrender, HexSnakeState.config.defaultKeybinds.surrender),
+          directions: HexSnakeState.config.defaultKeybinds.directions.map((fallback, index) => normalizeKey(saved.directions[index], fallback))
         };
       } catch {
-        return structuredClone(defaultKeybinds);
+        return structuredClone(HexSnakeState.config.defaultKeybinds);
       }
     }
 
@@ -37,36 +37,36 @@
 
     function cloneKeybinds(value = HexSnakeState.game.keybinds) {
       return {
-        smallAttack: normalizeKey(value.smallAttack, defaultKeybinds.smallAttack),
-        bigAttack: normalizeKey(value.bigAttack, defaultKeybinds.bigAttack),
-        pause: normalizeKey(value.pause, defaultKeybinds.pause),
-        surrender: normalizeKey(value.surrender, defaultKeybinds.surrender),
-        directions: defaultKeybinds.directions.map((fallback, index) => normalizeKey(value.directions?.[index], fallback))
+        smallAttack: normalizeKey(value.smallAttack, HexSnakeState.config.defaultKeybinds.smallAttack),
+        bigAttack: normalizeKey(value.bigAttack, HexSnakeState.config.defaultKeybinds.bigAttack),
+        pause: normalizeKey(value.pause, HexSnakeState.config.defaultKeybinds.pause),
+        surrender: normalizeKey(value.surrender, HexSnakeState.config.defaultKeybinds.surrender),
+        directions: HexSnakeState.config.defaultKeybinds.directions.map((fallback, index) => normalizeKey(value.directions?.[index], fallback))
       };
     }
 
     function cloneKeyboardAttackAim(value = HexSnakeState.game.keyboardAttackAim) {
       return {
         small: {
-          targetModeIndex: Math.max(0, Number(value.small?.targetModeIndex) || 0) % keyboardTargetModes.length,
-          direction: Math.max(0, Number(value.small?.direction) || 0) % directions.length
+          targetModeIndex: Math.max(0, Number(value.small?.targetModeIndex) || 0) % HexSnakeState.config.keyboardTargetModes.length,
+          direction: Math.max(0, Number(value.small?.direction) || 0) % HexSnakeState.config.directions.length
         },
         big: {
-          targetModeIndex: Math.max(0, Number(value.big?.targetModeIndex) || 0) % keyboardTargetModes.length,
-          direction: Math.max(0, Number(value.big?.direction) || 0) % directions.length
+          targetModeIndex: Math.max(0, Number(value.big?.targetModeIndex) || 0) % HexSnakeState.config.keyboardTargetModes.length,
+          direction: Math.max(0, Number(value.big?.direction) || 0) % HexSnakeState.config.directions.length
         }
       };
     }
 
     function cloneInitialStock(value = HexSnakeState.game.initialStock) {
-      return foodTypes.reduce((stock, type) => {
-        stock[type.id] = clampInitialStock(value?.[type.id] ?? defaultSettings.initialStock[type.id] ?? 0);
+      return HexSnakeState.config.foodTypes.reduce((stock, type) => {
+        stock[type.id] = clampInitialStock(value?.[type.id] ?? HexSnakeState.config.defaultSettings.initialStock[type.id] ?? 0);
         return stock;
       }, {});
     }
 
     function normalizeCharacterChoice(owner, value) {
-      const fallback = owner === "computer" ? defaultSettings.computerCharacterId : defaultSettings.playerCharacterId;
+      const fallback = owner === "computer" ? HexSnakeState.config.defaultSettings.computerCharacterId : HexSnakeState.config.defaultSettings.playerCharacterId;
       const choice = String(value || fallback).slice(0, 64);
       if (HexSnakeUI.isRandomCharacterChoiceId(choice)) return choice;
       if (!HexSnakeUI.hasCharacterCatalog()) return choice || fallback;
@@ -207,13 +207,13 @@
       if (HexSnakeUI.isRandomCharacterChoiceId(HexSnakeState.game.playerCharacterChoice)) {
         ensureStartLogoRandomCharacterId("player");
       } else {
-        HexSnakeState.game.playerCharacterId = HexSnakeUI.hasCharacterId(HexSnakeState.game.playerCharacterChoice) ? HexSnakeState.game.playerCharacterChoice : defaultSettings.playerCharacterId;
+        HexSnakeState.game.playerCharacterId = HexSnakeUI.hasCharacterId(HexSnakeState.game.playerCharacterChoice) ? HexSnakeState.game.playerCharacterChoice : HexSnakeState.config.defaultSettings.playerCharacterId;
         clearStartLogoRandomCharacterId("player");
       }
       if (HexSnakeUI.isRandomCharacterChoiceId(HexSnakeState.game.computerCharacterChoice)) {
         ensureStartLogoRandomCharacterId("computer");
       } else {
-        HexSnakeState.game.computerCharacterId = HexSnakeUI.hasCharacterId(HexSnakeState.game.computerCharacterChoice) ? HexSnakeState.game.computerCharacterChoice : defaultSettings.computerCharacterId;
+        HexSnakeState.game.computerCharacterId = HexSnakeUI.hasCharacterId(HexSnakeState.game.computerCharacterChoice) ? HexSnakeState.game.computerCharacterChoice : HexSnakeState.config.defaultSettings.computerCharacterId;
         clearStartLogoRandomCharacterId("computer");
       }
       syncCharacterInputs();
@@ -235,7 +235,7 @@
       setInitialLength(nextSettings.initialLength);
       setInitialEnergy(nextSettings.initialEnergy);
       setInitialBombs(nextSettings.initialBombs);
-      foodTypes.forEach(type => setInitialStock(type.id, nextSettings.initialStock[type.id]));
+      HexSnakeState.config.foodTypes.forEach(type => setInitialStock(type.id, nextSettings.initialStock[type.id]));
       HexSnakeState.game.gmPresetMode = normalizeGmPresetMode(nextSettings.gmPresetMode);
       updateGmPresetHighlight();
       saveGmSettings();
@@ -332,10 +332,10 @@
     function resolveCharacterChoicesForStart() {
       HexSnakeState.game.playerCharacterChoice = HexSnakeUI.isSelectableCharacterChoiceId(playerCharacterInput.value)
         ? playerCharacterInput.value
-        : defaultSettings.playerCharacterId;
+        : HexSnakeState.config.defaultSettings.playerCharacterId;
       HexSnakeState.game.computerCharacterChoice = HexSnakeUI.isSelectableCharacterChoiceId(computerCharacterInput.value)
         ? computerCharacterInput.value
-        : defaultSettings.computerCharacterId;
+        : HexSnakeState.config.defaultSettings.computerCharacterId;
       HexSnakeState.game.playerCharacterId = resolveCharacterChoice("player", HexSnakeState.game.playerCharacterChoice);
       HexSnakeState.game.computerCharacterId = resolveCharacterChoice("computer", HexSnakeState.game.computerCharacterChoice);
       syncCharacterInputs();
@@ -343,21 +343,21 @@
     }
 
     function applyKeybinds() {
-      directions.forEach((direction, index) => {
+      HexSnakeState.config.directions.forEach((direction, index) => {
         direction.key = HexSnakeState.game.keybinds.directions[index];
       });
-      HexSnakeState.game.keyToDir = new Map(directions.map((direction, index) => [direction.key, index]));
+      HexSnakeState.game.keyToDir = new Map(HexSnakeState.config.directions.map((direction, index) => [direction.key, index]));
       keyEls.forEach(el => {
-        const direction = directions[Number(el.dataset.dir)];
+        const direction = HexSnakeState.config.directions[Number(el.dataset.dir)];
         if (direction) el.textContent = keyLabel(direction.key);
       });
       hexDirButtons.forEach(button => {
-        const direction = directions[Number(button.dataset.dir)];
+        const direction = HexSnakeState.config.directions[Number(button.dataset.dir)];
         const label = button.querySelector("span") || button;
         if (direction) label.textContent = keyLabel(direction.key);
       });
       settingsDirButtons.forEach(button => {
-        const direction = directions[Number(button.dataset.dir)];
+        const direction = HexSnakeState.config.directions[Number(button.dataset.dir)];
         const label = button.querySelector("span") || button;
         if (direction) label.textContent = keyLabel(direction.key);
         button.classList.toggle("is-awaiting-key", Number(button.dataset.dir) === HexSnakeState.game.pendingDirectionKeybind);
@@ -373,10 +373,10 @@
     }
 
     function setPendingDirectionKeybind(direction) {
-      HexSnakeState.game.pendingDirectionKeybind = Number.isInteger(direction) && direction >= 0 && direction < directions.length ? direction : null;
+      HexSnakeState.game.pendingDirectionKeybind = Number.isInteger(direction) && direction >= 0 && direction < HexSnakeState.config.directions.length ? direction : null;
       settingsDirHint.textContent = HexSnakeState.game.pendingDirectionKeybind === null
         ? "點一個方向後按鍵盤設定快捷鍵"
-        : `按鍵盤設定 ${directions[HexSnakeState.game.pendingDirectionKeybind].label} 快捷鍵`;
+        : `按鍵盤設定 ${HexSnakeState.config.directions[HexSnakeState.game.pendingDirectionKeybind].label} 快捷鍵`;
       applyKeybinds();
     }
 
@@ -481,43 +481,43 @@
     function clampGridSize(value) {
       const parsed = Number.parseInt(value, 10);
       if (!Number.isFinite(parsed)) return HexSnakeState.game.gridSize;
-      return Math.min(maxGridSize, Math.max(minGridSize, parsed));
+      return Math.min(HexSnakeState.config.maxGridSize, Math.max(HexSnakeState.config.minGridSize, parsed));
     }
 
     function clampFoodCount(value) {
       const parsed = Number.parseInt(value, 10);
       if (!Number.isFinite(parsed)) return HexSnakeState.game.foodCount;
-      return Math.min(maxFoodCount, Math.max(minFoodCount, parsed));
+      return Math.min(HexSnakeState.config.maxFoodCount, Math.max(HexSnakeState.config.minFoodCount, parsed));
     }
 
     function clampInitialSpeed(value) {
       const parsed = Number.parseFloat(value);
       if (!Number.isFinite(parsed)) return HexSnakeState.game.initialSpeed;
-      return Math.min(maxInitialSpeed, Math.max(minInitialSpeed, parsed));
+      return Math.min(HexSnakeState.config.maxInitialSpeed, Math.max(HexSnakeState.config.minInitialSpeed, parsed));
     }
 
     function clampInitialLength(value) {
       const parsed = Number.parseInt(value, 10);
       if (!Number.isFinite(parsed)) return HexSnakeState.game.initialLength;
-      return Math.min(maxInitialLength, Math.max(minInitialLength, parsed));
+      return Math.min(HexSnakeState.config.maxInitialLength, Math.max(HexSnakeState.config.minInitialLength, parsed));
     }
 
     function clampInitialStock(value) {
       const parsed = Number.parseInt(value, 10);
       if (!Number.isFinite(parsed)) return 0;
-      return Math.min(maxFoodStock, Math.max(0, parsed));
+      return Math.min(HexSnakeState.config.maxFoodStock, Math.max(0, parsed));
     }
 
     function clampInitialEnergy(value) {
       const parsed = Number.parseInt(value, 10);
       if (!Number.isFinite(parsed)) return 0;
-      return Math.min(attackNeedTotal, Math.max(0, parsed));
+      return Math.min(HexSnakeState.config.attackNeedTotal, Math.max(0, parsed));
     }
 
     function clampInitialBombs(value) {
       const parsed = Number.parseInt(value, 10);
       if (!Number.isFinite(parsed)) return 0;
-      return Math.min(maxAmmo, Math.max(0, parsed));
+      return Math.min(HexSnakeState.config.maxAmmo, Math.max(0, parsed));
     }
 
     function buildCells() {
@@ -612,15 +612,15 @@
           updateGmPresetHighlight();
           return;
         }
-        setGridSize(saved.gridSize ?? defaultSettings.gridSize);
-        setFoodCount(saved.foodCount ?? defaultSettings.foodCount);
-        setComputerDifficulty(saved.computerDifficulty ?? defaultSettings.computerDifficulty);
-        setInitialSpeed(saved.initialSpeed ?? defaultSettings.initialSpeed);
-        setGmMode(saved.gmMode ?? defaultSettings.gmMode);
-        setInitialLength(saved.initialLength ?? defaultSettings.initialLength);
-        setInitialEnergy(saved.initialEnergy ?? defaultSettings.initialEnergy);
-        setInitialBombs(saved.initialBombs ?? defaultSettings.initialBombs);
-        foodTypes.forEach(type => setInitialStock(type.id, saved.initialStock?.[type.id] ?? defaultSettings.initialStock[type.id]));
+        setGridSize(saved.gridSize ?? HexSnakeState.config.defaultSettings.gridSize);
+        setFoodCount(saved.foodCount ?? HexSnakeState.config.defaultSettings.foodCount);
+        setComputerDifficulty(saved.computerDifficulty ?? HexSnakeState.config.defaultSettings.computerDifficulty);
+        setInitialSpeed(saved.initialSpeed ?? HexSnakeState.config.defaultSettings.initialSpeed);
+        setGmMode(saved.gmMode ?? HexSnakeState.config.defaultSettings.gmMode);
+        setInitialLength(saved.initialLength ?? HexSnakeState.config.defaultSettings.initialLength);
+        setInitialEnergy(saved.initialEnergy ?? HexSnakeState.config.defaultSettings.initialEnergy);
+        setInitialBombs(saved.initialBombs ?? HexSnakeState.config.defaultSettings.initialBombs);
+        HexSnakeState.config.foodTypes.forEach(type => setInitialStock(type.id, saved.initialStock?.[type.id] ?? HexSnakeState.config.defaultSettings.initialStock[type.id]));
         HexSnakeState.game.gmPresetMode = Object.prototype.hasOwnProperty.call(gmPresetButtons, saved.gmPresetMode) ? saved.gmPresetMode : null;
         updateGmPresetHighlight();
       } catch {
@@ -647,13 +647,13 @@
     }
 
     function resetGmParameters() {
-      setGridSize(defaultSettings.gridSize);
-      setFoodCount(defaultSettings.foodCount);
-      setInitialSpeed(defaultSettings.initialSpeed);
-      setInitialLength(defaultSettings.initialLength);
-      setInitialEnergy(defaultSettings.initialEnergy);
-      setInitialBombs(defaultSettings.initialBombs);
-      foodTypes.forEach(type => setInitialStock(type.id, defaultSettings.initialStock[type.id]));
+      setGridSize(HexSnakeState.config.defaultSettings.gridSize);
+      setFoodCount(HexSnakeState.config.defaultSettings.foodCount);
+      setInitialSpeed(HexSnakeState.config.defaultSettings.initialSpeed);
+      setInitialLength(HexSnakeState.config.defaultSettings.initialLength);
+      setInitialEnergy(HexSnakeState.config.defaultSettings.initialEnergy);
+      setInitialBombs(HexSnakeState.config.defaultSettings.initialBombs);
+      HexSnakeState.config.foodTypes.forEach(type => setInitialStock(type.id, HexSnakeState.config.defaultSettings.initialStock[type.id]));
     }
 
     function refreshGmPreview() {
@@ -667,28 +667,28 @@
     function applyUltimateModePreset() {
       setGmMode(true);
       const presetStock = 4;
-      setInitialBombs(maxAmmo);
-      setInitialEnergy(attackNeedTotal);
+      setInitialBombs(HexSnakeState.config.maxAmmo);
+      setInitialEnergy(HexSnakeState.config.attackNeedTotal);
       setInitialLength(presetStock);
-      foodTypes.forEach(type => setInitialStock(type.id, presetStock));
+      HexSnakeState.config.foodTypes.forEach(type => setInitialStock(type.id, presetStock));
     }
 
     function applyMidGameModePreset() {
       setGmMode(true);
-      const presetStock = Math.floor(maxFoodStock / 2);
-      setInitialBombs(maxAmmo);
-      setInitialEnergy(attackNeedTotal);
+      const presetStock = Math.floor(HexSnakeState.config.maxFoodStock / 2);
+      setInitialBombs(HexSnakeState.config.maxAmmo);
+      setInitialEnergy(HexSnakeState.config.attackNeedTotal);
       setInitialLength(presetStock);
-      foodTypes.forEach(type => setInitialStock(type.id, presetStock));
+      HexSnakeState.config.foodTypes.forEach(type => setInitialStock(type.id, presetStock));
     }
 
     function applyLateGameModePreset() {
       setGmMode(true);
-      const presetStock = maxFoodStock;
-      setInitialBombs(maxAmmo);
-      setInitialEnergy(attackNeedTotal);
+      const presetStock = HexSnakeState.config.maxFoodStock;
+      setInitialBombs(HexSnakeState.config.maxAmmo);
+      setInitialEnergy(HexSnakeState.config.attackNeedTotal);
       setInitialLength(presetStock);
-      foodTypes.forEach(type => setInitialStock(type.id, presetStock));
+      HexSnakeState.config.foodTypes.forEach(type => setInitialStock(type.id, presetStock));
     }
 
     function setGmSettingsLocked(locked) {
@@ -859,19 +859,19 @@
       HexSnakeState.game.dir = 0;
       HexSnakeState.game.nextDir = 0;
       HexSnakeState.game.computerDir = 3;
-      const startLength = HexSnakeState.game.gmMode ? HexSnakeState.game.initialLength : defaultSettings.initialLength;
+      const startLength = HexSnakeState.game.gmMode ? HexSnakeState.game.initialLength : HexSnakeState.config.defaultSettings.initialLength;
       HexSnakeState.game.snake = createStartingSnake({ q: -offset, r: offset }, HexSnakeState.game.dir, startLength);
       HexSnakeState.game.computerSnake = createStartingSnake({ q: offset, r: -offset }, HexSnakeState.game.computerDir, startLength);
       HexSnakeState.game.score = 0;
       HexSnakeState.game.computerScore = 0;
-      HexSnakeState.game.playerHp = maxHpForSnake(HexSnakeState.game.snake);
-      HexSnakeState.game.computerHp = maxHpForSnake(HexSnakeState.game.computerSnake);
-      HexSnakeState.game.playerStock = startingStock();
-      HexSnakeState.game.computerStock = startingStock();
-      HexSnakeState.game.playerAmmo = startingBombs();
-      HexSnakeState.game.computerAmmo = startingBombs();
-      HexSnakeState.game.playerAmmoCharge = startingEnergy();
-      HexSnakeState.game.computerAmmoCharge = startingEnergy();
+      HexSnakeState.game.playerHp = HexSnakeUI.maxHpForSnake(HexSnakeState.game.snake);
+      HexSnakeState.game.computerHp = HexSnakeUI.maxHpForSnake(HexSnakeState.game.computerSnake);
+      HexSnakeState.game.playerStock = HexSnakeUI.startingStock();
+      HexSnakeState.game.computerStock = HexSnakeUI.startingStock();
+      HexSnakeState.game.playerAmmo = HexSnakeUI.startingBombs();
+      HexSnakeState.game.computerAmmo = HexSnakeUI.startingBombs();
+      HexSnakeState.game.playerAmmoCharge = HexSnakeUI.startingEnergy();
+      HexSnakeState.game.computerAmmoCharge = HexSnakeUI.startingEnergy();
       HexSnakeState.game.playerEnergyFlashUntil = 0;
       HexSnakeState.game.computerEnergyFlashUntil = 0;
       HexSnakeState.game.playerBombFlashUntil = 0;
@@ -927,8 +927,8 @@
       HexSnakeState.game.computerFoodTargetAt = 0;
       HexSnakeState.game.lastPlayerFoodAt = 0;
       HexSnakeState.game.lastComputerFoodAt = 0;
-      HexSnakeState.game.lastPlayerAttackMs = resetAttackCooldownTracker();
-      HexSnakeState.game.lastComputerAttackMs = resetAttackCooldownTracker();
+      HexSnakeState.game.lastPlayerAttackMs = HexSnakeUI.resetAttackCooldownTracker();
+      HexSnakeState.game.lastComputerAttackMs = HexSnakeUI.resetAttackCooldownTracker();
       HexSnakeReplay.resetSurrendered();
       HexSnakeState.game.gameOver = false;
       HexSnakeUI.setLastResultShareData(null);
@@ -966,7 +966,7 @@
         plainResultText,
         scoreText,
         `角色：P1 ${playerCharacter?.name || "隨機選擇"} vs P2 ${computerCharacter?.name || "隨機選擇"}`,
-        `時間：${formatTime(HexSnakeState.game.totalElapsedMs)}`,
+        `時間：${HexSnakeUI.formatTime(HexSnakeState.game.totalElapsedMs)}`,
         `模式：${currentModeLabel(endedInAutoMode)}`,
         `難度：${currentDifficultyLabel()}`,
         resultReason,
@@ -1115,34 +1115,34 @@
 
     function randomFoodType(preferredFoodId = null) {
       if (!preferredFoodId || preferredFoodId === "balanced") {
-        return foodTypes[Math.floor(Math.random() * foodTypes.length)];
+        return HexSnakeState.config.foodTypes[Math.floor(Math.random() * HexSnakeState.config.foodTypes.length)];
       }
       let roll = Math.random();
-      for (const type of foodTypes) {
-        const weight = type.id === preferredFoodId ? preferredFoodWeight : otherFoodWeight;
+      for (const type of HexSnakeState.config.foodTypes) {
+        const weight = type.id === preferredFoodId ? HexSnakeState.config.preferredFoodWeight : HexSnakeState.config.otherFoodWeight;
         if (roll < weight) return type;
         roll -= weight;
       }
-      return foodTypes[foodTypes.length - 1];
+      return HexSnakeState.config.foodTypes[HexSnakeState.config.foodTypes.length - 1];
     }
 
     function randomFoodTypeIds(preferredFoodId = null, dualColor = false) {
       const firstType = randomFoodType(preferredFoodId);
       if (!dualColor) return [firstType.id];
-      const secondOptions = foodTypes.filter(type => type.id !== firstType.id);
+      const secondOptions = HexSnakeState.config.foodTypes.filter(type => type.id !== firstType.id);
       const secondType = secondOptions[Math.floor(Math.random() * secondOptions.length)];
       return [firstType.id, secondType.id];
     }
 
     function randomFoodTypeIdsForCharacter(character) {
-      if (character?.specialFood === "black" && Math.random() < blackSpecialChance) {
+      if (character?.specialFood === "black" && Math.random() < HexSnakeState.config.blackSpecialChance) {
         return ["black"];
       }
       if (character?.specialFood === "black") {
         return randomFoodTypeIds(null, false);
       }
       const preferredFoodId = character ? character.food : null;
-      const dualColor = character?.food === "balanced" && Math.random() < balancedDualChance;
+      const dualColor = character?.food === "balanced" && Math.random() < HexSnakeState.config.balancedDualChance;
       return randomFoodTypeIds(preferredFoodId, dualColor);
     }
 
@@ -1166,65 +1166,65 @@
     }
 
     function updateStockHud(owner, stock, ammo, ammoCharge) {
-      const totalEl = resourceEls.get(owner);
+      const totalEl = HexSnakeState.game.resourceEls.get(owner);
       if (totalEl) {
         const now = performance.now();
         const energyFlashing = now < (owner === "player" ? HexSnakeState.game.playerEnergyFlashUntil : HexSnakeState.game.computerEnergyFlashUntil);
         const bombFlashing = now < (owner === "player" ? HexSnakeState.game.playerBombFlashUntil : HexSnakeState.game.computerBombFlashUntil);
-        const energyRatio = Math.max(0, Math.min(1, ammoCharge / Math.max(1, attackNeedTotal)));
-        const bombRatio = Math.max(0, Math.min(1, ammo / Math.max(1, maxAmmo)));
+        const energyRatio = Math.max(0, Math.min(1, ammoCharge / Math.max(1, HexSnakeState.config.attackNeedTotal)));
+        const bombRatio = Math.max(0, Math.min(1, ammo / Math.max(1, HexSnakeState.config.maxAmmo)));
         totalEl.innerHTML = `
           <span class="resource-chip${energyFlashing ? " is-flashing" : ""}" title="能量">
             <span class="resource-icon energy-icon" aria-hidden="true"></span>
-            <span class="resource-chip-track" role="meter" aria-label="能量" aria-valuemin="0" aria-valuenow="${ammoCharge}" aria-valuemax="${attackNeedTotal}" aria-valuetext="${ammoCharge}/${attackNeedTotal}">
+            <span class="resource-chip-track" role="meter" aria-label="能量" aria-valuemin="0" aria-valuenow="${ammoCharge}" aria-valuemax="${HexSnakeState.config.attackNeedTotal}" aria-valuetext="${ammoCharge}/${HexSnakeState.config.attackNeedTotal}">
               <span class="resource-chip-fill" style="--resource-ratio: ${energyRatio.toFixed(4)}"></span>
             </span>
-            <span class="resource-chip-value">${ammoCharge}/${attackNeedTotal}</span>
+            <span class="resource-chip-value">${ammoCharge}/${HexSnakeState.config.attackNeedTotal}</span>
           </span>
           <span class="resource-chip${bombFlashing ? " is-flashing" : ""}" title="炸彈">
             <span class="resource-icon missile-icon" aria-hidden="true"></span>
-            <span class="resource-chip-track" role="meter" aria-label="炸彈" aria-valuemin="0" aria-valuenow="${ammo}" aria-valuemax="${maxAmmo}" aria-valuetext="${ammo}/${maxAmmo}">
+            <span class="resource-chip-track" role="meter" aria-label="炸彈" aria-valuemin="0" aria-valuenow="${ammo}" aria-valuemax="${HexSnakeState.config.maxAmmo}" aria-valuetext="${ammo}/${HexSnakeState.config.maxAmmo}">
               <span class="resource-chip-fill" style="--resource-ratio: ${bombRatio.toFixed(4)}"></span>
             </span>
-            <span class="resource-chip-value">${ammo}/${maxAmmo}</span>
+            <span class="resource-chip-value">${ammo}/${HexSnakeState.config.maxAmmo}</span>
           </span>
         `;
       }
       const now = performance.now();
       const energyFlashing = now < (owner === "player" ? HexSnakeState.game.playerEnergyFlashUntil : HexSnakeState.game.computerEnergyFlashUntil);
       const bombFlashing = now < (owner === "player" ? HexSnakeState.game.playerBombFlashUntil : HexSnakeState.game.computerBombFlashUntil);
-      const energyRatio = Math.max(0, Math.min(1, ammoCharge / Math.max(1, attackNeedTotal)));
-      const bombRatio = Math.max(0, Math.min(1, ammo / Math.max(1, maxAmmo)));
-      const energyChip = resourceEls.get(`${owner}-energyChip`);
-      const energyTrack = resourceEls.get(`${owner}-energyTrack`);
-      const energyFill = resourceEls.get(`${owner}-energyFill`);
-      const energyValue = resourceEls.get(`${owner}-energyValue`);
-      const bombChip = resourceEls.get(`${owner}-bombChip`);
-      const bombTrack = resourceEls.get(`${owner}-bombTrack`);
-      const bombFill = resourceEls.get(`${owner}-bombFill`);
-      const bombValue = resourceEls.get(`${owner}-bombValue`);
+      const energyRatio = Math.max(0, Math.min(1, ammoCharge / Math.max(1, HexSnakeState.config.attackNeedTotal)));
+      const bombRatio = Math.max(0, Math.min(1, ammo / Math.max(1, HexSnakeState.config.maxAmmo)));
+      const energyChip = HexSnakeState.game.resourceEls.get(`${owner}-energyChip`);
+      const energyTrack = HexSnakeState.game.resourceEls.get(`${owner}-energyTrack`);
+      const energyFill = HexSnakeState.game.resourceEls.get(`${owner}-energyFill`);
+      const energyValue = HexSnakeState.game.resourceEls.get(`${owner}-energyValue`);
+      const bombChip = HexSnakeState.game.resourceEls.get(`${owner}-bombChip`);
+      const bombTrack = HexSnakeState.game.resourceEls.get(`${owner}-bombTrack`);
+      const bombFill = HexSnakeState.game.resourceEls.get(`${owner}-bombFill`);
+      const bombValue = HexSnakeState.game.resourceEls.get(`${owner}-bombValue`);
       energyChip?.classList.toggle("is-flashing", energyFlashing);
       bombChip?.classList.toggle("is-flashing", bombFlashing);
       if (energyTrack) {
         energyTrack.setAttribute("aria-valuenow", String(ammoCharge));
-        energyTrack.setAttribute("aria-valuemax", String(attackNeedTotal));
-        energyTrack.setAttribute("aria-valuetext", `${ammoCharge}/${attackNeedTotal}`);
+        energyTrack.setAttribute("aria-valuemax", String(HexSnakeState.config.attackNeedTotal));
+        energyTrack.setAttribute("aria-valuetext", `${ammoCharge}/${HexSnakeState.config.attackNeedTotal}`);
       }
       if (bombTrack) {
         bombTrack.setAttribute("aria-valuenow", String(ammo));
-        bombTrack.setAttribute("aria-valuemax", String(maxAmmo));
-        bombTrack.setAttribute("aria-valuetext", `${ammo}/${maxAmmo}`);
+        bombTrack.setAttribute("aria-valuemax", String(HexSnakeState.config.maxAmmo));
+        bombTrack.setAttribute("aria-valuetext", `${ammo}/${HexSnakeState.config.maxAmmo}`);
       }
       if (energyFill) energyFill.style.setProperty("--resource-ratio", energyRatio.toFixed(4));
       if (bombFill) bombFill.style.setProperty("--resource-ratio", bombRatio.toFixed(4));
-      if (energyValue) energyValue.textContent = `${ammoCharge}/${attackNeedTotal}`;
-      if (bombValue) bombValue.textContent = `${ammo}/${maxAmmo}`;
-      foodTypes.forEach(type => {
-        const count = Math.max(0, Math.min(maxFoodStock, Math.round(stock[type.id] || 0)));
-        const countEl = resourceEls.get(`${owner}-${type.id}-count`);
-        const fill = resourceEls.get(`${owner}-${type.id}-fill`);
+      if (energyValue) energyValue.textContent = `${ammoCharge}/${HexSnakeState.config.attackNeedTotal}`;
+      if (bombValue) bombValue.textContent = `${ammo}/${HexSnakeState.config.maxAmmo}`;
+      HexSnakeState.config.foodTypes.forEach(type => {
+        const count = Math.max(0, Math.min(HexSnakeState.config.maxFoodStock, Math.round(stock[type.id] || 0)));
+        const countEl = HexSnakeState.game.resourceEls.get(`${owner}-${type.id}-count`);
+        const fill = HexSnakeState.game.resourceEls.get(`${owner}-${type.id}-fill`);
         if (countEl) countEl.textContent = count;
-        if (fill) fill.style.width = `${Math.min(100, count / maxFoodStock * 100)}%`;
+        if (fill) fill.style.width = `${Math.min(100, count / HexSnakeState.config.maxFoodStock * 100)}%`;
       });
     }
 
@@ -1249,9 +1249,9 @@
 
     function updateCooldownIndicator(profile = "small", indicator = null, valueEl = null, now = performance.now()) {
       if (!indicator || !valueEl) return;
-      const remainingMs = attackCooldownRemainingMs("player", profile, now);
+      const remainingMs = HexSnakeUI.attackCooldownRemainingMs("player", profile, now);
       const cooling = remainingMs > 0;
-      const available = canAttack("player", profile);
+      const available = HexSnakeUI.canAttack("player", profile);
       const label = profile === "big" ? "大招" : "小招";
       const text = cooldownTimerText(remainingMs);
       valueEl.textContent = text;
@@ -1288,19 +1288,19 @@
     function updateHud() {
       HexSnakeState.game.lastHudFrameAt = performance.now();
       updateSkillPrepVisibility();
-      const playerMaxHp = maxHpForSnake(HexSnakeState.game.snake);
-      const computerMaxHp = maxHpForSnake(HexSnakeState.game.computerSnake);
+      const playerMaxHp = HexSnakeUI.maxHpForSnake(HexSnakeState.game.snake);
+      const computerMaxHp = HexSnakeUI.maxHpForSnake(HexSnakeState.game.computerSnake);
       scoreEl.textContent = `HP ${Math.max(0, Math.ceil(HexSnakeState.game.playerHp))}/${playerMaxHp}`;
       computerScoreEl.textContent = `HP ${Math.max(0, Math.ceil(HexSnakeState.game.computerHp))}/${computerMaxHp}`;
       updateHealthBar("player", HexSnakeState.game.playerHp, playerMaxHp);
       updateHealthBar("computer", HexSnakeState.game.computerHp, computerMaxHp);
       bestEl.textContent = HexSnakeState.game.best;
-      totalTimeEl.textContent = formatTime(HexSnakeState.game.totalElapsedMs);
-      lastFeedTimeEl.textContent = formatTime(HexSnakeState.game.lastFeedElapsedMs);
-      bestTimeEl.textContent = formatTime(HexSnakeState.game.bestTotalMs);
+      totalTimeEl.textContent = HexSnakeUI.formatTime(HexSnakeState.game.totalElapsedMs);
+      lastFeedTimeEl.textContent = HexSnakeUI.formatTime(HexSnakeState.game.lastFeedElapsedMs);
+      bestTimeEl.textContent = HexSnakeUI.formatTime(HexSnakeState.game.bestTotalMs);
       const now = performance.now();
-      const playerSpeedValue = isMovementStunned("player", now) ? 0 : movementSpeed(HexSnakeState.game.playerStock) / (now < HexSnakeState.game.playerSlowUntil ? 2 : 1);
-      const computerSpeedValue = isMovementStunned("computer", now) ? 0 : movementSpeed(HexSnakeState.game.computerStock) / (now < HexSnakeState.game.computerSlowUntil ? 2 : 1);
+      const playerSpeedValue = HexSnakeUI.isMovementStunned("player", now) ? 0 : HexSnakeUI.movementSpeed(HexSnakeState.game.playerStock) / (now < HexSnakeState.game.playerSlowUntil ? 2 : 1);
+      const computerSpeedValue = HexSnakeUI.isMovementStunned("computer", now) ? 0 : HexSnakeUI.movementSpeed(HexSnakeState.game.computerStock) / (now < HexSnakeState.game.computerSlowUntil ? 2 : 1);
       const playerSpeed = Math.round(playerSpeedValue * 10) / 10;
       const computerSpeed = Math.round(computerSpeedValue * 10) / 10;
       playerSpeedEl.textContent = `${playerSpeed}x`;
@@ -1312,7 +1312,7 @@
     }
 
     function updateHudThrottled(now = performance.now()) {
-      if (now - HexSnakeState.game.lastHudFrameAt < hudFrameIntervalMs) return;
+      if (now - HexSnakeState.game.lastHudFrameAt < HexSnakeState.config.hudFrameIntervalMs) return;
       updateHud();
     }
 
@@ -1328,7 +1328,7 @@
 
     function normalizeAutoBattleSpeed(value) {
       const parsed = Number(value);
-      return autoBattleSpeeds.includes(parsed) ? parsed : 1;
+      return HexSnakeState.config.autoBattleSpeeds.includes(parsed) ? parsed : 1;
     }
 
     function autoBattleSpeedLabel(value) {
@@ -1336,7 +1336,7 @@
     }
 
     function renderAutoSpeedMenu() {
-      autoSpeedMenu.innerHTML = autoBattleSpeeds.map(speed => `
+      autoSpeedMenu.innerHTML = HexSnakeState.config.autoBattleSpeeds.map(speed => `
         <button class="${speed === HexSnakeState.game.computerBattleSpeed ? "is-selected" : ""}" type="button" data-auto-speed="${speed}">${autoBattleSpeedLabel(speed)}</button>
       `).join("");
     }
@@ -1512,7 +1512,7 @@
 
     function safeNetworkDirection(value) {
       const direction = Number(value);
-      return Number.isInteger(direction) && direction >= 0 && direction < directions.length ? direction : null;
+      return Number.isInteger(direction) && direction >= 0 && direction < HexSnakeState.config.directions.length ? direction : null;
     }
 
     function safeNetworkAttackOptions(options = {}) {
@@ -1710,7 +1710,7 @@
     }
 
     function nextCell(head, direction) {
-      const delta = directions[direction];
+      const delta = HexSnakeState.config.directions[direction];
       return { q: head.q + delta.q, r: head.r + delta.r };
     }
 
@@ -1760,9 +1760,9 @@
     function attackStats(stock, profile = "big") {
       const isSmall = profile === "small";
       return {
-        delay: attackDelay(stock) * (isSmall ? smallAttackDelayScale : 1),
-        radius: Math.max(1, blastRadius(stock) + (isSmall ? -1 : 0)),
-        damage: attackDamage(stock, profile)
+        delay: HexSnakeUI.attackDelay(stock) * (isSmall ? HexSnakeState.config.smallAttackDelayScale : 1),
+        radius: Math.max(1, HexSnakeUI.blastRadius(stock) + (isSmall ? -1 : 0)),
+        damage: HexSnakeUI.attackDamage(stock, profile)
       };
     }
 
@@ -1792,7 +1792,7 @@
     }
 
     function directionVector(direction) {
-      const delta = directions[direction];
+      const delta = HexSnakeState.config.directions[direction];
       if (!delta) return { x: 1, y: 0 };
       return {
         x: Math.sqrt(3) * (delta.q + delta.r / 2),
@@ -1814,7 +1814,7 @@
       if (!vx && !vy) return fallbackDirection;
       let bestDirection = fallbackDirection;
       let bestDot = -Infinity;
-      directions.forEach((direction, index) => {
+      HexSnakeState.config.directions.forEach((direction, index) => {
         const vector = directionVector(index);
         const dot = vx * vector.x + vy * vector.y;
         if (dot > bestDot) {
@@ -1826,8 +1826,8 @@
     }
 
     function turnDistance(left, right) {
-      const clockwise = (right - left + directions.length) % directions.length;
-      return Math.min(clockwise, directions.length - clockwise);
+      const clockwise = (right - left + HexSnakeState.config.directions.length) % HexSnakeState.config.directions.length;
+      return Math.min(clockwise, HexSnakeState.config.directions.length - clockwise);
     }
 
     function cellsForwardFrom(source, direction, includeSource = true) {
@@ -1856,7 +1856,7 @@
       const bodyTarget = targetSnake.slice(1).sort((a, b) => hexDistance(cursor, a) - hexDistance(cursor, b))[0];
       const target = head && hexDistance(cursor, head) <= remainingSteps ? head : (bodyTarget || head);
       if (!target) return direction;
-      const candidates = [direction, (direction + 1) % directions.length, (direction + 5) % directions.length];
+      const candidates = [direction, (direction + 1) % HexSnakeState.config.directions.length, (direction + 5) % HexSnakeState.config.directions.length];
       candidates.sort((a, b) => {
         const nextA = nextWrappedCell(cursor, a);
         const nextB = nextWrappedCell(cursor, b);
@@ -1967,7 +1967,7 @@
         damage: damageSnake(targetSnake, currentTarget, radius, damage),
         headDistance: head ? hexDistance(currentTarget, head) : 0
       };
-      return directions
+      return HexSnakeState.config.directions
         .map((_, direction) => nextWrappedCell(currentTarget, direction))
         .reduce((bestCandidate, candidate) => {
           const next = {
@@ -2052,19 +2052,19 @@
     }
 
     function lobsterPalmVulnerabilityChance(stock) {
-      return attackStunChance(stock, ultimateSetting("lobster", "vulnerabilityChance", 0.3));
+      return HexSnakeUI.attackStunChance(stock, ultimateSetting("lobster", "vulnerabilityChance", 0.3));
     }
 
     function attackHitStunChances(stock) {
       return {
-        body: Math.min(1, bodyHitStunChance + foodBonus(stock, "carb", bodyHitStunChanceBonusPerPoint, bodyHitMaxStunChanceBonus)),
-        head: Math.min(1, headHitStunChance + foodBonus(stock, "carb", headHitStunChanceBonusPerPoint, headHitMaxStunChanceBonus))
+        body: Math.min(1, HexSnakeState.config.bodyHitStunChance + HexSnakeUI.foodBonus(stock, "carb", HexSnakeState.config.bodyHitStunChanceBonusPerPoint, HexSnakeState.config.bodyHitMaxStunChanceBonus)),
+        head: Math.min(1, HexSnakeState.config.headHitStunChance + HexSnakeUI.foodBonus(stock, "carb", HexSnakeState.config.headHitStunChanceBonusPerPoint, HexSnakeState.config.headHitMaxStunChanceBonus))
       };
     }
 
     function scheduleCharacterBigAttack(owner, character, source, target, now, stock, stunChance, options = {}) {
       const small = attackStats(stock, "small");
-      const bigDamage = attackDamage(stock, "big");
+      const bigDamage = HexSnakeUI.attackDamage(stock, "big");
       const direction = Number.isInteger(options.aimDirection)
         ? options.aimDirection
         : directionFromSourceToTarget(source, target, ownerDirection(owner));
@@ -2080,7 +2080,7 @@
           ? options.vulnerabilityChance
           : lobsterPalmVulnerabilityChance(stock);
         const visualType = "lobster-palm-big";
-        const volleyIntervalMs = attackDelay(stock);
+        const volleyIntervalMs = HexSnakeUI.attackDelay(stock);
         let maxTravelDelay = 0;
         for (let volley = 0; volley < volleys; volley += 1) {
           const volleyDelay = volley * volleyIntervalMs;
@@ -2139,7 +2139,7 @@
         const lineCells = boardLineThrough(lineOrigin, direction);
         const lineShape = bandShapeFromTotalWidth(small.radius);
         const excludedCells = (owner === "player" ? HexSnakeState.game.snake : HexSnakeState.game.computerSnake).map(segment => ({ q: segment.q, r: segment.r }));
-        const durationMs = baseAttackDelayMs * smallAttackDelayScale * Math.max(1, ultimateSetting(character.id, "durationBaseTicks", 4));
+        const durationMs = HexSnakeState.config.baseAttackDelayMs * HexSnakeState.config.smallAttackDelayScale * Math.max(1, ultimateSetting(character.id, "durationBaseTicks", 4));
         const tickMs = Math.max(1, small.delay);
         const damage = bigDamage * ultimateSetting(character.id, "damageMultiplier", 0.24);
         HexSnakeState.game.projectiles.push({
@@ -2171,9 +2171,9 @@
       if (character.id === "quetzal") {
         const trail = (owner === "player" ? HexSnakeState.game.snake : HexSnakeState.game.computerSnake).map(segment => ({ q: segment.q, r: segment.r }));
         const duration = 3000;
-        const extensionDamageMultiplier = Math.max(0, Math.min(1, (stock.protein || 0) / maxFoodStock));
+        const extensionDamageMultiplier = Math.max(0, Math.min(1, (stock.protein || 0) / HexSnakeState.config.maxFoodStock));
         const outwardWidth = extensionDamageMultiplier > 0 ? 1 : 0;
-        const tickMs = ultimateSetting(character.id, "tickMs", baseStepMs);
+        const tickMs = ultimateSetting(character.id, "tickMs", HexSnakeState.config.baseStepMs);
         const slowDurationMs = ultimateSetting(character.id, "slowDurationMs", 2000);
         HexSnakeState.game.hazards.push({
           kind: "swamp",
@@ -2304,24 +2304,24 @@
 
     function launchAttack(owner, target, now, profile = "big", options = {}) {
       const stock = owner === "player" ? HexSnakeState.game.playerStock : HexSnakeState.game.computerStock;
-      const lastAttack = lastAttackMsFor(owner, profile);
+      const lastAttack = HexSnakeUI.lastAttackMsFor(owner, profile);
       const source = owner === "player" ? HexSnakeState.game.snake[0] : HexSnakeState.game.computerSnake[0];
       const character = characterFor(owner);
       const isSmall = profile === "small";
-      if (!canAttack(owner, profile)) return false;
-      if (now - lastAttack < attackProfileCooldown(stock, profile, character.id)) return false;
+      if (!HexSnakeUI.canAttack(owner, profile)) return false;
+      if (now - lastAttack < HexSnakeUI.attackProfileCooldown(stock, profile, character.id)) return false;
       const stats = attackStats(stock, profile);
       const hitStunChances = attackHitStunChances(stock);
       const stunChance = hitStunChances.body;
       const vulnerabilityChance = !isSmall && character.id === "lobster"
         ? lobsterPalmVulnerabilityChance(stock)
         : 0;
-      consumeAttackCost(owner, stock, profile);
+      HexSnakeUI.consumeAttackCost(owner, stock, profile);
       if (owner === "player") {
-        setLastAttackMsFor(owner, profile, now);
+        HexSnakeUI.setLastAttackMsFor(owner, profile, now);
         HexSnakeState.game.playerBombFlashUntil = now + 1200;
       } else {
-        setLastAttackMsFor(owner, profile, now);
+        HexSnakeUI.setLastAttackMsFor(owner, profile, now);
         HexSnakeState.game.computerBombFlashUntil = now + 1200;
       }
       HexSnakeAudio.playCharacter(owner, isSmall ? "small" : "big");
@@ -2463,7 +2463,7 @@
       return HexSnakeState.game.projectiles.length !== beforeCount;
     }
 
-    function applyAttackStun(owner, chance = baseAttackStunChance, now = performance.now(), options = {}) {
+    function applyAttackStun(owner, chance = HexSnakeState.config.baseAttackStunChance, now = performance.now(), options = {}) {
       if (Math.random() >= chance) return false;
       if (isOwnerSandwormArmored(owner, now)) {
         clearOwnerAbnormalStatus(owner, now);
@@ -2472,8 +2472,8 @@
       const interrupted = options.interrupt !== false && interruptCasting(owner);
       const currentStunUntil = owner === "player" ? HexSnakeState.game.playerStunUntil : HexSnakeState.game.computerStunUntil;
       const stunBase = options.stack ? Math.max(now, currentStunUntil) : now;
-      const stunUntil = stunBase + attackStunMs;
-      const slowUntil = stunUntil + attackSlowMs;
+      const stunUntil = stunBase + HexSnakeState.config.attackStunMs;
+      const slowUntil = stunUntil + HexSnakeState.config.attackSlowMs;
       if (owner === "player") {
         HexSnakeState.game.playerStunUntil = Math.max(HexSnakeState.game.playerStunUntil, stunUntil);
         HexSnakeState.game.playerSlowUntil = Math.max(HexSnakeState.game.playerSlowUntil, slowUntil);
@@ -2503,7 +2503,7 @@
       return true;
     }
 
-    function applyVulnerability(owner, chance = baseAttackStunChance, now = performance.now()) {
+    function applyVulnerability(owner, chance = HexSnakeState.config.baseAttackStunChance, now = performance.now()) {
       if (Math.random() >= chance) return false;
       if (isOwnerSandwormArmored(owner, now)) {
         clearOwnerAbnormalStatus(owner, now);
@@ -2520,20 +2520,20 @@
         return false;
       }
       const interrupted = interruptCasting(owner);
-      const stunUntil = now + collisionStunMs * severity;
-      const slowUntil = stunUntil + collisionSlowMs * severity;
+      const stunUntil = now + HexSnakeState.config.collisionStunMs * severity;
+      const slowUntil = stunUntil + HexSnakeState.config.collisionSlowMs * severity;
       if (owner === "player") {
         HexSnakeState.game.playerStunUntil = Math.max(HexSnakeState.game.playerStunUntil, stunUntil);
         HexSnakeState.game.playerSlowUntil = Math.max(HexSnakeState.game.playerSlowUntil, slowUntil);
-        HexSnakeState.game.playerCollisionParalysisMs += collisionStunMs * severity;
+        HexSnakeState.game.playerCollisionParalysisMs += HexSnakeState.config.collisionStunMs * severity;
         if (interrupted) HexSnakeUI.showStatusCallout(owner, severity > 1 ? "重度麻痺！招式中斷" : "麻痺！招式中斷", { interrupted });
-        return HexSnakeState.game.playerCollisionParalysisMs > maxCollisionParalysisMs;
+        return HexSnakeState.game.playerCollisionParalysisMs > HexSnakeState.config.maxCollisionParalysisMs;
       } else {
         HexSnakeState.game.computerStunUntil = Math.max(HexSnakeState.game.computerStunUntil, stunUntil);
         HexSnakeState.game.computerSlowUntil = Math.max(HexSnakeState.game.computerSlowUntil, slowUntil);
-        HexSnakeState.game.computerCollisionParalysisMs += collisionStunMs * severity;
+        HexSnakeState.game.computerCollisionParalysisMs += HexSnakeState.config.collisionStunMs * severity;
         if (interrupted) HexSnakeUI.showStatusCallout(owner, severity > 1 ? "重度麻痺！招式中斷" : "麻痺！招式中斷", { interrupted });
-        return HexSnakeState.game.computerCollisionParalysisMs > maxCollisionParalysisMs;
+        return HexSnakeState.game.computerCollisionParalysisMs > HexSnakeState.config.maxCollisionParalysisMs;
       }
     }
 
@@ -2543,8 +2543,8 @@
         return false;
       }
       const interrupted = interruptCasting(owner);
-      const stunUntil = now + collisionStunMs;
-      const slowUntil = stunUntil + collisionSlowMs;
+      const stunUntil = now + HexSnakeState.config.collisionStunMs;
+      const slowUntil = stunUntil + HexSnakeState.config.collisionSlowMs;
       if (owner === "player") {
         HexSnakeState.game.playerStunUntil = Math.max(HexSnakeState.game.playerStunUntil, stunUntil);
         HexSnakeState.game.playerSlowUntil = Math.max(HexSnakeState.game.playerSlowUntil, slowUntil);
@@ -2691,7 +2691,7 @@
           visualType,
           hand: projectile.hand,
           startedAt: now,
-          endAt: now + blastDurationMs * 1.25
+          endAt: now + HexSnakeState.config.blastDurationMs * 1.25
         });
         triggerBoardShake(visualType, now);
         return { visualType };
@@ -2709,7 +2709,7 @@
           owner: projectile.owner,
           visualType,
           startedAt: now,
-          endAt: now + blastDurationMs
+          endAt: now + HexSnakeState.config.blastDurationMs
         });
         triggerBoardShake(visualType, now);
         return { visualType };
@@ -2727,7 +2727,7 @@
           owner: projectile.owner,
           visualType,
           startedAt: now,
-          endAt: now + blastDurationMs
+          endAt: now + HexSnakeState.config.blastDurationMs
         });
         triggerBoardShake(visualType, now);
         return { visualType };
@@ -2738,7 +2738,7 @@
         projectile.target = { q: projectile.explosionTarget.q, r: projectile.explosionTarget.r };
       }
       const explosionTarget = projectile.explosionTarget || projectile.target;
-      const explosionRadius = projectile.radius || baseBlastHexRadius;
+      const explosionRadius = projectile.radius || HexSnakeState.config.baseBlastHexRadius;
       const visualType = projectile.visualType || attackVisualType(projectile.owner, projectile.profile);
       HexSnakeState.game.blasts.push({
         kind: "circle",
@@ -2748,7 +2748,7 @@
         visualType,
         hand: projectile.hand,
         startedAt: now,
-        endAt: now + blastDurationMs
+        endAt: now + HexSnakeState.config.blastDurationMs
       });
       triggerBoardShake(visualType, now);
       if (projectile.kind === "headCircle" && projectile.radiationDurationMs) {
@@ -2819,7 +2819,7 @@
           HexSnakeState.game.relayRestartTimer = null;
           if (!HexSnakeState.game.relayMode) return;
           startGame(nextOptions);
-        }, Math.max(900, gameOverRestartDelayMs + 80));
+        }, Math.max(900, HexSnakeState.config.gameOverRestartDelayMs + 80));
       }
     }
 
@@ -2885,22 +2885,22 @@
 
       if (owner === "player") {
         HexSnakeState.game.score += 1;
-        collectFood("player", eatenFood);
+        HexSnakeUI.collectFood("player", eatenFood);
         HexSnakeState.game.best = Math.max(HexSnakeState.game.best, HexSnakeState.game.score);
         HexSnakeStorage.set("hexSnakeBest", String(HexSnakeState.game.best));
         HexSnakeState.game.lastFeedElapsedMs = 0;
         HexSnakeState.game.lastPlayerFoodAt = performance.now();
         HexSnakeState.game.playerFoodTargetKey = null;
         HexSnakeState.game.playerFoodTargetAt = 0;
-        HexSnakeState.game.playerHp = Math.min(maxHpForSnake(HexSnakeState.game.snake), HexSnakeState.game.playerHp + foodHealAmount());
+        HexSnakeState.game.playerHp = Math.min(HexSnakeUI.maxHpForSnake(HexSnakeState.game.snake), HexSnakeState.game.playerHp + HexSnakeUI.foodHealAmount());
       } else {
         HexSnakeState.game.computerScore += 1;
         HexSnakeState.game.lastComputerFoodAt = performance.now();
         HexSnakeState.game.computerFoodTargetKey = null;
         HexSnakeState.game.computerFoodTargetAt = 0;
         if (computerCanGrow()) {
-          collectFood("computer", eatenFood);
-          HexSnakeState.game.computerHp = Math.min(maxHpForSnake(HexSnakeState.game.computerSnake), HexSnakeState.game.computerHp + foodHealAmount());
+          HexSnakeUI.collectFood("computer", eatenFood);
+          HexSnakeState.game.computerHp = Math.min(HexSnakeUI.maxHpForSnake(HexSnakeState.game.computerSnake), HexSnakeState.game.computerHp + HexSnakeUI.foodHealAmount());
         } else {
           parts.pop();
         }
@@ -3054,10 +3054,10 @@
       HexSnakeState.game.gameOver = true;
       if (shouldUseGameOverLogo) HexSnakeUI.showCharacterStage({ rebuild: false, overlay: true });
       else HexSnakeUI.hideCharacterStage();
-      HexSnakeState.game.gameOverContinuousVisualDeadlineAt = gameOverAt + gameOverContinuousVisualMaxWaitMs;
+      HexSnakeState.game.gameOverContinuousVisualDeadlineAt = gameOverAt + HexSnakeState.config.gameOverContinuousVisualMaxWaitMs;
       HexSnakeState.game.gameOverLogoTransitionEndsAt = shouldUseGameOverLogo ? gameOverAt + HexSnakeState.ui.logoTransitionDurationMs : 0;
       updateAutoBattleControls();
-      HexSnakeState.game.restartUnlockAt = gameOverAt + (shouldUseGameOverLogo ? HexSnakeState.ui.logoTransitionDurationMs : gameOverRestartDelayMs);
+      HexSnakeState.game.restartUnlockAt = gameOverAt + (shouldUseGameOverLogo ? HexSnakeState.ui.logoTransitionDurationMs : HexSnakeState.config.gameOverRestartDelayMs);
       setSettingsLocked(false);
       if (HexSnakeState.game.totalElapsedMs > HexSnakeState.game.bestTotalMs) {
         HexSnakeState.game.bestTotalMs = HexSnakeState.game.totalElapsedMs;
@@ -3171,8 +3171,8 @@
         HexSnakeState.game.totalElapsedMs += delta * timeScale;
         HexSnakeState.game.lastFeedElapsedMs += delta * timeScale;
         HexSnakeState.game.lastTimerFrame = now;
-        if (HexSnakeState.game.totalElapsedMs >= maxMatchMs) {
-          HexSnakeState.game.totalElapsedMs = maxMatchMs;
+        if (HexSnakeState.game.totalElapsedMs >= HexSnakeState.config.maxMatchMs) {
+          HexSnakeState.game.totalElapsedMs = HexSnakeState.config.maxMatchMs;
           endGame(true, true);
           return;
         }
@@ -3187,11 +3187,11 @@
         updateAiVisibilityMemory(now);
       }
       if (HexSnakeState.game.running && !HexSnakeState.game.paused) {
-        const playerDue = !isMovementStunned("player", now) && now - HexSnakeState.game.lastPlayerStep >= moveIntervalFor("player", now);
-        const computerDue = !isMovementStunned("computer", now) && now - HexSnakeState.game.lastComputerStep >= moveIntervalFor("computer", now);
+        const playerDue = !HexSnakeUI.isMovementStunned("player", now) && now - HexSnakeState.game.lastPlayerStep >= HexSnakeUI.moveIntervalFor("player", now);
+        const computerDue = !HexSnakeUI.isMovementStunned("computer", now) && now - HexSnakeState.game.lastComputerStep >= HexSnakeUI.moveIntervalFor("computer", now);
         if (playerDue && computerDue) {
-          const playerDueAt = HexSnakeState.game.lastPlayerStep + moveIntervalFor("player", now);
-          const computerDueAt = HexSnakeState.game.lastComputerStep + moveIntervalFor("computer", now);
+          const playerDueAt = HexSnakeState.game.lastPlayerStep + HexSnakeUI.moveIntervalFor("player", now);
+          const computerDueAt = HexSnakeState.game.lastComputerStep + HexSnakeUI.moveIntervalFor("computer", now);
           const headCollisionOrder = Math.abs(playerDueAt - computerDueAt) < 0.001
             ? "simultaneous"
             : playerDueAt < computerDueAt ? "playerFirst" : "computerFirst";
@@ -3223,7 +3223,7 @@
       if (distance < Math.max(4, rect.width * 0.035)) return null;
       let bestDirection = 0;
       let bestDot = -Infinity;
-      directions.forEach((_, direction) => {
+      HexSnakeState.config.directions.forEach((_, direction) => {
         const vector = directionVector(direction);
         const dot = x * vector.x + y * vector.y;
         if (dot > bestDot) {
@@ -3413,7 +3413,7 @@
         if (launchAttack("player", HexSnakeState.game.targetCell || HexSnakeState.game.snake[0], performance.now())) {
           setStatus("P1 施放炸彈，2 秒後落地。");
         } else {
-          setStatus(`大招需要 ${bigAttackBombCost} 枚炸彈，且四種庫存各至少 2。`);
+          setStatus(`大招需要 ${HexSnakeState.config.bigAttackBombCost} 枚炸彈，且四種庫存各至少 2。`);
         }
       }
       HexSnakeState.game.targetActive = false;
@@ -3440,7 +3440,7 @@
 
     function keyboardTargetMode(profile = "small") {
       const aim = HexSnakeState.game.keyboardAttackAim[profile] || HexSnakeState.game.keyboardAttackAim.small;
-      return keyboardTargetModes[aim.targetModeIndex % keyboardTargetModes.length] || "head";
+      return HexSnakeState.config.keyboardTargetModes[aim.targetModeIndex % HexSnakeState.config.keyboardTargetModes.length] || "head";
     }
 
     function keyboardAttackTarget(profile = "small") {
@@ -3478,10 +3478,10 @@
 
     function keyboardAttackHintLabel(profile = "small") {
       if (keyboardAttackUsesDirection(profile)) {
-        const direction = directions[keyboardAttackDirection(profile)];
+        const direction = HexSnakeState.config.directions[keyboardAttackDirection(profile)];
         return direction ? direction.label : "目前方向";
       }
-      return keyboardTargetModeLabels[keyboardTargetMode(profile)] || "目標頭部";
+      return HexSnakeState.config.keyboardTargetModeLabels[keyboardTargetMode(profile)] || "目標頭部";
     }
 
     function currentKeyboardAimProfile() {
@@ -3597,9 +3597,9 @@
       }
       const aim = HexSnakeState.game.keyboardAttackAim[profile] || HexSnakeState.game.keyboardAttackAim.small;
       if (keyboardAttackUsesDirection(profile)) {
-        aim.direction = (keyboardAttackDirection(profile) + 1) % directions.length;
+        aim.direction = (keyboardAttackDirection(profile) + 1) % HexSnakeState.config.directions.length;
       } else {
-        aim.targetModeIndex = (aim.targetModeIndex + 1) % keyboardTargetModes.length;
+        aim.targetModeIndex = (aim.targetModeIndex + 1) % HexSnakeState.config.keyboardTargetModes.length;
       }
       HexSnakeState.game.keyboardAttackAim[profile] = aim;
       HexSnakeState.game.selectedAttackProfile = profile;
@@ -3701,23 +3701,23 @@
       if (!target || !HexSnakeState.game.snake?.length) return `${moveName} 施放失敗：沒有有效目標格。`;
 
       const stock = HexSnakeState.game.playerStock;
-      const foodCost = attackFoodCost(profile);
+      const foodCost = HexSnakeUI.attackFoodCost(profile);
       if (profile === "small") {
-        const highestType = highestStockFoodType(stock);
+        const highestType = HexSnakeUI.highestStockFoodType(stock);
         const highestCount = highestType ? stock[highestType.id] || 0 : 0;
         if (highestCount < foodCost) return `${moveName} 施放失敗：最高庫存不足，需要任一食物庫存至少 ${foodCost}。`;
       } else {
-        const missingFood = foodTypes
+        const missingFood = HexSnakeState.config.foodTypes
           .filter(type => stock[type.id] < foodCost)
           .map(type => type.label)
           .join("、");
         if (missingFood) return `${moveName} 施放失敗：${missingFood}庫存不足，需要四種庫存各 ${foodCost}。`;
       }
 
-      const bombCost = attackBombCost(profile);
-      if (ammoFor("player") < bombCost) return `${moveName} 施放失敗：炸彈不足，需要 ${bombCost} 枚，目前 ${ammoFor("player")} 枚。`;
+      const bombCost = HexSnakeUI.attackBombCost(profile);
+      if (HexSnakeUI.ammoFor("player") < bombCost) return `${moveName} 施放失敗：炸彈不足，需要 ${bombCost} 枚，目前 ${HexSnakeUI.ammoFor("player")} 枚。`;
 
-      const remainingMs = attackCooldownRemainingMs("player", profile, now);
+      const remainingMs = HexSnakeUI.attackCooldownRemainingMs("player", profile, now);
       if (remainingMs > 0) return `${moveName} 施放失敗：冷卻中，還需 ${(remainingMs / 1000).toFixed(1)} 秒。`;
 
       return `${moveName} 施放失敗：目前條件不允許施放。`;
@@ -4464,8 +4464,8 @@
       input.addEventListener("change", () => {
         if (HexSnakeState.game.running) return;
         const changedOwner = input === computerCharacterInput ? "computer" : "player";
-        HexSnakeState.game.playerCharacterChoice = HexSnakeUI.isSelectableCharacterChoiceId(playerCharacterInput.value) ? playerCharacterInput.value : defaultSettings.playerCharacterId;
-        HexSnakeState.game.computerCharacterChoice = HexSnakeUI.isSelectableCharacterChoiceId(computerCharacterInput.value) ? computerCharacterInput.value : defaultSettings.computerCharacterId;
+        HexSnakeState.game.playerCharacterChoice = HexSnakeUI.isSelectableCharacterChoiceId(playerCharacterInput.value) ? playerCharacterInput.value : HexSnakeState.config.defaultSettings.playerCharacterId;
+        HexSnakeState.game.computerCharacterChoice = HexSnakeUI.isSelectableCharacterChoiceId(computerCharacterInput.value) ? computerCharacterInput.value : HexSnakeState.config.defaultSettings.computerCharacterId;
         if (HexSnakeUI.hasCharacterId(HexSnakeState.game.playerCharacterChoice)) HexSnakeState.game.playerCharacterId = HexSnakeState.game.playerCharacterChoice;
         if (HexSnakeUI.hasCharacterId(HexSnakeState.game.computerCharacterChoice)) HexSnakeState.game.computerCharacterId = HexSnakeState.game.computerCharacterChoice;
         syncCharacterInputs();
@@ -4525,17 +4525,17 @@
 
     resetSettingsButton.addEventListener("click", () => {
       if (HexSnakeState.game.running) return;
-      setComputerDifficulty(defaultSettings.computerDifficulty);
-      setGmMode(defaultSettings.gmMode);
+      setComputerDifficulty(HexSnakeState.config.defaultSettings.computerDifficulty);
+      setGmMode(HexSnakeState.config.defaultSettings.gmMode);
       resetGmParameters();
       applyGmSettingsChanged({ presetMode: "real" });
-      HexSnakeState.game.playerCharacterId = defaultSettings.playerCharacterId;
-      HexSnakeState.game.computerCharacterId = defaultSettings.computerCharacterId;
+      HexSnakeState.game.playerCharacterId = HexSnakeState.config.defaultSettings.playerCharacterId;
+      HexSnakeState.game.computerCharacterId = HexSnakeState.config.defaultSettings.computerCharacterId;
       HexSnakeState.game.playerCharacterChoice = HexSnakeState.game.playerCharacterId;
       HexSnakeState.game.computerCharacterChoice = HexSnakeState.game.computerCharacterId;
       syncCharacterInputs();
       saveCharacterChoices();
-      HexSnakeState.game.keybinds = structuredClone(defaultKeybinds);
+      HexSnakeState.game.keybinds = structuredClone(HexSnakeState.config.defaultKeybinds);
       saveKeybinds();
       applyKeybinds();
       setLeftHandMode(false);
@@ -4887,7 +4887,7 @@
         return;
       }
       overlayTitle.textContent = "準備開局";
-      overlayText.textContent = `每吃 1 個食物獲得 2 點能量，集滿 ${attackNeedTotal} 點獲得 1 枚炸彈，最多 ${maxAmmo} 枚；HP 上限為（蛇長 + 1）× ${hpPerSnakeUnit}；能量與炸彈都滿時，施放消耗炸彈的招式會立刻把滿能量轉為 1 枚炸彈；小招消耗目前最高的食物庫存 ${smallAttackFoodCost} 點與 ${smallAttackBombCost} 枚炸彈，大招消耗 ${bigAttackBombCost} 枚炸彈與四種庫存各 2 點。`;
+      overlayText.textContent = `每吃 1 個食物獲得 2 點能量，集滿 ${HexSnakeState.config.attackNeedTotal} 點獲得 1 枚炸彈，最多 ${HexSnakeState.config.maxAmmo} 枚；HP 上限為（蛇長 + 1）× ${HexSnakeState.config.hpPerSnakeUnit}；能量與炸彈都滿時，施放消耗炸彈的招式會立刻把滿能量轉為 1 枚炸彈；小招消耗目前最高的食物庫存 ${HexSnakeState.config.smallAttackFoodCost} 點與 ${HexSnakeState.config.smallAttackBombCost} 枚炸彈，大招消耗 ${HexSnakeState.config.bigAttackBombCost} 枚炸彈與四種庫存各 2 點。`;
       startButton.textContent = "開始";
       HexSnakeUI.setOverlayChromeVisible(true);
       beginStartLogoCountdown();
@@ -4907,9 +4907,9 @@
     });
 
     function applyAutoBattleSpeedIndex(index) {
-      const nextIndex = Math.max(0, Math.min(autoBattleSpeeds.length - 1, index));
-      if (autoBattleSpeeds[nextIndex] === HexSnakeState.game.computerBattleSpeed) return;
-      setComputerBattleSpeed(autoBattleSpeeds[nextIndex]);
+      const nextIndex = Math.max(0, Math.min(HexSnakeState.config.autoBattleSpeeds.length - 1, index));
+      if (HexSnakeState.config.autoBattleSpeeds[nextIndex] === HexSnakeState.game.computerBattleSpeed) return;
+      setComputerBattleSpeed(HexSnakeState.config.autoBattleSpeeds[nextIndex]);
       resetAutoBattleStepTimers();
       updateAutoBattleControls();
     }
@@ -5015,7 +5015,7 @@
       select: autoBattleSpeedSelect,
       menu: autoSpeedMenu,
       isActive: isPlayerAutoControlActive,
-      currentIndex: () => autoBattleSpeeds.indexOf(HexSnakeState.game.computerBattleSpeed),
+      currentIndex: () => HexSnakeState.config.autoBattleSpeeds.indexOf(HexSnakeState.game.computerBattleSpeed),
       applyIndex: applyAutoBattleSpeedIndex,
       setMenuOpen: setAutoSpeedMenuOpen,
       menuButtonSelector: "[data-auto-speed]",
@@ -5447,7 +5447,7 @@
         if (launchAttack("player", HexSnakeState.game.targetCell || HexSnakeState.game.snake[0], performance.now())) {
           setStatus("P1 施放炸彈，2 秒後落地。");
         } else {
-          setStatus(`大招需要 ${bigAttackBombCost} 枚炸彈，且四種庫存各至少 2。`);
+          setStatus(`大招需要 ${HexSnakeState.config.bigAttackBombCost} 枚炸彈，且四種庫存各至少 2。`);
         }
         return;
       }
@@ -5544,7 +5544,7 @@
     window.addEventListener("resize", resize);
 
     async function bootstrap() {
-      await loadBalanceConfig();
+      await HexSnakeUI.loadBalanceConfig();
       await loadHighAiStrategyConfig();
       try {
         await loadCharacterDatabase();
