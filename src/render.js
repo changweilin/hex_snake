@@ -1,7 +1,8 @@
     const RenderRuntime = HexSnakeRuntime;
-    const RenderConfig = HexSnakeState.config;
+    const RenderRootState = HexSnakeState;
+    const RenderConfig = RenderRootState.config;
     const RenderDom = HexSnakeDOM;
-    const RenderState = HexSnakeState.game;
+    const RenderState = RenderRootState.game;
     const RenderUI = HexSnakeUI;
     const RenderAI = RenderUI.ai;
     const RenderGame = HexSnakeRenderGame;

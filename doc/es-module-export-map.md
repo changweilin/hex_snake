@@ -39,7 +39,7 @@
 | `HexSnakeUI` | `src/state.js` creates; `src/ui.js` and services extend | shared registry with `about`、`ai`、`aiGame`、`audio`、`replay`、`replayGame`、`stats`、`uiGame`; UI self-references use `UiRegistry` | named `uiRegistry` export implemented until UI/game split is complete |
 | `HexSnakeUICore` | `src/ui.js` | frozen UI config/presentation shell over existing `HexSnakeUI` registrations | named `uiCore` export implemented |
 | `HexSnakeGame` | `src/game.js` | frozen game shell with facade helpers plus `loadGameShell()` / `bootstrapGame()` | named `gameShell` export implemented; `module-shadow` imports shell but does not call bootstrap |
-| `HexSnakeRender` | `src/state.js` creates; `src/render.js` extends | render public hooks | named `render` export implemented from `state.js`; named `renderHooks` export implemented from `render.js` |
+| `HexSnakeRender` | `src/state.js` creates; `src/render.js` extends | render public hooks using `RenderRootState` state aliases | named `render` export implemented from `state.js`; named `renderHooks` export implemented from `render.js` |
 | `HexSnakeRenderGame` | `src/state.js` creates; `src/game.js` extends | game geometry/combat helpers used by render | named `renderGame` export implemented; later move to pure helper module |
 | `HexSnakeControls` | `src/state.js` | frozen keyboard/control helpers using `StateStorage` for keybind persistence; UI/game access through `UiControls` / `GameControls` aliases | named `controls` export implemented |
 | `HexSnakeDOM` | `src/dom.js` | frozen DOM reference facade | named `dom` export implemented |
