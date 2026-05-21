@@ -474,105 +474,105 @@
 
     function clampGridSize(value) {
       const parsed = Number.parseInt(value, 10);
-      if (!Number.isFinite(parsed)) return HexSnakeState.game.gridSize;
-      return Math.min(HexSnakeState.config.maxGridSize, Math.max(HexSnakeState.config.minGridSize, parsed));
+      if (!Number.isFinite(parsed)) return GameRuntimeState.gridSize;
+      return Math.min(GameConfig.maxGridSize, Math.max(GameConfig.minGridSize, parsed));
     }
 
     function clampFoodCount(value) {
       const parsed = Number.parseInt(value, 10);
-      if (!Number.isFinite(parsed)) return HexSnakeState.game.foodCount;
-      return Math.min(HexSnakeState.config.maxFoodCount, Math.max(HexSnakeState.config.minFoodCount, parsed));
+      if (!Number.isFinite(parsed)) return GameRuntimeState.foodCount;
+      return Math.min(GameConfig.maxFoodCount, Math.max(GameConfig.minFoodCount, parsed));
     }
 
     function clampInitialSpeed(value) {
       const parsed = Number.parseFloat(value);
-      if (!Number.isFinite(parsed)) return HexSnakeState.game.initialSpeed;
-      return Math.min(HexSnakeState.config.maxInitialSpeed, Math.max(HexSnakeState.config.minInitialSpeed, parsed));
+      if (!Number.isFinite(parsed)) return GameRuntimeState.initialSpeed;
+      return Math.min(GameConfig.maxInitialSpeed, Math.max(GameConfig.minInitialSpeed, parsed));
     }
 
     function clampInitialLength(value) {
       const parsed = Number.parseInt(value, 10);
-      if (!Number.isFinite(parsed)) return HexSnakeState.game.initialLength;
-      return Math.min(HexSnakeState.config.maxInitialLength, Math.max(HexSnakeState.config.minInitialLength, parsed));
+      if (!Number.isFinite(parsed)) return GameRuntimeState.initialLength;
+      return Math.min(GameConfig.maxInitialLength, Math.max(GameConfig.minInitialLength, parsed));
     }
 
     function clampInitialStock(value) {
       const parsed = Number.parseInt(value, 10);
       if (!Number.isFinite(parsed)) return 0;
-      return Math.min(HexSnakeState.config.maxFoodStock, Math.max(0, parsed));
+      return Math.min(GameConfig.maxFoodStock, Math.max(0, parsed));
     }
 
     function clampInitialEnergy(value) {
       const parsed = Number.parseInt(value, 10);
       if (!Number.isFinite(parsed)) return 0;
-      return Math.min(HexSnakeState.config.attackNeedTotal, Math.max(0, parsed));
+      return Math.min(GameConfig.attackNeedTotal, Math.max(0, parsed));
     }
 
     function clampInitialBombs(value) {
       const parsed = Number.parseInt(value, 10);
       if (!Number.isFinite(parsed)) return 0;
-      return Math.min(HexSnakeState.config.maxAmmo, Math.max(0, parsed));
+      return Math.min(GameConfig.maxAmmo, Math.max(0, parsed));
     }
 
     function buildCells() {
       const nextCells = [];
-      for (let q = -HexSnakeState.game.radius; q <= HexSnakeState.game.radius; q += 1) {
-        const r1 = Math.max(-HexSnakeState.game.radius, -q - HexSnakeState.game.radius);
-        const r2 = Math.min(HexSnakeState.game.radius, -q + HexSnakeState.game.radius);
+      for (let q = -GameRuntimeState.radius; q <= GameRuntimeState.radius; q += 1) {
+        const r1 = Math.max(-GameRuntimeState.radius, -q - GameRuntimeState.radius);
+        const r2 = Math.min(GameRuntimeState.radius, -q + GameRuntimeState.radius);
         for (let r = r1; r <= r2; r += 1) {
           nextCells.push({ q, r });
         }
       }
-      HexSnakeState.game.cells = nextCells;
+      GameRuntimeState.cells = nextCells;
     }
 
     function setGridSize(value) {
-      HexSnakeState.game.gridSize = clampGridSize(value);
-      HexSnakeState.game.radius = HexSnakeState.game.gridSize - 1;
-      Dom.gridSizeInput.value = HexSnakeState.game.gridSize;
+      GameRuntimeState.gridSize = clampGridSize(value);
+      GameRuntimeState.radius = GameRuntimeState.gridSize - 1;
+      Dom.gridSizeInput.value = GameRuntimeState.gridSize;
       buildCells();
     }
 
     function setFoodCount(value) {
-      HexSnakeState.game.foodCount = clampFoodCount(value);
-      Dom.foodCountInput.value = HexSnakeState.game.foodCount;
+      GameRuntimeState.foodCount = clampFoodCount(value);
+      Dom.foodCountInput.value = GameRuntimeState.foodCount;
     }
 
     function setComputerDifficulty(value) {
-      HexSnakeState.game.computerDifficulty = ["novice", "low", "medium", "high", "extreme"].includes(value) ? value : "medium";
-      Dom.computerDifficultyInput.value = HexSnakeState.game.computerDifficulty;
+      GameRuntimeState.computerDifficulty = ["novice", "low", "medium", "high", "extreme"].includes(value) ? value : "medium";
+      Dom.computerDifficultyInput.value = GameRuntimeState.computerDifficulty;
     }
 
     function setInitialSpeed(value) {
-      HexSnakeState.game.initialSpeed = clampInitialSpeed(value);
-      Dom.initialSpeedInput.value = HexSnakeState.game.initialSpeed;
+      GameRuntimeState.initialSpeed = clampInitialSpeed(value);
+      Dom.initialSpeedInput.value = GameRuntimeState.initialSpeed;
     }
 
     function setInitialLength(value) {
-      HexSnakeState.game.initialLength = clampInitialLength(value);
-      Dom.initialLengthInput.value = HexSnakeState.game.initialLength;
+      GameRuntimeState.initialLength = clampInitialLength(value);
+      Dom.initialLengthInput.value = GameRuntimeState.initialLength;
     }
 
     function setInitialEnergy(value) {
-      HexSnakeState.game.initialEnergy = clampInitialEnergy(value);
-      Dom.initialEnergyInput.value = HexSnakeState.game.initialEnergy;
+      GameRuntimeState.initialEnergy = clampInitialEnergy(value);
+      Dom.initialEnergyInput.value = GameRuntimeState.initialEnergy;
     }
 
     function setInitialBombs(value) {
-      HexSnakeState.game.initialBombs = clampInitialBombs(value);
-      Dom.initialBombsInput.value = HexSnakeState.game.initialBombs;
+      GameRuntimeState.initialBombs = clampInitialBombs(value);
+      Dom.initialBombsInput.value = GameRuntimeState.initialBombs;
     }
 
     function setInitialStock(typeId, value) {
-      if (!Object.prototype.hasOwnProperty.call(HexSnakeState.game.initialStock, typeId)) return;
-      HexSnakeState.game.initialStock[typeId] = clampInitialStock(value);
+      if (!Object.prototype.hasOwnProperty.call(GameRuntimeState.initialStock, typeId)) return;
+      GameRuntimeState.initialStock[typeId] = clampInitialStock(value);
       const input = Dom.initialStockInputs.find(stockInput => stockInput.dataset.initialStock === typeId);
-      if (input) input.value = HexSnakeState.game.initialStock[typeId];
+      if (input) input.value = GameRuntimeState.initialStock[typeId];
     }
 
     function updateGmPresetHighlight() {
       Object.entries(Dom.gmPresetButtons).forEach(([mode, button]) => {
-        const selected = HexSnakeState.game.gmPresetMode === mode;
+        const selected = GameRuntimeState.gmPresetMode === mode;
         button.classList.toggle("is-selected", selected);
         button.setAttribute("aria-pressed", selected ? "true" : "false");
       });
@@ -580,21 +580,21 @@
 
     function saveGmSettings() {
       GameStorage.setJson("hexSnakeGmSettings", {
-        gridSize: HexSnakeState.game.gridSize,
-        foodCount: HexSnakeState.game.foodCount,
-        computerDifficulty: HexSnakeState.game.computerDifficulty,
-        initialSpeed: HexSnakeState.game.initialSpeed,
-        gmMode: HexSnakeState.game.gmMode,
-        initialLength: HexSnakeState.game.initialLength,
-        initialEnergy: HexSnakeState.game.initialEnergy,
-        initialBombs: HexSnakeState.game.initialBombs,
-        initialStock: HexSnakeState.game.initialStock,
-        gmPresetMode: HexSnakeState.game.gmPresetMode
+        gridSize: GameRuntimeState.gridSize,
+        foodCount: GameRuntimeState.foodCount,
+        computerDifficulty: GameRuntimeState.computerDifficulty,
+        initialSpeed: GameRuntimeState.initialSpeed,
+        gmMode: GameRuntimeState.gmMode,
+        initialLength: GameRuntimeState.initialLength,
+        initialEnergy: GameRuntimeState.initialEnergy,
+        initialBombs: GameRuntimeState.initialBombs,
+        initialStock: GameRuntimeState.initialStock,
+        gmPresetMode: GameRuntimeState.gmPresetMode
       });
     }
 
     function applyGmSettingsChanged(options = {}) {
-      HexSnakeState.game.gmPresetMode = options.presetMode ?? null;
+      GameRuntimeState.gmPresetMode = options.presetMode ?? null;
       updateGmPresetHighlight();
       saveGmSettings();
     }
@@ -606,32 +606,32 @@
           updateGmPresetHighlight();
           return;
         }
-        setGridSize(saved.gridSize ?? HexSnakeState.config.defaultSettings.gridSize);
-        setFoodCount(saved.foodCount ?? HexSnakeState.config.defaultSettings.foodCount);
-        setComputerDifficulty(saved.computerDifficulty ?? HexSnakeState.config.defaultSettings.computerDifficulty);
-        setInitialSpeed(saved.initialSpeed ?? HexSnakeState.config.defaultSettings.initialSpeed);
-        setGmMode(saved.gmMode ?? HexSnakeState.config.defaultSettings.gmMode);
-        setInitialLength(saved.initialLength ?? HexSnakeState.config.defaultSettings.initialLength);
-        setInitialEnergy(saved.initialEnergy ?? HexSnakeState.config.defaultSettings.initialEnergy);
-        setInitialBombs(saved.initialBombs ?? HexSnakeState.config.defaultSettings.initialBombs);
-        HexSnakeState.config.foodTypes.forEach(type => setInitialStock(type.id, saved.initialStock?.[type.id] ?? HexSnakeState.config.defaultSettings.initialStock[type.id]));
-        HexSnakeState.game.gmPresetMode = Object.prototype.hasOwnProperty.call(Dom.gmPresetButtons, saved.gmPresetMode) ? saved.gmPresetMode : null;
+        setGridSize(saved.gridSize ?? GameConfig.defaultSettings.gridSize);
+        setFoodCount(saved.foodCount ?? GameConfig.defaultSettings.foodCount);
+        setComputerDifficulty(saved.computerDifficulty ?? GameConfig.defaultSettings.computerDifficulty);
+        setInitialSpeed(saved.initialSpeed ?? GameConfig.defaultSettings.initialSpeed);
+        setGmMode(saved.gmMode ?? GameConfig.defaultSettings.gmMode);
+        setInitialLength(saved.initialLength ?? GameConfig.defaultSettings.initialLength);
+        setInitialEnergy(saved.initialEnergy ?? GameConfig.defaultSettings.initialEnergy);
+        setInitialBombs(saved.initialBombs ?? GameConfig.defaultSettings.initialBombs);
+        GameConfig.foodTypes.forEach(type => setInitialStock(type.id, saved.initialStock?.[type.id] ?? GameConfig.defaultSettings.initialStock[type.id]));
+        GameRuntimeState.gmPresetMode = Object.prototype.hasOwnProperty.call(Dom.gmPresetButtons, saved.gmPresetMode) ? saved.gmPresetMode : null;
         updateGmPresetHighlight();
       } catch {
-        HexSnakeState.game.gmPresetMode = "real";
+        GameRuntimeState.gmPresetMode = "real";
         updateGmPresetHighlight();
       }
     }
 
     function setGmMode(active) {
-      HexSnakeState.game.gmMode = Boolean(active);
-      Dom.settingsToggle.classList.toggle("is-gm-active", HexSnakeState.game.gmMode);
+      GameRuntimeState.gmMode = Boolean(active);
+      Dom.settingsToggle.classList.toggle("is-gm-active", GameRuntimeState.gmMode);
       updateSettingsActionMode();
       updateGmControlState();
     }
 
     function updateGmControlState() {
-      const disabled = HexSnakeState.game.running;
+      const disabled = GameRuntimeState.running;
       Dom.initialLengthInput.disabled = disabled;
       Dom.initialEnergyInput.disabled = disabled;
       Dom.initialBombsInput.disabled = disabled;
@@ -641,13 +641,13 @@
     }
 
     function resetGmParameters() {
-      setGridSize(HexSnakeState.config.defaultSettings.gridSize);
-      setFoodCount(HexSnakeState.config.defaultSettings.foodCount);
-      setInitialSpeed(HexSnakeState.config.defaultSettings.initialSpeed);
-      setInitialLength(HexSnakeState.config.defaultSettings.initialLength);
-      setInitialEnergy(HexSnakeState.config.defaultSettings.initialEnergy);
-      setInitialBombs(HexSnakeState.config.defaultSettings.initialBombs);
-      HexSnakeState.config.foodTypes.forEach(type => setInitialStock(type.id, HexSnakeState.config.defaultSettings.initialStock[type.id]));
+      setGridSize(GameConfig.defaultSettings.gridSize);
+      setFoodCount(GameConfig.defaultSettings.foodCount);
+      setInitialSpeed(GameConfig.defaultSettings.initialSpeed);
+      setInitialLength(GameConfig.defaultSettings.initialLength);
+      setInitialEnergy(GameConfig.defaultSettings.initialEnergy);
+      setInitialBombs(GameConfig.defaultSettings.initialBombs);
+      GameConfig.foodTypes.forEach(type => setInitialStock(type.id, GameConfig.defaultSettings.initialStock[type.id]));
     }
 
     function refreshGmPreview() {
