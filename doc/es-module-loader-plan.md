@@ -59,4 +59,4 @@ Shared order:
 
 ## Next AI Task
 
-下一個 AI 可直接處理項目是延續 Phase D service module migration：`game.js` control-profile、saved character choice、keybind、attack button highlight、settings / perf overlay、settings clamp / GM parameters、GM presets / settings action、board geometry helper 與 reset game setup slices 已改走 `GameRuntimeState` / `GameConfig` / `GamePresentationState` / `GameUI` 並由 `audit:esm-map` 固定；下一輪可接續 result share helper slice，production default 繼續維持 `bundled-legacy-fallback`。
+下一個 AI 可直接處理項目是延續 Phase D service module migration：`game.js` control-profile、saved character choice、keybind、attack button highlight、settings / perf overlay、settings clamp / GM parameters、GM presets / settings action、board geometry helper、reset game setup 與 result share helper slices 已改走 `GameRuntimeState` / `GameConfig` / `GamePresentationState` / `GameUI` 並由 `audit:esm-map` 固定；下一輪可接續 start logo countdown slice，production default 繼續維持 `bundled-legacy-fallback`。

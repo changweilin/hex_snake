@@ -933,7 +933,7 @@
     }
 
     function canRestartAfterGameOver() {
-      return !HexSnakeState.game.gameOverSettlementPending && performance.now() >= HexSnakeState.game.restartUnlockAt;
+      return !GameRuntimeState.gameOverSettlementPending && performance.now() >= GameRuntimeState.restartUnlockAt;
     }
 
     function resultCopyText(data) {
@@ -941,26 +941,26 @@
     }
 
     function currentModeLabel(endedInAutoMode = false) {
-      if (HexSnakeState.game.relayMode) return "接力賽";
-      if (HexSnakeState.game.computerBattleMode) return "自動對弈";
+      if (GameRuntimeState.relayMode) return "接力賽";
+      if (GameRuntimeState.computerBattleMode) return "自動對弈";
       if (endedInAutoMode) return "Auto 操作";
       return "玩家操作";
     }
 
     function currentDifficultyLabel() {
-      return Dom.computerDifficultyInput.selectedOptions[0]?.textContent?.trim() || HexSnakeState.game.computerDifficulty;
+      return Dom.computerDifficultyInput.selectedOptions[0]?.textContent?.trim() || GameRuntimeState.computerDifficulty;
     }
 
     function buildResultShareData({ winnerOwner, plainResultText, scoreText, resultReason, endedInAutoMode }) {
-      const playerCharacter = HexSnakeUI.characterFor("player");
-      const computerCharacter = HexSnakeUI.characterFor("computer");
+      const playerCharacter = GameUI.characterFor("player");
+      const computerCharacter = GameUI.characterFor("computer");
       const url = window.location.href.split("#")[0];
       const lines = [
         "Hex Snake 對戰結果",
         plainResultText,
         scoreText,
         `角色：P1 ${playerCharacter?.name || "隨機選擇"} vs P2 ${computerCharacter?.name || "隨機選擇"}`,
-        `時間：${HexSnakeUI.formatTime(HexSnakeState.game.totalElapsedMs)}`,
+        `時間：${GameUI.formatTime(GameRuntimeState.totalElapsedMs)}`,
         `模式：${currentModeLabel(endedInAutoMode)}`,
         `難度：${currentDifficultyLabel()}`,
         resultReason,
@@ -974,22 +974,22 @@
     }
 
     async function copyCurrentResult() {
-      if (!HexSnakeState.ui.lastResultShareData || HexSnakeState.ui.resultShareInProgress) return;
-      HexSnakeState.ui.resultShareInProgress = true;
-      HexSnakeUI.updateResultSharePanel();
-      HexSnakeUI.setResultShareStatus("正在複製結果...");
+      if (!GamePresentationState.lastResultShareData || GamePresentationState.resultShareInProgress) return;
+      GamePresentationState.resultShareInProgress = true;
+      GameUI.updateResultSharePanel();
+      GameUI.setResultShareStatus("正在複製結果...");
       try {
-        if (await GamePlatform.share.copyText(resultCopyText(HexSnakeState.ui.lastResultShareData))) {
-          HexSnakeUI.setResultShareStatus("結果已複製。", "success");
+        if (await GamePlatform.share.copyText(resultCopyText(GamePresentationState.lastResultShareData))) {
+          GameUI.setResultShareStatus("結果已複製。", "success");
           return;
         }
-        HexSnakeUI.setResultShareStatus("此瀏覽器無法複製結果。", "error");
+        GameUI.setResultShareStatus("此瀏覽器無法複製結果。", "error");
       } catch (error) {
         console.warn("Unable to copy result.", error);
-        HexSnakeUI.setResultShareStatus("複製失敗，請稍後再試。", "error");
+        GameUI.setResultShareStatus("複製失敗，請稍後再試。", "error");
       } finally {
-        HexSnakeState.ui.resultShareInProgress = false;
-        HexSnakeUI.updateResultSharePanel();
+        GamePresentationState.resultShareInProgress = false;
+        GameUI.updateResultSharePanel();
       }
     }
 
