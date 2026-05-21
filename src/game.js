@@ -3690,31 +3690,31 @@
       return launchPlayerAttack(target, profile, playerDirectAttackOptions(profile, pointer));
     }
 
-    function playerAttackFailureReason(target, profile = HexSnakeState.game.selectedAttackProfile, now = performance.now()) {
-      const moveName = profile === "small" ? HexSnakeUI.characterFor("player").smallMove : HexSnakeUI.characterFor("player").bigMove;
+    function playerAttackFailureReason(target, profile = GameRuntimeState.selectedAttackProfile, now = performance.now()) {
+      const moveName = profile === "small" ? GameUI.characterFor("player").smallMove : GameUI.characterFor("player").bigMove;
       if (GameReplay.isPlaybackMode()) return "正在播放重播，不能施放招式。";
-      if (!HexSnakeState.game.running || HexSnakeState.game.gameOver) return "尚未開局；開始後再點棋盤可施放招式。";
-      if (HexSnakeState.game.paused) return "遊戲暫停中，請先繼續再施放招式。";
-      if (!target || !HexSnakeState.game.snake?.length) return `${moveName} 施放失敗：沒有有效目標格。`;
+      if (!GameRuntimeState.running || GameRuntimeState.gameOver) return "尚未開局；開始後再點棋盤可施放招式。";
+      if (GameRuntimeState.paused) return "遊戲暫停中，請先繼續再施放招式。";
+      if (!target || !GameRuntimeState.snake?.length) return `${moveName} 施放失敗：沒有有效目標格。`;
 
-      const stock = HexSnakeState.game.playerStock;
-      const foodCost = HexSnakeUI.attackFoodCost(profile);
+      const stock = GameRuntimeState.playerStock;
+      const foodCost = GameUI.attackFoodCost(profile);
       if (profile === "small") {
-        const highestType = HexSnakeUI.highestStockFoodType(stock);
+        const highestType = GameUI.highestStockFoodType(stock);
         const highestCount = highestType ? stock[highestType.id] || 0 : 0;
         if (highestCount < foodCost) return `${moveName} 施放失敗：最高庫存不足，需要任一食物庫存至少 ${foodCost}。`;
       } else {
-        const missingFood = HexSnakeState.config.foodTypes
+        const missingFood = GameConfig.foodTypes
           .filter(type => stock[type.id] < foodCost)
           .map(type => type.label)
           .join("、");
         if (missingFood) return `${moveName} 施放失敗：${missingFood}庫存不足，需要四種庫存各 ${foodCost}。`;
       }
 
-      const bombCost = HexSnakeUI.attackBombCost(profile);
-      if (HexSnakeUI.ammoFor("player") < bombCost) return `${moveName} 施放失敗：炸彈不足，需要 ${bombCost} 枚，目前 ${HexSnakeUI.ammoFor("player")} 枚。`;
+      const bombCost = GameUI.attackBombCost(profile);
+      if (GameUI.ammoFor("player") < bombCost) return `${moveName} 施放失敗：炸彈不足，需要 ${bombCost} 枚，目前 ${GameUI.ammoFor("player")} 枚。`;
 
-      const remainingMs = HexSnakeUI.attackCooldownRemainingMs("player", profile, now);
+      const remainingMs = GameUI.attackCooldownRemainingMs("player", profile, now);
       if (remainingMs > 0) return `${moveName} 施放失敗：冷卻中，還需 ${(remainingMs / 1000).toFixed(1)} 秒。`;
 
       return `${moveName} 施放失敗：目前條件不允許施放。`;
