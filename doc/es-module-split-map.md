@@ -36,12 +36,12 @@
 | 1. Low-risk module borders | 完成 | platform web/mobile、state、dom、network、about 建立 script-compatible facade 與 module borders | build、quick、smoke 通過；`audit:globals` 下降 |
 | 2. DOM/helper facade | 完成 | 建立 `HexSnakeControls`、`HexSnakeDOM` 與 game/UI helper facade | `audit:globals` 486 -> 367 |
 | 3. Catalog/media cleanup | 完成 | catalog setter/list、portrait variant state getter、food label config getter；characters/audio/stats 改走 facade | `audit:globals` 367 -> 339；build、quick、smoke 通過 |
-| 4. Runtime cleanup | runtime adapter facade 收斂完成 | replay、render、AI、UI/game hooks、public services 與 platform/storage adapter 已分批改走 `HexSnakeDOM`、`HexSnakeState`、`HexSnakeUI`、`HexSnakeRender`、`HexSnakeRuntime` | `audit:globals` 339 -> 42；`audit:state-boundary` 維持 0/0 |
+| 4. Runtime cleanup | service module migration 小切片進行中 | replay、render、AI、UI/game hooks、public services 與 platform/storage adapter 已分批改走 `HexSnakeDOM`、`HexSnakeState`、`HexSnakeUI`、`HexSnakeRender`、`HexSnakeRuntime`；`stats.js` 已集中成 `StatsRuntime` / `StatsStorage` / `StatsGameState` / `StatsUI` / `StatsDom` aliases，方便後續替換成 explicit imports | `audit:globals` 339 -> 42；`audit:state-boundary` 維持 0/0；`audit:esm-map` 固定 stats alias shape |
 | 5. Core ES module split | production strategy 完成 | 已新增 `src/main-module.js` 與 `?hexSnakeLoader=module-shadow` / `?hexSnakeLoader=module`；platform/runtime、state registry、DOM facade、UI shell、network/about leaf services、catalog/media/stats、runtime helper 與 game shell 已可被 native module import；`test:module-loader` 固定驗證 shadow no-bootstrap、source module bootstrap 與 dist fallback；正式 production 決定維持 `bundled-legacy-fallback`，由 `check:assets` 驗證 manifest | `audit:esm-map`、`test:module-loader`、`check:assets`、legacy loader 可回退；正式 module bundle 須另走 source map gate |
 
 ## Immediate AI Task Queue
 
-1. 回到 Phase D service module migration：先挑一個 leaf service 或 runtime helper 做 explicit import friendly 的小切片，並維持 production `bundled-legacy-fallback`。
+1. 延續 Phase D service module migration：挑下一個 leaf service 或 runtime helper 做 explicit import friendly 的小切片，並維持 production `bundled-legacy-fallback`。
 2. 若要啟動正式 module bundle，先依 `doc/es-module-production-strategy.md` 新增 opt-in module artifact / source map gate，不直接改 default。
 3. 每批只移動一層 ownership，確保 `audit:globals`、`audit:state-boundary` 與 `test:module-loader` 不退步。
 

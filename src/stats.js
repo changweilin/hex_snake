@@ -1,5 +1,10 @@
+const StatsRuntime = HexSnakeRuntime;
+const StatsStorage = StatsRuntime.storage;
+const StatsGameState = HexSnakeState.game;
+const StatsUI = HexSnakeUI;
+const StatsDom = HexSnakeDOM;
+
 const HexSnakeStats = (() => {
-  const StatsStorage = HexSnakeRuntime.storage;
   const statsKey = "hexSnakeMatchStatsV1";
   const statsVersion = 1;
   const recentLimit = 10;
@@ -106,7 +111,7 @@ const HexSnakeStats = (() => {
   }
 
   function characterName(characterId) {
-    return HexSnakeUI.characterForId(characterId)?.name || characterId || "未選擇";
+    return StatsUI.characterForId(characterId)?.name || characterId || "未選擇";
   }
 
   function modeLabel(mode) {
@@ -177,13 +182,13 @@ const HexSnakeStats = (() => {
   }
 
   function renderSummary(stats) {
-    HexSnakeDOM.statsSummary.innerHTML = "";
+    StatsDom.statsSummary.innerHTML = "";
     const totals = stats.totals;
     [
       ["對戰", totals.matches, "statsTotalMatches"],
       ["P1 勝率", formatPercent(totals.playerWins, totals.matches), "statsWinRate"],
       ["最佳分數", totals.bestPlayerScore, "statsBestScore"],
-      ["總時長", HexSnakeUI.formatTime(totals.totalDurationMs), "statsTotalDuration"]
+      ["總時長", StatsUI.formatTime(totals.totalDurationMs), "statsTotalDuration"]
     ].forEach(([label, value, id]) => {
       const card = document.createElement("div");
       card.className = "app-stats-card";
@@ -193,18 +198,18 @@ const HexSnakeStats = (() => {
       const labelEl = document.createElement("span");
       labelEl.textContent = label;
       card.append(valueEl, labelEl);
-      HexSnakeDOM.statsSummary.append(card);
+      StatsDom.statsSummary.append(card);
     });
   }
 
   function renderRecent(stats) {
-    HexSnakeDOM.statsRecentList.innerHTML = "";
-    HexSnakeDOM.statsRecentCount.textContent = `${stats.recent.length} / ${recentLimit}`;
+    StatsDom.statsRecentList.innerHTML = "";
+    StatsDom.statsRecentCount.textContent = `${stats.recent.length} / ${recentLimit}`;
     if (!stats.recent.length) {
       const empty = document.createElement("div");
       empty.className = "replay-empty";
       empty.textContent = "還沒有戰績，完成一場後會出現在這裡。";
-      HexSnakeDOM.statsRecentList.append(empty);
+      StatsDom.statsRecentList.append(empty);
       return;
     }
 
@@ -219,14 +224,14 @@ const HexSnakeStats = (() => {
       title.textContent = `${formatDate(record.createdAt)} ${winnerLabel(record.winnerOwner)} ${record.playerScore}:${record.computerScore}`;
       const meta = document.createElement("div");
       meta.className = "replay-meta";
-      meta.textContent = `${modeLabel(record.mode)} · ${characterName(record.playerCharacterId)} vs ${characterName(record.computerCharacterId)} · ${HexSnakeUI.formatTime(record.durationMs)}${record.surrendered ? " · 投降" : ""}`;
+      meta.textContent = `${modeLabel(record.mode)} · ${characterName(record.playerCharacterId)} vs ${characterName(record.computerCharacterId)} · ${StatsUI.formatTime(record.durationMs)}${record.surrendered ? " · 投降" : ""}`;
       details.append(title, meta);
 
       const badge = document.createElement("span");
       badge.className = `app-stats-badge ${record.winnerOwner === "player" ? "is-win" : record.winnerOwner === "computer" ? "is-loss" : "is-draw"}`;
       badge.textContent = winnerLabel(record.winnerOwner);
       row.append(details, badge);
-      HexSnakeDOM.statsRecentList.append(row);
+      StatsDom.statsRecentList.append(row);
     });
   }
 
@@ -243,13 +248,13 @@ const HexSnakeStats = (() => {
 
   function renderCharacterMastery(stats) {
     const rows = characterRows(stats);
-    HexSnakeDOM.statsCharacterList.innerHTML = "";
-    HexSnakeDOM.statsCharacterCount.textContent = `${rows.length}`;
+    StatsDom.statsCharacterList.innerHTML = "";
+    StatsDom.statsCharacterCount.textContent = `${rows.length}`;
     if (!rows.length) {
       const empty = document.createElement("div");
       empty.className = "replay-empty";
       empty.textContent = "P1 使用角色完成對戰後會累積熟練度。";
-      HexSnakeDOM.statsCharacterList.append(empty);
+      StatsDom.statsCharacterList.append(empty);
       return;
     }
 
@@ -264,14 +269,14 @@ const HexSnakeStats = (() => {
       title.textContent = characterName(row.characterId);
       const meta = document.createElement("div");
       meta.className = "replay-meta";
-      meta.textContent = `${row.played} 場 · ${row.wins} 勝 ${row.losses} 敗 ${row.draws} 平 · 最高 ${row.bestScore} · ${HexSnakeUI.formatTime(row.durationMs)}`;
+      meta.textContent = `${row.played} 場 · ${row.wins} 勝 ${row.losses} 敗 ${row.draws} 平 · 最高 ${row.bestScore} · ${StatsUI.formatTime(row.durationMs)}`;
       details.append(title, meta);
 
       const badge = document.createElement("span");
       badge.className = "app-stats-badge";
       badge.textContent = formatPercent(row.wins, row.played);
       item.append(details, badge);
-      HexSnakeDOM.statsCharacterList.append(item);
+      StatsDom.statsCharacterList.append(item);
     });
   }
 
@@ -283,14 +288,14 @@ const HexSnakeStats = (() => {
   }
 
   function openModal() {
-    if (HexSnakeState.game.running && !HexSnakeState.game.gameOver) return;
-    HexSnakeUI.clearRelayRestartTimer();
+    if (StatsGameState.running && !StatsGameState.gameOver) return;
+    StatsUI.clearRelayRestartTimer();
     refreshModal();
-    HexSnakeDOM.statsModal.hidden = false;
+    StatsDom.statsModal.hidden = false;
   }
 
   function closeModal() {
-    HexSnakeDOM.statsModal.hidden = true;
+    StatsDom.statsModal.hidden = true;
   }
 
   function clearStats() {
@@ -307,7 +312,7 @@ const HexSnakeStats = (() => {
   });
 })();
 
-Object.defineProperties(HexSnakeUI.stats, Object.getOwnPropertyDescriptors(HexSnakeStats));
+Object.defineProperties(StatsUI.stats, Object.getOwnPropertyDescriptors(HexSnakeStats));
 
 export {
   HexSnakeStats,
