@@ -2,6 +2,7 @@
     const AiState = HexSnakeState.game;
     const AiUI = HexSnakeUI;
     const AiGame = HexSnakeUI.aiGame;
+    const AiStorage = HexSnakeRuntime.storage;
 
     let wrappedDistanceBoardCache = null;
     let activeAiDecisionCache = null;
@@ -11,7 +12,7 @@
     function isAiPerfEnabled() {
       if (aiPerfEnabledCache !== null) return aiPerfEnabledCache;
       try {
-        aiPerfEnabledCache = HexSnakeStorage.get("hexSnakeAiPerf") === "1";
+        aiPerfEnabledCache = AiStorage.get("hexSnakeAiPerf") === "1";
       } catch {
         aiPerfEnabledCache = false;
       }

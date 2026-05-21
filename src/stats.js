@@ -1,4 +1,5 @@
 const HexSnakeStats = (() => {
+  const StatsStorage = HexSnakeRuntime.storage;
   const statsKey = "hexSnakeMatchStatsV1";
   const statsVersion = 1;
   const recentLimit = 10;
@@ -83,11 +84,11 @@ const HexSnakeStats = (() => {
   }
 
   function loadStats() {
-    return normalizeStats(HexSnakeStorage.getJson(statsKey, emptyStats()));
+    return normalizeStats(StatsStorage.getJson(statsKey, emptyStats()));
   }
 
   function saveStats(stats) {
-    HexSnakeStorage.setJson(statsKey, normalizeStats(stats));
+    StatsStorage.setJson(statsKey, normalizeStats(stats));
   }
 
   function saveStatsSafely(stats) {
@@ -293,7 +294,7 @@ const HexSnakeStats = (() => {
   }
 
   function clearStats() {
-    HexSnakeStorage.remove(statsKey);
+    StatsStorage.remove(statsKey);
     refreshModal();
   }
 

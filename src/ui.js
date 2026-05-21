@@ -4,6 +4,7 @@ const UiAudio = HexSnakeUI.audio;
 const UiGame = HexSnakeUI.uiGame;
 const UiReplay = HexSnakeUI.replay;
 const UiRender = HexSnakeRender;
+const UiStorage = HexSnakeRuntime.storage;
 let maxGridSize = 12;
 let minFoodCount = 1;
 let maxFoodCount = 4;
@@ -807,8 +808,8 @@ let playerEnergyFlashUntil = 0;
 let computerEnergyFlashUntil = 0;
 let playerBombFlashUntil = 0;
 let computerBombFlashUntil = 0;
-let best = Number(HexSnakeStorage.get("hexSnakeBest") || 0);
-let bestTotalMs = Number(HexSnakeStorage.get("hexSnakeBestTotalMs") || 0);
+let best = Number(UiStorage.get("hexSnakeBest") || 0);
+let bestTotalMs = Number(UiStorage.get("hexSnakeBestTotalMs") || 0);
 let totalElapsedMs = 0;
 let lastFeedElapsedMs = 0;
 let running = false;
@@ -817,9 +818,9 @@ let computerBattleMode = false;
 let playerAutoMode = false;
 let computerBattleManualOverride = false;
 let computerBattleSpeed = HexSnakeControls.normalizeAutoBattleSpeed(
-  HexSnakeStorage.get("hexSnakeAutoBattleSpeed"),
+  UiStorage.get("hexSnakeAutoBattleSpeed"),
 );
-let relayModePreference = HexSnakeStorage.get("hexSnakeRelayMode") === "1";
+let relayModePreference = UiStorage.get("hexSnakeRelayMode") === "1";
 let relayMode = false;
 let relayPlayerWins = 0;
 let relayComputerWins = 0;
@@ -1744,7 +1745,7 @@ let introDetailsOpen = false;
 let tutorialStepIndex = 0;
 const tutorialSeenKey = "hexSnakeTutorialSeen";
 const perfStatsKey = "hexSnakePerfStats";
-let perfStatsVisible = HexSnakeStorage.get(perfStatsKey) === "1";
+let perfStatsVisible = UiStorage.get(perfStatsKey) === "1";
 let tutorialSwipeStartX = null;
 let tutorialSwipeStartY = null;
 let tutorialSwipePointerId = null;
@@ -1764,7 +1765,7 @@ const portraitVariantLabels = {
   beast: "幻獸版",
   chibi: "Q獸版",
 };
-const storedPortraitVariant = HexSnakeStorage.get("hexSnakePortraitVariant");
+const storedPortraitVariant = UiStorage.get("hexSnakePortraitVariant");
 let portraitVariantMode = portraitVariantModes.includes(storedPortraitVariant)
   ? storedPortraitVariant
   : storedPortraitVariant === "full"
@@ -2842,14 +2843,14 @@ function showTutorial(startIndex = 0) {
 }
 
 function finishTutorial(markSeen = true) {
-  if (markSeen) HexSnakeStorage.set(tutorialSeenKey, "1");
+  if (markSeen) UiStorage.set(tutorialSeenKey, "1");
   UiDom.overlay.classList.remove("tutorial-open");
   renderIntroPortraits(false);
   UiDom.overlay.classList.add("show");
 }
 
 function shouldShowTutorial() {
-  return HexSnakeStorage.get(tutorialSeenKey) !== "1";
+  return UiStorage.get(tutorialSeenKey) !== "1";
 }
 
 function isTutorialOpen() {
@@ -3399,7 +3400,7 @@ function setPortraitVariantMode(mode) {
         : defaultPortraitVariantMode;
   if (portraitVariantMode === nextMode) return;
   portraitVariantMode = nextMode;
-  HexSnakeStorage.set("hexSnakePortraitVariant", portraitVariantMode);
+  UiStorage.set("hexSnakePortraitVariant", portraitVariantMode);
   rerenderPortraitSurfaces();
   HexSnakeUI.preloadPortraitsFor("player");
   HexSnakeUI.preloadPortraitsFor("computer");

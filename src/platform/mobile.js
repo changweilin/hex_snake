@@ -383,6 +383,12 @@ const HexSnakePlatform = (() => {
   });
 })();
 
+const HexSnakeRuntime = Object.freeze({
+  platform: HexSnakePlatform,
+  storage: HexSnakeStorage
+});
+
 window.HexSnakeStorage = HexSnakeStorage;
 window.HexSnakePlatform = HexSnakePlatform;
+window.HexSnakeRuntime = HexSnakeRuntime;
 window.HexSnakeMobilePlatform = HexSnakePlatform;

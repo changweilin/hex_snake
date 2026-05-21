@@ -1,4 +1,5 @@
 const HexSnakeAbout = (() => {
+  const AboutPlatform = HexSnakeRuntime.platform;
   const AboutDom = HexSnakeDOM;
 
   function yesNo(value) {
@@ -31,7 +32,7 @@ const HexSnakeAbout = (() => {
   }
 
   function renderVersionInfo() {
-    const info = HexSnakePlatform.appInfo;
+    const info = AboutPlatform.appInfo;
     AboutDom.versionInfoList.innerHTML = "";
     addRow("名稱", info.name, "versionAppName");
     addRow("版本", info.version, "versionAppVersion");

@@ -1,4 +1,5 @@
 const HexSnakeNet = (() => {
+  const NetStorage = HexSnakeRuntime.storage;
   const statusText = document.querySelector("#networkStatus");
   const panel = document.querySelector("#networkPanel");
   const roomCodeText = document.querySelector("#networkRoomCode");
@@ -23,7 +24,7 @@ const HexSnakeNet = (() => {
   let desiredRole = null;
   let desiredRoomCode = "";
   let lastSnapshotSentAt = -Infinity;
-  let snapshotIntervalMs = clampSnapshotInterval(HexSnakeStorage?.get?.("hexSnakeLanSnapshotIntervalMs") || 100);
+  let snapshotIntervalMs = clampSnapshotInterval(NetStorage?.get?.("hexSnakeLanSnapshotIntervalMs") || 100);
   let baseStatusText = "";
   let baseStatusState = "";
 
@@ -360,7 +361,7 @@ const HexSnakeNet = (() => {
     },
     setSnapshotIntervalMs(value) {
       snapshotIntervalMs = clampSnapshotInterval(value);
-      HexSnakeStorage?.set?.("hexSnakeLanSnapshotIntervalMs", String(snapshotIntervalMs));
+      NetStorage?.set?.("hexSnakeLanSnapshotIntervalMs", String(snapshotIntervalMs));
       return snapshotIntervalMs;
     },
     role() {

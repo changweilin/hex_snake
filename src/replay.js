@@ -1,6 +1,8 @@
     const replayRecentKey = "hexSnakeReplayRecent";
     const replayFavoritesKey = "hexSnakeReplayFavorites";
     const replaySpeedKey = "hexSnakeReplaySpeed";
+    const ReplayPlatform = HexSnakeRuntime.platform;
+    const ReplayStorage = HexSnakeRuntime.storage;
     const replayLimit = 5;
     const replaySnapshotIntervalMs = 200;
     const replayMaxSnapshots = 900;
@@ -29,7 +31,7 @@
 
     function replayLoadList(key) {
       try {
-        const parsed = HexSnakeStorage.getJson(key, []);
+        const parsed = ReplayStorage.getJson(key, []);
         return Array.isArray(parsed) ? parsed : [];
       } catch {
         return [];
@@ -37,7 +39,7 @@
     }
 
     function replaySaveList(key, list) {
-      HexSnakeStorage.setJson(key, list);
+      ReplayStorage.setJson(key, list);
     }
 
     function replayCharacterName(id) {
@@ -69,7 +71,7 @@
     }
 
     function storedReplaySpeed() {
-      return normalizeReplaySpeed(HexSnakeStorage.get(replaySpeedKey));
+      return normalizeReplaySpeed(ReplayStorage.get(replaySpeedKey));
     }
 
     function allReplayRecords() {
@@ -617,14 +619,14 @@
       replayReturnState = null;
     }
 
-    HexSnakePlatform.lifecycle.onPause(() => {
+    ReplayPlatform.lifecycle.onPause(() => {
       if (!replayRafId) return;
       cancelAnimationFrame(replayRafId);
       replayRafId = 0;
       if (replayPlayback) replayPlayback.lastFrameAt = performance.now();
     });
 
-    HexSnakePlatform.lifecycle.onResume(() => {
+    ReplayPlatform.lifecycle.onResume(() => {
       if (!replayPlayback || replayRafId) return;
       replayPlayback.lastFrameAt = performance.now();
       replayRafId = requestAnimationFrame(renderReplayFrame);
@@ -684,7 +686,7 @@
       setPlaybackSpeed(value) {
         if (!replayPlayback) return false;
         replayPlayback.speed = normalizeReplaySpeed(value);
-        HexSnakeStorage.set(replaySpeedKey, String(replayPlayback.speed));
+        ReplayStorage.set(replaySpeedKey, String(replayPlayback.speed));
         replayPlayback.lastFrameAt = performance.now();
         updateReplayControls();
         return true;

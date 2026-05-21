@@ -4,14 +4,15 @@
     const RenderUI = HexSnakeUI;
     const RenderAI = HexSnakeUI.ai;
     const RenderGame = HexSnakeRenderGame;
+    const RenderPlatform = HexSnakeRuntime.platform;
     const RenderReplay = HexSnakeUI.replay;
 
     function comparisonLoop(now) {
-      if (HexSnakePlatform.lifecycle.isPaused()) {
+      if (RenderPlatform.lifecycle.isPaused()) {
         RenderState.rafId = 0;
         return;
       }
-      const frameStats = HexSnakePlatform.display.recordFrame(now || performance.now());
+      const frameStats = RenderPlatform.display.recordFrame(now || performance.now());
       if (typeof RenderGame.updatePerfOverlay === "function") RenderGame.updatePerfOverlay(frameStats);
       drawEffectComparisonBoard(now);
       RenderState.rafId = requestAnimationFrame(comparisonLoop);
@@ -200,7 +201,7 @@
     function visualLoadScale() {
       const mobileScale = RenderDom.mobileInputQuery.matches ? 0.72 : 1;
       const boardScale = RenderState.cells.length > 240 ? 0.82 : 1;
-      return mobileScale * boardScale * HexSnakePlatform.display.visualLoadScale();
+      return mobileScale * boardScale * RenderPlatform.display.visualLoadScale();
     }
 
     function effectVisualPlanFor(visualType = "", phase = "impact", character = null) {

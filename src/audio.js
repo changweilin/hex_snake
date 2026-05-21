@@ -1,8 +1,9 @@
+    const AudioStorage = HexSnakeRuntime.storage;
     let sfxContext = null;
     let sfxMaster = null;
     let sfxNoiseBuffer = null;
     let sfxUnlocked = false;
-    let sfxMuted = HexSnakeStorage.get("hexSnakeSfxMuted") === "1";
+    let sfxMuted = AudioStorage.get("hexSnakeSfxMuted") === "1";
     HexSnakeState.audio.muted = sfxMuted;
     HexSnakeState.audio.unlocked = sfxUnlocked;
     const sfxLastPlayedAt = new Map();
@@ -59,7 +60,7 @@
       sfxMuted = Boolean(muted);
       HexSnakeState.audio.muted = sfxMuted;
       HexSnakeDOM.sfxMuteToggle.checked = sfxMuted;
-      HexSnakeStorage.set("hexSnakeSfxMuted", sfxMuted ? "1" : "0");
+      AudioStorage.set("hexSnakeSfxMuted", sfxMuted ? "1" : "0");
       if (sfxMuted && sfxContext?.state === "running") {
         sfxContext.suspend().catch(() => {});
       } else if (!sfxMuted) {

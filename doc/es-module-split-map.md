@@ -1,60 +1,59 @@
 # ES Module Split Map
 
-更新日期：2026-05-21（Asia/Taipei）
+最後更新：2026-05-21（Asia/Taipei）
 
-## 目的
+## 目標
 
-這份文件把 `npm.cmd run audit:globals` 的 legacy global dependency report 轉成 ES module split 的執行順序。目標是在不改玩法行為的前提下，先拆低風險邊界，再處理 `ui.js` / `game.js` / `render.js` / `ai.js` / `replay.js` 的核心循環。
+本文件把 `npm.cmd run audit:globals` 的 legacy global dependency report 轉成 ES module split 的執行地圖，避免在正式拆分時一次碰到 `ui.js` / `game.js` / `render.js` / `ai.js` / `replay.js` 的核心循環依賴。
 
-目前基準：
-
-- `npm.cmd run audit:state-boundary`：`game.js` 對 `ui.js` top-level declaration 的 heuristic reference 已歸零。
-- `npm.cmd run audit:globals`：44 cross-file reads，Phase 4 已先把 `replay.js` 的直接 DOM/runtime reads、`render.js` 對 `ui.js` 的直接 DOM/runtime/config-catalog reads、`ai.js` 的規則/runtime/helper reads 收斂到 facade，將 `ui.js -> dom.js` 個別 DOM globals 收斂為單一 `HexSnakeDOM` 依賴，新增 service facade 讓 audio/replay/stats/about/AI 改由 `HexSnakeUI.audio/replay/stats/about/ai` 取得，並以 `HexSnakeUI.uiGame` / `HexSnakeRender` 清掉 `ui.js -> game.js` 與 render public hooks consumers。
-- `src/main.js` 仍用 legacy loader 將 13 個 source files 合併到同一個 module scope。
+目前基線：
+- `npm.cmd run audit:state-boundary`：`game.js` 對 `ui.js` top-level declaration 的 heuristic reference 維持 0，legacy name leak 維持 0。
+- `npm.cmd run audit:globals`：42 cross-file reads。Phase 4 已把 replay、render、AI、UI/game hooks、public service 與 platform/storage runtime adapter 分批收斂到 facade；一般模組現在透過 `HexSnakeRuntime.platform/storage` 取用 runtime adapter。
+- `src/main.js` 仍使用 legacy concatenated loader 載入 13 個 source files，尚未切到正式 module scope。
 
 ## Split Principles
 
-1. 每一階段都維持可 build、可 quick test、可 smoke test。
-2. 先抽低反向依賴與 facade，再拆高循環檔案。
-3. 不先拆 `ui.js` / `game.js` 本體；先移除它們之間的晚期 helper 依賴與直接 DOM/state 讀取。
-4. 每次變更後保留 `audit:state-boundary` 歸零，並用 `audit:globals` 觀察 cross-file reads 是否下降。
+1. 每一步都必須可 build、可 quick test、可 smoke test。
+2. 先新增 script-compatible facade，再移動讀取點，最後才移除 legacy globals。
+3. 不直接拆 `ui.js` / `game.js` 核心；先把 helper、DOM/state、service、runtime adapter 依賴收斂到 facade。
+4. 每批變更後保留 `audit:state-boundary` gate，並讓 `audit:globals` cross-file reads 單調下降。
 
 ## Dependency Groups
 
-| Group | Files | 現況 | Split 判斷 |
+| Group | Files | 現況 | Split 方向 |
 | --- | --- | --- | --- |
-| Foundation | `src/platform/web.js`, `src/state.js`, `src/dom.js` | `state.js`、`dom.js` 沒有 detected cross-file globals；`platform/web.js` 被多數檔案讀取，但仍有 `render.js` 的 late read `visualLoadScale` | 第一階段可先建立 export/facade 邊界；`platform/web.js` 的 late read 要在正式 split 前移除 |
-| Leaf services | `src/network.js`, `src/about.js` | `network.js` 沒 detected consumers；`about.js` 只依賴 platform/dom 並由 `game.js` 使用 | 最適合先做 script-compatible wrapper 與 isolated verification |
-| Catalog / media / stats | `src/characters.js`, `src/audio.js`, `src/stats.js` | 直接 state / DOM reads 已收斂；`characters.js` helper consumers 已改走 `HexSnakeUI`，目前無 detected consumers；`audio.js` 已註冊 `HexSnakeUI.audio`，`stats.js` 已註冊 `HexSnakeUI.stats`，目前無 detected consumers | 第二階段首輪完成，後續只需在正式 ESM 前確認 catalog / service exports |
-| Runtime helpers | `src/ai.js`, `src/render.js`, `src/replay.js` | `replay.js` 首批已改走 DOM/state/UI facade，game lifecycle helpers 已改走 `HexSnakeUI.replayGame`，render draw calls 已改走 `HexSnakeRender`，public service 已註冊 `HexSnakeUI.replay`；`render.js -> ui.js` direct reads 已清空，`render.js -> game.js` 已收斂為 `HexSnakeRenderGame`；`ai.js -> ui.js` direct reads 已清空，`ai.js -> game.js` 已收斂為 `HexSnakeUI.aiGame`，public service 已註冊 `HexSnakeUI.ai`；`render.js`、`replay.js`、`ai.js` 目前無 detected consumers | 下一步整理 platform/storage 依賴與正式 ESM export 形狀 |
-| Core knot | `src/ui.js`, `src/game.js` | `ui.js -> dom.js` 與 `game.js -> dom.js` 都已收斂成單一 `HexSnakeDOM` facade；`ui.js -> game.js` 已改走 `HexSnakeUI.uiGame`；`game.js -> ui.js` 無 detected consumers；`game.js` 目前無 detected consumers | 最後拆；下一步先降低 platform/storage adapter 依賴 |
+| Foundation | `src/platform/web.js`, `src/platform/mobile.js`, `src/state.js`, `src/dom.js` | `state.js` 與 `dom.js` 沒有 detected cross-file globals；web/mobile platform 已註冊 `HexSnakeRuntime = { platform, storage }`，一般模組改走 `HexSnakeRuntime.platform/storage` | 先維持 script-compatible window facade；下一步確認正式 ESM export map 與 registry 初始化順序 |
+| Leaf services | `src/network.js`, `src/about.js` | `network.js` 改用 `HexSnakeRuntime.storage`；`about.js` 改用 `HexSnakeRuntime.platform`、`HexSnakeDOM` 與 `HexSnakeUI.about` | 可先抽成 isolated wrapper，保留 legacy global fallback |
+| Catalog / media / stats | `src/characters.js`, `src/audio.js`, `src/stats.js` | catalog setter/list、portrait variant、food label 與角色 helper 已有 facade；`audio.js` / `stats.js` 分別註冊到 `HexSnakeUI.audio/stats`，runtime storage 改走 `HexSnakeRuntime.storage` | 補正式 catalog / service exports，再評估移除 window-only wiring |
+| Runtime helpers | `src/ai.js`, `src/render.js`, `src/replay.js` | replay 已改走 DOM/state/UI facade 與 `HexSnakeUI.replayGame`；render draw/public hooks 已改走 `HexSnakeRender` 與 `HexSnakeRenderGame`；AI helper hooks 已改走 `HexSnakeUI.aiGame`；runtime adapter 改走 `HexSnakeRuntime` | 下一步不再新增零散 facade，先確認 registry init/export map |
+| Core knot | `src/ui.js`, `src/game.js` | `ui.js -> dom.js` 與 `game.js -> dom.js` 都已收斂成 `HexSnakeDOM`；`ui.js -> game.js` 已改走 `HexSnakeUI.uiGame`；`game.js -> service/render/AI/runtime` 已改走 facade | 最後拆；先建立 ESM loader 需要的初始化順序文件與 export map |
 
 ## Recommended Split Order
 
 | Phase | 狀態 | Work | Gate |
 | --- | --- | --- | --- |
-| 0. Boundary freeze | 完成 | `audit:state-boundary` 精修並歸零，固定 486 cross-file reads baseline | `audit:state-boundary` = 0/0 |
-| 1. Low-risk module borders | 首輪完成 | 已為 platform web/mobile、`state.js`、`dom.js`、`network.js`、`about.js` 建立 script-compatible window/facade 邊界；`dom.js` 新增 `HexSnakeDOM` facade；未改 runtime call sites | build、quick、smoke 通過；`audit:globals` 不上升 |
-| 2. DOM/helper facade | 完成 | 已新增 `HexSnakeControls`，讓 `keyLabel`、`loadKeybinds`、`normalizeAutoBattleSpeed` 不再由 `ui.js` 讀 `game.js`；`game.js` 所有直接 DOM globals 已改走 `HexSnakeDOM` | `ui.js -> game.js` 僅剩 `HexSnakeGame`；`game.js -> dom.js` 僅剩 `HexSnakeDOM`；`audit:globals` 486 -> 367 |
-| 3. Catalog/media cleanup | 首輪完成 | 已新增 catalog setter/list facade 與 portrait variant state getter，並將 `characters.js`、`audio.js`、`stats.js` 的直接 state / DOM reads 改走 `HexSnakeState` / `HexSnakeUI` / `HexSnakeDOM` | `audit:globals` 367 -> 339；build、quick、smoke 通過 |
-| 4. Runtime cleanup | service facade 收斂完成 | `replay.js` 已改走 `HexSnakeDOM`、`HexSnakeState.game/ui/replay` 與 `HexSnakeUI` facade，game lifecycle helpers 已改走 `HexSnakeUI.replayGame`，render draw calls 已改走 `HexSnakeRender`，public service 已註冊 `HexSnakeUI.replay`；`render.js` 的 DOM refs、rafId、board-shake state、visualLoadScale cells read、colors / food / character catalog、elemental sprite cache、攻擊視覺常數、board collections、cell geometry、attack preview state 與 public hooks 已改走 facade；`ai.js` 的 board cache、food/resource valuation、visibility memory、attack target/profile、projectile/hazard threat reads 已改走 `HexSnakeState.config/game` 與 `HexSnakeUI`，AI game helper hooks 已改走 `HexSnakeUI.aiGame`，public service 已註冊 `HexSnakeUI.ai`；`ui.js -> game.js` 已改走 `HexSnakeUI.uiGame`；audio/stats/about public services 已註冊到 `HexSnakeUI` | `audit:globals` 339 -> 44；`audit:state-boundary` 維持 0/0 |
-| 5. Core ES module split | 待辦 | 在循環讀取清乾淨後，才拆 `ui.js` / `game.js` 本體與 `src/main.js` loader | legacy loader 可移除或降為 fallback |
+| 0. Boundary freeze | 完成 | 建立 `audit:state-boundary` gate，記錄 486 cross-file reads baseline | `audit:state-boundary` = 0/0 |
+| 1. Low-risk module borders | 完成 | platform web/mobile、state、dom、network、about 建立 script-compatible facade 與 module borders | build、quick、smoke 通過；`audit:globals` 下降 |
+| 2. DOM/helper facade | 完成 | 建立 `HexSnakeControls`、`HexSnakeDOM` 與 game/UI helper facade | `audit:globals` 486 -> 367 |
+| 3. Catalog/media cleanup | 完成 | catalog setter/list、portrait variant state getter、food label config getter；characters/audio/stats 改走 facade | `audit:globals` 367 -> 339；build、quick、smoke 通過 |
+| 4. Runtime cleanup | runtime adapter facade 收斂完成 | replay、render、AI、UI/game hooks、public services 與 platform/storage adapter 已分批改走 `HexSnakeDOM`、`HexSnakeState`、`HexSnakeUI`、`HexSnakeRender`、`HexSnakeRuntime` | `audit:globals` 339 -> 42；`audit:state-boundary` 維持 0/0 |
+| 5. Core ES module split | 待開始 | 確認 `HexSnakeState` / `HexSnakeDOM` / `HexSnakeUI` registry 初始化順序，建立正式 ESM export map，再拆 `src/main.js` loader | legacy loader 可回退；正式 loader 可逐步啟用 |
 
 ## Immediate AI Task Queue
 
-1. Phase 4 下一批：整理 platform/storage 依賴，評估 `HexSnakePlatform` / `HexSnakeStorage` 正式 ESM export 形狀。
-2. 接著確認 `HexSnakeState` / `HexSnakeDOM` / `HexSnakeUI` registry 在正式 ESM 下的初始化順序。
-3. 最後才拆 `ui.js` / `game.js` 本體與 `src/main.js` legacy loader。
+1. 確認 `HexSnakeState` / `HexSnakeDOM` / `HexSnakeUI` / `HexSnakeRuntime` registry 在正式 ESM 下的初始化順序，並補 export map 文件。
+2. 規劃 `src/main.js` loader split：先保留 legacy concatenated loader，再新增可切換的 module loader。
+3. 最後才處理 `ui.js` / `game.js` 的正式 module scope 拆分。
 
 ## Do Not Start With
 
-- 不先直接拆 `ui.js` / `game.js` 成獨立 modules。
-- 不先拆 `render.js` / `ai.js` / `replay.js`，因為它們仍是 UI runtime state 的重度消費者。
+- 不直接把 `ui.js` / `game.js` 拆成 modules。
+- 不把 `render.js` / `ai.js` / `replay.js` 剩餘 runtime reads 與 UI state 重新混在同一批大改動。
 - 不把 DOM、game loop、AI decision 與 replay schema 放在同一個大改動中處理。
 
 ## Validation
 
-每一階段至少執行：
+每批變更至少執行：
 
 ```bash
 npm.cmd run build
@@ -64,7 +63,7 @@ npm.cmd run test:quick
 npm.cmd run test:smoke
 ```
 
-release-adjacent 或 loader 相關階段再執行：
+接近 release 或 loader 行為變更時加跑：
 
 ```bash
 npm.cmd run release:check

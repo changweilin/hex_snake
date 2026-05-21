@@ -6,16 +6,18 @@
     const GameReplay = HexSnakeUI.replay;
     const GameRender = HexSnakeRender;
     const GameStats = HexSnakeUI.stats;
+    const GamePlatform = HexSnakeRuntime.platform;
+    const GameStorage = HexSnakeRuntime.storage;
 
     function saveKeybinds() {
-      HexSnakeStorage.setJson("hexSnakeKeybinds", HexSnakeState.game.keybinds);
+      GameStorage.setJson("hexSnakeKeybinds", HexSnakeState.game.keybinds);
     }
 
     const controlProfilesKey = "hexSnakeControlProfilesV1";
     const selectedControlProfileKey = "hexSnakeSelectedControlProfileV1";
     const controlProfileLimit = 8;
     let controlProfiles = loadControlProfiles();
-    let selectedControlProfileId = String(HexSnakeStorage.get(selectedControlProfileKey) || "").slice(0, 48);
+    let selectedControlProfileId = String(GameStorage.get(selectedControlProfileKey) || "").slice(0, 48);
 
     function cloneKeybinds(value = HexSnakeState.game.keybinds) {
       return {
@@ -80,7 +82,7 @@
     function cloneProfilePreferences(value = {}) {
       return {
         sfxMuted: Boolean(value.sfxMuted ?? GameAudio.muted),
-        lowPowerMode: Boolean(value.lowPowerMode ?? HexSnakePlatform.display.lowPowerMode()),
+        lowPowerMode: Boolean(value.lowPowerMode ?? GamePlatform.display.lowPowerMode()),
         "perfStatsVisible": Boolean(value.perfStatsVisible ?? HexSnakeState.ui.perfStatsVisible)
       };
     }
@@ -114,7 +116,7 @@
     }
 
     function loadControlProfiles() {
-      const saved = HexSnakeStorage.getJson(controlProfilesKey, []);
+      const saved = GameStorage.getJson(controlProfilesKey, []);
       if (!Array.isArray(saved)) return [];
       return saved
         .map(normalizeControlProfile)
@@ -123,12 +125,12 @@
     }
 
     function saveControlProfiles() {
-      HexSnakeStorage.setJson(controlProfilesKey, controlProfiles);
+      GameStorage.setJson(controlProfilesKey, controlProfiles);
     }
 
     function saveSelectedControlProfileId() {
-      if (selectedControlProfileId) HexSnakeStorage.set(selectedControlProfileKey, selectedControlProfileId);
-      else HexSnakeStorage.remove(selectedControlProfileKey);
+      if (selectedControlProfileId) GameStorage.set(selectedControlProfileKey, selectedControlProfileId);
+      else GameStorage.remove(selectedControlProfileKey);
     }
 
     function selectedControlProfile() {
@@ -287,8 +289,8 @@
     }
 
     function loadSavedCharacterChoices() {
-      const savedPlayer = HexSnakeStorage.get("hexSnakePlayerCharacterId");
-      const savedComputer = HexSnakeStorage.get("hexSnakeComputerCharacterId");
+      const savedPlayer = GameStorage.get("hexSnakePlayerCharacterId");
+      const savedComputer = GameStorage.get("hexSnakeComputerCharacterId");
       if (HexSnakeUI.isSelectableCharacterChoiceId(savedPlayer)) HexSnakeState.game.playerCharacterChoice = savedPlayer;
       if (HexSnakeUI.isSelectableCharacterChoiceId(savedComputer)) HexSnakeState.game.computerCharacterChoice = savedComputer;
       HexSnakeState.game.playerCharacterId = HexSnakeUI.hasCharacterId(HexSnakeState.game.playerCharacterChoice) ? HexSnakeState.game.playerCharacterChoice : HexSnakeUI.characterFallbackId("player");
@@ -296,8 +298,8 @@
     }
 
     function saveCharacterChoices() {
-      HexSnakeStorage.set("hexSnakePlayerCharacterId", HexSnakeState.game.playerCharacterChoice);
-      HexSnakeStorage.set("hexSnakeComputerCharacterId", HexSnakeState.game.computerCharacterChoice);
+      GameStorage.set("hexSnakePlayerCharacterId", HexSnakeState.game.playerCharacterChoice);
+      GameStorage.set("hexSnakeComputerCharacterId", HexSnakeState.game.computerCharacterChoice);
     }
 
     function syncCharacterInputs() {
@@ -372,7 +374,7 @@
 
     function triggerTouchFeedback(event, strength = 8) {
       if (event?.pointerType === "mouse") return;
-      HexSnakePlatform.haptics.vibrate(strength);
+      GamePlatform.haptics.vibrate(strength);
     }
 
     function setAttackButtonHighlight(profile = null) {
@@ -421,11 +423,11 @@
       const active = Boolean(enabled);
       Dom.controlRow.classList.toggle("left-handed", active);
       Dom.leftHandModeInput.checked = active;
-      HexSnakeStorage.set("hexSnakeLeftHandMode", active ? "1" : "0");
+      GameStorage.set("hexSnakeLeftHandMode", active ? "1" : "0");
     }
 
     function syncLowPowerMode() {
-      const active = HexSnakePlatform.display.lowPowerMode();
+      const active = GamePlatform.display.lowPowerMode();
       Dom.lowPowerModeInput.checked = active;
       document.body.classList.toggle("is-low-power", active);
       updatePerfOverlay();
@@ -433,7 +435,7 @@
     }
 
     function setLowPowerPreference(enabled) {
-      HexSnakePlatform.display.setLowPowerMode(enabled);
+      GamePlatform.display.setLowPowerMode(enabled);
       syncLowPowerMode();
       resize();
     }
@@ -442,18 +444,18 @@
       HexSnakeState.ui.perfStatsVisible = Boolean(enabled);
       Dom.perfStatsToggle.checked = HexSnakeState.ui.perfStatsVisible;
       Dom.perfOverlay.hidden = !HexSnakeState.ui.perfStatsVisible;
-      HexSnakeStorage.set(HexSnakeState.ui.perfStatsKey, HexSnakeState.ui.perfStatsVisible ? "1" : "0");
+      GameStorage.set(HexSnakeState.ui.perfStatsKey, HexSnakeState.ui.perfStatsVisible ? "1" : "0");
       updatePerfOverlay();
     }
 
-    function updatePerfOverlay(stats = HexSnakePlatform.display.frameStats) {
+    function updatePerfOverlay(stats = GamePlatform.display.frameStats) {
       if (!Dom.perfOverlay) return;
       if (!HexSnakeState.ui.perfStatsVisible) {
         Dom.perfOverlay.hidden = true;
         return;
       }
       Dom.perfOverlay.hidden = false;
-      Dom.perfOverlay.classList.toggle("is-low-power", HexSnakePlatform.display.lowPowerMode());
+      Dom.perfOverlay.classList.toggle("is-low-power", GamePlatform.display.lowPowerMode());
       const fps = Number.isFinite(stats.fps) ? Math.round(stats.fps) : 0;
       const frameMs = Number.isFinite(stats.frameMs) ? stats.frameMs.toFixed(1) : "0.0";
       Dom.perfFps.textContent = `${fps} FPS`;
@@ -567,7 +569,7 @@
     }
 
     function saveGmSettings() {
-      HexSnakeStorage.setJson("hexSnakeGmSettings", {
+      GameStorage.setJson("hexSnakeGmSettings", {
         gridSize: HexSnakeState.game.gridSize,
         foodCount: HexSnakeState.game.foodCount,
         computerDifficulty: HexSnakeState.game.computerDifficulty,
@@ -589,7 +591,7 @@
 
     function loadSavedGmSettings() {
       try {
-        const saved = HexSnakeStorage.getJson("hexSnakeGmSettings", null);
+        const saved = GameStorage.getJson("hexSnakeGmSettings", null);
         if (!saved || typeof saved !== "object") {
           updateGmPresetHighlight();
           return;
@@ -799,7 +801,7 @@
 
     function resize() {
       const rect = Dom.playArea.getBoundingClientRect();
-      const dpr = HexSnakePlatform.display.devicePixelRatio();
+      const dpr = GamePlatform.display.devicePixelRatio();
       Dom.canvas.width = Math.floor(rect.width * dpr);
       Dom.canvas.height = Math.floor(rect.height * dpr);
       Dom.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -967,7 +969,7 @@
       HexSnakeUI.updateResultSharePanel();
       HexSnakeUI.setResultShareStatus("正在複製結果...");
       try {
-        if (await HexSnakePlatform.share.copyText(resultCopyText(HexSnakeState.ui.lastResultShareData))) {
+        if (await GamePlatform.share.copyText(resultCopyText(HexSnakeState.ui.lastResultShareData))) {
           HexSnakeUI.setResultShareStatus("結果已複製。", "success");
           return;
         }
@@ -1027,7 +1029,7 @@
       HexSnakeState.game.computerBattleManualOverride = false;
       if (HexSnakeState.game.computerBattleMode || HexSnakeState.game.playerAutoMode) setRelayMode(HexSnakeState.game.relayModePreference, Boolean(options.resetRelayScore), false);
       if (!HexSnakeState.game.computerBattleMode && !HexSnakeState.game.playerAutoMode) setRelayMode(false, false, false);
-      if (HexSnakeState.game.computerBattleMode || HexSnakeState.game.playerAutoMode) setComputerBattleSpeed(HexSnakeStorage.get("hexSnakeAutoBattleSpeed"), false);
+      if (HexSnakeState.game.computerBattleMode || HexSnakeState.game.playerAutoMode) setComputerBattleSpeed(GameStorage.get("hexSnakeAutoBattleSpeed"), false);
       setFoodCount(Dom.foodCountInput.value);
       setComputerDifficulty(Dom.computerDifficultyInput.value);
       setInitialSpeed(Dom.initialSpeedInput.value);
@@ -1354,7 +1356,7 @@
       Dom.autoBattleSpeedSelect.setAttribute("aria-valuetext", autoBattleSpeedLabel(HexSnakeState.game.computerBattleSpeed));
       renderAutoSpeedMenu();
       if (persist) {
-        HexSnakeStorage.set("hexSnakeAutoBattleSpeed", String(HexSnakeState.game.computerBattleSpeed));
+        GameStorage.set("hexSnakeAutoBattleSpeed", String(HexSnakeState.game.computerBattleSpeed));
       }
     }
 
@@ -1400,7 +1402,7 @@
       const requestedRelayMode = persist ? HexSnakeState.game.relayModePreference : Boolean(enabled);
       HexSnakeState.game.relayMode = requestedRelayMode && isRelayModeAvailable();
       Dom.relayModeInput.checked = HexSnakeState.game.relayMode;
-      if (persist) HexSnakeStorage.set("hexSnakeRelayMode", HexSnakeState.game.relayModePreference ? "1" : "0");
+      if (persist) GameStorage.set("hexSnakeRelayMode", HexSnakeState.game.relayModePreference ? "1" : "0");
       if (resetScore) resetRelayScore();
       if (!HexSnakeState.game.relayMode) clearRelayRestartTimer();
       updateRelayControls();
@@ -1433,7 +1435,7 @@
       if (HexSnakeState.game.playerAutoMode === nextActive) return;
       HexSnakeState.game.playerAutoMode = nextActive;
       if (HexSnakeState.game.playerAutoMode) {
-        setComputerBattleSpeed(HexSnakeStorage.get("hexSnakeAutoBattleSpeed"), false);
+        setComputerBattleSpeed(GameStorage.get("hexSnakeAutoBattleSpeed"), false);
         setRelayMode(HexSnakeState.game.relayModePreference, false, false);
         resetAutoBattleStepTimers();
         if (announce) setStatus("Auto 已開啟，電腦接手 P1 操作。");
@@ -1451,7 +1453,7 @@
       if (!HexSnakeState.game.computerBattleMode || !HexSnakeState.game.running || HexSnakeState.game.gameOver || GameReplay.isPlaybackMode()) return;
       HexSnakeState.game.computerBattleManualOverride = Boolean(active);
       if (!HexSnakeState.game.computerBattleManualOverride) {
-        setComputerBattleSpeed(HexSnakeStorage.get("hexSnakeAutoBattleSpeed"), false);
+        setComputerBattleSpeed(GameStorage.get("hexSnakeAutoBattleSpeed"), false);
         setRelayMode(HexSnakeState.game.relayModePreference, false, false);
         resetAutoBattleStepTimers();
         setStatus("Auto 已開啟，電腦接手 P1 操作。");
@@ -2864,7 +2866,7 @@
         HexSnakeState.game.score += 1;
         HexSnakeUI.collectFood("player", eatenFood);
         HexSnakeState.game.best = Math.max(HexSnakeState.game.best, HexSnakeState.game.score);
-        HexSnakeStorage.set("hexSnakeBest", String(HexSnakeState.game.best));
+        GameStorage.set("hexSnakeBest", String(HexSnakeState.game.best));
         HexSnakeState.game.lastFeedElapsedMs = 0;
         HexSnakeState.game.lastPlayerFoodAt = performance.now();
         HexSnakeState.game.playerFoodTargetKey = null;
@@ -3038,7 +3040,7 @@
       setSettingsLocked(false);
       if (HexSnakeState.game.totalElapsedMs > HexSnakeState.game.bestTotalMs) {
         HexSnakeState.game.bestTotalMs = HexSnakeState.game.totalElapsedMs;
-        HexSnakeStorage.set("hexSnakeBestTotalMs", String(Math.floor(HexSnakeState.game.bestTotalMs)));
+        GameStorage.set("hexSnakeBestTotalMs", String(Math.floor(HexSnakeState.game.bestTotalMs)));
       }
       updateHud();
       broadcastNetworkSnapshot(gameOverAt, true, true);
@@ -3120,11 +3122,11 @@
     }
 
     function loop(now) {
-      if (HexSnakePlatform.lifecycle.isPaused()) {
+      if (GamePlatform.lifecycle.isPaused()) {
         HexSnakeState.game.rafId = 0;
         return;
       }
-      updatePerfOverlay(HexSnakePlatform.display.recordFrame(now || performance.now()));
+      updatePerfOverlay(GamePlatform.display.recordFrame(now || performance.now()));
       if (!HexSnakeState.game.running) {
         const frameNow = now || performance.now();
         const visualsActive = HexSnakeState.game.gameOverSettlementPending && advanceGameOverVisuals(frameNow);
@@ -4467,7 +4469,7 @@
 
     Dom.resetBestTimeButton.addEventListener("click", () => {
       HexSnakeState.game.bestTotalMs = 0;
-      HexSnakeStorage.set("hexSnakeBestTotalMs", "0");
+      GameStorage.set("hexSnakeBestTotalMs", "0");
       updateHud();
     });
 
@@ -4518,7 +4520,7 @@
       setLeftHandMode(false);
       renderControlProfiles();
       GameAudio.setMuted(false);
-      HexSnakePlatform.display.clearLowPowerModePreference();
+      GamePlatform.display.clearLowPowerModePreference();
       syncLowPowerMode();
       setPerfStatsVisible(false);
       resetGame();
@@ -5443,14 +5445,14 @@
       }
     });
     window.addEventListener("blur", clearKeyboardAimKeyLocks);
-    HexSnakePlatform.lifecycle.onPause(() => {
+    GamePlatform.lifecycle.onPause(() => {
       clearKeyboardAimKeyLocks();
       if (HexSnakeState.game.rafId) {
         cancelAnimationFrame(HexSnakeState.game.rafId);
         HexSnakeState.game.rafId = 0;
       }
     });
-    HexSnakePlatform.lifecycle.onResume(() => {
+    GamePlatform.lifecycle.onResume(() => {
       if (HexSnakeState.game.rafId) return;
       const now = performance.now();
       if (HexSnakeState.game.running && !HexSnakeState.game.gameOver) {
@@ -5464,7 +5466,7 @@
         HexSnakeState.game.rafId = requestAnimationFrame(GameRender.comparisonLoop);
       }
     });
-    HexSnakePlatform.lifecycle.onBackButton?.(handlePlatformBackButton);
+    GamePlatform.lifecycle.onBackButton?.(handlePlatformBackButton);
 
     Object.assign(HexSnakeRenderGame, {
       attackStats,
@@ -5623,7 +5625,7 @@
       updateGmPresetHighlight();
       setSettingsLocked(false);
       applyKeybinds();
-      setLeftHandMode(HexSnakeStorage.get("hexSnakeLeftHandMode") === "1");
+      setLeftHandMode(GameStorage.get("hexSnakeLeftHandMode") === "1");
       renderControlProfiles();
       Dom.sfxMuteToggle.checked = GameAudio.muted;
       syncLowPowerMode();
