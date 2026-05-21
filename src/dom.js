@@ -284,3 +284,8 @@
     });
 
     window.HexSnakeDOM = HexSnakeDOM;
+
+    export {
+      HexSnakeDOM,
+      HexSnakeDOM as dom
+    };

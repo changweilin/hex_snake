@@ -87,8 +87,10 @@ const mainModuleSource = read("src/main-module.js");
 [
   'import { runtime } from "./platform/web.js";',
   'from "./state.js"',
+  'import { dom } from "./dom.js";',
   "module-shadow",
   "bootstrapsGameplay: false",
+  "domReady",
   "runtimeKind",
   "registryKeys",
   "loadModuleShadow",
@@ -99,7 +101,6 @@ const mainModuleSource = read("src/main-module.js");
 });
 
 [
-  "./dom.js",
   "./ui.js",
   "./network.js",
   "./characters.js",
@@ -146,6 +147,7 @@ const requiredRegistrations = [
   ["src/state.js", "HexSnakeUI.stats = {};"],
   ["src/state.js", "HexSnakeUI.uiGame = {};"],
   ["src/dom.js", "window.HexSnakeDOM = HexSnakeDOM;"],
+  ["src/dom.js", "HexSnakeDOM as dom"],
   ["src/network.js", "window.HexSnakeNet = HexSnakeNet;"],
   ["src/audio.js", "Object.defineProperties(HexSnakeUI.audio"],
   ["src/replay.js", "Object.defineProperties(HexSnakeUI.replay"],

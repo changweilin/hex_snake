@@ -1,5 +1,6 @@
 import { runtime } from "./platform/web.js";
 import { controls, render, renderGame, state, uiRegistry } from "./state.js";
+import { dom } from "./dom.js";
 
 const moduleShadowSourceOrder = [
   "src/platform/web.js",
@@ -21,7 +22,8 @@ const moduleShadowContract = Object.freeze({
   mode: "module-shadow",
   entry: "src/main-module.js",
   bootstrapsGameplay: false,
-  imports: Object.freeze(["runtime", "state", "uiRegistry", "render", "renderGame", "controls"]),
+  imports: Object.freeze(["runtime", "state", "uiRegistry", "render", "renderGame", "controls", "dom"]),
+  domReady: Boolean(dom.canvas && dom.ctx && dom.overlay),
   runtimeKind: runtime.platform.kind,
   storageKind: runtime.storage.kind,
   registryKeys: Object.freeze(Object.keys(uiRegistry).sort()),
@@ -29,7 +31,7 @@ const moduleShadowContract = Object.freeze({
 });
 
 function loadModuleShadow() {
-  if (!state || !uiRegistry || !render || !renderGame || !controls) {
+  if (!state || !uiRegistry || !render || !renderGame || !controls || !dom) {
     throw new Error("Module shadow registry import failed.");
   }
   window.__HEX_SNAKE_MODULE_SHADOW__ = moduleShadowContract;

@@ -8,7 +8,7 @@
 
 ## Shadow Entry
 
-`src/main-module.js` 是目前唯一的 native module shadow entry。local dev 可用 `?hexSnakeLoader=module-shadow` 觸發它；它已 import dual-mode `runtime` 與 state registry shell，只回報 `module-shadow` contract，不 import 尚未 dual-mode 的 gameplay files，也不啟動 bootstrap。
+`src/main-module.js` 是目前唯一的 native module shadow entry。local dev 可用 `?hexSnakeLoader=module-shadow` 觸發它；它已 import dual-mode `runtime`、state registry shell 與 `dom` facade，只回報 `module-shadow` contract，不 import 尚未 dual-mode 的 gameplay files，也不啟動 bootstrap。
 
 ## Loader Order
 
@@ -40,7 +40,7 @@
 | `HexSnakeRender` | `src/state.js` creates; `src/render.js` extends | render public hooks | named `render` export implemented |
 | `HexSnakeRenderGame` | `src/state.js` creates; `src/game.js` extends | game geometry/combat helpers used by render | named `renderGame` export implemented; later move to pure helper module |
 | `HexSnakeControls` | `src/state.js` | frozen keyboard/control helpers | named `controls` export implemented |
-| `HexSnakeDOM` | `src/dom.js` | frozen DOM reference facade | named `dom` export |
+| `HexSnakeDOM` | `src/dom.js` | frozen DOM reference facade | named `dom` export implemented |
 | `HexSnakeNet` | `src/network.js` | frozen LAN client/service facade | named `network` export |
 | `HexSnakeAbout` | `src/about.js` | frozen version/about service, mirrored into `HexSnakeUI.about` | named `about` export |
 
