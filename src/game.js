@@ -2904,7 +2904,7 @@
       const consumed = consumedFoods.filter(Boolean);
       if (!attemptedFood && !consumed.length) return;
       const eatenKeys = new Set(consumed.map(food => food.key));
-      if (eatenKeys.size) HexSnakeState.game.foods = HexSnakeState.game.foods.filter(food => !eatenKeys.has(keyOf(food)));
+      if (eatenKeys.size) GameRuntimeState.foods = GameRuntimeState.foods.filter(food => !eatenKeys.has(keyOf(food)));
       placeFoods(consumed.map(food => food.owner));
     }
 
