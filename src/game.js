@@ -3720,19 +3720,19 @@
       return `${moveName} 施放失敗：目前條件不允許施放。`;
     }
 
-    function launchPlayerAttack(target, profile = HexSnakeState.game.selectedAttackProfile, options = {}) {
+    function launchPlayerAttack(target, profile = GameRuntimeState.selectedAttackProfile, options = {}) {
       if (GameReplay.isPlaybackMode()) {
         setStatus(playerAttackFailureReason(target, profile));
         return false;
       }
       if (isNetworkGuestActive()) {
         const safeProfile = profile === "small" ? "small" : "big";
-        const ownHeadKey = HexSnakeState.game.computerSnake?.[0] ? keyOf(HexSnakeState.game.computerSnake[0]) : "";
+        const ownHeadKey = GameRuntimeState.computerSnake?.[0] ? keyOf(GameRuntimeState.computerSnake[0]) : "";
         const targetIsOwnHead = target && keyOf(target) === ownHeadKey;
-        const networkTarget = target && !targetIsOwnHead ? target : HexSnakeState.game.snake?.[0];
+        const networkTarget = target && !targetIsOwnHead ? target : GameRuntimeState.snake?.[0];
         const networkOptions = { ...options };
-        if (networkOptions.aimOrigin && HexSnakeState.game.snake?.[0] && keyOf(networkOptions.aimOrigin) === keyOf(HexSnakeState.game.snake[0])) {
-          networkOptions.aimOrigin = HexSnakeState.game.computerSnake?.[0] ? { ...HexSnakeState.game.computerSnake[0] } : networkOptions.aimOrigin;
+        if (networkOptions.aimOrigin && GameRuntimeState.snake?.[0] && keyOf(networkOptions.aimOrigin) === keyOf(GameRuntimeState.snake[0])) {
+          networkOptions.aimOrigin = GameRuntimeState.computerSnake?.[0] ? { ...GameRuntimeState.computerSnake[0] } : networkOptions.aimOrigin;
         }
         sendNetworkInput({
           kind: "attack",
@@ -3744,29 +3744,29 @@
         setStatus(safeProfile === "small" ? "Sent P2 LAN attack." : "Sent P2 LAN big attack.");
         return true;
       }
-      if (!HexSnakeState.game.running || HexSnakeState.game.gameOver) {
+      if (!GameRuntimeState.running || GameRuntimeState.gameOver) {
         if (!autoStartGame()) {
           setStatus(playerAttackFailureReason(target, profile));
           return false;
         }
       }
-      if (HexSnakeState.game.paused) {
+      if (GameRuntimeState.paused) {
         setStatus(playerAttackFailureReason(target, profile));
         return false;
       }
       const now = performance.now();
       if (launchAttack("player", target, now, profile, options)) {
-        HexSnakeState.game.keyboardAttackPreview = null;
+        GameRuntimeState.keyboardAttackPreview = null;
         clearKeyboardAttackPreviewTimer();
-        HexSnakeState.game.targetCell = { ...target };
-        HexSnakeState.game.targetActive = true;
+        GameRuntimeState.targetCell = { ...target };
+        GameRuntimeState.targetActive = true;
         flashAttackButton(profile);
         GameRender.draw();
         setTimeout(() => {
-          HexSnakeState.game.targetActive = false;
+          GameRuntimeState.targetActive = false;
           GameRender.draw();
         }, 180);
-        const moveName = profile === "small" ? HexSnakeUI.characterFor("player").smallMove : HexSnakeUI.characterFor("player").bigMove;
+        const moveName = profile === "small" ? GameUI.characterFor("player").smallMove : GameUI.characterFor("player").bigMove;
         setStatus(`${moveName} 發動。`);
         return true;
       }
