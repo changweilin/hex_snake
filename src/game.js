@@ -388,19 +388,19 @@
     }
 
     function setAttackButtonHighlight(profile = null) {
-      if (HexSnakeState.game.attackHighlightReleaseTimer) {
-        clearTimeout(HexSnakeState.game.attackHighlightReleaseTimer);
-        HexSnakeState.game.attackHighlightReleaseTimer = null;
+      if (GameRuntimeState.attackHighlightReleaseTimer) {
+        clearTimeout(GameRuntimeState.attackHighlightReleaseTimer);
+        GameRuntimeState.attackHighlightReleaseTimer = null;
       }
-      HexSnakeState.game.highlightedAttackProfile = ["small", "big", "smallAim", "bigAim"].includes(profile) ? profile : null;
+      GameRuntimeState.highlightedAttackProfile = ["small", "big", "smallAim", "bigAim"].includes(profile) ? profile : null;
       updateAttackButtons();
     }
 
     function releaseAttackButtonHighlight(delayMs = 90) {
-      if (HexSnakeState.game.attackHighlightReleaseTimer) clearTimeout(HexSnakeState.game.attackHighlightReleaseTimer);
-      HexSnakeState.game.attackHighlightReleaseTimer = setTimeout(() => {
-        HexSnakeState.game.attackHighlightReleaseTimer = null;
-        HexSnakeState.game.highlightedAttackProfile = null;
+      if (GameRuntimeState.attackHighlightReleaseTimer) clearTimeout(GameRuntimeState.attackHighlightReleaseTimer);
+      GameRuntimeState.attackHighlightReleaseTimer = setTimeout(() => {
+        GameRuntimeState.attackHighlightReleaseTimer = null;
+        GameRuntimeState.highlightedAttackProfile = null;
         updateAttackButtons();
       }, delayMs);
     }
@@ -411,21 +411,21 @@
     }
 
     function updateAttackButtons() {
-      Dom.smallAttackButton.classList.toggle("is-selected", HexSnakeState.game.highlightedAttackProfile === "small");
-      Dom.bigAttackButton.classList.toggle("is-selected", HexSnakeState.game.highlightedAttackProfile === "big");
-      Dom.keyboardSmallAimButton.classList.toggle("is-selected", HexSnakeState.game.highlightedAttackProfile === "smallAim");
-      Dom.keyboardBigAimButton.classList.toggle("is-selected", HexSnakeState.game.highlightedAttackProfile === "bigAim");
-      Dom.targetModeSmallIndicator.classList.toggle("is-active", HexSnakeState.game.highlightedAttackProfile === "smallAim");
-      Dom.targetModeBigIndicator.classList.toggle("is-active", HexSnakeState.game.highlightedAttackProfile === "bigAim");
-      Dom.smallAttackButton.classList.toggle("secondary", HexSnakeState.game.highlightedAttackProfile !== "small");
-      Dom.bigAttackButton.classList.toggle("secondary", HexSnakeState.game.highlightedAttackProfile !== "big");
+      Dom.smallAttackButton.classList.toggle("is-selected", GameRuntimeState.highlightedAttackProfile === "small");
+      Dom.bigAttackButton.classList.toggle("is-selected", GameRuntimeState.highlightedAttackProfile === "big");
+      Dom.keyboardSmallAimButton.classList.toggle("is-selected", GameRuntimeState.highlightedAttackProfile === "smallAim");
+      Dom.keyboardBigAimButton.classList.toggle("is-selected", GameRuntimeState.highlightedAttackProfile === "bigAim");
+      Dom.targetModeSmallIndicator.classList.toggle("is-active", GameRuntimeState.highlightedAttackProfile === "smallAim");
+      Dom.targetModeBigIndicator.classList.toggle("is-active", GameRuntimeState.highlightedAttackProfile === "bigAim");
+      Dom.smallAttackButton.classList.toggle("secondary", GameRuntimeState.highlightedAttackProfile !== "small");
+      Dom.bigAttackButton.classList.toggle("secondary", GameRuntimeState.highlightedAttackProfile !== "big");
       updateTargetModeIndicator();
     }
 
     function selectAttackProfile(profile) {
-      HexSnakeState.game.selectedAttackProfile = profile === "big" ? "big" : "small";
+      GameRuntimeState.selectedAttackProfile = profile === "big" ? "big" : "small";
       updateAttackButtons();
-      const moveName = HexSnakeState.game.selectedAttackProfile === "big" ? HexSnakeUI.characterFor("player").bigMove : HexSnakeUI.characterFor("player").smallMove;
+      const moveName = GameRuntimeState.selectedAttackProfile === "big" ? GameUI.characterFor("player").bigMove : GameUI.characterFor("player").smallMove;
       setStatus(`已選擇 ${moveName}。點棋盤即可攻擊。`);
     }
 
