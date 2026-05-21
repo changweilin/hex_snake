@@ -1097,13 +1097,13 @@
     }
 
     function openGameOverCharacterSelect(owner) {
-      if (!HexSnakeState.game.gameOver) return;
+      if (!GameRuntimeState.gameOver) return;
       const nextOwner = owner === "computer" ? "computer" : "player";
       returnToStartScreen();
-      HexSnakeState.ui.selectedPortraitOwner = nextOwner;
+      GamePresentationState.selectedPortraitOwner = nextOwner;
       Dom.overlayTitle.textContent = "角色選擇";
       Dom.overlayText.textContent = "選好角色後關閉選擇畫面，會回到開始畫面。";
-      HexSnakeUI.renderIntroPortraits(true);
+      GameUI.renderIntroPortraits(true);
       Dom.overlay.classList.add("show");
     }
 
