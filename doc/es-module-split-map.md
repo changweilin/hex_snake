@@ -8,7 +8,7 @@
 
 目前基線：
 - `npm.cmd run audit:state-boundary`：`game.js` 對 `ui.js` top-level declaration 的 heuristic reference 維持 0，legacy name leak 維持 0。
-- `npm.cmd run audit:globals`：43 cross-file reads。Phase 4 已把 replay、render、AI、UI/game hooks、public service 與 platform/storage runtime adapter 分批收斂到 facade；一般模組現在透過 `HexSnakeRuntime.platform/storage` 取用 runtime adapter；LAN service 已註冊到 `HexSnakeUI.network`，`game.js` 不再讀 `window.HexSnakeNet`。
+- `npm.cmd run audit:globals`：44 cross-file reads。Phase 4 已把 replay、render、AI、UI/game hooks、public service 與 platform/storage runtime adapter 分批收斂到 facade；一般模組現在透過 `HexSnakeRuntime.platform/storage` 取用 runtime adapter；LAN service 已註冊到 `HexSnakeUI.network`，`game.js` 不再讀 `window.HexSnakeNet`；controls keybind storage 已改走 `StateStorage`，`state.js` 不再讀 `window.HexSnakeStorage`。
 - `src/main.js` 預設仍使用 legacy concatenated loader 載入 13 個 source files；local dev 可用 `?hexSnakeLoader=module-shadow` 載入 `src/main-module.js` shadow entry 並保持不啟動 gameplay，也可用 `?hexSnakeLoader=module` 由 `loadModuleGame()` 明確呼叫 `gameShell.bootstrapGame()`。
 
 ## Split Principles
@@ -36,7 +36,7 @@
 | 1. Low-risk module borders | 完成 | platform web/mobile、state、dom、network、about 建立 script-compatible facade 與 module borders | build、quick、smoke 通過；`audit:globals` 下降 |
 | 2. DOM/helper facade | 完成 | 建立 `HexSnakeControls`、`HexSnakeDOM` 與 game/UI helper facade | `audit:globals` 486 -> 367 |
 | 3. Catalog/media cleanup | 完成 | catalog setter/list、portrait variant state getter、food label config getter；characters/audio/stats 改走 facade | `audit:globals` 367 -> 339；build、quick、smoke 通過 |
-| 4. Runtime cleanup | service module migration 小切片進行中 | replay、render、AI、UI/game hooks、public services 與 platform/storage adapter 已分批改走 `HexSnakeDOM`、`HexSnakeState`、`HexSnakeUI`、`HexSnakeRender`、`HexSnakeRuntime`；`ui.js`、`stats.js`、`about.js`、`network.js`、`audio.js`、`characters.js`、`replay.js`、`ai.js`、`render.js` 與 `game.js` 已集中 dependency aliases，`network.js` 已註冊 `HexSnakeUI.network` 供 game LAN hooks 取用，方便後續替換成 explicit imports | `audit:globals` 339 -> 43；`audit:state-boundary` 維持 0/0；`audit:esm-map` 固定 ui/stats/about/network/audio/characters/replay/ai/render/game alias/registry shape |
+| 4. Runtime cleanup | service module migration 小切片進行中 | replay、render、AI、UI/game hooks、public services 與 platform/storage adapter 已分批改走 `HexSnakeDOM`、`HexSnakeState`、`HexSnakeUI`、`HexSnakeRender`、`HexSnakeRuntime`；`state.js` controls storage、`ui.js`、`stats.js`、`about.js`、`network.js`、`audio.js`、`characters.js`、`replay.js`、`ai.js`、`render.js` 與 `game.js` 已集中 dependency aliases，`network.js` 已註冊 `HexSnakeUI.network` 供 game LAN hooks 取用，方便後續替換成 explicit imports | `audit:globals` 339 -> 44；`audit:state-boundary` 維持 0/0；`audit:esm-map` 固定 state/ui/stats/about/network/audio/characters/replay/ai/render/game alias/registry shape |
 | 5. Core ES module split | production strategy 完成 | 已新增 `src/main-module.js` 與 `?hexSnakeLoader=module-shadow` / `?hexSnakeLoader=module`；platform/runtime、state registry、DOM facade、UI shell、network/about leaf services、catalog/media/stats、runtime helper 與 game shell 已可被 native module import；`test:module-loader` 固定驗證 shadow no-bootstrap、source module bootstrap 與 dist fallback；正式 production 決定維持 `bundled-legacy-fallback`，由 `check:assets` 驗證 manifest | `audit:esm-map`、`test:module-loader`、`check:assets`、legacy loader 可回退；正式 module bundle 須另走 source map gate |
 
 ## Immediate AI Task Queue

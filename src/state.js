@@ -1,3 +1,6 @@
+const StateRuntime = HexSnakeRuntime;
+const StateStorage = StateRuntime.storage;
+
 const HexSnakeState = {
   audio: {
     muted: false,
@@ -36,7 +39,7 @@ const HexSnakeControls = (() => {
 
   function loadKeybinds() {
     try {
-      const storage = window.HexSnakeStorage;
+      const storage = StateStorage;
       const saved = storage?.getJson?.("hexSnakeKeybinds", null);
       if (!saved || !Array.isArray(saved.directions)) return structuredClone(HexSnakeState.config.defaultKeybinds);
       return {

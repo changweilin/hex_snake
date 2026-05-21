@@ -59,4 +59,4 @@ npm.cmd run app:check
 
 ## Next AI Task
 
-下一個 AI 可直接處理項目是延續 Phase D service module migration：盤點剩餘 direct window/facade reads，挑下一個 low-risk helper 或 import preflight 小切片；`ui.js`、`stats.js`、`about.js`、`network.js`、`audio.js`、`characters.js`、`replay.js`、`ai.js`、`render.js` 與 `game.js` 已完成 alias slices，LAN service 已註冊到 `HexSnakeUI.network`，production default 繼續維持 `bundled-legacy-fallback`。
+下一個 AI 可直接處理項目是延續 Phase D service module migration：盤點剩餘 direct window/facade reads，挑下一個 low-risk helper 或 import preflight 小切片；`state.js` controls storage、`ui.js`、`stats.js`、`about.js`、`network.js`、`audio.js`、`characters.js`、`replay.js`、`ai.js`、`render.js` 與 `game.js` 已完成 alias slices，LAN service 已註冊到 `HexSnakeUI.network`，production default 繼續維持 `bundled-legacy-fallback`。
