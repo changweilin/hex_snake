@@ -114,6 +114,7 @@ The audit checks:
 - `src/game.js` projectile resolver helper slice uses `GameRuntimeState` local alias instead of direct `HexSnakeState.` reads.
 - `src/game.js` projectile blast visual helper slice uses `GameRuntimeState` / `GameConfig` local aliases instead of direct `HexSnakeState.` reads.
 - `src/game.js` game-over visual advance helper slice uses `GameRuntimeState` local alias instead of direct `HexSnakeState.` reads.
+- `src/game.js` hazard resolver helper slice uses `GameRuntimeState` local alias instead of direct `HexSnakeState.` reads.
 - This file mentions every source and public surface in the current map.
 - `doc/es-module-loader-plan.md` still documents the loader modes, fallback rules, source order, production strategy, and next Phase D step.
 - `doc/es-module-core-bootstrap-checklist.md` still documents the `ui.js` / `game.js` blockers, explicit import surface, bootstrap ownership, preflight gates, and production fallback strategy.

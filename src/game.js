@@ -2815,8 +2815,8 @@
     }
 
     function resolveHazards(now) {
-      const activeHazards = HexSnakeState.game.hazards.filter(hazard => now <= hazard.endAt);
-      HexSnakeState.game.hazards = activeHazards;
+      const activeHazards = GameRuntimeState.hazards.filter(hazard => now <= hazard.endAt);
+      GameRuntimeState.hazards = activeHazards;
       activeHazards.forEach(hazard => {
         if (now < hazard.startedAt || now < hazard.nextTickAt) return;
         if (!hazard.shaken) {
@@ -2826,17 +2826,17 @@
         hazard.nextTickAt = now + hazard.tickMs;
         const damageExcludedCells = hazard.damageExcludedCells || hazard.excludedCells || [];
         let playerDamage = hazard.kind === "radiation"
-          ? damageSnake(HexSnakeState.game.snake, hazard.target, hazard.radius, hazard.damage)
-          : damageSnakeCells(HexSnakeState.game.snake, hazard.cells, hazard.width, hazard.damage, hazard.owner === "player" ? damageExcludedCells : [], hazard.minDistance || 0, hazard.outerDamageMultiplier ?? 1, hazard.fullDamageWidth || 0);
+          ? damageSnake(GameRuntimeState.snake, hazard.target, hazard.radius, hazard.damage)
+          : damageSnakeCells(GameRuntimeState.snake, hazard.cells, hazard.width, hazard.damage, hazard.owner === "player" ? damageExcludedCells : [], hazard.minDistance || 0, hazard.outerDamageMultiplier ?? 1, hazard.fullDamageWidth || 0);
         let computerDamage = hazard.kind === "radiation"
-          ? damageSnake(HexSnakeState.game.computerSnake, hazard.target, hazard.radius, hazard.damage)
-          : damageSnakeCells(HexSnakeState.game.computerSnake, hazard.cells, hazard.width, hazard.damage, hazard.owner === "computer" ? damageExcludedCells : [], hazard.minDistance || 0, hazard.outerDamageMultiplier ?? 1, hazard.fullDamageWidth || 0);
+          ? damageSnake(GameRuntimeState.computerSnake, hazard.target, hazard.radius, hazard.damage)
+          : damageSnakeCells(GameRuntimeState.computerSnake, hazard.cells, hazard.width, hazard.damage, hazard.owner === "computer" ? damageExcludedCells : [], hazard.minDistance || 0, hazard.outerDamageMultiplier ?? 1, hazard.fullDamageWidth || 0);
         const playerStunChance = stunChanceForHeadHit(
-          hazardHitsHead(HexSnakeState.game.snake, hazard, hazard.owner === "player" ? damageExcludedCells : []),
+          hazardHitsHead(GameRuntimeState.snake, hazard, hazard.owner === "player" ? damageExcludedCells : []),
           hazard
         );
         const computerStunChance = stunChanceForHeadHit(
-          hazardHitsHead(HexSnakeState.game.computerSnake, hazard, hazard.owner === "computer" ? damageExcludedCells : []),
+          hazardHitsHead(GameRuntimeState.computerSnake, hazard, hazard.owner === "computer" ? damageExcludedCells : []),
           hazard
         );
         const canApplyStun = (hazard.stunTicksRemaining ?? Infinity) > 0;
@@ -2862,7 +2862,7 @@
           hazard.stunTicksRemaining = Math.max(0, hazard.stunTicksRemaining - 1);
         }
       });
-      if (HexSnakeState.game.playerHp <= 0 || HexSnakeState.game.computerHp <= 0) endGame(HexSnakeState.game.playerHp <= 0, HexSnakeState.game.computerHp <= 0);
+      if (GameRuntimeState.playerHp <= 0 || GameRuntimeState.computerHp <= 0) endGame(GameRuntimeState.playerHp <= 0, GameRuntimeState.computerHp <= 0);
     }
 
     function advanceOwnerMovement(owner, next, eatenFood) {
