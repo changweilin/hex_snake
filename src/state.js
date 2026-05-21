@@ -14,6 +14,7 @@ HexSnakeUI.about = {};
 HexSnakeUI.ai = {};
 HexSnakeUI.aiGame = {};
 HexSnakeUI.audio = {};
+HexSnakeUI.network = {};
 HexSnakeUI.replay = {};
 HexSnakeUI.replayGame = {};
 HexSnakeUI.stats = {};

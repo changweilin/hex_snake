@@ -18,7 +18,7 @@
 | 2 | `src/state.js` | `src/state.js` | `HexSnakeState`、`HexSnakeUI` 子 registry、`HexSnakeRender`、`HexSnakeRenderGame`、`HexSnakeControls` | DOM、UI、services、AI、render、game |
 | 3 | `src/dom.js` | `src/dom.js` | `HexSnakeDOM` | UI、replay、stats、about、render、game |
 | 4 | `src/ui.js` | `src/ui.js` | `HexSnakeUI` config、presentation、resource、character helper base | characters、replay、stats、AI、render、game |
-| 5 | `src/network.js` | `src/network.js` | `HexSnakeNet` | game LAN helper lookup |
+| 5 | `src/network.js` | `src/network.js` | `HexSnakeNet`、`HexSnakeUI.network` | game LAN helper lookup |
 | 6 | `src/characters.js` | `src/characters.js` | `HexSnakeUI` character catalog / portrait helpers | audio、replay、stats、AI、render、game |
 | 7 | `src/audio.js` | `src/audio.js` | `HexSnakeUI.audio` | UI、game |
 | 8 | `src/replay.js` | `src/replay.js` | `HexSnakeUI.replay` | UI、game |
@@ -43,7 +43,7 @@
 | `HexSnakeRenderGame` | `src/state.js` creates; `src/game.js` extends | game geometry/combat helpers used by render | named `renderGame` export implemented; later move to pure helper module |
 | `HexSnakeControls` | `src/state.js` | frozen keyboard/control helpers | named `controls` export implemented |
 | `HexSnakeDOM` | `src/dom.js` | frozen DOM reference facade | named `dom` export implemented |
-| `HexSnakeNet` | `src/network.js` | frozen LAN client/service facade | named `network` export implemented |
+| `HexSnakeNet` | `src/network.js` | frozen LAN client/service facade plus `HexSnakeUI.network` registry copy | named `network` export implemented |
 | `HexSnakeCharacters` | `src/characters.js` | frozen character catalog / portrait helper facade, mirrored into `HexSnakeUI` | named `characterCatalog` export implemented |
 | `HexSnakeAudio` | `src/audio.js` | frozen character SFX service, mirrored into `HexSnakeUI.audio` | named `audio` export implemented |
 | `HexSnakeReplay` | `src/replay.js` | frozen replay record/playback service, mirrored into `HexSnakeUI.replay` | named `replay` export implemented |

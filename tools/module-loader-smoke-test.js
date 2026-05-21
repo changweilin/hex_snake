@@ -101,6 +101,28 @@ async function newCheckedPage(context, label, errors) {
   return page;
 }
 
+async function closeCheckedPage(page) {
+  page.removeAllListeners("console");
+  page.removeAllListeners("pageerror");
+  page.removeAllListeners("requestfailed");
+  await page.close();
+}
+
+async function evaluateAfterNavigationSettles(page, callback) {
+  let lastError = null;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      return await page.evaluate(callback);
+    } catch (error) {
+      lastError = error;
+      if (!/Execution context was destroyed|Cannot find context/i.test(error.message || "")) throw error;
+      await page.waitForLoadState("load", { timeout: actionTimeoutMs }).catch(() => {});
+      await page.waitForTimeout(100);
+    }
+  }
+  throw lastError;
+}
+
 async function checkSourceModuleShadow(context, url, errors) {
   const page = await newCheckedPage(context, "module-shadow", errors);
   await page.goto(`${url}?hexSnakeLoader=module-shadow`, { waitUntil: "load", timeout: actionTimeoutMs });
@@ -118,7 +140,7 @@ async function checkSourceModuleShadow(context, url, errors) {
       characterOptions: document.querySelectorAll("#playerCharacter option").length
     };
   });
-  await page.close();
+  await closeCheckedPage(page);
 
   assertOk(result.hasShadow, `module-shadow contract missing: ${JSON.stringify(result)}`);
   assertOk(!result.hasModuleGame, `module-shadow created module game contract: ${JSON.stringify(result)}`);
@@ -145,7 +167,7 @@ async function checkSourceModuleGame(context, url, errors) {
       characterOptions: document.querySelectorAll("#playerCharacter option").length
     };
   });
-  await page.close();
+  await closeCheckedPage(page);
 
   assertOk(result.mode === "module", `module contract has wrong mode: ${JSON.stringify(result)}`);
   assertOk(result.bootstrapsGameplay === true && result.gameContractBootstraps === true, `module contract did not bootstrap gameplay: ${JSON.stringify(result)}`);
@@ -159,14 +181,14 @@ async function checkDistFallback(context, url, mode, errors) {
   await page.goto(`${url}?hexSnakeLoader=${mode}`, { waitUntil: "load", timeout: actionTimeoutMs });
   await page.waitForFunction(() => window.__HEX_SNAKE_BUNDLED_LEGACY__ && window.HexSnakeState && window.HexSnakeUI, null, { timeout: actionTimeoutMs });
   await page.waitForFunction(() => document.querySelectorAll("#playerCharacter option").length > 0, null, { timeout: actionTimeoutMs });
-  const result = await page.evaluate(() => ({
+  const result = await evaluateAfterNavigationSettles(page, () => ({
     bundled: Boolean(window.__HEX_SNAKE_BUNDLED_LEGACY__),
     hasModuleGame: Boolean(window.__HEX_SNAKE_MODULE_GAME__),
     hasModuleShadow: Boolean(window.__HEX_SNAKE_MODULE_SHADOW__),
     overlayShows: Boolean(document.querySelector("#overlay")?.classList.contains("show")),
     characterOptions: document.querySelectorAll("#playerCharacter option").length
   }));
-  await page.close();
+  await closeCheckedPage(page);
 
   assertOk(result.bundled, `dist ${mode} did not use bundled legacy loader: ${JSON.stringify(result)}`);
   assertOk(!result.hasModuleGame && !result.hasModuleShadow, `dist ${mode} created module contracts: ${JSON.stringify(result)}`);

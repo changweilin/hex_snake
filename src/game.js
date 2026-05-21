@@ -11,6 +11,7 @@
     const GameAI = GameUI.ai;
     const GameAbout = GameUI.about;
     const GameAudio = GameUI.audio;
+    const GameNetwork = GameUI.network;
     const GameReplay = GameUI.replay;
     const GameRender = HexSnakeRender;
     const GameRenderGame = HexSnakeRenderGame;
@@ -1479,7 +1480,7 @@
     let lastNetworkSnapshotAt = -Infinity;
 
     function networkAdapter() {
-      return window.HexSnakeNet || null;
+      return GameNetwork || null;
     }
 
     function isNetworkHostActive() {

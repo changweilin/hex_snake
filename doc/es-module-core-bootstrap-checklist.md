@@ -13,7 +13,7 @@
 - `src/main-module.js` 可 import `src/game.js` 的 `gameShell`；`module-shadow` 仍不得呼叫 `bootstrapGame()`，正式 `module` 路徑由 `loadModuleGame()` 呼叫。
 - Production build 已決定維持 `bundled-legacy-fallback`；`dist/build-asset-manifest.json` 的 `moduleLoader` 區塊與 `check:assets` 會固定此策略。
 - Phase D 已開始 service module migration 小切片；`ui.js`、`stats.js`、`about.js`、`network.js`、`audio.js`、`characters.js`、`replay.js`、`ai.js`、`render.js` 與 `game.js` 已集中 dependency aliases，後續可逐步替換成 explicit imports。
-- `npm.cmd run audit:globals` 維持 42 cross-file reads；`npm.cmd run audit:state-boundary` 維持 0/0。
+- `npm.cmd run audit:globals` 維持 43 cross-file reads；新增的 `network.js -> HexSnakeUI` 是 LAN service registry 註冊讀取，`game.js` 已不再讀 `window.HexSnakeNet`；`npm.cmd run audit:state-boundary` 維持 0/0。
 
 ## Module Blockers
 

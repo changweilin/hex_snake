@@ -1,5 +1,6 @@
 const NetRuntime = HexSnakeRuntime;
 const NetStorage = NetRuntime.storage;
+const NetUI = HexSnakeUI;
 
 const HexSnakeNet = (() => {
   const statusText = document.querySelector("#networkStatus");
@@ -382,6 +383,7 @@ const HexSnakeNet = (() => {
   });
 })();
 
+Object.defineProperties(NetUI.network, Object.getOwnPropertyDescriptors(HexSnakeNet));
 window.HexSnakeNet = HexSnakeNet;
 
 export {
