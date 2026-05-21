@@ -3604,11 +3604,12 @@
     function handleKeyboardAimKeyDown(event, profile = "small", key = "") {
       event.preventDefault();
       if (event.repeat) return true;
-      if (HexSnakeState.game.keyboardAimHeldKeys.has(key)) {
-        HexSnakeState.game.keyboardAimHeldKeys.delete(key);
+      const heldKeys = GameRuntimeState.keyboardAimHeldKeys;
+      if (heldKeys.has(key)) {
+        heldKeys.delete(key);
         setAttackButtonHighlight(null);
       }
-      HexSnakeState.game.keyboardAimHeldKeys.add(key);
+      heldKeys.add(key);
       setAttackButtonHighlight(profile === "big" ? "bigAim" : "smallAim");
       triggerTouchFeedback(event, profile === "big" ? 12 : 8);
       cycleKeyboardAttackAim(profile);
@@ -3616,17 +3617,19 @@
     }
 
     function handleKeyboardAimKeyUp(event, key = "") {
-      if (!HexSnakeState.game.keyboardAimHeldKeys.has(key)) return false;
+      const heldKeys = GameRuntimeState.keyboardAimHeldKeys;
+      if (!heldKeys.has(key)) return false;
       event.preventDefault();
-      HexSnakeState.game.keyboardAimHeldKeys.delete(key);
+      heldKeys.delete(key);
       releaseAttackButtonHighlight();
       triggerTouchFeedback(event, 5);
       return true;
     }
 
     function clearKeyboardAimKeyLocks() {
-      if (!HexSnakeState.game.keyboardAimHeldKeys.size) return;
-      HexSnakeState.game.keyboardAimHeldKeys.clear();
+      const heldKeys = GameRuntimeState.keyboardAimHeldKeys;
+      if (!heldKeys.size) return;
+      heldKeys.clear();
       setAttackButtonHighlight(null);
     }
 

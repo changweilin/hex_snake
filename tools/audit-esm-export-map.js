@@ -776,6 +776,14 @@ expectSliceExcludes(
   ["HexSnakeState.", "HexSnakeUI."]
 );
 
+expectSliceExcludes(
+  "src/game.js",
+  "keyboard aim key helper alias slice",
+  "function handleKeyboardAimKeyDown",
+  "function launchKeyboardPlayerAttack",
+  ["HexSnakeState.", "HexSnakeUI."]
+);
+
 const docText = read("doc/es-module-export-map.md");
 [
   "src/platform/web.js",
