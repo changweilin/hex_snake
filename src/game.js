@@ -654,35 +654,35 @@
       resetGame();
       resize();
       if (Dom.overlay.classList.contains("show")) {
-        HexSnakeUI.renderIntroPortraits(false);
+        GameUI.renderIntroPortraits(false);
       }
     }
 
     function applyUltimateModePreset() {
       setGmMode(true);
       const presetStock = 4;
-      setInitialBombs(HexSnakeState.config.maxAmmo);
-      setInitialEnergy(HexSnakeState.config.attackNeedTotal);
+      setInitialBombs(GameConfig.maxAmmo);
+      setInitialEnergy(GameConfig.attackNeedTotal);
       setInitialLength(presetStock);
-      HexSnakeState.config.foodTypes.forEach(type => setInitialStock(type.id, presetStock));
+      GameConfig.foodTypes.forEach(type => setInitialStock(type.id, presetStock));
     }
 
     function applyMidGameModePreset() {
       setGmMode(true);
-      const presetStock = Math.floor(HexSnakeState.config.maxFoodStock / 2);
-      setInitialBombs(HexSnakeState.config.maxAmmo);
-      setInitialEnergy(HexSnakeState.config.attackNeedTotal);
+      const presetStock = Math.floor(GameConfig.maxFoodStock / 2);
+      setInitialBombs(GameConfig.maxAmmo);
+      setInitialEnergy(GameConfig.attackNeedTotal);
       setInitialLength(presetStock);
-      HexSnakeState.config.foodTypes.forEach(type => setInitialStock(type.id, presetStock));
+      GameConfig.foodTypes.forEach(type => setInitialStock(type.id, presetStock));
     }
 
     function applyLateGameModePreset() {
       setGmMode(true);
-      const presetStock = HexSnakeState.config.maxFoodStock;
-      setInitialBombs(HexSnakeState.config.maxAmmo);
-      setInitialEnergy(HexSnakeState.config.attackNeedTotal);
+      const presetStock = GameConfig.maxFoodStock;
+      setInitialBombs(GameConfig.maxAmmo);
+      setInitialEnergy(GameConfig.attackNeedTotal);
       setInitialLength(presetStock);
-      HexSnakeState.config.foodTypes.forEach(type => setInitialStock(type.id, presetStock));
+      GameConfig.foodTypes.forEach(type => setInitialStock(type.id, presetStock));
     }
 
     function setGmSettingsLocked(locked) {
@@ -703,7 +703,7 @@
     }
 
     function updateSettingsActionMode() {
-      const showSurrender = HexSnakeState.game.running && !HexSnakeState.game.gameOver && !GameReplay.isPlaybackMode();
+      const showSurrender = GameRuntimeState.running && !GameRuntimeState.gameOver && !GameReplay.isPlaybackMode();
       if (showSurrender) {
         setSettingsOpen(false);
         setGmOpen(false);
