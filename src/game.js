@@ -2055,7 +2055,7 @@
 
     function scheduleCharacterBigAttack(owner, character, source, target, now, stock, stunChance, options = {}) {
       const small = attackStats(stock, "small");
-      const bigDamage = HexSnakeUI.attackDamage(stock, "big");
+      const bigDamage = GameUI.attackDamage(stock, "big");
       const direction = Number.isInteger(options.aimDirection)
         ? options.aimDirection
         : directionFromSourceToTarget(source, target, ownerDirection(owner));
@@ -2071,7 +2071,7 @@
           ? options.vulnerabilityChance
           : lobsterPalmVulnerabilityChance(stock);
         const visualType = "lobster-palm-big";
-        const volleyIntervalMs = HexSnakeUI.attackDelay(stock);
+        const volleyIntervalMs = GameUI.attackDelay(stock);
         let maxTravelDelay = 0;
         for (let volley = 0; volley < volleys; volley += 1) {
           const volleyDelay = volley * volleyIntervalMs;
@@ -2081,7 +2081,7 @@
               owner,
               source,
               direction,
-              targetSnake: owner === "player" ? HexSnakeState.game.computerSnake : HexSnakeState.game.snake,
+              targetSnake: owner === "player" ? GameRuntimeState.computerSnake : GameRuntimeState.snake,
               now,
               smallDelay: small.delay,
               fistStepMs,
@@ -2096,9 +2096,9 @@
               hand
             }));
           } else {
-            const maxSteps = Math.max(1, Math.ceil((HexSnakeState.game.radius * 2 + 1) / 2));
+            const maxSteps = Math.max(1, Math.ceil((GameRuntimeState.radius * 2 + 1) / 2));
             maxTravelDelay = Math.max(maxTravelDelay, small.delay + maxSteps * fistStepMs);
-            HexSnakeState.game.projectiles.push({
+            GameRuntimeState.projectiles.push({
               kind: "lobsterPalmSetup",
               owner,
               profile: "big",
@@ -2129,11 +2129,11 @@
         const lineOrigin = options.aimOrigin || target;
         const lineCells = boardLineThrough(lineOrigin, direction);
         const lineShape = bandShapeFromTotalWidth(small.radius);
-        const excludedCells = (owner === "player" ? HexSnakeState.game.snake : HexSnakeState.game.computerSnake).map(segment => ({ q: segment.q, r: segment.r }));
-        const durationMs = HexSnakeState.config.baseAttackDelayMs * HexSnakeState.config.smallAttackDelayScale * Math.max(1, GameAI.ultimateSetting(character.id, "durationBaseTicks", 4));
+        const excludedCells = (owner === "player" ? GameRuntimeState.snake : GameRuntimeState.computerSnake).map(segment => ({ q: segment.q, r: segment.r }));
+        const durationMs = GameConfig.baseAttackDelayMs * GameConfig.smallAttackDelayScale * Math.max(1, GameAI.ultimateSetting(character.id, "durationBaseTicks", 4));
         const tickMs = Math.max(1, small.delay);
         const damage = bigDamage * GameAI.ultimateSetting(character.id, "damageMultiplier", 0.24);
-        HexSnakeState.game.projectiles.push({
+        GameRuntimeState.projectiles.push({
           kind: "lineHazardSetup",
           owner,
           profile: "big",
@@ -2160,13 +2160,13 @@
       }
 
       if (character.id === "quetzal") {
-        const trail = (owner === "player" ? HexSnakeState.game.snake : HexSnakeState.game.computerSnake).map(segment => ({ q: segment.q, r: segment.r }));
+        const trail = (owner === "player" ? GameRuntimeState.snake : GameRuntimeState.computerSnake).map(segment => ({ q: segment.q, r: segment.r }));
         const duration = 3000;
-        const extensionDamageMultiplier = Math.max(0, Math.min(1, (stock.protein || 0) / HexSnakeState.config.maxFoodStock));
+        const extensionDamageMultiplier = Math.max(0, Math.min(1, (stock.protein || 0) / GameConfig.maxFoodStock));
         const outwardWidth = extensionDamageMultiplier > 0 ? 1 : 0;
-        const tickMs = GameAI.ultimateSetting(character.id, "tickMs", HexSnakeState.config.baseStepMs);
+        const tickMs = GameAI.ultimateSetting(character.id, "tickMs", GameConfig.baseStepMs);
         const slowDurationMs = GameAI.ultimateSetting(character.id, "slowDurationMs", 2000);
-        HexSnakeState.game.hazards.push({
+        GameRuntimeState.hazards.push({
           kind: "swamp",
           owner,
           cells: trail,
@@ -2198,15 +2198,15 @@
         const undergroundUntil = undergroundFrom + GameAI.ultimateSetting(character.id, "invisibleDurationMs", 1500);
         const delay = small.delay * GameAI.ultimateSetting(character.id, "impactDelayMultiplier", 3);
         if (owner === "player") {
-          HexSnakeState.game.playerSandwormArmorFrom = armorFrom;
-          HexSnakeState.game.playerSandwormArmorUntil = Math.max(HexSnakeState.game.playerSandwormArmorUntil, armorUntil);
-          HexSnakeState.game.playerUndergroundFrom = undergroundFrom;
-          HexSnakeState.game.playerUndergroundUntil = Math.max(HexSnakeState.game.playerUndergroundUntil, undergroundUntil);
+          GameRuntimeState.playerSandwormArmorFrom = armorFrom;
+          GameRuntimeState.playerSandwormArmorUntil = Math.max(GameRuntimeState.playerSandwormArmorUntil, armorUntil);
+          GameRuntimeState.playerUndergroundFrom = undergroundFrom;
+          GameRuntimeState.playerUndergroundUntil = Math.max(GameRuntimeState.playerUndergroundUntil, undergroundUntil);
         } else {
-          HexSnakeState.game.computerSandwormArmorFrom = armorFrom;
-          HexSnakeState.game.computerSandwormArmorUntil = Math.max(HexSnakeState.game.computerSandwormArmorUntil, armorUntil);
-          HexSnakeState.game.computerUndergroundFrom = undergroundFrom;
-          HexSnakeState.game.computerUndergroundUntil = Math.max(HexSnakeState.game.computerUndergroundUntil, undergroundUntil);
+          GameRuntimeState.computerSandwormArmorFrom = armorFrom;
+          GameRuntimeState.computerSandwormArmorUntil = Math.max(GameRuntimeState.computerSandwormArmorUntil, armorUntil);
+          GameRuntimeState.computerUndergroundFrom = undergroundFrom;
+          GameRuntimeState.computerUndergroundUntil = Math.max(GameRuntimeState.computerUndergroundUntil, undergroundUntil);
         }
         pushCircleAttack({
           owner,
@@ -2239,7 +2239,7 @@
         const volleys = 1;
         for (let index = 0; index < volleys; index += 1) {
           const impactDelay = firstImpactDelay + index * 2000;
-          HexSnakeState.game.projectiles.push({
+          GameRuntimeState.projectiles.push({
             kind: "headCircle",
             owner,
             profile: "big",
@@ -2266,7 +2266,7 @@
       if (character.id === "gu_king") {
         const volleyIntervalMs = small.delay;
         const firstImpactDelay = small.delay;
-        const targetSnake = owner === "player" ? HexSnakeState.game.computerSnake : HexSnakeState.game.snake;
+        const targetSnake = owner === "player" ? GameRuntimeState.computerSnake : GameRuntimeState.snake;
         const damage = bigDamage * GameAI.ultimateSetting(character.id, "damageMultiplier", 1.414);
         let waveTarget = { q: target.q, r: target.r };
         for (let index = 0; index < 3; index += 1) {
