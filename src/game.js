@@ -3649,7 +3649,7 @@
     }
 
     function playerDirectAttackTarget(profile = "small", pointer = null) {
-      const character = HexSnakeUI.characterFor("player");
+      const character = GameUI.characterFor("player");
       if (profile === "big" && pointer && character.id === "moray") {
         return pointer.currentCell || pointer.startCell || opponentHeadTarget();
       }
@@ -3661,27 +3661,27 @@
 
     function playerGestureAttackDirection(pointer, fallbackTarget) {
       if (pointer?.moved) {
-        return directionFromSourceToTarget(pointer.startCell, pointer.currentCell, directionFromSourceToTarget(HexSnakeState.game.snake[0], fallbackTarget, ownerDirection("player")));
+        return directionFromSourceToTarget(pointer.startCell, pointer.currentCell, directionFromSourceToTarget(GameRuntimeState.snake[0], fallbackTarget, ownerDirection("player")));
       }
-      return directionFromSourceToTarget(HexSnakeState.game.snake[0], fallbackTarget, ownerDirection("player"));
+      return directionFromSourceToTarget(GameRuntimeState.snake[0], fallbackTarget, ownerDirection("player"));
     }
 
     function playerDirectAttackOptions(profile = "small", pointer = null) {
       const target = playerDirectAttackTarget(profile, pointer);
-      const character = HexSnakeUI.characterFor("player");
-      if (profile === "big" && GameAI.bigAttackUsesDrawnDirection(character.id) && HexSnakeState.game.snake?.length) {
+      const character = GameUI.characterFor("player");
+      if (profile === "big" && GameAI.bigAttackUsesDrawnDirection(character.id) && GameRuntimeState.snake?.length) {
         return {
           aimDirection: playerGestureAttackDirection(pointer, target),
-          aimOrigin: character.id === "moray" && pointer?.moved ? target : HexSnakeState.game.snake[0]
+          aimOrigin: character.id === "moray" && pointer?.moved ? target : GameRuntimeState.snake[0]
         };
       }
       return {};
     }
 
     function previewDirectAttack(profile = "small", pointer = null) {
-      HexSnakeState.game.selectedAttackProfile = profile === "big" ? "big" : "small";
-      HexSnakeState.game.targetCell = playerDirectAttackTarget(profile, pointer);
-      HexSnakeState.game.targetActive = Boolean(HexSnakeState.game.targetCell);
+      GameRuntimeState.selectedAttackProfile = profile === "big" ? "big" : "small";
+      GameRuntimeState.targetCell = playerDirectAttackTarget(profile, pointer);
+      GameRuntimeState.targetActive = Boolean(GameRuntimeState.targetCell);
       GameRender.requestPreviewDraw();
     }
 
