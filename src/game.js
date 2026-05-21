@@ -3567,36 +3567,36 @@
       };
       if (keyboardAttackUsesDirection(profile)) {
         preview.direction = keyboardAttackDirection(profile);
-        preview.origin = HexSnakeUI.characterFor("player").id === "moray" ? target : HexSnakeState.game.snake?.[0];
+        preview.origin = GameUI.characterFor("player").id === "moray" ? target : GameRuntimeState.snake?.[0];
       }
-      HexSnakeState.game.keyboardAttackPreview = preview;
-      HexSnakeState.game.targetCell = target;
-      HexSnakeState.game.targetActive = Boolean(target);
-      HexSnakeState.game.selectedAttackProfile = profile;
+      GameRuntimeState.keyboardAttackPreview = preview;
+      GameRuntimeState.targetCell = target;
+      GameRuntimeState.targetActive = Boolean(target);
+      GameRuntimeState.selectedAttackProfile = profile;
       updateTargetModeIndicator();
       GameRender.requestPreviewDraw();
       clearKeyboardAttackPreviewTimer();
-      HexSnakeState.game.keyboardAttackPreviewTimer = setTimeout(() => {
-        HexSnakeState.game.keyboardAttackPreviewTimer = null;
-        if (HexSnakeState.game.keyboardAttackPreview === preview) HexSnakeState.game.keyboardAttackPreview = null;
-        HexSnakeState.game.targetActive = false;
+      GameRuntimeState.keyboardAttackPreviewTimer = setTimeout(() => {
+        GameRuntimeState.keyboardAttackPreviewTimer = null;
+        if (GameRuntimeState.keyboardAttackPreview === preview) GameRuntimeState.keyboardAttackPreview = null;
+        GameRuntimeState.targetActive = false;
         GameRender.requestPreviewDraw();
       }, 900);
       setStatus(`${profile === "big" ? "大招" : "小招"}按鍵目標：${keyboardAttackHintLabel(profile)}`);
     }
 
     function cycleKeyboardAttackAim(profile = "small") {
-      if (!HexSnakeState.game.running || HexSnakeState.game.gameOver) {
+      if (!GameRuntimeState.running || GameRuntimeState.gameOver) {
         if (!autoStartGame()) return false;
       }
-      const aim = HexSnakeState.game.keyboardAttackAim[profile] || HexSnakeState.game.keyboardAttackAim.small;
+      const aim = GameRuntimeState.keyboardAttackAim[profile] || GameRuntimeState.keyboardAttackAim.small;
       if (keyboardAttackUsesDirection(profile)) {
-        aim.direction = (keyboardAttackDirection(profile) + 1) % HexSnakeState.config.directions.length;
+        aim.direction = (keyboardAttackDirection(profile) + 1) % GameConfig.directions.length;
       } else {
-        aim.targetModeIndex = (aim.targetModeIndex + 1) % HexSnakeState.config.keyboardTargetModes.length;
+        aim.targetModeIndex = (aim.targetModeIndex + 1) % GameConfig.keyboardTargetModes.length;
       }
-      HexSnakeState.game.keyboardAttackAim[profile] = aim;
-      HexSnakeState.game.selectedAttackProfile = profile;
+      GameRuntimeState.keyboardAttackAim[profile] = aim;
+      GameRuntimeState.selectedAttackProfile = profile;
       showKeyboardAttackHint(profile);
       return true;
     }
