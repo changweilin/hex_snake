@@ -17,9 +17,10 @@
     let replayReturnState = null;
     let replayRafId = 0;
     let replaySurrendered = false;
-    const GameState = HexSnakeState.game;
-    const UiState = HexSnakeState.ui;
-    const ReplayState = HexSnakeState.replay;
+    const ReplayRootState = HexSnakeState;
+    const GameState = ReplayRootState.game;
+    const UiState = ReplayRootState.ui;
+    const ReplayState = ReplayRootState.replay;
     const ReplayUI = HexSnakeUI;
     const ReplayDom = HexSnakeDOM;
     const ReplayGame = ReplayUI.replayGame;
