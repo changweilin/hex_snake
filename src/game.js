@@ -4829,11 +4829,11 @@
       });
       input.addEventListener("change", () => {
         const normalized = normalizeKey(input.value, " ");
-        if (input.id === "smallAttackKey") HexSnakeState.game.keybinds.smallAttack = normalized;
-        else if (input.id === "bigAttackKey") HexSnakeState.game.keybinds.bigAttack = normalized;
-        else if (input.id === "pauseKey") HexSnakeState.game.keybinds.pause = normalized;
-        else if (input.id === "surrenderKey") HexSnakeState.game.keybinds.surrender = normalized;
-        else if (input.dataset.keybindDir !== undefined) HexSnakeState.game.keybinds.directions[Number(input.dataset.keybindDir)] = normalized;
+        if (input.id === "smallAttackKey") GameRuntimeState.keybinds.smallAttack = normalized;
+        else if (input.id === "bigAttackKey") GameRuntimeState.keybinds.bigAttack = normalized;
+        else if (input.id === "pauseKey") GameRuntimeState.keybinds.pause = normalized;
+        else if (input.id === "surrenderKey") GameRuntimeState.keybinds.surrender = normalized;
+        else if (input.dataset.keybindDir !== undefined) GameRuntimeState.keybinds.directions[Number(input.dataset.keybindDir)] = normalized;
         saveKeybinds();
         applyKeybinds();
       });

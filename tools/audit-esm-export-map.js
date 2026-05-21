@@ -912,6 +912,14 @@ expectSliceExcludes(
   ["HexSnakeState.", "HexSnakeUI."]
 );
 
+expectSliceExcludes(
+  "src/game.js",
+  "keybind input alias slice",
+  "Dom.keybindInputs.forEach",
+  "Dom.settingsDirButtons.forEach(button => {\n      button.addEventListener",
+  ["HexSnakeState.", "HexSnakeUI."]
+);
+
 const docText = read("doc/es-module-export-map.md");
 [
   "src/platform/web.js",
