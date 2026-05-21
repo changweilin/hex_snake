@@ -4126,6 +4126,72 @@
       return false;
     }
 
+    const HexSnakeGame = Object.freeze({
+      attackHitStunChances,
+      attackStats,
+      attackVisualType,
+      axialToPixel,
+      bandDistanceFromTotalWidth,
+      bandShapeFromTotalWidth,
+      boardLineThrough,
+      bootstrapGame,
+      buildCells,
+      canOwnerTurn,
+      cellsNearCells,
+      characterForVisualType,
+      circleDamageMultiplier,
+      clearRelayRestartTimer,
+      clampInitialBombs,
+      clampInitialEnergy,
+      clampInitialStock,
+      createStartingSnake,
+      damageSnake,
+      directionFromSourceToTarget,
+      directionScreenAngle,
+      flashAttackButton,
+      hexDistance,
+      hexPath,
+      isPlayerAutoControlActive,
+      isOwnerDamageImmune,
+      keyOf,
+      launchAttack,
+      lineBandDamageMultiplier,
+      loadGameShell,
+      loadSavedCharacterChoices,
+      lobsterFistPath,
+      nextWrappedCell,
+      opponentHeadTarget,
+      ownerDirection,
+      pointAlongPath,
+      returnToStartScreen,
+      resize,
+      sandwormUndergroundAlpha,
+      saveCharacterChoices,
+      setGmOpen,
+      setSettingsLocked,
+      setSettingsOpen,
+      setStatus,
+      stableVariantIndex,
+      syncCharacterInputs,
+      turnDistance,
+      updateAutoBattleControls,
+      updatePerfOverlay,
+      updateHud,
+      updateSettingsActionMode
+    });
+
+    let gameShellLoaded = false;
+    let gameBootstrapPromise = null;
+    const gameBootstrapContract = Object.freeze({
+      mode: "game",
+      entry: "src/game.js",
+      bootstrapsGameplay: true
+    });
+
+    function loadGameShell() {
+      if (gameShellLoaded) return HexSnakeGame;
+      gameShellLoaded = true;
+
     document.addEventListener("pointerdown", GameAudio.unlock, { once: true, passive: true });
     document.addEventListener("keydown", GameAudio.unlock, { once: true });
 
@@ -5545,68 +5611,18 @@
       syncCharacterInputs
     });
 
-    const HexSnakeGame = Object.freeze({
-      attackHitStunChances,
-      attackStats,
-      attackVisualType,
-      axialToPixel,
-      bandDistanceFromTotalWidth,
-      bandShapeFromTotalWidth,
-      boardLineThrough,
-      buildCells,
-      canOwnerTurn,
-      cellsNearCells,
-      characterForVisualType,
-      circleDamageMultiplier,
-      clearRelayRestartTimer,
-      clampInitialBombs,
-      clampInitialEnergy,
-      clampInitialStock,
-      createStartingSnake,
-      damageSnake,
-      directionFromSourceToTarget,
-      directionScreenAngle,
-      flashAttackButton,
-      hexDistance,
-      hexPath,
-      isPlayerAutoControlActive,
-      isOwnerDamageImmune,
-      keyOf,
-      launchAttack,
-      lineBandDamageMultiplier,
-      loadSavedCharacterChoices,
-      lobsterFistPath,
-      nextWrappedCell,
-      opponentHeadTarget,
-      ownerDirection,
-      pointAlongPath,
-      returnToStartScreen,
-      resize,
-      sandwormUndergroundAlpha,
-      saveCharacterChoices,
-      setGmOpen,
-      setSettingsLocked,
-      setSettingsOpen,
-      setStatus,
-      stableVariantIndex,
-      syncCharacterInputs,
-      turnDistance,
-      updateAutoBattleControls,
-      updatePerfOverlay,
-      updateHud,
-      updateSettingsActionMode
-    });
-
     window.addEventListener("resize", resize);
+      return HexSnakeGame;
+    }
 
-    async function bootstrap() {
+    async function runGameBootstrap() {
       await HexSnakeUI.loadBalanceConfig();
       await GameAI.loadHighAiStrategyConfig();
       try {
         await HexSnakeUI.loadCharacterDatabase();
       } catch (error) {
         HexSnakeUI.showCharacterDatabaseError(error);
-        return;
+        return gameBootstrapContract;
       }
       HexSnakeUI.buildCharacterOptions();
       HexSnakeUI.buildCharacterStage();
@@ -5651,6 +5667,30 @@
       } else {
         setTimeout(HexSnakeUI.preloadAllPortraits, 250);
       }
+      return gameBootstrapContract;
     }
 
-    bootstrap();
+    function bootstrapGame() {
+      if (!gameBootstrapPromise) {
+        loadGameShell();
+        gameBootstrapPromise = runGameBootstrap();
+      }
+      return gameBootstrapPromise;
+    }
+
+    function shouldAutoBootstrapGame() {
+      if (window.__HEX_SNAKE_BUNDLED_LEGACY__) return true;
+      const params = new URLSearchParams(window.location.search);
+      return (params.get("hexSnakeLoader") || "legacy").trim().toLowerCase() === "legacy";
+    }
+
+    if (shouldAutoBootstrapGame()) {
+      bootstrapGame();
+    }
+
+    export {
+      HexSnakeGame,
+      HexSnakeGame as gameShell,
+      bootstrapGame,
+      loadGameShell
+    };

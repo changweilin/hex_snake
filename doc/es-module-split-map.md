@@ -9,7 +9,7 @@
 目前基線：
 - `npm.cmd run audit:state-boundary`：`game.js` 對 `ui.js` top-level declaration 的 heuristic reference 維持 0，legacy name leak 維持 0。
 - `npm.cmd run audit:globals`：42 cross-file reads。Phase 4 已把 replay、render、AI、UI/game hooks、public service 與 platform/storage runtime adapter 分批收斂到 facade；一般模組現在透過 `HexSnakeRuntime.platform/storage` 取用 runtime adapter。
-- `src/main.js` 預設仍使用 legacy concatenated loader 載入 13 個 source files；local dev 可用 `?hexSnakeLoader=module-shadow` 載入 `src/main-module.js` shadow entry，並已 import dual-mode runtime/state/DOM/uiCore/network/about、catalog/media/stats 與 runtime helper shell，尚不啟動 gameplay bootstrap。
+- `src/main.js` 預設仍使用 legacy concatenated loader 載入 13 個 source files；local dev 可用 `?hexSnakeLoader=module-shadow` 載入 `src/main-module.js` shadow entry，並已 import dual-mode runtime/state/DOM/uiCore/network/about、catalog/media/stats、runtime helper 與 game shell，尚不啟動 gameplay bootstrap。
 
 ## Split Principles
 
@@ -26,7 +26,7 @@
 | Leaf services | `src/network.js`, `src/about.js` | `network.js` 已 export `network`，`about.js` 已 export `about`；module shadow 已 import leaf service shell，legacy `window.HexSnakeNet` / `window.HexSnakeAbout` 保留 | 已完成首批；後續等 module loader 啟用後再評估 window-only wiring |
 | Catalog / media / stats | `src/characters.js`, `src/audio.js`, `src/stats.js` | `characters.js` 已 export `characterCatalog` / `HexSnakeCharacters`；`audio.js` / `stats.js` 分別 export `audio` / `stats`，並保留 `HexSnakeUI.audio/stats` registry 註冊；module shadow 已 import 這些 shell | 已完成；後續等 module loader 啟用後再評估 explicit imports |
 | Runtime helpers | `src/ai.js`, `src/render.js`, `src/replay.js` | `replay.js` export `replay` / `HexSnakeReplay`；`ai.js` export `ai` / `HexSnakeAI`；`render.js` export `renderHooks` / `HexSnakeRenderHooks`；module shadow 已 import 這些 shell | 已完成；後續等 module loader 啟用後再評估 explicit imports |
-| Core knot | `src/ui.js`, `src/game.js` | `ui.js` 已 export `uiCore` / `HexSnakeUICore` 並可被 module shadow import；`game.js -> dom.js` 已收斂成 `HexSnakeDOM`；`ui.js -> game.js` 已改走 `HexSnakeUI.uiGame`；`game.js -> service/render/AI/runtime` 已改走 facade | 下一步拆 `game.js` shell registration 與 explicit `bootstrapGame()` |
+| Core knot | `src/ui.js`, `src/game.js` | `ui.js` 已 export `uiCore` / `HexSnakeUICore`；`game.js` 已 export `gameShell` / `HexSnakeGame`、`loadGameShell()` 與 `bootstrapGame()`；module shadow 可 import shell 但不啟動 gameplay | 下一步補 module bootstrap owner，讓正式 `module` 路徑才呼叫 `bootstrapGame()` |
 
 ## Recommended Split Order
 
@@ -37,13 +37,13 @@
 | 2. DOM/helper facade | 完成 | 建立 `HexSnakeControls`、`HexSnakeDOM` 與 game/UI helper facade | `audit:globals` 486 -> 367 |
 | 3. Catalog/media cleanup | 完成 | catalog setter/list、portrait variant state getter、food label config getter；characters/audio/stats 改走 facade | `audit:globals` 367 -> 339；build、quick、smoke 通過 |
 | 4. Runtime cleanup | runtime adapter facade 收斂完成 | replay、render、AI、UI/game hooks、public services 與 platform/storage adapter 已分批改走 `HexSnakeDOM`、`HexSnakeState`、`HexSnakeUI`、`HexSnakeRender`、`HexSnakeRuntime` | `audit:globals` 339 -> 42；`audit:state-boundary` 維持 0/0 |
-| 5. Core ES module split | `uiCore` shell export 完成 | 已新增 `src/main-module.js` 與 `?hexSnakeLoader=module-shadow`；platform/runtime、state registry、DOM facade、UI shell、network/about leaf services、catalog/media/stats 與 runtime helper shell 已可被 native module shadow import；`game.js` 仍未 import 且不啟動 gameplay | `audit:esm-map`、legacy loader 可回退；正式 loader 可逐步啟用 |
+| 5. Core ES module split | `gameShell` / `bootstrapGame()` export 完成 | 已新增 `src/main-module.js` 與 `?hexSnakeLoader=module-shadow`；platform/runtime、state registry、DOM facade、UI shell、network/about leaf services、catalog/media/stats、runtime helper 與 game shell 已可被 native module shadow import；`module-shadow` 仍不呼叫 `bootstrapGame()` | `audit:esm-map`、legacy loader 可回退；正式 loader 可逐步啟用 |
 
 ## Immediate AI Task Queue
 
-1. 將 `src/game.js` 的 shell registration 與立即執行的 `bootstrap()` 拆開。
-2. 補 `gameShell` / `bootstrapGame()` exports，並保持 legacy loader 仍會自動 bootstrap。
-3. 讓 `src/main-module.js` shadow entry 只 import `gameShell`，不呼叫 `bootstrapGame()`。
+1. 在 `src/main-module.js` 補正式 module bootstrap owner（例如 `loadModuleGame()`）。
+2. 讓 `src/main.js` 的 `hexSnakeLoader=module` 路徑呼叫 module owner，並保留 legacy default。
+3. 擴充 browser smoke，分別驗證 `module-shadow` 不啟動 gameplay、`module` 可明確呼叫 `bootstrapGame()`。
 
 ## Do Not Start With
 

@@ -18,7 +18,7 @@
 
 ## Source Order Contract
 
-Native module loader 必須保持 `doc/es-module-export-map.md` 的初始化順序。第一批不得直接逐檔 `import("src/ui.js")`、`import("src/game.js")`，因為現有檔案仍依賴 legacy shared top-level scope。可接受的第一步是新增 module entry / shell，並讓 shell import 已完成 dual-mode 的 runtime / registry module。
+Native module loader 必須保持 `doc/es-module-export-map.md` 的初始化順序。現階段只允許 import 已完成 dual-mode 的 shell；`src/game.js` 可被 shadow entry import `gameShell`，但不得呼叫 `bootstrapGame()`，因為 gameplay owner 仍必須由明確 module mode 啟動。
 
 Shared order:
 
@@ -42,7 +42,7 @@ Shared order:
 | --- | --- | --- |
 | A. Loader plan gate | 文件化 modes、fallback、source order，並讓 `audit:esm-map` 檢查本文件存在關鍵契約 | `npm.cmd run audit:esm-map` |
 | B. Module shadow entry | 已新增 `src/main-module.js` 與 `?hexSnakeLoader=module-shadow`，只載入 shadow contract 並回報 ready，不啟動 gameplay | `audit:esm-map`、`build`、`test:smoke` |
-| C. Dual-mode runtime / registry exports | platform/runtime、state registry、DOM facade、`uiCore` shell、network/about leaf services、catalog/media/stats shell 與 runtime helper shell 已具備正式 named exports，module shadow 已 import 這些 shell；下一步拆 `game.js` shell registration 與 explicit `bootstrapGame()` | `audit:esm-map`、`audit:globals` 不上升 |
+| C. Dual-mode runtime / registry exports | platform/runtime、state registry、DOM facade、`uiCore` shell、network/about leaf services、catalog/media/stats shell、runtime helper shell 與 `gameShell` 已具備正式 named exports；module shadow 已 import shell，且不呼叫 `bootstrapGame()` | `audit:esm-map`、`audit:globals` 不上升 |
 | D. Service module migration | 依 export map 順序讓 leaf services 與 runtime helpers 改成 explicit imports，legacy loader 仍可回退 | build、quick、smoke、mobile |
 | E. Gameplay module bootstrap | `src/game.js` 或新 bootstrap entry 接管 module mode；legacy loader 降為 fallback | release:check |
 
@@ -55,4 +55,4 @@ Shared order:
 
 ## Next AI Task
 
-下一個 AI 可直接處理項目是 Phase C 下一段：將 `src/game.js` 的 shell registration 與立即執行的 `bootstrap()` 拆開，先提供 `gameShell` / `bootstrapGame()` exports；`module-shadow` 只能 import game shell，不得呼叫 `bootstrapGame()`。
+下一個 AI 可直接處理項目是 Phase E 前置：在 `src/main-module.js` 補明確的 module bootstrap owner（例如 `loadModuleGame()`），只在 `hexSnakeLoader=module` 路徑呼叫 `gameShell.bootstrapGame()`；`module-shadow` 仍只能回報 contract。

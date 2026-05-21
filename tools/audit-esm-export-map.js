@@ -97,6 +97,7 @@ const mainModuleSource = read("src/main-module.js");
   'import { about } from "./about.js";',
   'import { ai } from "./ai.js";',
   'import { renderHooks } from "./render.js";',
+  'import { gameShell } from "./game.js";',
   "module-shadow",
   "bootstrapsGameplay: false",
   "domReady",
@@ -108,6 +109,7 @@ const mainModuleSource = read("src/main-module.js");
   "statsReady",
   "aiReady",
   "renderReady",
+  "gameReady",
   "runtimeKind",
   "registryKeys",
   "loadModuleShadow",
@@ -117,13 +119,9 @@ const mainModuleSource = read("src/main-module.js");
   if (!mainModuleSource.includes(token)) fail(`src/main-module.js is missing ${token}`);
 });
 
-[
-  "./game.js"
-].forEach(source => {
-  if (mainModuleSource.includes(source)) {
-    fail(`src/main-module.js must not import ${source} during module-shadow phase.`);
-  }
-});
+if (/bootstrapGame\s*\(/.test(mainModuleSource) || /loadGameShell\s*\(/.test(mainModuleSource)) {
+  fail("src/main-module.js must not call game shell or bootstrap functions during module-shadow phase.");
+}
 
 expectToken(
   "build.js",
@@ -173,11 +171,17 @@ const requiredRegistrations = [
   ["src/ai.js", "HexSnakeAI as ai"],
   ["src/render.js", "Object.assign(HexSnakeRender"],
   ["src/render.js", "HexSnakeRenderHooks as renderHooks"],
+  ["src/game.js", "HexSnakeGame as gameShell"],
+  ["src/game.js", "function loadGameShell()"],
+  ["src/game.js", "function bootstrapGame()"],
+  ["src/game.js", "bootstrapsGameplay: true"],
   ["src/game.js", "Object.assign(HexSnakeRenderGame"],
   ["src/game.js", "Object.assign(HexSnakeUI.aiGame"],
   ["src/game.js", "Object.assign(HexSnakeUI.uiGame"],
   ["src/game.js", "Object.assign(HexSnakeUI.replayGame"],
-  ["src/game.js", "bootstrap();"]
+  ["src/game.js", "window.__HEX_SNAKE_BUNDLED_LEGACY__"],
+  ["src/game.js", "if (shouldAutoBootstrapGame())"],
+  ["src/game.js", "bootstrapGame();"]
 ];
 
 requiredRegistrations.forEach(([relativePath, token]) => expectToken(relativePath, token));
@@ -206,6 +210,7 @@ const docText = read("doc/es-module-export-map.md");
   "HexSnakeUICore",
   "HexSnakeRender",
   "HexSnakeRenderGame",
+  "HexSnakeGame",
   "HexSnakeControls",
   "HexSnakeNet",
   "HexSnakeAbout"

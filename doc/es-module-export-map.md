@@ -8,7 +8,7 @@
 
 ## Shadow Entry
 
-`src/main-module.js` 是目前唯一的 native module shadow entry。local dev 可用 `?hexSnakeLoader=module-shadow` 觸發它；它已 import dual-mode `runtime`、state registry shell、`dom` facade、`uiCore` shell、leaf service shell、catalog/media/stats shell 與 runtime helper shell，只回報 `module-shadow` contract，不 import `game.js`，也不啟動 bootstrap。
+`src/main-module.js` 是目前唯一的 native module shadow entry。local dev 可用 `?hexSnakeLoader=module-shadow` 觸發它；它已 import dual-mode `runtime`、state registry shell、`dom` facade、`uiCore` shell、leaf service shell、catalog/media/stats shell、runtime helper shell 與 `gameShell`，只回報 `module-shadow` contract，不呼叫 `bootstrapGame()`，也不啟動 gameplay。
 
 ## Loader Order
 
@@ -26,7 +26,7 @@
 | 10 | `src/about.js` | `src/about.js` | `HexSnakeUI.about`、`HexSnakeAbout` | game settings/version modal |
 | 11 | `src/ai.js` | `src/ai.js` | `HexSnakeUI.ai` | render、game |
 | 12 | `src/render.js` | `src/render.js` | `HexSnakeRender` | UI、replay、game |
-| 13 | `src/game.js` | `src/game.js` | `HexSnakeRenderGame`、`HexSnakeUI.aiGame`、`HexSnakeUI.uiGame`、`HexSnakeUI.replayGame`、bootstrap side effect | final bootstrap owner |
+| 13 | `src/game.js` | `src/game.js` | `HexSnakeGame`、`HexSnakeRenderGame`、`HexSnakeUI.aiGame`、`HexSnakeUI.uiGame`、`HexSnakeUI.replayGame`、explicit `bootstrapGame()` | final bootstrap owner |
 
 `src/main.js` always uses the web platform source for local browser loading. `build.js` swaps only the first source to `src/platform/mobile.js` when `--mobile` is used; the remaining order must stay identical.
 
@@ -38,6 +38,7 @@
 | `HexSnakeState` | `src/state.js` | mutable state namespaces: `audio`、`config`、`game`、`replay`、`ui` | named `state` export implemented |
 | `HexSnakeUI` | `src/state.js` creates; `src/ui.js` and services extend | shared registry with `about`、`ai`、`aiGame`、`audio`、`replay`、`replayGame`、`stats`、`uiGame` | named `uiRegistry` export implemented until UI/game split is complete |
 | `HexSnakeUICore` | `src/ui.js` | frozen UI config/presentation shell over existing `HexSnakeUI` registrations | named `uiCore` export implemented |
+| `HexSnakeGame` | `src/game.js` | frozen game shell with facade helpers plus `loadGameShell()` / `bootstrapGame()` | named `gameShell` export implemented; `module-shadow` imports shell but does not call bootstrap |
 | `HexSnakeRender` | `src/state.js` creates; `src/render.js` extends | render public hooks | named `render` export implemented from `state.js`; named `renderHooks` export implemented from `render.js` |
 | `HexSnakeRenderGame` | `src/state.js` creates; `src/game.js` extends | game geometry/combat helpers used by render | named `renderGame` export implemented; later move to pure helper module |
 | `HexSnakeControls` | `src/state.js` | frozen keyboard/control helpers | named `controls` export implemented |
@@ -57,7 +58,7 @@
 3. `dom.js` must run before `ui.js`; `ui.js` creates local `UiDom` and attaches the largest `HexSnakeUI` base surface.
 4. Character catalog helpers must run before audio/replay/stats/AI/render/game rely on `HexSnakeUI.characterFor*` helpers.
 5. Service facades must extend `HexSnakeUI.audio/replay/stats/about/ai` before `game.js` snapshots them into local aliases.
-6. `render.js` must extend `HexSnakeRender` before `game.js` bootstraps; `game.js` is the only current bootstrap owner.
+6. `render.js` must extend `HexSnakeRender` before `game.js` bootstraps; `game.js` exports `bootstrapGame()` as the only current gameplay bootstrap owner.
 
 ## Verification
 
@@ -74,4 +75,4 @@ The audit checks:
 - Required registry extension points and exports such as `HexSnakeUI.audio`, `HexSnakeCharacters`, `HexSnakeAudio`, `HexSnakeReplay`, `HexSnakeStats`, `HexSnakeAI`, `HexSnakeUI.aiGame`, and `HexSnakeRender`.
 - This file mentions every source and public surface in the current map.
 - `doc/es-module-loader-plan.md` still documents the loader modes, fallback rules, source order, and next module-shadow step.
-- `doc/es-module-core-bootstrap-checklist.md` still documents the `ui.js` / `game.js` blockers, explicit import surface, bootstrap ownership, preflight gates, and next `uiCore` shell task.
+- `doc/es-module-core-bootstrap-checklist.md` still documents the `ui.js` / `game.js` blockers, explicit import surface, bootstrap ownership, preflight gates, and next module bootstrap task.
