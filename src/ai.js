@@ -1537,3 +1537,8 @@
     });
 
     Object.defineProperties(HexSnakeUI.ai, Object.getOwnPropertyDescriptors(HexSnakeAI));
+
+export {
+  HexSnakeAI,
+  HexSnakeAI as ai
+};

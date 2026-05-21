@@ -704,3 +704,8 @@
     });
 
     Object.defineProperties(HexSnakeUI.replay, Object.getOwnPropertyDescriptors(HexSnakeReplay));
+
+export {
+  HexSnakeReplay,
+  HexSnakeReplay as replay
+};

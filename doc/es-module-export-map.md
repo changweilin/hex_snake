@@ -8,7 +8,7 @@
 
 ## Shadow Entry
 
-`src/main-module.js` 是目前唯一的 native module shadow entry。local dev 可用 `?hexSnakeLoader=module-shadow` 觸發它；它已 import dual-mode `runtime`、state registry shell、`dom` facade、leaf service shell 與 catalog/media/stats shell，只回報 `module-shadow` contract，不 import 尚未 dual-mode 的 gameplay files，也不啟動 bootstrap。
+`src/main-module.js` 是目前唯一的 native module shadow entry。local dev 可用 `?hexSnakeLoader=module-shadow` 觸發它；它已 import dual-mode `runtime`、state registry shell、`dom` facade、leaf service shell、catalog/media/stats shell 與 runtime helper shell，只回報 `module-shadow` contract，不 import `ui.js` / `game.js`，也不啟動 bootstrap。
 
 ## Loader Order
 
@@ -37,15 +37,17 @@
 | `HexSnakeRuntime` | `src/platform/web.js` / `src/platform/mobile.js` | frozen `{ platform, storage }` adapter | named `runtime` / `platform` / `storage` exports implemented |
 | `HexSnakeState` | `src/state.js` | mutable state namespaces: `audio`、`config`、`game`、`replay`、`ui` | named `state` export implemented |
 | `HexSnakeUI` | `src/state.js` creates; `src/ui.js` and services extend | shared registry with `about`、`ai`、`aiGame`、`audio`、`replay`、`replayGame`、`stats`、`uiGame` | named `uiRegistry` export implemented until UI/game split is complete |
-| `HexSnakeRender` | `src/state.js` creates; `src/render.js` extends | render public hooks | named `render` export implemented |
+| `HexSnakeRender` | `src/state.js` creates; `src/render.js` extends | render public hooks | named `render` export implemented from `state.js`; named `renderHooks` export implemented from `render.js` |
 | `HexSnakeRenderGame` | `src/state.js` creates; `src/game.js` extends | game geometry/combat helpers used by render | named `renderGame` export implemented; later move to pure helper module |
 | `HexSnakeControls` | `src/state.js` | frozen keyboard/control helpers | named `controls` export implemented |
 | `HexSnakeDOM` | `src/dom.js` | frozen DOM reference facade | named `dom` export implemented |
 | `HexSnakeNet` | `src/network.js` | frozen LAN client/service facade | named `network` export implemented |
 | `HexSnakeCharacters` | `src/characters.js` | frozen character catalog / portrait helper facade, mirrored into `HexSnakeUI` | named `characterCatalog` export implemented |
 | `HexSnakeAudio` | `src/audio.js` | frozen character SFX service, mirrored into `HexSnakeUI.audio` | named `audio` export implemented |
+| `HexSnakeReplay` | `src/replay.js` | frozen replay record/playback service, mirrored into `HexSnakeUI.replay` | named `replay` export implemented |
 | `HexSnakeStats` | `src/stats.js` | frozen match stats service, mirrored into `HexSnakeUI.stats` | named `stats` export implemented |
 | `HexSnakeAbout` | `src/about.js` | frozen version/about service, mirrored into `HexSnakeUI.about` | named `about` export implemented |
+| `HexSnakeAI` | `src/ai.js` | frozen AI decision/combat helper service, mirrored into `HexSnakeUI.ai` | named `ai` export implemented |
 
 ## Initialization Contract
 
@@ -68,6 +70,6 @@ The audit checks:
 - `src/main.js` browser loader order.
 - `build.js` web/mobile first-source switch and shared legacy source order.
 - Required `window.HexSnake*` compatibility registrations.
-- Required registry extension points and exports such as `HexSnakeUI.audio`, `HexSnakeCharacters`, `HexSnakeAudio`, `HexSnakeStats`, `HexSnakeUI.aiGame`, and `HexSnakeRender`.
+- Required registry extension points and exports such as `HexSnakeUI.audio`, `HexSnakeCharacters`, `HexSnakeAudio`, `HexSnakeReplay`, `HexSnakeStats`, `HexSnakeAI`, `HexSnakeUI.aiGame`, and `HexSnakeRender`.
 - This file mentions every source and public surface in the current map.
 - `doc/es-module-loader-plan.md` still documents the loader modes, fallback rules, source order, and next module-shadow step.

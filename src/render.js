@@ -4,6 +4,7 @@
     const RenderUI = HexSnakeUI;
     const RenderAI = HexSnakeUI.ai;
     const RenderGame = HexSnakeRenderGame;
+    const HexSnakeRenderHooks = HexSnakeRender;
     const RenderPlatform = HexSnakeRuntime.platform;
     const RenderReplay = HexSnakeUI.replay;
 
@@ -3991,3 +3992,8 @@
       requestPreviewDraw,
       triggerBoardShake
     });
+
+export {
+  HexSnakeRenderHooks,
+  HexSnakeRenderHooks as renderHooks
+};

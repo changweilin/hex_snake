@@ -4,8 +4,11 @@ import { dom } from "./dom.js";
 import { network } from "./network.js";
 import { characterCatalog as characters } from "./characters.js";
 import { audio } from "./audio.js";
+import { replay } from "./replay.js";
 import { stats } from "./stats.js";
 import { about } from "./about.js";
+import { ai } from "./ai.js";
+import { renderHooks } from "./render.js";
 
 const moduleShadowSourceOrder = [
   "src/platform/web.js",
@@ -27,12 +30,15 @@ const moduleShadowContract = Object.freeze({
   mode: "module-shadow",
   entry: "src/main-module.js",
   bootstrapsGameplay: false,
-  imports: Object.freeze(["runtime", "state", "uiRegistry", "render", "renderGame", "controls", "dom", "network", "characters", "audio", "stats", "about"]),
+  imports: Object.freeze(["runtime", "state", "uiRegistry", "render", "renderGame", "controls", "dom", "network", "characters", "audio", "replay", "stats", "about", "ai", "renderHooks"]),
   domReady: Boolean(dom.canvas && dom.ctx && dom.overlay),
   serviceReady: Boolean(network.lifecycle && about.refresh),
   catalogReady: Boolean(characters.loadCharacterDatabase && characters.characterFor),
   mediaReady: Boolean(audio.playCharacter && audio.preloadCharacter),
+  replayReady: Boolean(replay.startRecording && replay.startPlayback),
   statsReady: Boolean(stats.recordMatch && stats.refresh),
+  aiReady: Boolean(ai.chooseComputerDirection && ai.maybeComputerAttack),
+  renderReady: Boolean(renderHooks.draw && renderHooks.triggerBoardShake),
   runtimeKind: runtime.platform.kind,
   storageKind: runtime.storage.kind,
   registryKeys: Object.freeze(Object.keys(uiRegistry).sort()),
@@ -40,7 +46,7 @@ const moduleShadowContract = Object.freeze({
 });
 
 function loadModuleShadow() {
-  if (!state || !uiRegistry || !render || !renderGame || !controls || !dom || !network || !characters || !audio || !stats || !about) {
+  if (!state || !uiRegistry || !render || !renderGame || !controls || !dom || !network || !characters || !audio || !replay || !stats || !about || !ai || !renderHooks) {
     throw new Error("Module shadow registry import failed.");
   }
   window.__HEX_SNAKE_MODULE_SHADOW__ = moduleShadowContract;
