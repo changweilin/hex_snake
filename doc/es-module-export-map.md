@@ -41,7 +41,7 @@
 | `HexSnakeGame` | `src/game.js` | frozen game shell with facade helpers plus `loadGameShell()` / `bootstrapGame()` | named `gameShell` export implemented; `module-shadow` imports shell but does not call bootstrap |
 | `HexSnakeRender` | `src/state.js` creates; `src/render.js` extends | render public hooks | named `render` export implemented from `state.js`; named `renderHooks` export implemented from `render.js` |
 | `HexSnakeRenderGame` | `src/state.js` creates; `src/game.js` extends | game geometry/combat helpers used by render | named `renderGame` export implemented; later move to pure helper module |
-| `HexSnakeControls` | `src/state.js` | frozen keyboard/control helpers using `StateStorage` for keybind persistence | named `controls` export implemented |
+| `HexSnakeControls` | `src/state.js` | frozen keyboard/control helpers using `StateStorage` for keybind persistence; UI/game access through `UiControls` / `GameControls` aliases | named `controls` export implemented |
 | `HexSnakeDOM` | `src/dom.js` | frozen DOM reference facade | named `dom` export implemented |
 | `HexSnakeNet` | `src/network.js` | frozen LAN client/service facade plus `HexSnakeUI.network` registry copy | named `network` export implemented |
 | `HexSnakeCharacters` | `src/characters.js` | frozen character catalog / portrait helper facade, mirrored into `HexSnakeUI` | named `characterCatalog` export implemented |
