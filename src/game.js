@@ -1311,8 +1311,8 @@
     }
 
     function recordReplaySnapshotThrottled(now) {
-      if (now - HexSnakeState.ui.lastReplayRecordCheckAt < HexSnakeState.ui.replayRecordCheckIntervalMs) return;
-      HexSnakeState.ui.lastReplayRecordCheckAt = now;
+      if (now - GamePresentationState.lastReplayRecordCheckAt < GamePresentationState.replayRecordCheckIntervalMs) return;
+      GamePresentationState.lastReplayRecordCheckAt = now;
       GameReplay.recordSnapshot(now);
     }
 
