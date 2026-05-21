@@ -337,46 +337,46 @@
     }
 
     function applyKeybinds() {
-      HexSnakeState.config.directions.forEach((direction, index) => {
-        direction.key = HexSnakeState.game.keybinds.directions[index];
+      GameConfig.directions.forEach((direction, index) => {
+        direction.key = GameRuntimeState.keybinds.directions[index];
       });
-      HexSnakeState.game.keyToDir = new Map(HexSnakeState.config.directions.map((direction, index) => [direction.key, index]));
+      GameRuntimeState.keyToDir = new Map(GameConfig.directions.map((direction, index) => [direction.key, index]));
       Dom.keyEls.forEach(el => {
-        const direction = HexSnakeState.config.directions[Number(el.dataset.dir)];
+        const direction = GameConfig.directions[Number(el.dataset.dir)];
         if (direction) el.textContent = keyLabel(direction.key);
       });
       Dom.hexDirButtons.forEach(button => {
-        const direction = HexSnakeState.config.directions[Number(button.dataset.dir)];
+        const direction = GameConfig.directions[Number(button.dataset.dir)];
         const label = button.querySelector("span") || button;
         if (direction) label.textContent = keyLabel(direction.key);
       });
       Dom.settingsDirButtons.forEach(button => {
-        const direction = HexSnakeState.config.directions[Number(button.dataset.dir)];
+        const direction = GameConfig.directions[Number(button.dataset.dir)];
         const label = button.querySelector("span") || button;
         if (direction) label.textContent = keyLabel(direction.key);
-        button.classList.toggle("is-awaiting-key", Number(button.dataset.dir) === HexSnakeState.game.pendingDirectionKeybind);
-        button.setAttribute("aria-pressed", String(Number(button.dataset.dir) === HexSnakeState.game.pendingDirectionKeybind));
+        button.classList.toggle("is-awaiting-key", Number(button.dataset.dir) === GameRuntimeState.pendingDirectionKeybind);
+        button.setAttribute("aria-pressed", String(Number(button.dataset.dir) === GameRuntimeState.pendingDirectionKeybind));
       });
-      document.querySelector("#smallAttackKey").value = keyLabel(HexSnakeState.game.keybinds.smallAttack);
-      document.querySelector("#bigAttackKey").value = keyLabel(HexSnakeState.game.keybinds.bigAttack);
-      document.querySelector("#pauseKey").value = keyLabel(HexSnakeState.game.keybinds.pause);
-      document.querySelector("#surrenderKey").value = keyLabel(HexSnakeState.game.keybinds.surrender);
+      document.querySelector("#smallAttackKey").value = keyLabel(GameRuntimeState.keybinds.smallAttack);
+      document.querySelector("#bigAttackKey").value = keyLabel(GameRuntimeState.keybinds.bigAttack);
+      document.querySelector("#pauseKey").value = keyLabel(GameRuntimeState.keybinds.pause);
+      document.querySelector("#surrenderKey").value = keyLabel(GameRuntimeState.keybinds.surrender);
       document.querySelectorAll("[data-keybind-dir]").forEach(input => {
-        input.value = keyLabel(HexSnakeState.game.keybinds.directions[Number(input.dataset.keybindDir)]);
+        input.value = keyLabel(GameRuntimeState.keybinds.directions[Number(input.dataset.keybindDir)]);
       });
     }
 
     function setPendingDirectionKeybind(direction) {
-      HexSnakeState.game.pendingDirectionKeybind = Number.isInteger(direction) && direction >= 0 && direction < HexSnakeState.config.directions.length ? direction : null;
-      Dom.settingsDirHint.textContent = HexSnakeState.game.pendingDirectionKeybind === null
+      GameRuntimeState.pendingDirectionKeybind = Number.isInteger(direction) && direction >= 0 && direction < GameConfig.directions.length ? direction : null;
+      Dom.settingsDirHint.textContent = GameRuntimeState.pendingDirectionKeybind === null
         ? "點一個方向後按鍵盤設定快捷鍵"
-        : `按鍵盤設定 ${HexSnakeState.config.directions[HexSnakeState.game.pendingDirectionKeybind].label} 快捷鍵`;
+        : `按鍵盤設定 ${GameConfig.directions[GameRuntimeState.pendingDirectionKeybind].label} 快捷鍵`;
       applyKeybinds();
     }
 
     function commitPendingDirectionKeybind(key) {
-      if (HexSnakeState.game.pendingDirectionKeybind === null) return false;
-      HexSnakeState.game.keybinds.directions[HexSnakeState.game.pendingDirectionKeybind] = normalizeKey(key, HexSnakeState.game.keybinds.directions[HexSnakeState.game.pendingDirectionKeybind]);
+      if (GameRuntimeState.pendingDirectionKeybind === null) return false;
+      GameRuntimeState.keybinds.directions[GameRuntimeState.pendingDirectionKeybind] = normalizeKey(key, GameRuntimeState.keybinds.directions[GameRuntimeState.pendingDirectionKeybind]);
       saveKeybinds();
       setPendingDirectionKeybind(null);
       return true;
