@@ -5298,12 +5298,12 @@
     });
 
     window.addEventListener("pointermove", event => {
-      if (HexSnakeState.game.controlAttackPointer && event.pointerId === HexSnakeState.game.controlAttackPointer.pointerId) {
+      if (GameRuntimeState.controlAttackPointer && event.pointerId === GameRuntimeState.controlAttackPointer.pointerId) {
         moveControlPadAttackPointer(event);
         return;
       }
-      if (!HexSnakeState.game.moveStickLocked && !HexSnakeState.game.moveStickEngaged) return;
-      if (event.pointerId === HexSnakeState.game.movePointerId || event.pointerType === "mouse") {
+      if (!GameRuntimeState.moveStickLocked && !GameRuntimeState.moveStickEngaged) return;
+      if (event.pointerId === GameRuntimeState.movePointerId || event.pointerType === "mouse") {
         moveStick(event);
       }
     });

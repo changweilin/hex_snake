@@ -152,6 +152,7 @@ The audit checks:
 - `src/game.js` computer battle button slice uses `GameRuntimeState` / `GameUI` local aliases instead of direct `HexSnakeState.` / `HexSnakeUI.` reads.
 - `src/game.js` auto pause button slice uses `GameRuntimeState` local alias instead of direct `HexSnakeState.` reads.
 - `src/game.js` joy zone pointer slice uses `GameRuntimeState` local alias instead of direct `HexSnakeState.` reads.
+- `src/game.js` window pointer slice uses `GameRuntimeState` local alias instead of direct `HexSnakeState.` reads.
 - This file mentions every source and public surface in the current map.
 - `doc/es-module-loader-plan.md` still documents the loader modes, fallback rules, source order, production strategy, and next Phase D step.
 - `doc/es-module-core-bootstrap-checklist.md` still documents the `ui.js` / `game.js` blockers, explicit import surface, bootstrap ownership, preflight gates, and production fallback strategy.
