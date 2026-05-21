@@ -3214,7 +3214,7 @@
       if (distance < Math.max(4, rect.width * 0.035)) return null;
       let bestDirection = 0;
       let bestDot = -Infinity;
-      HexSnakeState.config.directions.forEach((_, direction) => {
+      GameConfig.directions.forEach((_, direction) => {
         const vector = directionVector(direction);
         const dot = x * vector.x + y * vector.y;
         if (dot > bestDot) {
