@@ -3952,7 +3952,7 @@
       Dom.networkToggle.setAttribute("aria-expanded", String(!Dom.networkContent.hidden));
       Dom.settingsToggle.closest(".settings-section").classList.toggle("open", settingsPagesOpen || !Dom.networkContent.hidden);
       updateSettingsPageBars();
-      if (!HexSnakeState.game.running || HexSnakeState.game.gameOver || GameReplay.isPlaybackMode()) {
+      if (!GameRuntimeState.running || GameRuntimeState.gameOver || GameReplay.isPlaybackMode()) {
         Dom.networkToggle.classList.toggle("is-active", !Dom.networkContent.hidden);
       }
     }
@@ -3978,7 +3978,7 @@
     }
 
     function toggleSettings() {
-      if (Dom.settingsToggle.disabled || HexSnakeState.game.running) return;
+      if (Dom.settingsToggle.disabled || GameRuntimeState.running) return;
       const settingsPagesOpen = !Dom.settingsContent.hidden || !Dom.gmContent.hidden;
       if (settingsPagesOpen) {
         setSettingsOpen(false);
@@ -3991,7 +3991,7 @@
     function setGmOpen(open, options = {}) {
       const previousPage = currentSettingsPage();
       Dom.gmContent.hidden = !open;
-      if (open && !HexSnakeState.game.running) {
+      if (open && !GameRuntimeState.running) {
         closeRulesPanelForOverlay();
         Dom.settingsContent.hidden = true;
         Dom.networkContent.hidden = true;
@@ -4017,12 +4017,12 @@
     }
 
     function toggleNetworkSettings() {
-      if (HexSnakeState.game.running && !HexSnakeState.game.gameOver && !GameReplay.isPlaybackMode()) {
-        if (HexSnakeState.game.computerBattleMode) setComputerBattleManualOverride(!HexSnakeState.game.computerBattleManualOverride);
-        else setPlayerAutoMode(!HexSnakeState.game.playerAutoMode);
+      if (GameRuntimeState.running && !GameRuntimeState.gameOver && !GameReplay.isPlaybackMode()) {
+        if (GameRuntimeState.computerBattleMode) setComputerBattleManualOverride(!GameRuntimeState.computerBattleManualOverride);
+        else setPlayerAutoMode(!GameRuntimeState.playerAutoMode);
         return;
       }
-      if (Dom.networkToggle.disabled || HexSnakeState.game.running) return;
+      if (Dom.networkToggle.disabled || GameRuntimeState.running) return;
       setNetworkOpen(Dom.networkToggle.getAttribute("aria-expanded") !== "true");
     }
 
