@@ -3848,7 +3848,7 @@
       if (event.target !== Dom.canvas) return;
       event.preventDefault();
       const cell = boardCellFromPointer(event);
-      HexSnakeState.game.attackPointer = {
+      GameRuntimeState.attackPointer = {
         pointerId: event.pointerId,
         startCell: { ...cell },
         currentCell: { ...cell },
@@ -3859,13 +3859,13 @@
         longPressed: false,
         previewProfile: "small"
       };
-      previewDirectAttack("small", HexSnakeState.game.attackPointer);
+      previewDirectAttack("small", GameRuntimeState.attackPointer);
       clearAttackPointerLongPressTimer();
-      HexSnakeState.game.attackPointerLongPressTimer = setTimeout(() => {
-        if (!HexSnakeState.game.attackPointer || HexSnakeState.game.attackPointer.pointerId !== event.pointerId) return;
-        HexSnakeState.game.attackPointer.longPressed = true;
-        HexSnakeState.game.attackPointer.previewProfile = "big";
-        previewDirectAttack("big", HexSnakeState.game.attackPointer);
+      GameRuntimeState.attackPointerLongPressTimer = setTimeout(() => {
+        if (!GameRuntimeState.attackPointer || GameRuntimeState.attackPointer.pointerId !== event.pointerId) return;
+        GameRuntimeState.attackPointer.longPressed = true;
+        GameRuntimeState.attackPointer.previewProfile = "big";
+        previewDirectAttack("big", GameRuntimeState.attackPointer);
       }, 460);
       try {
         Dom.canvas.setPointerCapture(event.pointerId);
@@ -3876,28 +3876,28 @@
     }
 
     function moveBoardAttackPointer(event) {
-      if (!HexSnakeState.game.attackPointer || event.pointerId !== HexSnakeState.game.attackPointer.pointerId) return;
+      if (!GameRuntimeState.attackPointer || event.pointerId !== GameRuntimeState.attackPointer.pointerId) return;
       event.preventDefault();
       const cell = boardCellFromPointer(event);
-      HexSnakeState.game.attackPointer.currentCell = { ...cell };
-      const dragDistance = Math.hypot(event.clientX - HexSnakeState.game.attackPointer.startX, event.clientY - HexSnakeState.game.attackPointer.startY);
-      HexSnakeState.game.attackPointer.moved = HexSnakeState.game.attackPointer.moved || dragDistance > Math.max(8, HexSnakeState.game.cellSize * 0.28) || keyOf(cell) !== keyOf(HexSnakeState.game.attackPointer.startCell);
-      if (HexSnakeState.game.attackPointer.moved) {
+      GameRuntimeState.attackPointer.currentCell = { ...cell };
+      const dragDistance = Math.hypot(event.clientX - GameRuntimeState.attackPointer.startX, event.clientY - GameRuntimeState.attackPointer.startY);
+      GameRuntimeState.attackPointer.moved = GameRuntimeState.attackPointer.moved || dragDistance > Math.max(8, GameRuntimeState.cellSize * 0.28) || keyOf(cell) !== keyOf(GameRuntimeState.attackPointer.startCell);
+      if (GameRuntimeState.attackPointer.moved) {
         clearAttackPointerLongPressTimer();
-        HexSnakeState.game.attackPointer.previewProfile = "big";
-        previewDirectAttack("big", HexSnakeState.game.attackPointer);
+        GameRuntimeState.attackPointer.previewProfile = "big";
+        previewDirectAttack("big", GameRuntimeState.attackPointer);
         return;
       }
-      previewDirectAttack(HexSnakeState.game.attackPointer.previewProfile, HexSnakeState.game.attackPointer);
+      previewDirectAttack(GameRuntimeState.attackPointer.previewProfile, GameRuntimeState.attackPointer);
       GameRender.requestPreviewDraw();
     }
 
     function finishBoardAttackPointer(event) {
-      if (!HexSnakeState.game.attackPointer || event.pointerId !== HexSnakeState.game.attackPointer.pointerId) return;
+      if (!GameRuntimeState.attackPointer || event.pointerId !== GameRuntimeState.attackPointer.pointerId) return;
       event.preventDefault();
-      const pointer = HexSnakeState.game.attackPointer;
+      const pointer = GameRuntimeState.attackPointer;
       pointer.currentCell = boardCellFromPointer(event);
-      HexSnakeState.game.attackPointer = null;
+      GameRuntimeState.attackPointer = null;
       clearAttackPointerLongPressTimer();
       if (Dom.canvas.hasPointerCapture?.(event.pointerId)) Dom.canvas.releasePointerCapture(event.pointerId);
       const heldLongEnough = performance.now() - pointer.startedAt >= 460;
@@ -3906,10 +3906,10 @@
     }
 
     function cancelBoardAttackPointer(event) {
-      if (!HexSnakeState.game.attackPointer || event.pointerId !== HexSnakeState.game.attackPointer.pointerId) return;
-      HexSnakeState.game.attackPointer = null;
+      if (!GameRuntimeState.attackPointer || event.pointerId !== GameRuntimeState.attackPointer.pointerId) return;
+      GameRuntimeState.attackPointer = null;
       clearAttackPointerLongPressTimer();
-      HexSnakeState.game.targetActive = false;
+      GameRuntimeState.targetActive = false;
       if (Dom.canvas.hasPointerCapture?.(event.pointerId)) Dom.canvas.releasePointerCapture(event.pointerId);
       GameRender.requestPreviewDraw();
     }
