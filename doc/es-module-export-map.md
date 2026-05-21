@@ -4,7 +4,7 @@
 
 ## 目的
 
-這份文件固定正式 ESM split 前的 registry 初始化順序與 export surface。現階段仍使用 legacy concatenated loader；正式 module loader 開始前，必須先讓這張表、`doc/es-module-loader-plan.md`、`doc/es-module-core-bootstrap-checklist.md` 與 `npm.cmd run audit:esm-map` 同步通過。
+這份文件固定正式 ESM split 前的 registry 初始化順序與 export surface。現階段 source mode 已可跑 `module-shadow` / `module`，但 production 仍維持 `bundled-legacy-fallback`；正式 module production 開始前，必須先讓這張表、`doc/es-module-loader-plan.md`、`doc/es-module-core-bootstrap-checklist.md`、`doc/es-module-production-strategy.md` 與 `npm.cmd run audit:esm-map` 同步通過。
 
 ## Shadow Entry
 
@@ -72,8 +72,10 @@ The audit checks:
 - `src/main.js` browser loader order.
 - `build.js` web/mobile first-source switch and shared legacy source order.
 - `tools/module-loader-smoke-test.js` and `release:check` include module-shadow, source module, and production fallback gates.
+- `build.js` and `check:assets` keep production manifest strategy at `bundled-legacy-fallback` until a formal module bundle / source map gate exists.
 - Required `window.HexSnake*` compatibility registrations.
 - Required registry extension points and exports such as `HexSnakeUI.audio`, `HexSnakeCharacters`, `HexSnakeAudio`, `HexSnakeReplay`, `HexSnakeStats`, `HexSnakeAI`, `HexSnakeUI.aiGame`, and `HexSnakeRender`.
 - This file mentions every source and public surface in the current map.
-- `doc/es-module-loader-plan.md` still documents the loader modes, fallback rules, source order, and next module-shadow step.
-- `doc/es-module-core-bootstrap-checklist.md` still documents the `ui.js` / `game.js` blockers, explicit import surface, bootstrap ownership, preflight gates, and next module bootstrap task.
+- `doc/es-module-loader-plan.md` still documents the loader modes, fallback rules, source order, production strategy, and next Phase D step.
+- `doc/es-module-core-bootstrap-checklist.md` still documents the `ui.js` / `game.js` blockers, explicit import surface, bootstrap ownership, preflight gates, and production fallback strategy.
+- `doc/es-module-production-strategy.md` still documents the release checklist, switch conditions, and module-bundle-source-map-release-gate.

@@ -44,15 +44,19 @@ Shared order:
 | B. Module shadow entry | 已新增 `src/main-module.js` 與 `?hexSnakeLoader=module-shadow`，只載入 shadow contract 並回報 ready，不啟動 gameplay | `audit:esm-map`、`build`、`test:smoke` |
 | C. Dual-mode runtime / registry exports | platform/runtime、state registry、DOM facade、`uiCore` shell、network/about leaf services、catalog/media/stats shell、runtime helper shell 與 `gameShell` 已具備正式 named exports；module shadow 已 import shell，且不呼叫 `bootstrapGame()` | `audit:esm-map`、`audit:globals` 不上升 |
 | D. Service module migration | 依 export map 順序讓 leaf services 與 runtime helpers 改成 explicit imports，legacy loader 仍可回退 | build、quick、smoke、mobile |
-| E. Gameplay module bootstrap | `src/main-module.js` 已新增 `loadModuleGame()` 作為 module mode 唯一 bootstrap owner；`module-shadow` 仍只回報 contract；`test:module-loader` 已固定 source module / shadow 與 dist fallback checks | `test:module-loader`、release:check |
+| E. Gameplay module bootstrap | `src/main-module.js` 已新增 `loadModuleGame()` 作為 module mode 唯一 bootstrap owner；`module-shadow` 仍只回報 contract；`test:module-loader` 已固定 source module / shadow 與 dist fallback checks；production strategy 已決定維持 `bundled-legacy-fallback` | `test:module-loader`、`check:assets`、release:check |
 
 ## Fallback Rules
 
 1. `legacy` 永遠是 default，直到 module mode 通過 desktop/mobile smoke、offline、app readiness。
 2. module mode 失敗時不得靜默切換成 legacy；開發期要顯示 boot error，避免誤判 module mode 已可用。
-3. production build 不啟用 module mode，除非 release checklist 明確加入 module loader gate。
+3. production build 維持 `bundled-legacy-fallback`，並由 `dist/build-asset-manifest.json` 的 `moduleLoader` 區塊與 `check:assets` 驗證；詳細策略見 `doc/es-module-production-strategy.md`。
 4. 每批只能移動一層 ownership：runtime/registry、DOM、leaf service、runtime helper、game bootstrap 不混批。
+
+## Production Strategy
+
+目前正式決策是維持 `bundled-legacy-fallback`：`assets/app.bundle.js` 是 production entrypoint，`src/main-module.js` 只作為 source-mode 驗證入口。除非另新增 `module-bundle-source-map-release-gate`，不得把 production default 切到 module。
 
 ## Next AI Task
 
-下一個 AI 可直接處理項目是整理正式 module production 策略：評估 production build 要維持 bundled legacy fallback，或新增正式 module bundle / source map gate；不得在未定策略前切換 production default。
+下一個 AI 可直接處理項目是回到 Phase D service module migration：先挑一個 leaf service 或 runtime helper 做 explicit import friendly 的小切片；production default 繼續維持 `bundled-legacy-fallback`。

@@ -11,6 +11,7 @@
 - `src/main.js` 預設仍使用 legacy concatenated loader。
 - `src/main-module.js` 已可 native import platform/runtime、state registry、DOM、UI shell、leaf services、catalog/media/stats、runtime helpers 與 game shell。
 - `src/main-module.js` 可 import `src/game.js` 的 `gameShell`；`module-shadow` 仍不得呼叫 `bootstrapGame()`，正式 `module` 路徑由 `loadModuleGame()` 呼叫。
+- Production build 已決定維持 `bundled-legacy-fallback`；`dist/build-asset-manifest.json` 的 `moduleLoader` 區塊與 `check:assets` 會固定此策略。
 - `npm.cmd run audit:globals` 維持 42 cross-file reads；`npm.cmd run audit:state-boundary` 維持 0/0。
 
 ## Module Blockers
@@ -64,4 +65,4 @@ Also run `npm.cmd run test:module-loader` after each loader step. The source `mo
 
 ## Next AI Task
 
-下一個 AI 可直接處理項目是整理正式 module production 策略：明確決定 production build 繼續使用 bundled legacy fallback，或另設 module bundle / source map gate。
+下一個 AI 可直接處理項目是回到 Phase D service module migration：先挑一個 leaf service 或 runtime helper 做 explicit import friendly 的小切片；production default 繼續維持 `bundled-legacy-fallback`。

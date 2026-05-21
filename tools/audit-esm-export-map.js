@@ -143,6 +143,18 @@ expectToken(
   'const platformSource = buildTarget === "mobile" ? "src/platform/mobile.js" : "src/platform/web.js";'
 );
 expectToken(
+  "build.js",
+  'strategy: "bundled-legacy-fallback"'
+);
+expectToken(
+  "build.js",
+  'activationGate: "module-bundle-source-map-release-gate"'
+);
+expectToken(
+  "tools/check-assets.js",
+  'manifest.moduleLoader?.strategy !== "bundled-legacy-fallback"'
+);
+expectToken(
   "package.json",
   '"test:module-loader": "node tools/module-loader-smoke-test.js"'
 );
@@ -275,6 +287,8 @@ const loaderPlanText = read("doc/es-module-loader-plan.md");
   "src/game.js",
   "audit:esm-map",
   "test:module-loader",
+  "bundled-legacy-fallback",
+  "doc/es-module-production-strategy.md",
   "Next AI Task"
 ].forEach(token => {
   if (!loaderPlanText.includes(token)) fail(`doc/es-module-loader-plan.md is missing ${token}`);
@@ -293,9 +307,23 @@ const coreBootstrapChecklistText = read("doc/es-module-core-bootstrap-checklist.
   "bootstrapGame()",
   "test:module-loader",
   "bootstrapsGameplay: false",
+  "bundled-legacy-fallback",
   "Next AI Task"
 ].forEach(token => {
   if (!coreBootstrapChecklistText.includes(token)) fail(`doc/es-module-core-bootstrap-checklist.md is missing ${token}`);
+});
+
+const productionStrategyText = read("doc/es-module-production-strategy.md");
+[
+  "bundled-legacy-fallback",
+  "assets/app.bundle.js",
+  "src/main-module.js",
+  "module-bundle-source-map-release-gate",
+  "Release Checklist",
+  "Switch Conditions",
+  "Next AI Task"
+].forEach(token => {
+  if (!productionStrategyText.includes(token)) fail(`doc/es-module-production-strategy.md is missing ${token}`);
 });
 
 if (errors.length) {

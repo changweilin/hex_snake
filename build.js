@@ -28,6 +28,13 @@ const legacySources = [
 ];
 const bundlePath = "assets/app.bundle.js";
 const bundleMapPath = `${bundlePath}.map`;
+const moduleLoaderStrategy = Object.freeze({
+  strategy: "bundled-legacy-fallback",
+  defaultMode: "legacy",
+  productionEntrypoint: bundlePath,
+  sourceModuleEntry: "src/main-module.js",
+  activationGate: "module-bundle-source-map-release-gate"
+});
 const buildVersion = (process.env.HEX_SNAKE_BUILD_VERSION || new Date().toISOString())
   .replace(/[^a-zA-Z0-9_.-]/g, "-");
 const appVersion = packageInfo.version || "0.0.0";
@@ -558,6 +565,7 @@ const manifest = {
     script: bundlePath,
     styles: "src/styles.css"
   },
+  moduleLoader: moduleLoaderStrategy,
   sourceMap: {
     path: bundleMapPath,
     mode: "sourcesContent without generated-line mappings"

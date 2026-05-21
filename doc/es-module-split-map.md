@@ -37,13 +37,13 @@
 | 2. DOM/helper facade | 完成 | 建立 `HexSnakeControls`、`HexSnakeDOM` 與 game/UI helper facade | `audit:globals` 486 -> 367 |
 | 3. Catalog/media cleanup | 完成 | catalog setter/list、portrait variant state getter、food label config getter；characters/audio/stats 改走 facade | `audit:globals` 367 -> 339；build、quick、smoke 通過 |
 | 4. Runtime cleanup | runtime adapter facade 收斂完成 | replay、render、AI、UI/game hooks、public services 與 platform/storage adapter 已分批改走 `HexSnakeDOM`、`HexSnakeState`、`HexSnakeUI`、`HexSnakeRender`、`HexSnakeRuntime` | `audit:globals` 339 -> 42；`audit:state-boundary` 維持 0/0 |
-| 5. Core ES module split | module loader smoke gate 完成 | 已新增 `src/main-module.js` 與 `?hexSnakeLoader=module-shadow` / `?hexSnakeLoader=module`；platform/runtime、state registry、DOM facade、UI shell、network/about leaf services、catalog/media/stats、runtime helper 與 game shell 已可被 native module import；`test:module-loader` 固定驗證 shadow no-bootstrap、source module bootstrap 與 dist fallback | `audit:esm-map`、`test:module-loader`、legacy loader 可回退；正式 loader 可逐步啟用 |
+| 5. Core ES module split | production strategy 完成 | 已新增 `src/main-module.js` 與 `?hexSnakeLoader=module-shadow` / `?hexSnakeLoader=module`；platform/runtime、state registry、DOM facade、UI shell、network/about leaf services、catalog/media/stats、runtime helper 與 game shell 已可被 native module import；`test:module-loader` 固定驗證 shadow no-bootstrap、source module bootstrap 與 dist fallback；正式 production 決定維持 `bundled-legacy-fallback`，由 `check:assets` 驗證 manifest | `audit:esm-map`、`test:module-loader`、`check:assets`、legacy loader 可回退；正式 module bundle 須另走 source map gate |
 
 ## Immediate AI Task Queue
 
-1. 整理 production module 策略，決定是否新增正式 module bundle / source map gate，或繼續讓 production fallback 到 bundled legacy。
-2. 若維持 fallback，文件化切換條件與 release checklist；若新增 module bundle，先做 build plan，不直接改 default。
-3. 再評估 Phase D service module migration 的下一個低風險切片。
+1. 回到 Phase D service module migration：先挑一個 leaf service 或 runtime helper 做 explicit import friendly 的小切片，並維持 production `bundled-legacy-fallback`。
+2. 若要啟動正式 module bundle，先依 `doc/es-module-production-strategy.md` 新增 opt-in module artifact / source map gate，不直接改 default。
+3. 每批只移動一層 ownership，確保 `audit:globals`、`audit:state-boundary` 與 `test:module-loader` 不退步。
 
 ## Do Not Start With
 

@@ -49,6 +49,22 @@ if (manifest.forbidden?.length) {
   fail(`Build manifest reports forbidden assets:\n${manifest.forbidden.map(item => `${item.path} (${item.reason})`).join("\n")}`);
 }
 
+if (manifest.moduleLoader?.strategy !== "bundled-legacy-fallback") {
+  fail("Build manifest must keep production module strategy as bundled-legacy-fallback.");
+}
+
+if (manifest.moduleLoader?.defaultMode !== "legacy") {
+  fail("Build manifest must keep the production default loader mode as legacy.");
+}
+
+if (manifest.moduleLoader?.productionEntrypoint !== "assets/app.bundle.js") {
+  fail("Build manifest must keep assets/app.bundle.js as the production entrypoint.");
+}
+
+if (manifest.moduleLoader?.sourceModuleEntry !== "src/main-module.js") {
+  fail("Build manifest must record src/main-module.js as the source-only module entry.");
+}
+
 requiredFiles.forEach(relativePath => {
   const absolutePath = path.join(dist, relativePath);
   if (!fs.existsSync(absolutePath)) fail(`${relativePath} is missing from dist.`);
