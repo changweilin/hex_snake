@@ -3372,8 +3372,8 @@
 
     function moveTargetStick(event) {
       if (GameReplay.isPlaybackMode()) return;
-      if (HexSnakeUI.isLogoTransitionActive()) return;
-      if (!HexSnakeState.game.running || HexSnakeState.game.gameOver) {
+      if (GameUI.isLogoTransitionActive()) return;
+      if (!GameRuntimeState.running || GameRuntimeState.gameOver) {
         if (!autoStartGame()) return;
       }
       const rect = targetZone.getBoundingClientRect();
@@ -3385,29 +3385,29 @@
       const distance = Math.min(54, rawDistance);
       const angle = Math.atan2(dy, dx);
       targetStick.style.transform = `translate(${Math.cos(angle) * distance}px, ${Math.sin(angle) * distance}px)`;
-      const playerPixel = axialToPixel(HexSnakeState.game.snake[0]);
-      const maxPixelRange = HexSnakeState.game.targetMaxHex * HexSnakeState.game.cellSize;
+      const playerPixel = axialToPixel(GameRuntimeState.snake[0]);
+      const maxPixelRange = GameRuntimeState.targetMaxHex * GameRuntimeState.cellSize;
       const ratio = Math.min(1, rawDistance / Math.max(1, rect.width * 0.44));
       const targetPixel = {
         x: playerPixel.x + Math.cos(angle) * maxPixelRange * ratio,
         y: playerPixel.y + Math.sin(angle) * maxPixelRange * ratio
       };
-      HexSnakeState.game.targetCell = nearestInsideCell(pixelToAxial(targetPixel.x, targetPixel.y));
-      HexSnakeState.game.targetActive = true;
+      GameRuntimeState.targetCell = nearestInsideCell(pixelToAxial(targetPixel.x, targetPixel.y));
+      GameRuntimeState.targetActive = true;
       GameRender.requestPreviewDraw();
     }
 
     function releaseTargetStick() {
-      HexSnakeState.game.targetPointerId = null;
+      GameRuntimeState.targetPointerId = null;
       targetStick.style.transform = "translate(0, 0)";
-      if (HexSnakeState.game.targetActive && HexSnakeState.game.running && !HexSnakeState.game.paused && !HexSnakeState.game.gameOver) {
-        if (launchAttack("player", HexSnakeState.game.targetCell || HexSnakeState.game.snake[0], performance.now())) {
+      if (GameRuntimeState.targetActive && GameRuntimeState.running && !GameRuntimeState.paused && !GameRuntimeState.gameOver) {
+        if (launchAttack("player", GameRuntimeState.targetCell || GameRuntimeState.snake[0], performance.now())) {
           setStatus("P1 施放炸彈，2 秒後落地。");
         } else {
-          setStatus(`大招需要 ${HexSnakeState.config.bigAttackBombCost} 枚炸彈，且四種庫存各至少 2。`);
+          setStatus(`大招需要 ${GameConfig.bigAttackBombCost} 枚炸彈，且四種庫存各至少 2。`);
         }
       }
-      HexSnakeState.game.targetActive = false;
+      GameRuntimeState.targetActive = false;
     }
 
     function opponentHeadTarget() {
