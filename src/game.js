@@ -2866,7 +2866,7 @@
     }
 
     function advanceOwnerMovement(owner, next, eatenFood) {
-      const parts = owner === "player" ? HexSnakeState.game.snake : HexSnakeState.game.computerSnake;
+      const parts = owner === "player" ? GameRuntimeState.snake : GameRuntimeState.computerSnake;
       const ate = Boolean(eatenFood);
       parts.unshift(next);
       if (!ate) {
@@ -2875,23 +2875,23 @@
       }
 
       if (owner === "player") {
-        HexSnakeState.game.score += 1;
-        HexSnakeUI.collectFood("player", eatenFood);
-        HexSnakeState.game.best = Math.max(HexSnakeState.game.best, HexSnakeState.game.score);
-        GameStorage.set("hexSnakeBest", String(HexSnakeState.game.best));
-        HexSnakeState.game.lastFeedElapsedMs = 0;
-        HexSnakeState.game.lastPlayerFoodAt = performance.now();
-        HexSnakeState.game.playerFoodTargetKey = null;
-        HexSnakeState.game.playerFoodTargetAt = 0;
-        HexSnakeState.game.playerHp = Math.min(HexSnakeUI.maxHpForSnake(HexSnakeState.game.snake), HexSnakeState.game.playerHp + HexSnakeUI.foodHealAmount());
+        GameRuntimeState.score += 1;
+        GameUI.collectFood("player", eatenFood);
+        GameRuntimeState.best = Math.max(GameRuntimeState.best, GameRuntimeState.score);
+        GameStorage.set("hexSnakeBest", String(GameRuntimeState.best));
+        GameRuntimeState.lastFeedElapsedMs = 0;
+        GameRuntimeState.lastPlayerFoodAt = performance.now();
+        GameRuntimeState.playerFoodTargetKey = null;
+        GameRuntimeState.playerFoodTargetAt = 0;
+        GameRuntimeState.playerHp = Math.min(GameUI.maxHpForSnake(GameRuntimeState.snake), GameRuntimeState.playerHp + GameUI.foodHealAmount());
       } else {
-        HexSnakeState.game.computerScore += 1;
-        HexSnakeState.game.lastComputerFoodAt = performance.now();
-        HexSnakeState.game.computerFoodTargetKey = null;
-        HexSnakeState.game.computerFoodTargetAt = 0;
+        GameRuntimeState.computerScore += 1;
+        GameRuntimeState.lastComputerFoodAt = performance.now();
+        GameRuntimeState.computerFoodTargetKey = null;
+        GameRuntimeState.computerFoodTargetAt = 0;
         if (GameAI.computerCanGrow()) {
-          HexSnakeUI.collectFood("computer", eatenFood);
-          HexSnakeState.game.computerHp = Math.min(HexSnakeUI.maxHpForSnake(HexSnakeState.game.computerSnake), HexSnakeState.game.computerHp + HexSnakeUI.foodHealAmount());
+          GameUI.collectFood("computer", eatenFood);
+          GameRuntimeState.computerHp = Math.min(GameUI.maxHpForSnake(GameRuntimeState.computerSnake), GameRuntimeState.computerHp + GameUI.foodHealAmount());
         } else {
           parts.pop();
         }
