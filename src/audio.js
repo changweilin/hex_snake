@@ -1,7 +1,8 @@
 const AudioRuntime = HexSnakeRuntime;
 const AudioStorage = AudioRuntime.storage;
-const AudioState = HexSnakeState.audio;
-const AudioUiState = HexSnakeState.ui;
+const AudioRootState = HexSnakeState;
+const AudioState = AudioRootState.audio;
+const AudioUiState = AudioRootState.ui;
 const AudioUI = HexSnakeUI;
 const AudioDom = HexSnakeDOM;
 
