@@ -896,6 +896,14 @@ expectSliceExcludes(
   ["HexSnakeState.", "HexSnakeUI."]
 );
 
+expectSliceExcludes(
+  "src/game.js",
+  "attack button pointer / keyboard aim button alias slice",
+  "function defaultPlayerAttackTarget",
+  "Dom.rulesButton.addEventListener",
+  ["HexSnakeState.", "HexSnakeUI."]
+);
+
 const docText = read("doc/es-module-export-map.md");
 [
   "src/platform/web.js",

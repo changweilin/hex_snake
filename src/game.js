@@ -4617,19 +4617,19 @@
     });
 
     function defaultPlayerAttackTarget() {
-      return HexSnakeState.game.targetCell || HexSnakeState.game.computerSnake[0] || HexSnakeState.game.snake[0];
+      return GameRuntimeState.targetCell || GameRuntimeState.computerSnake[0] || GameRuntimeState.snake[0];
     }
 
     function attackButtonPointerTarget(profile) {
-      if (profile === "big" && GameAI.bigAttackUsesDrawnDirection(HexSnakeUI.characterFor("player").id)) {
+      if (profile === "big" && GameAI.bigAttackUsesDrawnDirection(GameUI.characterFor("player").id)) {
         return directionalAttackTarget(ownerDirection("player"));
       }
       return defaultPlayerAttackTarget();
     }
 
     function attackButtonPointerOptions(profile) {
-      if (profile === "big" && GameAI.bigAttackUsesDrawnDirection(HexSnakeUI.characterFor("player").id)) {
-        return { aimDirection: ownerDirection("player"), aimOrigin: HexSnakeState.game.snake[0] };
+      if (profile === "big" && GameAI.bigAttackUsesDrawnDirection(GameUI.characterFor("player").id)) {
+        return { aimDirection: ownerDirection("player"), aimOrigin: GameRuntimeState.snake[0] };
       }
       return {};
     }
@@ -4637,8 +4637,8 @@
     function handleAttackButtonDown(event, profile) {
       event.preventDefault();
       event.stopPropagation();
-      if (HexSnakeUI.isLogoTransitionActive()) return;
-      HexSnakeState.game.attackButtonPointerId = event.pointerId;
+      if (GameUI.isLogoTransitionActive()) return;
+      GameRuntimeState.attackButtonPointerId = event.pointerId;
       setAttackButtonHighlight(profile);
       triggerTouchFeedback(event, profile === "big" ? 12 : 8);
       try {
@@ -4652,9 +4652,9 @@
     function handleAttackButtonUp(event, profile) {
       event.preventDefault();
       event.stopPropagation();
-      if (HexSnakeUI.isLogoTransitionActive()) return;
-      if (HexSnakeState.game.attackButtonPointerId !== null && event.pointerId !== HexSnakeState.game.attackButtonPointerId) return;
-      HexSnakeState.game.attackButtonPointerId = null;
+      if (GameUI.isLogoTransitionActive()) return;
+      if (GameRuntimeState.attackButtonPointerId !== null && event.pointerId !== GameRuntimeState.attackButtonPointerId) return;
+      GameRuntimeState.attackButtonPointerId = null;
       if (event.currentTarget.hasPointerCapture?.(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
       releaseAttackButtonHighlight();
       triggerTouchFeedback(event, 5);
@@ -4662,8 +4662,8 @@
     }
 
     function handleAttackButtonCancel(event) {
-      if (HexSnakeState.game.attackButtonPointerId !== null && event.pointerId !== HexSnakeState.game.attackButtonPointerId) return;
-      HexSnakeState.game.attackButtonPointerId = null;
+      if (GameRuntimeState.attackButtonPointerId !== null && event.pointerId !== GameRuntimeState.attackButtonPointerId) return;
+      GameRuntimeState.attackButtonPointerId = null;
       if (event.currentTarget.hasPointerCapture?.(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
       setAttackButtonHighlight(null);
     }
@@ -4671,8 +4671,8 @@
     function handleKeyboardAimButtonDown(event, profile) {
       event.preventDefault();
       event.stopPropagation();
-      if (HexSnakeUI.isLogoTransitionActive()) return;
-      HexSnakeState.game.attackButtonPointerId = event.pointerId;
+      if (GameUI.isLogoTransitionActive()) return;
+      GameRuntimeState.attackButtonPointerId = event.pointerId;
       try {
         event.currentTarget.setPointerCapture(event.pointerId);
       } catch (error) {
@@ -4684,15 +4684,15 @@
     function handleKeyboardAimButtonUp(event, profile) {
       event.preventDefault();
       event.stopPropagation();
-      if (HexSnakeState.game.attackButtonPointerId !== null && event.pointerId !== HexSnakeState.game.attackButtonPointerId) return;
-      HexSnakeState.game.attackButtonPointerId = null;
+      if (GameRuntimeState.attackButtonPointerId !== null && event.pointerId !== GameRuntimeState.attackButtonPointerId) return;
+      GameRuntimeState.attackButtonPointerId = null;
       if (event.currentTarget.hasPointerCapture?.(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
       handleKeyboardAimKeyUp(event, `button-${profile}`);
     }
 
     function handleKeyboardAimButtonCancel(event) {
-      if (HexSnakeState.game.attackButtonPointerId !== null && event.pointerId !== HexSnakeState.game.attackButtonPointerId) return;
-      HexSnakeState.game.attackButtonPointerId = null;
+      if (GameRuntimeState.attackButtonPointerId !== null && event.pointerId !== GameRuntimeState.attackButtonPointerId) return;
+      GameRuntimeState.attackButtonPointerId = null;
       if (event.currentTarget.hasPointerCapture?.(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
       clearKeyboardAimKeyLocks();
     }
