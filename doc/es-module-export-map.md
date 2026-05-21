@@ -47,7 +47,7 @@
 | `HexSnakeCharacters` | `src/characters.js` | frozen character catalog / portrait helper facade, mirrored into `HexSnakeUI` | named `characterCatalog` export implemented |
 | `HexSnakeAudio` | `src/audio.js` | frozen character SFX service, mirrored into `HexSnakeUI.audio` | named `audio` export implemented |
 | `HexSnakeReplay` | `src/replay.js` | frozen replay record/playback service, mirrored into `HexSnakeUI.replay` | named `replay` export implemented |
-| `HexSnakeStats` | `src/stats.js` | frozen match stats service, mirrored into `HexSnakeUI.stats` | named `stats` export implemented |
+| `HexSnakeStats` | `src/stats.js` | frozen match stats service using `StatsRootState` / `StatsGameState`, mirrored into `HexSnakeUI.stats` | named `stats` export implemented |
 | `HexSnakeAbout` | `src/about.js` | frozen version/about service, mirrored into `HexSnakeUI.about` | named `about` export implemented |
 | `HexSnakeAI` | `src/ai.js` | frozen AI decision/combat helper service, mirrored into `HexSnakeUI.ai` | named `ai` export implemented |
 

@@ -1,6 +1,7 @@
 const StatsRuntime = HexSnakeRuntime;
 const StatsStorage = StatsRuntime.storage;
-const StatsGameState = HexSnakeState.game;
+const StatsRootState = HexSnakeState;
+const StatsGameState = StatsRootState.game;
 const StatsUI = HexSnakeUI;
 const StatsDom = HexSnakeDOM;
 
