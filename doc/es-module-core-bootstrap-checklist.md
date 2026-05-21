@@ -9,15 +9,15 @@
 ## Current Baseline
 
 - `src/main.js` 預設仍使用 legacy concatenated loader。
-- `src/main-module.js` 已可 native import platform/runtime、state registry、DOM、leaf services、catalog/media/stats 與 runtime helpers。
-- `src/main-module.js` 仍禁止 import `src/ui.js` / `src/game.js`，因為兩者是最後的 core knot。
+- `src/main-module.js` 已可 native import platform/runtime、state registry、DOM、UI shell、leaf services、catalog/media/stats 與 runtime helpers。
+- `src/main-module.js` 仍禁止 import `src/game.js`，因為 gameplay bootstrap ownership 尚未拆開。
 - `npm.cmd run audit:globals` 維持 42 cross-file reads；`npm.cmd run audit:state-boundary` 維持 0/0。
 
 ## Module Blockers
 
 | File | Blocker | Required before import in module mode |
 | --- | --- | --- |
-| `src/ui.js` | 仍以 top-level side effects 建立 config/state accessors、`HexSnakeUI` facade 與 UI presentation helpers | 補 dual-mode export surface，至少提供 `uiCore` / `HexSnakeUICore` shell；確認 import 後只註冊 facade，不啟動 gameplay |
+| `src/ui.js` | 仍以 top-level side effects 建立 config/state accessors、`HexSnakeUI` facade 與 UI presentation helpers | 已提供 `uiCore` / `HexSnakeUICore` shell；module-shadow import 後只註冊 facade，不啟動 gameplay |
 | `src/ui.js` | 依賴 `HexSnakeRuntime.storage`、`HexSnakeDOM`、`HexSnakeControls`、`HexSnakeRender` 與 `HexSnakeUI` shared registry | 先明確記錄 import order，再逐步改成 explicit imports 或保持 window compatibility gate |
 | `src/game.js` | import 時會綁定大量 DOM/window listeners、註冊 `HexSnakeRenderGame` / `HexSnakeUI.*Game` hooks，並立即呼叫 `bootstrap()` | 拆出 `loadGameShell()` 與 `bootstrapGame()`，讓 module entry 可以先驗證 shell，再由明確 owner 啟動 |
 | `src/game.js` | gameplay bootstrap 同時載入 balance、AI strategy、character database、settings、HUD、replay/effect comparison 與 first render | bootstrap 必須保留 async error path，並建立 module-mode boot failure UI，不得靜默 fallback |
@@ -43,7 +43,7 @@
 2. A new exported shell function should register event listeners and game facades once, guarded against duplicate registration.
 3. A separate exported bootstrap function should own async startup and return a contract with `bootstrapsGameplay: true`.
 4. `legacy` mode must keep existing behavior until module mode has browser/mobile smoke coverage.
-5. `module-shadow` may import `ui.js` before `game.js`, but it must assert that gameplay did not start.
+5. `module-shadow` may import `ui.js`; it must not call `bootstrapGame()` until formal module mode is enabled.
 
 ## Module Mode Preflight
 
@@ -63,4 +63,4 @@ Also run a browser check against `?hexSnakeLoader=module-shadow` after each shel
 
 ## Next AI Task
 
-下一個 AI 可直接處理項目是先讓 `src/ui.js` 提供 dual-mode `uiCore` shell export，並讓 `module-shadow` import UI shell 後仍不 import `src/game.js`、不啟動 gameplay。
+下一個 AI 可直接處理項目是將 `src/game.js` 的 shell registration 與立即執行的 `bootstrap()` 拆開，先提供 `gameShell` / `bootstrapGame()` exports；`module-shadow` 只能 import game shell，不得呼叫 `bootstrapGame()`。

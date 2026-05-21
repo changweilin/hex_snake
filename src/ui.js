@@ -4046,3 +4046,18 @@ Object.assign(HexSnakeUI, {
   startingEnergy,
   startingStock,
 });
+
+const HexSnakeUICore = Object.freeze({
+  buildCharacterStage,
+  buildResourceHud,
+  buildRulesContent,
+  formatTime,
+  loadBalanceConfig,
+  renderIntroPortraits,
+  setOverlayChromeVisible
+});
+
+export {
+  HexSnakeUICore,
+  HexSnakeUICore as uiCore
+};

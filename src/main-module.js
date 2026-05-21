@@ -1,6 +1,7 @@
 import { runtime } from "./platform/web.js";
 import { controls, render, renderGame, state, uiRegistry } from "./state.js";
 import { dom } from "./dom.js";
+import { uiCore } from "./ui.js";
 import { network } from "./network.js";
 import { characterCatalog as characters } from "./characters.js";
 import { audio } from "./audio.js";
@@ -30,8 +31,9 @@ const moduleShadowContract = Object.freeze({
   mode: "module-shadow",
   entry: "src/main-module.js",
   bootstrapsGameplay: false,
-  imports: Object.freeze(["runtime", "state", "uiRegistry", "render", "renderGame", "controls", "dom", "network", "characters", "audio", "replay", "stats", "about", "ai", "renderHooks"]),
+  imports: Object.freeze(["runtime", "state", "uiRegistry", "render", "renderGame", "controls", "dom", "uiCore", "network", "characters", "audio", "replay", "stats", "about", "ai", "renderHooks"]),
   domReady: Boolean(dom.canvas && dom.ctx && dom.overlay),
+  uiReady: Boolean(uiCore.loadBalanceConfig && uiCore.buildCharacterStage && uiCore.formatTime),
   serviceReady: Boolean(network.lifecycle && about.refresh),
   catalogReady: Boolean(characters.loadCharacterDatabase && characters.characterFor),
   mediaReady: Boolean(audio.playCharacter && audio.preloadCharacter),
@@ -46,7 +48,7 @@ const moduleShadowContract = Object.freeze({
 });
 
 function loadModuleShadow() {
-  if (!state || !uiRegistry || !render || !renderGame || !controls || !dom || !network || !characters || !audio || !replay || !stats || !about || !ai || !renderHooks) {
+  if (!state || !uiRegistry || !render || !renderGame || !controls || !dom || !uiCore || !network || !characters || !audio || !replay || !stats || !about || !ai || !renderHooks) {
     throw new Error("Module shadow registry import failed.");
   }
   window.__HEX_SNAKE_MODULE_SHADOW__ = moduleShadowContract;

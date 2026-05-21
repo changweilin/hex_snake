@@ -88,6 +88,7 @@ const mainModuleSource = read("src/main-module.js");
   'import { runtime } from "./platform/web.js";',
   'from "./state.js"',
   'import { dom } from "./dom.js";',
+  'import { uiCore } from "./ui.js";',
   'import { network } from "./network.js";',
   'import { characterCatalog as characters } from "./characters.js";',
   'import { audio } from "./audio.js";',
@@ -99,6 +100,7 @@ const mainModuleSource = read("src/main-module.js");
   "module-shadow",
   "bootstrapsGameplay: false",
   "domReady",
+  "uiReady",
   "serviceReady",
   "catalogReady",
   "mediaReady",
@@ -116,7 +118,6 @@ const mainModuleSource = read("src/main-module.js");
 });
 
 [
-  "./ui.js",
   "./game.js"
 ].forEach(source => {
   if (mainModuleSource.includes(source)) {
@@ -155,6 +156,7 @@ const requiredRegistrations = [
   ["src/state.js", "HexSnakeUI.uiGame = {};"],
   ["src/dom.js", "window.HexSnakeDOM = HexSnakeDOM;"],
   ["src/dom.js", "HexSnakeDOM as dom"],
+  ["src/ui.js", "HexSnakeUICore as uiCore"],
   ["src/network.js", "window.HexSnakeNet = HexSnakeNet;"],
   ["src/network.js", "HexSnakeNet as network"],
   ["src/characters.js", "HexSnakeCharacters as characterCatalog"],
@@ -201,6 +203,7 @@ const docText = read("doc/es-module-export-map.md");
   "HexSnakeState",
   "HexSnakeDOM",
   "HexSnakeUI",
+  "HexSnakeUICore",
   "HexSnakeRender",
   "HexSnakeRenderGame",
   "HexSnakeControls",
