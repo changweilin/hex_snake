@@ -998,19 +998,19 @@
         setStatus("LAN guest is waiting for Host to start.");
         return false;
       }
-      if (GameReplay.isPlaybackMode() || HexSnakeState.game.running || HexSnakeState.ui.startLogoCountdownPending || HexSnakeUI.isLogoTransitionActive()) return false;
-      if (HexSnakeState.game.gameOver) {
+      if (GameReplay.isPlaybackMode() || GameRuntimeState.running || GamePresentationState.startLogoCountdownPending || GameUI.isLogoTransitionActive()) return false;
+      if (GameRuntimeState.gameOver) {
         if (!canRestartAfterGameOver()) return false;
         returnToStartScreen();
       }
-      HexSnakeUI.showCharacterStage({ startLogoCharacters: true, "overlay": true });
-      HexSnakeState.ui.startLogoCountdownPending = true;
+      GameUI.showCharacterStage({ startLogoCharacters: true, "overlay": true });
+      GamePresentationState.startLogoCountdownPending = true;
       setSettingsLocked(true);
       setStatus("開局倒數中：3 秒後開始。");
-      HexSnakeUI.playStartLogoCountdown().then(ready => {
-        HexSnakeState.ui.startLogoCountdownPending = false;
-        if (!ready || HexSnakeState.game.running || HexSnakeState.game.gameOver || GameReplay.isPlaybackMode()) {
-          if (!HexSnakeState.game.running && !HexSnakeState.game.gameOver) setSettingsLocked(false);
+      GameUI.playStartLogoCountdown().then(ready => {
+        GamePresentationState.startLogoCountdownPending = false;
+        if (!ready || GameRuntimeState.running || GameRuntimeState.gameOver || GameReplay.isPlaybackMode()) {
+          if (!GameRuntimeState.running && !GameRuntimeState.gameOver) setSettingsLocked(false);
           return;
         }
         startGame();
