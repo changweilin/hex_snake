@@ -31,7 +31,7 @@
 | iOS 上架主線 | blocked | 取得 macOS / Xcode / Apple signing 環境 | 尚未驗證 |
 | LAN / Wi-Fi 多人 | Phase 2 自動化首輪完成 | 雙機長時間 reconnect / snapshot 驗證，之後規劃 WebRTC | `doc/local-multiplayer-progress-plan.md`、`test:network` |
 | AI / 規則一致性 | gate 已檢查，不套用 | 保留現行策略；若再推策略，先針對 dragon 負 delta 與 gu_king qualified 不足做新訓練 | `doc/strategy-optimization-sop.md`、`reports/` |
-| 架構整理 | Phase 5 module bootstrap owner 完成 | platform/runtime、state registry、DOM、UI shell、leaf services、catalog/media/stats、runtime helpers 與 game shell 已具備 dual-mode exports；`hexSnakeLoader=module` 已由 `loadModuleGame()` 明確啟動 gameplay；下一步補 module loader 自動化 smoke gate | `npm run audit:esm-map`、`npm run audit:globals`、`npm run audit:state-boundary`、`doc/es-module-split-map.md`、`doc/es-module-export-map.md`、`doc/es-module-loader-plan.md`、`doc/es-module-core-bootstrap-checklist.md` |
+| 架構整理 | Phase 5 module loader smoke gate 完成 | platform/runtime、state registry、DOM、UI shell、leaf services、catalog/media/stats、runtime helpers 與 game shell 已具備 dual-mode exports；`test:module-loader` 已固定 source module / shadow 與 dist fallback；下一步整理 production module 策略 | `npm run audit:esm-map`、`npm run test:module-loader`、`npm run audit:globals`、`npm run audit:state-boundary`、`doc/es-module-split-map.md`、`doc/es-module-export-map.md`、`doc/es-module-loader-plan.md`、`doc/es-module-core-bootstrap-checklist.md` |
 | 產品延伸 | 暫緩 | 等上架與核心穩定後再推 replay 分享、每日挑戰、觀戰聯賽 | 本文件 P3 |
 
 ## 主控看板
@@ -56,7 +56,7 @@
 
 | 項目 | 狀態 | 下一步 | 完成標準 |
 | --- | --- | --- | --- |
-| 核心 facade / ES modules | Phase 5 module bootstrap owner 完成 | replay、render、ai 與 service/runtime facade 已分批收斂；module shadow entry 已可用 native import 取得 runtime/state/DOM/UI/network/about、catalog/media/stats、runtime helper 與 game shell；正式 `hexSnakeLoader=module` 已接到 `gameShell.bootstrapGame()`；下一步補自動化 module loader smoke | build、quick、smoke、audit 通過 |
+| 核心 facade / ES modules | Phase 5 module loader smoke gate 完成 | replay、render、ai 與 service/runtime facade 已分批收斂；`test:module-loader` 驗證 source `module-shadow` 不啟動 gameplay、source `module` 可啟動初始 UI、dist module flags 仍 fallback 到 bundled legacy；下一步整理 production module 策略 | build、quick、smoke、audit 通過 |
 | Browser / simulator 共用規則核心 | 未開始 | 等 AI 對齊差異明確後，先抽純函式與常數，不碰 DOM/UI state | 同 seed 關鍵差異可解釋 |
 | Render / CSS 拆分 | 未開始 | 先列 board/snake/effects 與 layout/settings/portrait/replay/HUD 搬移清單 | 桌機與手機 smoke screenshot 正常 |
 
@@ -77,7 +77,7 @@
 | PWA / 離線基礎 | manifest、icons、service worker、offline fallback 已完成 | `test:offline`、`app:check` |
 | 素材壓縮與部署瘦身 | `dist` 約 26.92 MB，WebP / M4A 轉檔與 forbidden asset 檢查已納入 build | `check:assets`、`check:size` |
 | 文字與編碼檢查 | `text:check` 可掃描 README、HTML、JS、JSON、文件與工具 | `text:check` |
-| Browser / mobile smoke | `tools/smoke-test.js`、`mobile-smoke-test.js` 已覆蓋主要 UI 與 replay | `test:smoke`、`test:mobile` |
+| Browser / mobile smoke | `tools/smoke-test.js`、`mobile-smoke-test.js` 已覆蓋主要 UI 與 replay；`module-loader-smoke-test.js` 已覆蓋 module loader modes | `test:smoke`、`test:mobile`、`test:module-loader` |
 | LAN protocol hardening 首輪 | 2026-05-20 加入 room lifecycle、sequence number、latency telemetry、relay ack、reconnect / rejoin、snapshot throttling 與 server room routing test | `test:network`、`test:smoke`、`test:mobile` |
 | AI / simulator parity preflight | 2026-05-20 執行 `simulate:ai-cross -- --runs 5 --jobs 1 --seed sim-game-parity-smoke-20260520`，並以 `record-mobile-auto-battle.js` 錄製 1 段 12 秒 browser auto battle；未發現啟動或 console 阻塞 | 近期改 AI / timing / UI 後重跑；策略套用仍需正式 `comparison.md` gate |
 | AI strategy apply gate 檢查 | 2026-05-20 檢查 2026-05-10 overnight：整體 +1.0% 但 dragon -4.4%，moray/lobster/gu_king qualified 不足；2026-05-16 progress-test 樣本過小且 delta -50%；dragon repair 長跑只到 partial checkpoint，不作 gate；dragon fast gate probe 前 3 候選最佳仍 -1.0% | 不套用；保留 `reports/strategy-gate-dragon-20260520-fast/target-gate.md` 作為證據 |
@@ -131,7 +131,8 @@
 | ES module Phase 5 core bootstrap checklist | 2026-05-21 新增 `doc/es-module-core-bootstrap-checklist.md`，盤點 `src/ui.js` / `src/game.js` 的 module blockers、explicit import surface、bootstrap ownership 與 module-mode preflight gate | 已接續完成 `uiCore` 與 `gameShell` exports；後續維護 checklist 作為 module bootstrap gate |
 | ES module Phase 5 uiCore shell export | 2026-05-21 `src/ui.js` export `uiCore` / `HexSnakeUICore`，`src/main-module.js` import UI shell 並回報 `uiReady`；當時 module-shadow 仍禁止 `src/game.js`、不啟動 gameplay | 已接續完成 `gameShell` / `bootstrapGame()` export；保留作為 UI shell 歷史證據 |
 | ES module Phase 5 game shell export | 2026-05-21 `src/game.js` export `gameShell` / `HexSnakeGame`、`loadGameShell()` 與 `bootstrapGame()`；legacy default 仍自動 bootstrap，`module-shadow` import game shell 並回報 `gameReady` 但不呼叫 bootstrap | 已接續完成正式 `module` bootstrap owner；保留作為 game shell 歷史證據 |
-| ES module Phase 5 module bootstrap owner | 2026-05-21 `src/main-module.js` 新增 `loadModuleGame()`，`src/main.js` 的 `hexSnakeLoader=module` 路徑改由它呼叫 `gameShell.bootstrapGame()`；同步收斂 `characters.js` owner colors 與 `render.js` board radius 的 module-scope 依賴；production bundle 繼續 fallback 到 legacy | `audit:esm-map` 驗證 module owner 與 shadow no-bootstrap；下一輪補 module loader 自動化 smoke |
+| ES module Phase 5 module bootstrap owner | 2026-05-21 `src/main-module.js` 新增 `loadModuleGame()`，`src/main.js` 的 `hexSnakeLoader=module` 路徑改由它呼叫 `gameShell.bootstrapGame()`；同步收斂 `characters.js` owner colors 與 `render.js` board radius 的 module-scope 依賴；production bundle 繼續 fallback 到 legacy | 已接續完成 module loader smoke gate；保留作為 module owner 歷史證據 |
+| ES module Phase 5 module loader smoke gate | 2026-05-21 新增 `tools/module-loader-smoke-test.js` 與 `npm run test:module-loader`，驗證 source `module-shadow`、source `module`、dist `module-shadow` fallback、dist `module` fallback；`release:check` 已納入此 gate | 下一輪整理 production module 策略，不直接切換 production default |
 | Release gate | `release:check` 串接 build、text、data、assets、size、quick、network、mobile、smoke、offline、app readiness | `release:check` |
 | App shell 基礎封裝 | Capacitor 8、Android / iOS 專案、mobile platform adapter、APK / AAB build scripts 已建立 | `app:check`、Android build scripts |
 | Android 實機驗證 | 2026-05-20 使用者確認 debug APK 實機測試正常，返回鍵、背景暫停 / 恢復、震動、音效 unlock 與長時間效能無問題 | 後續版本若改 platform adapter 或原生設定，再重測 |
@@ -156,7 +157,7 @@
 3. iOS 目前被環境阻塞，因此不阻擋 Android 主線；取得 macOS / Xcode 後可與 Android Play 後台並行。
 4. LAN protocol hardening 的 AI 可處理首輪已完成；剩餘雙機長時間驗證屬裝置測試，不阻擋下一個 AI 可直接處理項目。
 5. AI / simulator 對齊排在策略套用與共用規則核心之前，因為尚未確認差異前，直接套策略或抽共用核心都容易把錯誤固定下來。
-6. Facade / ES modules 排在共用規則核心之前，因為先清楚模組邊界，再抽共享純函式，回歸風險較低；目前 `ui.js`、`render.js`、`ai.js` 可安全移動的執行期 game API 已完成，`running`、`paused`、`gameOver`、match collections、combat/resource state、runtime/session state、角色/方向/timer state、controls/settings state、presentation/actions API、presentation state、character catalog API、misc/render runtime state、attack/input pointer state、read-only config/helper facade、state-boundary audit cleanup、ES module split dependency map、Phase 1 module borders、Phase 2 helper extraction、game.js DOM facade、Phase 3 catalog/media/stats cleanup、Phase 4 replay cleanup 首批、Phase 4 render cleanup 第三批、Phase 4 ai cleanup 首批、dependency 精修、ui DOM facade 首批、helper facade 收斂、render/helper hooks 收斂、replay game hook 收斂、ai game hook 收斂、ui/render public hooks 收斂、service facade 收斂、runtime adapter facade 收斂、registry/export map gate、loader split plan gate、module shadow entry、runtime/state dual-mode exports、DOM dual-mode export、network/about service exports、catalog/media/stats shell exports、runtime helper shell exports、core bootstrap checklist、`uiCore` shell export、`gameShell` / `bootstrapGame()` export 與 module bootstrap owner 已完成，下一步補 module loader 自動化 smoke gate。
+6. Facade / ES modules 排在共用規則核心之前，因為先清楚模組邊界，再抽共享純函式，回歸風險較低；目前 `ui.js`、`render.js`、`ai.js` 可安全移動的執行期 game API 已完成，`running`、`paused`、`gameOver`、match collections、combat/resource state、runtime/session state、角色/方向/timer state、controls/settings state、presentation/actions API、presentation state、character catalog API、misc/render runtime state、attack/input pointer state、read-only config/helper facade、state-boundary audit cleanup、ES module split dependency map、Phase 1 module borders、Phase 2 helper extraction、game.js DOM facade、Phase 3 catalog/media/stats cleanup、Phase 4 replay cleanup 首批、Phase 4 render cleanup 第三批、Phase 4 ai cleanup 首批、dependency 精修、ui DOM facade 首批、helper facade 收斂、render/helper hooks 收斂、replay game hook 收斂、ai game hook 收斂、ui/render public hooks 收斂、service facade 收斂、runtime adapter facade 收斂、registry/export map gate、loader split plan gate、module shadow entry、runtime/state dual-mode exports、DOM dual-mode export、network/about service exports、catalog/media/stats shell exports、runtime helper shell exports、core bootstrap checklist、`uiCore` shell export、`gameShell` / `bootstrapGame()` export、module bootstrap owner 與 module loader smoke gate 已完成，下一步整理 production module 策略。
 7. Replay 分享、每日挑戰、觀戰聯賽屬產品延伸，等上架、多人協議與核心穩定後再做，避免擴大同時變更面。
 
 ## 固定檢查
@@ -181,6 +182,7 @@ npm.cmd run audit:state-boundary
 
 ```bash
 npm.cmd run audit:esm-map
+npm.cmd run test:module-loader
 npm.cmd run test:smoke
 npm.cmd run test:mobile
 ```
@@ -220,6 +222,6 @@ npm.cmd run evaluate:strategy-gate -- --character <id> --candidates <candidate-j
 1. 建立 Google Play internal testing，補資料安全、內容分級、截圖與商店欄位，並上傳 signed release AAB。
 2. 找 macOS / Xcode 環境執行 iOS build 與 TestFlight；若環境已備妥，可與第 1 步並行。
 3. LAN 多人剩餘雙機長時間 reconnect / snapshot 驗證；若通過，再規劃 WebRTC DataChannel。
-4. 執行 ES module split 下一批：補 module loader 自動化 smoke gate，固定驗證 `module-shadow` 不啟動 gameplay、`module` 可成功啟動初始 UI。
+4. 執行 ES module split 下一批：整理 production module 策略，決定繼續 bundled legacy fallback 或規劃正式 module bundle / source map gate。
 5. 若之後要繼續 AI 訓練，先以 dragon / gu_king 為目標重跑完整 target-vs-field gate，不直接套用既有輸出。
 6. 最後再做 replay 分享、每日挑戰與觀戰聯賽。

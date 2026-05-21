@@ -25,6 +25,7 @@
     "optimize:strategy": "node tools/run-strategy-optimization.js",
     "test:smoke": "node tools/smoke-test.js",
     "test:network": "node tools/network-room-routing-test.js",
+    "test:module-loader": "node tools/module-loader-smoke-test.js",
     "test:mobile": "node tools/mobile-smoke-test.js",
     "test:mobile-platform": "node tools/mobile-platform-adapter-test.js",
     "test:offline": "node tools/offline-smoke-test.js",

@@ -55,12 +55,13 @@ npm.cmd run audit:globals
 npm.cmd run audit:state-boundary
 npm.cmd run build
 npm.cmd run build:mobile
+npm.cmd run test:module-loader
 npm.cmd run test:quick
 npm.cmd run test:smoke
 ```
 
-Also run a browser check against `?hexSnakeLoader=module-shadow` after each shell step. The contract must keep `bootstrapsGameplay: false` until `bootstrapGame()` is explicitly wired.
+Also run `npm.cmd run test:module-loader` after each loader step. The source `module-shadow` contract must keep `bootstrapsGameplay: false`; source `module` must set `__HEX_SNAKE_MODULE_GAME__`; dist `module-shadow` / `module` must keep using bundled legacy fallback until production module mode is intentionally enabled.
 
 ## Next AI Task
 
-下一個 AI 可直接處理項目是把 module loader 納入自動化 smoke gate：`module-shadow` 必須維持 `bootstrapsGameplay: false`，`module` 必須回報 `__HEX_SNAKE_MODULE_GAME__` 並成功顯示初始 UI。
+下一個 AI 可直接處理項目是整理正式 module production 策略：明確決定 production build 繼續使用 bundled legacy fallback，或另設 module bundle / source map gate。

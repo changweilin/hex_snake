@@ -37,13 +37,13 @@
 | 2. DOM/helper facade | 完成 | 建立 `HexSnakeControls`、`HexSnakeDOM` 與 game/UI helper facade | `audit:globals` 486 -> 367 |
 | 3. Catalog/media cleanup | 完成 | catalog setter/list、portrait variant state getter、food label config getter；characters/audio/stats 改走 facade | `audit:globals` 367 -> 339；build、quick、smoke 通過 |
 | 4. Runtime cleanup | runtime adapter facade 收斂完成 | replay、render、AI、UI/game hooks、public services 與 platform/storage adapter 已分批改走 `HexSnakeDOM`、`HexSnakeState`、`HexSnakeUI`、`HexSnakeRender`、`HexSnakeRuntime` | `audit:globals` 339 -> 42；`audit:state-boundary` 維持 0/0 |
-| 5. Core ES module split | module bootstrap owner 完成 | 已新增 `src/main-module.js` 與 `?hexSnakeLoader=module-shadow` / `?hexSnakeLoader=module`；platform/runtime、state registry、DOM facade、UI shell、network/about leaf services、catalog/media/stats、runtime helper 與 game shell 已可被 native module import；`module-shadow` 仍不呼叫 `bootstrapGame()` | `audit:esm-map`、legacy loader 可回退；正式 loader 可逐步啟用 |
+| 5. Core ES module split | module loader smoke gate 完成 | 已新增 `src/main-module.js` 與 `?hexSnakeLoader=module-shadow` / `?hexSnakeLoader=module`；platform/runtime、state registry、DOM facade、UI shell、network/about leaf services、catalog/media/stats、runtime helper 與 game shell 已可被 native module import；`test:module-loader` 固定驗證 shadow no-bootstrap、source module bootstrap 與 dist fallback | `audit:esm-map`、`test:module-loader`、legacy loader 可回退；正式 loader 可逐步啟用 |
 
 ## Immediate AI Task Queue
 
-1. 擴充 browser smoke，分別驗證 `module-shadow` 不啟動 gameplay、`module` 可明確呼叫 `bootstrapGame()`。
-2. 將 module loader smoke 納入固定 `audit:esm-map` / smoke gate 文件。
-3. 再評估是否要讓 production build 加入 module-mode bundle 或繼續保留 legacy fallback。
+1. 整理 production module 策略，決定是否新增正式 module bundle / source map gate，或繼續讓 production fallback 到 bundled legacy。
+2. 若維持 fallback，文件化切換條件與 release checklist；若新增 module bundle，先做 build plan，不直接改 default。
+3. 再評估 Phase D service module migration 的下一個低風險切片。
 
 ## Do Not Start With
 
@@ -58,6 +58,7 @@
 ```bash
 npm.cmd run build
 npm.cmd run audit:esm-map
+npm.cmd run test:module-loader
 npm.cmd run audit:globals
 npm.cmd run audit:state-boundary
 npm.cmd run test:quick

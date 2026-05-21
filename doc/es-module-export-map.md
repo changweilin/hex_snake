@@ -71,6 +71,7 @@ npm.cmd run audit:esm-map
 The audit checks:
 - `src/main.js` browser loader order.
 - `build.js` web/mobile first-source switch and shared legacy source order.
+- `tools/module-loader-smoke-test.js` and `release:check` include module-shadow, source module, and production fallback gates.
 - Required `window.HexSnake*` compatibility registrations.
 - Required registry extension points and exports such as `HexSnakeUI.audio`, `HexSnakeCharacters`, `HexSnakeAudio`, `HexSnakeReplay`, `HexSnakeStats`, `HexSnakeAI`, `HexSnakeUI.aiGame`, and `HexSnakeRender`.
 - This file mentions every source and public surface in the current map.

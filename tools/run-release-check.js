@@ -12,6 +12,7 @@ const checks = [
   { script: "check:size", reason: "enforce dist size budget" },
   { script: "test:quick", reason: "run fast gameplay and data unit checks" },
   { script: "test:network", reason: "verify LAN relay room routing and protocol metadata" },
+  { script: "test:module-loader", reason: "verify module loader modes and production fallback" },
   { script: "test:mobile", reason: "verify mobile controls, layout, and screenshot capture" },
   { script: "test:mobile-platform", reason: "verify mobile app platform adapter behavior" },
   { script: "test:smoke", reason: "verify desktop and mobile browser startup" },

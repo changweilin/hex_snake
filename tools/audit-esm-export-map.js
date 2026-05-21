@@ -142,6 +142,30 @@ expectToken(
   "build.js",
   'const platformSource = buildTarget === "mobile" ? "src/platform/mobile.js" : "src/platform/web.js";'
 );
+expectToken(
+  "package.json",
+  '"test:module-loader": "node tools/module-loader-smoke-test.js"'
+);
+expectToken(
+  "tools/run-release-check.js",
+  'script: "test:module-loader"'
+);
+expectToken(
+  "tools/module-loader-smoke-test.js",
+  "hexSnakeLoader=module-shadow"
+);
+expectToken(
+  "tools/module-loader-smoke-test.js",
+  "hexSnakeLoader=module"
+);
+expectToken(
+  "tools/module-loader-smoke-test.js",
+  "__HEX_SNAKE_MODULE_GAME__"
+);
+expectToken(
+  "tools/module-loader-smoke-test.js",
+  "__HEX_SNAKE_BUNDLED_LEGACY__"
+);
 
 const requiredRegistrations = [
   ["src/platform/web.js", "window.HexSnakeRuntime = HexSnakeRuntime;"],
@@ -250,6 +274,7 @@ const loaderPlanText = read("doc/es-module-loader-plan.md");
   "src/ui.js",
   "src/game.js",
   "audit:esm-map",
+  "test:module-loader",
   "Next AI Task"
 ].forEach(token => {
   if (!loaderPlanText.includes(token)) fail(`doc/es-module-loader-plan.md is missing ${token}`);
@@ -266,6 +291,7 @@ const coreBootstrapChecklistText = read("doc/es-module-core-bootstrap-checklist.
   "src/game.js",
   "uiCore",
   "bootstrapGame()",
+  "test:module-loader",
   "bootstrapsGameplay: false",
   "Next AI Task"
 ].forEach(token => {
