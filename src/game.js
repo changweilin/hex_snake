@@ -2554,9 +2554,9 @@
     }
 
     function resolveProjectiles(now) {
-      const landed = HexSnakeState.game.projectiles.filter(projectile => now >= projectile.impactAt);
+      const landed = GameRuntimeState.projectiles.filter(projectile => now >= projectile.impactAt);
       if (!landed.length) return;
-      HexSnakeState.game.projectiles = HexSnakeState.game.projectiles.filter(projectile => now < projectile.impactAt);
+      GameRuntimeState.projectiles = GameRuntimeState.projectiles.filter(projectile => now < projectile.impactAt);
 
       landed.forEach(projectile => {
         let playerDamage = 0;
@@ -2564,7 +2564,7 @@
         let playerStunChance = projectile.stunChance;
         let computerStunChance = projectile.stunChance;
         if (projectile.kind === "lineHazardSetup") {
-          HexSnakeState.game.hazards.push({
+          GameRuntimeState.hazards.push({
             kind: "lineHazard",
             owner: projectile.owner,
             cells: projectile.lineCells,
@@ -2593,7 +2593,7 @@
               owner: projectile.owner,
               source,
               direction: Number.isInteger(projectile.direction) ? projectile.direction : ownerDirection(projectile.owner),
-              targetSnake: projectile.owner === "player" ? HexSnakeState.game.computerSnake : HexSnakeState.game.snake,
+              targetSnake: projectile.owner === "player" ? GameRuntimeState.computerSnake : GameRuntimeState.snake,
               now,
               smallDelay: projectile.smallDelay,
               fistStepMs: projectile.fistStepMs,
@@ -2613,24 +2613,24 @@
           return;
         } else if (projectile.kind === "lobsterPalmBurst") {
           const defenderOwner = projectile.owner === "player" ? "computer" : "player";
-          const defenderSnake = defenderOwner === "player" ? HexSnakeState.game.snake : HexSnakeState.game.computerSnake;
+          const defenderSnake = defenderOwner === "player" ? GameRuntimeState.snake : GameRuntimeState.computerSnake;
           const contactDamage = damageSnake(defenderSnake, projectile.target, projectile.radius, projectile.damage);
           if (defenderOwner === "player") playerDamage += contactDamage;
           else computerDamage += contactDamage;
-          playerDamage += damageSnake(HexSnakeState.game.snake, projectile.target, projectile.burstRadius, projectile.burstDamage);
-          computerDamage += damageSnake(HexSnakeState.game.computerSnake, projectile.target, projectile.burstRadius, projectile.burstDamage);
-          const playerHeadHit = (defenderOwner === "player" && projectile.damage > 0 && circleAttackHitsHead(HexSnakeState.game.snake, projectile.target, projectile.radius))
-            || (projectile.burstDamage > 0 && circleAttackHitsHead(HexSnakeState.game.snake, projectile.target, projectile.burstRadius));
-          const computerHeadHit = (defenderOwner === "computer" && projectile.damage > 0 && circleAttackHitsHead(HexSnakeState.game.computerSnake, projectile.target, projectile.radius))
-            || (projectile.burstDamage > 0 && circleAttackHitsHead(HexSnakeState.game.computerSnake, projectile.target, projectile.burstRadius));
+          playerDamage += damageSnake(GameRuntimeState.snake, projectile.target, projectile.burstRadius, projectile.burstDamage);
+          computerDamage += damageSnake(GameRuntimeState.computerSnake, projectile.target, projectile.burstRadius, projectile.burstDamage);
+          const playerHeadHit = (defenderOwner === "player" && projectile.damage > 0 && circleAttackHitsHead(GameRuntimeState.snake, projectile.target, projectile.radius))
+            || (projectile.burstDamage > 0 && circleAttackHitsHead(GameRuntimeState.snake, projectile.target, projectile.burstRadius));
+          const computerHeadHit = (defenderOwner === "computer" && projectile.damage > 0 && circleAttackHitsHead(GameRuntimeState.computerSnake, projectile.target, projectile.radius))
+            || (projectile.burstDamage > 0 && circleAttackHitsHead(GameRuntimeState.computerSnake, projectile.target, projectile.burstRadius));
           playerStunChance = stunChanceForHeadHit(playerHeadHit, projectile);
           computerStunChance = stunChanceForHeadHit(computerHeadHit, projectile);
           addProjectileBlastVisual(projectile, now);
         } else if (projectile.kind === "line") {
-          playerDamage = damageSnakeCells(HexSnakeState.game.snake, projectile.lineCells, projectile.width, projectile.damage, projectile.excludedCells, 0, projectile.outerDamageMultiplier ?? 1, projectile.fullDamageWidth ?? 0);
-          computerDamage = damageSnakeCells(HexSnakeState.game.computerSnake, projectile.lineCells, projectile.width, projectile.damage, projectile.excludedCells, 0, projectile.outerDamageMultiplier ?? 1, projectile.fullDamageWidth ?? 0);
-          playerStunChance = lineProjectileStunChance(HexSnakeState.game.snake, projectile);
-          computerStunChance = lineProjectileStunChance(HexSnakeState.game.computerSnake, projectile);
+          playerDamage = damageSnakeCells(GameRuntimeState.snake, projectile.lineCells, projectile.width, projectile.damage, projectile.excludedCells, 0, projectile.outerDamageMultiplier ?? 1, projectile.fullDamageWidth ?? 0);
+          computerDamage = damageSnakeCells(GameRuntimeState.computerSnake, projectile.lineCells, projectile.width, projectile.damage, projectile.excludedCells, 0, projectile.outerDamageMultiplier ?? 1, projectile.fullDamageWidth ?? 0);
+          playerStunChance = lineProjectileStunChance(GameRuntimeState.snake, projectile);
+          computerStunChance = lineProjectileStunChance(GameRuntimeState.computerSnake, projectile);
           addProjectileBlastVisual(projectile, now);
         } else {
           const radiationDamage = projectile.kind === "headCircle" && projectile.radiationDurationMs
@@ -2638,18 +2638,18 @@
             : 0;
           const { explosionTarget, radius } = addProjectileBlastVisual(projectile, now, { radiationDamage });
           const damage = projectile.damage || 1;
-          playerDamage = damageSnake(HexSnakeState.game.snake, explosionTarget, radius, damage);
-          computerDamage = damageSnake(HexSnakeState.game.computerSnake, explosionTarget, radius, damage);
-          playerStunChance = stunChanceForHeadHit(circleAttackHitsHead(HexSnakeState.game.snake, explosionTarget, radius), projectile);
-          computerStunChance = stunChanceForHeadHit(circleAttackHitsHead(HexSnakeState.game.computerSnake, explosionTarget, radius), projectile);
+          playerDamage = damageSnake(GameRuntimeState.snake, explosionTarget, radius, damage);
+          computerDamage = damageSnake(GameRuntimeState.computerSnake, explosionTarget, radius, damage);
+          playerStunChance = stunChanceForHeadHit(circleAttackHitsHead(GameRuntimeState.snake, explosionTarget, radius), projectile);
+          computerStunChance = stunChanceForHeadHit(circleAttackHitsHead(GameRuntimeState.computerSnake, explosionTarget, radius), projectile);
           if (projectile.sandwormParalyzeOnBody || projectile.sandwormKillOnHead) {
             if (projectile.owner !== "player") {
-              if (projectile.sandwormKillOnHead && snakeHeadHitAtCenter(HexSnakeState.game.snake, explosionTarget)) playerDamage = Math.max(playerDamage, HexSnakeState.game.playerHp);
-              else if (projectile.sandwormParalyzeOnBody && snakeBodyHitAtCenter(HexSnakeState.game.snake, explosionTarget)) applyCollisionParalysis("player", now);
+              if (projectile.sandwormKillOnHead && snakeHeadHitAtCenter(GameRuntimeState.snake, explosionTarget)) playerDamage = Math.max(playerDamage, GameRuntimeState.playerHp);
+              else if (projectile.sandwormParalyzeOnBody && snakeBodyHitAtCenter(GameRuntimeState.snake, explosionTarget)) applyCollisionParalysis("player", now);
             }
             if (projectile.owner !== "computer") {
-              if (projectile.sandwormKillOnHead && snakeHeadHitAtCenter(HexSnakeState.game.computerSnake, explosionTarget)) computerDamage = Math.max(computerDamage, HexSnakeState.game.computerHp);
-              else if (projectile.sandwormParalyzeOnBody && snakeBodyHitAtCenter(HexSnakeState.game.computerSnake, explosionTarget)) applyCollisionParalysis("computer", now);
+              if (projectile.sandwormKillOnHead && snakeHeadHitAtCenter(GameRuntimeState.computerSnake, explosionTarget)) computerDamage = Math.max(computerDamage, GameRuntimeState.computerHp);
+              else if (projectile.sandwormParalyzeOnBody && snakeBodyHitAtCenter(GameRuntimeState.computerSnake, explosionTarget)) applyCollisionParalysis("computer", now);
             }
           }
         }
@@ -2665,8 +2665,8 @@
         if (projectile.owner !== "player" && playerDamage > 0 && projectile.vulnerabilityChance > 0) applyVulnerability("player", projectile.vulnerabilityChance, now);
         if (projectile.owner !== "computer" && computerDamage > 0 && projectile.vulnerabilityChance > 0) applyVulnerability("computer", projectile.vulnerabilityChance, now);
       });
-      HexSnakeState.game.blasts = HexSnakeState.game.blasts.filter(blast => now <= blast.endAt);
-      if (HexSnakeState.game.playerHp <= 0 || HexSnakeState.game.computerHp <= 0) endGame(HexSnakeState.game.playerHp <= 0, HexSnakeState.game.computerHp <= 0);
+      GameRuntimeState.blasts = GameRuntimeState.blasts.filter(blast => now <= blast.endAt);
+      if (GameRuntimeState.playerHp <= 0 || GameRuntimeState.computerHp <= 0) endGame(GameRuntimeState.playerHp <= 0, GameRuntimeState.computerHp <= 0);
     }
 
     function addProjectileBlastVisual(projectile, now, options = {}) {
