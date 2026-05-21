@@ -36,7 +36,7 @@
 
       RenderState.cells.forEach(cell => {
         const { x, y } = RenderGame.axialToPixel(cell);
-        const shade = (cell.q - cell.r + radius) % 2 === 0 ? RenderConfig.colors.cell : RenderConfig.colors.cellAlt;
+        const shade = (cell.q - cell.r + RenderState.radius) % 2 === 0 ? RenderConfig.colors.cell : RenderConfig.colors.cellAlt;
         RenderGame.hexPath(x, y, RenderState.cellSize * 0.94);
         RenderDom.ctx.fillStyle = shade;
         RenderDom.ctx.fill();
@@ -3080,7 +3080,7 @@
         targetKey,
         dragStartKey,
         dragTargetKey,
-        radius,
+        RenderState.radius,
         RenderState.targetMaxHex,
         stockKey,
         playerSnakeKey,
@@ -3112,7 +3112,7 @@
     }
 
     function lobsterFistTurnPathIndex() {
-      const maxSteps = Math.max(1, Math.ceil((radius * 2 + 1) / 2));
+      const maxSteps = Math.max(1, Math.ceil((RenderState.radius * 2 + 1) / 2));
       return Math.ceil(maxSteps / 2);
     }
 

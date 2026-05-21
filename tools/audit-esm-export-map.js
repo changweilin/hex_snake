@@ -76,9 +76,12 @@ const mainSource = read("src/main.js");
 [
   "hexSnakeLoader",
   "module-shadow",
+  "module",
   "./main-module.js",
   "loadModuleShadowEntry",
-  "Native module loader is not implemented yet"
+  "loadModuleGameEntry",
+  "moduleEntry.loadModuleGame()",
+  "Module loader did not bootstrap gameplay."
 ].forEach(token => {
   if (!mainSource.includes(token)) fail(`src/main.js is missing ${token}`);
 });
@@ -113,14 +116,26 @@ const mainModuleSource = read("src/main-module.js");
   "runtimeKind",
   "registryKeys",
   "loadModuleShadow",
+  "loadModuleGame",
   "moduleShadowContract",
+  "moduleGameContract",
+  "window.__HEX_SNAKE_MODULE_GAME__",
   "window.__HEX_SNAKE_MODULE_SHADOW__"
 ].forEach(token => {
   if (!mainModuleSource.includes(token)) fail(`src/main-module.js is missing ${token}`);
 });
 
-if (/bootstrapGame\s*\(/.test(mainModuleSource) || /loadGameShell\s*\(/.test(mainModuleSource)) {
+const loadModuleShadowSource = mainModuleSource.slice(
+  mainModuleSource.indexOf("function loadModuleShadow"),
+  mainModuleSource.indexOf("async function loadModuleGame")
+);
+
+if (/bootstrapGame\s*\(/.test(loadModuleShadowSource) || /loadGameShell\s*\(/.test(loadModuleShadowSource)) {
   fail("src/main-module.js must not call game shell or bootstrap functions during module-shadow phase.");
+}
+
+if (!/async function loadModuleGame\(\)[\s\S]*gameShell\.bootstrapGame\(\)/.test(mainModuleSource)) {
+  fail("src/main-module.js must call gameShell.bootstrapGame() only from loadModuleGame().");
 }
 
 expectToken(
@@ -158,6 +173,7 @@ const requiredRegistrations = [
   ["src/network.js", "window.HexSnakeNet = HexSnakeNet;"],
   ["src/network.js", "HexSnakeNet as network"],
   ["src/characters.js", "HexSnakeCharacters as characterCatalog"],
+  ["src/characters.js", "HexSnakeState.config.colors"],
   ["src/audio.js", "Object.defineProperties(HexSnakeUI.audio"],
   ["src/audio.js", "HexSnakeAudio as audio"],
   ["src/replay.js", "Object.defineProperties(HexSnakeUI.replay"],
@@ -170,6 +186,7 @@ const requiredRegistrations = [
   ["src/ai.js", "Object.defineProperties(HexSnakeUI.ai"],
   ["src/ai.js", "HexSnakeAI as ai"],
   ["src/render.js", "Object.assign(HexSnakeRender"],
+  ["src/render.js", "RenderState.radius"],
   ["src/render.js", "HexSnakeRenderHooks as renderHooks"],
   ["src/game.js", "HexSnakeGame as gameShell"],
   ["src/game.js", "function loadGameShell()"],

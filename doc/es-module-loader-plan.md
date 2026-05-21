@@ -14,7 +14,7 @@
 | --- | --- | --- | --- |
 | `legacy` | default | 使用現有 concatenated Blob loader；local web 載入 `src/platform/web.js`，build 依 target 換成 web/mobile platform source | 現行預設 |
 | `module-shadow` | `?hexSnakeLoader=module-shadow` in local dev | 只驗證 native module entry 能載入 shadow contract，不啟動 gameplay bootstrap | 已建立 `src/main-module.js` |
-| `module` | future query flag / build flag | 直接 import ESM entry，由 entry 依 export map 初始化 runtime、state、DOM、services、render、game | dual-mode modules 完成後才啟用 |
+| `module` | `?hexSnakeLoader=module` in local dev | 直接 import ESM entry，由 `loadModuleGame()` 呼叫 `gameShell.bootstrapGame()` 啟動 gameplay；production bundle 仍 fallback 到 legacy | local source mode 已可啟動 |
 
 ## Source Order Contract
 
@@ -44,7 +44,7 @@ Shared order:
 | B. Module shadow entry | 已新增 `src/main-module.js` 與 `?hexSnakeLoader=module-shadow`，只載入 shadow contract 並回報 ready，不啟動 gameplay | `audit:esm-map`、`build`、`test:smoke` |
 | C. Dual-mode runtime / registry exports | platform/runtime、state registry、DOM facade、`uiCore` shell、network/about leaf services、catalog/media/stats shell、runtime helper shell 與 `gameShell` 已具備正式 named exports；module shadow 已 import shell，且不呼叫 `bootstrapGame()` | `audit:esm-map`、`audit:globals` 不上升 |
 | D. Service module migration | 依 export map 順序讓 leaf services 與 runtime helpers 改成 explicit imports，legacy loader 仍可回退 | build、quick、smoke、mobile |
-| E. Gameplay module bootstrap | `src/game.js` 或新 bootstrap entry 接管 module mode；legacy loader 降為 fallback | release:check |
+| E. Gameplay module bootstrap | `src/main-module.js` 已新增 `loadModuleGame()` 作為 module mode 唯一 bootstrap owner；`module-shadow` 仍只回報 contract | module smoke、release:check |
 
 ## Fallback Rules
 
@@ -55,4 +55,4 @@ Shared order:
 
 ## Next AI Task
 
-下一個 AI 可直接處理項目是 Phase E 前置：在 `src/main-module.js` 補明確的 module bootstrap owner（例如 `loadModuleGame()`），只在 `hexSnakeLoader=module` 路徑呼叫 `gameShell.bootstrapGame()`；`module-shadow` 仍只能回報 contract。
+下一個 AI 可直接處理項目是把 module loader 納入自動化 smoke gate：新增或擴充 smoke 腳本，分別驗證 `hexSnakeLoader=module-shadow` 不啟動 gameplay、`hexSnakeLoader=module` 會回報 `__HEX_SNAKE_MODULE_GAME__` 並成功顯示初始 UI。

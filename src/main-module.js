@@ -49,6 +49,16 @@ const moduleShadowContract = Object.freeze({
   sourceOrder: Object.freeze([...moduleShadowSourceOrder])
 });
 
+const moduleGameContract = Object.freeze({
+  mode: "module",
+  entry: "src/main-module.js",
+  bootstrapsGameplay: true,
+  imports: moduleShadowContract.imports,
+  sourceOrder: moduleShadowContract.sourceOrder
+});
+
+let moduleGamePromise = null;
+
 function loadModuleShadow() {
   if (!state || !uiRegistry || !render || !renderGame || !controls || !dom || !uiCore || !network || !characters || !audio || !replay || !stats || !about || !ai || !renderHooks || !gameShell) {
     throw new Error("Module shadow registry import failed.");
@@ -57,8 +67,27 @@ function loadModuleShadow() {
   return moduleShadowContract;
 }
 
+async function loadModuleGame() {
+  if (!gameShell.bootstrapGame) {
+    throw new Error("Module game bootstrap import failed.");
+  }
+  if (!moduleGamePromise) {
+    moduleGamePromise = gameShell.bootstrapGame().then(gameContract => {
+      const contract = Object.freeze({
+        ...moduleGameContract,
+        gameContract
+      });
+      window.__HEX_SNAKE_MODULE_GAME__ = contract;
+      return contract;
+    });
+  }
+  return moduleGamePromise;
+}
+
 export {
+  loadModuleGame,
   loadModuleShadow,
+  moduleGameContract,
   moduleShadowContract,
   moduleShadowSourceOrder
 };

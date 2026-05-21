@@ -203,11 +203,25 @@ async function loadModuleShadowEntry() {
   pageLoadingProgress.set(96, "Module shadow ready");
 }
 
+async function loadModuleGameEntry() {
+  if (window.__HEX_SNAKE_BUNDLED_LEGACY__) {
+    return loadLegacyModules();
+  }
+
+  pageLoadingProgress.set(8, "Preparing module loader");
+  const moduleEntry = await import("./main-module.js");
+  const contract = await moduleEntry.loadModuleGame();
+  if (!contract?.bootstrapsGameplay) {
+    throw new Error("Module loader did not bootstrap gameplay.");
+  }
+  pageLoadingProgress.set(96, "Module ready");
+}
+
 async function loadAppModules() {
   const mode = selectedLoaderMode();
   if (mode === "legacy") return loadLegacyModules();
   if (mode === "module-shadow") return loadModuleShadowEntry();
-  if (mode === "module") throw new Error("Native module loader is not implemented yet. Use hexSnakeLoader=module-shadow for the shadow entry.");
+  if (mode === "module") return loadModuleGameEntry();
   throw new Error(`Unknown Hex Snake loader mode: ${mode}`);
 }
 

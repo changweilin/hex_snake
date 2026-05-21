@@ -176,6 +176,7 @@
     }
 
     function ownerMeta(owner) {
+      const colors = HexSnakeState.config.colors;
       return owner === "computer"
         ? { mark: "P2", label: "P2", color: colors.computerHead, line: colors.computerHeadLine }
         : { mark: "P1", label: "P1", color: colors.head, line: colors.headLine };

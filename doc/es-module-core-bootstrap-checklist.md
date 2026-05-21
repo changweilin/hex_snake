@@ -10,7 +10,7 @@
 
 - `src/main.js` 預設仍使用 legacy concatenated loader。
 - `src/main-module.js` 已可 native import platform/runtime、state registry、DOM、UI shell、leaf services、catalog/media/stats、runtime helpers 與 game shell。
-- `src/main-module.js` 可 import `src/game.js` 的 `gameShell`，但 `module-shadow` 仍不得呼叫 `bootstrapGame()`。
+- `src/main-module.js` 可 import `src/game.js` 的 `gameShell`；`module-shadow` 仍不得呼叫 `bootstrapGame()`，正式 `module` 路徑由 `loadModuleGame()` 呼叫。
 - `npm.cmd run audit:globals` 維持 42 cross-file reads；`npm.cmd run audit:state-boundary` 維持 0/0。
 
 ## Module Blockers
@@ -21,7 +21,7 @@
 | `src/ui.js` | 依賴 `HexSnakeRuntime.storage`、`HexSnakeDOM`、`HexSnakeControls`、`HexSnakeRender` 與 `HexSnakeUI` shared registry | 先明確記錄 import order，再逐步改成 explicit imports 或保持 window compatibility gate |
 | `src/game.js` | import 時曾綁定大量 DOM/window listeners、註冊 `HexSnakeRenderGame` / `HexSnakeUI.*Game` hooks，並立即呼叫 `bootstrap()` | 已拆出 `loadGameShell()` 與 `bootstrapGame()`；module-shadow 只驗證 shell，正式 module owner 才能啟動 |
 | `src/game.js` | gameplay bootstrap 同時載入 balance、AI strategy、character database、settings、HUD、replay/effect comparison 與 first render | bootstrap 必須保留 async error path，並建立 module-mode boot failure UI，不得靜默 fallback |
-| `src/game.js` | 已提供 formal ESM export，legacy default 仍自動呼叫 bootstrap | 下一步在 `main-module.js` / `main.js` 建立正式 `module` 路徑的唯一 bootstrap owner |
+| `src/game.js` | 已提供 formal ESM export，legacy default 仍自動呼叫 bootstrap | 已由 `main-module.js` / `main.js` 建立正式 `module` 路徑的唯一 bootstrap owner |
 
 ## Explicit Import Surface
 
@@ -63,4 +63,4 @@ Also run a browser check against `?hexSnakeLoader=module-shadow` after each shel
 
 ## Next AI Task
 
-下一個 AI 可直接處理項目是在 `src/main-module.js` 補明確的 module bootstrap owner，讓 `hexSnakeLoader=module` 路徑才呼叫 `gameShell.bootstrapGame()`；`module-shadow` 仍只回報 `bootstrapsGameplay: false` contract。
+下一個 AI 可直接處理項目是把 module loader 納入自動化 smoke gate：`module-shadow` 必須維持 `bootstrapsGameplay: false`，`module` 必須回報 `__HEX_SNAKE_MODULE_GAME__` 並成功顯示初始 UI。

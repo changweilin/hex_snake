@@ -8,7 +8,7 @@
 
 ## Shadow Entry
 
-`src/main-module.js` 是目前唯一的 native module shadow entry。local dev 可用 `?hexSnakeLoader=module-shadow` 觸發它；它已 import dual-mode `runtime`、state registry shell、`dom` facade、`uiCore` shell、leaf service shell、catalog/media/stats shell、runtime helper shell 與 `gameShell`，只回報 `module-shadow` contract，不呼叫 `bootstrapGame()`，也不啟動 gameplay。
+`src/main-module.js` 是目前唯一的 native module entry。local dev 可用 `?hexSnakeLoader=module-shadow` 觸發 shadow contract；也可用 `?hexSnakeLoader=module` 觸發 `loadModuleGame()`，由它呼叫 `gameShell.bootstrapGame()` 啟動 gameplay。`module-shadow` 仍只回報 contract，不呼叫 `bootstrapGame()`。
 
 ## Loader Order
 
@@ -58,7 +58,7 @@
 3. `dom.js` must run before `ui.js`; `ui.js` creates local `UiDom` and attaches the largest `HexSnakeUI` base surface.
 4. Character catalog helpers must run before audio/replay/stats/AI/render/game rely on `HexSnakeUI.characterFor*` helpers.
 5. Service facades must extend `HexSnakeUI.audio/replay/stats/about/ai` before `game.js` snapshots them into local aliases.
-6. `render.js` must extend `HexSnakeRender` before `game.js` bootstraps; `game.js` exports `bootstrapGame()` as the only current gameplay bootstrap owner.
+6. `render.js` must extend `HexSnakeRender` before `game.js` bootstraps; `src/main-module.js` owns module mode startup and calls `gameShell.bootstrapGame()` only from `loadModuleGame()`.
 
 ## Verification
 
