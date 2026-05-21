@@ -2976,17 +2976,17 @@
 
     function stepPlayerOnly(now = performance.now()) {
       if (isPlayerAutoControlActive()) {
-        HexSnakeState.game.nextDir = GameAI.chooseAutoDirection("player");
-        setDirectionButtonHighlight(HexSnakeState.game.nextDir);
+        GameRuntimeState.nextDir = GameAI.chooseAutoDirection("player");
+        setDirectionButtonHighlight(GameRuntimeState.nextDir);
       }
-      HexSnakeState.game.dir = HexSnakeState.game.nextDir;
-      const next = nextWrappedCell(HexSnakeState.game.snake[0], HexSnakeState.game.dir);
+      GameRuntimeState.dir = GameRuntimeState.nextDir;
+      const next = nextWrappedCell(GameRuntimeState.snake[0], GameRuntimeState.dir);
       const nextKey = keyOf(next);
-      const eatenFood = HexSnakeState.game.foods.find(food => next.q === food.q && next.r === food.r);
+      const eatenFood = GameRuntimeState.foods.find(food => next.q === food.q && next.r === food.r);
       const eating = Boolean(eatenFood);
-      const body = eating ? HexSnakeState.game.snake : HexSnakeState.game.snake.slice(0, -1);
+      const body = eating ? GameRuntimeState.snake : GameRuntimeState.snake.slice(0, -1);
       const playerSelfHit = body.some(segment => keyOf(segment) === nextKey);
-      const playerOpponentHit = HexSnakeState.game.computerSnake.some(segment => keyOf(segment) === nextKey);
+      const playerOpponentHit = GameRuntimeState.computerSnake.some(segment => keyOf(segment) === nextKey);
       const playerCollision = collisionSeverity(playerSelfHit, playerOpponentHit);
 
       if (playerCollision) {
@@ -2999,7 +2999,7 @@
 
       const consumedFood = advanceOwnerMovement("player", next, eatenFood);
       replaceConsumedFoods([consumedFood], eating);
-      if (HexSnakeState.game.running && !HexSnakeState.game.paused) GameAI.maybeAutoBattlePlayerAttack(now);
+      if (GameRuntimeState.running && !GameRuntimeState.paused) GameAI.maybeAutoBattlePlayerAttack(now);
       updateHud();
     }
 
