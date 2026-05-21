@@ -2674,7 +2674,7 @@
       if (projectile.kind === "lobsterPalm") return {};
       if (projectile.kind === "lobsterPalmBurst") {
         const visualType = burstVisualType(projectile);
-        HexSnakeState.game.blasts.push({
+        GameRuntimeState.blasts.push({
           kind: "circle",
           target: projectile.target,
           owner: projectile.owner,
@@ -2682,14 +2682,14 @@
           visualType,
           hand: projectile.hand,
           startedAt: now,
-          endAt: now + HexSnakeState.config.blastDurationMs * 1.25
+          endAt: now + GameConfig.blastDurationMs * 1.25
         });
         GameRender.triggerBoardShake(visualType, now);
         return { visualType };
       }
       if (projectile.kind === "lineHazardSetup") {
         const visualType = projectile.visualType || attackVisualType(projectile.owner, projectile.profile);
-        HexSnakeState.game.blasts.push({
+        GameRuntimeState.blasts.push({
           kind: "line",
           lineCells: projectile.lineCells,
           excludedCells: projectile.excludedCells,
@@ -2700,14 +2700,14 @@
           owner: projectile.owner,
           visualType,
           startedAt: now,
-          endAt: now + HexSnakeState.config.blastDurationMs
+          endAt: now + GameConfig.blastDurationMs
         });
         GameRender.triggerBoardShake(visualType, now);
         return { visualType };
       }
       if (projectile.kind === "line") {
         const visualType = projectile.visualType || attackVisualType(projectile.owner, projectile.profile);
-        HexSnakeState.game.blasts.push({
+        GameRuntimeState.blasts.push({
           kind: "line",
           lineCells: projectile.lineCells,
           excludedCells: projectile.excludedCells,
@@ -2718,7 +2718,7 @@
           owner: projectile.owner,
           visualType,
           startedAt: now,
-          endAt: now + HexSnakeState.config.blastDurationMs
+          endAt: now + GameConfig.blastDurationMs
         });
         GameRender.triggerBoardShake(visualType, now);
         return { visualType };
@@ -2729,9 +2729,9 @@
         projectile.target = { q: projectile.explosionTarget.q, r: projectile.explosionTarget.r };
       }
       const explosionTarget = projectile.explosionTarget || projectile.target;
-      const explosionRadius = projectile.radius || HexSnakeState.config.baseBlastHexRadius;
+      const explosionRadius = projectile.radius || GameConfig.baseBlastHexRadius;
       const visualType = projectile.visualType || attackVisualType(projectile.owner, projectile.profile);
-      HexSnakeState.game.blasts.push({
+      GameRuntimeState.blasts.push({
         kind: "circle",
         target: explosionTarget,
         owner: projectile.owner,
@@ -2739,11 +2739,11 @@
         visualType,
         hand: projectile.hand,
         startedAt: now,
-        endAt: now + HexSnakeState.config.blastDurationMs
+        endAt: now + GameConfig.blastDurationMs
       });
       GameRender.triggerBoardShake(visualType, now);
       if (projectile.kind === "headCircle" && projectile.radiationDurationMs) {
-        HexSnakeState.game.hazards.push({
+        GameRuntimeState.hazards.push({
           kind: "radiation",
           owner: projectile.owner,
           target: { q: explosionTarget.q, r: explosionTarget.r },
