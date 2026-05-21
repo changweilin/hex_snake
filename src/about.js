@@ -65,3 +65,8 @@ const HexSnakeAbout = (() => {
 Object.defineProperties(HexSnakeUI.about, Object.getOwnPropertyDescriptors(HexSnakeAbout));
 
 window.HexSnakeAbout = HexSnakeAbout;
+
+export {
+  HexSnakeAbout,
+  HexSnakeAbout as about
+};

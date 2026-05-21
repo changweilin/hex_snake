@@ -381,3 +381,8 @@ const HexSnakeNet = (() => {
 })();
 
 window.HexSnakeNet = HexSnakeNet;
+
+export {
+  HexSnakeNet,
+  HexSnakeNet as network
+};

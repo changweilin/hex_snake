@@ -42,7 +42,7 @@ Shared order:
 | --- | --- | --- |
 | A. Loader plan gate | 文件化 modes、fallback、source order，並讓 `audit:esm-map` 檢查本文件存在關鍵契約 | `npm.cmd run audit:esm-map` |
 | B. Module shadow entry | 已新增 `src/main-module.js` 與 `?hexSnakeLoader=module-shadow`，只載入 shadow contract 並回報 ready，不啟動 gameplay | `audit:esm-map`、`build`、`test:smoke` |
-| C. Dual-mode runtime / registry exports | platform/runtime、state registry 與 DOM facade 已具備正式 named exports，module shadow 已 import 這些 shell；下一步處理 leaf service shell | `audit:esm-map`、`audit:globals` 不上升 |
+| C. Dual-mode runtime / registry exports | platform/runtime、state registry、DOM facade、network/about leaf services 已具備正式 named exports，module shadow 已 import 這些 shell；下一步處理 catalog/media/stats shell | `audit:esm-map`、`audit:globals` 不上升 |
 | D. Service module migration | 依 export map 順序讓 leaf services 與 runtime helpers 改成 explicit imports，legacy loader 仍可回退 | build、quick、smoke、mobile |
 | E. Gameplay module bootstrap | `src/game.js` 或新 bootstrap entry 接管 module mode；legacy loader 降為 fallback | release:check |
 
@@ -55,4 +55,4 @@ Shared order:
 
 ## Next AI Task
 
-下一個 AI 可直接處理項目是 Phase C 下一段：讓 `src/network.js` / `src/about.js` 先具備 dual-mode service exports，並讓 module shadow entry import leaf service shell；仍不 import gameplay files。
+下一個 AI 可直接處理項目是 Phase C 下一段：讓 `src/characters.js` / `src/audio.js` / `src/stats.js` 具備 dual-mode service exports，並讓 module shadow entry import catalog/media/stats shell；仍不 import gameplay files。
