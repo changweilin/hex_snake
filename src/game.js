@@ -3796,8 +3796,8 @@
     }
 
     function clearModuleHold() {
-      clearTimeout(HexSnakeState.game.moduleHoldTimer);
-      HexSnakeState.game.moduleHoldTimer = null;
+      clearTimeout(GameRuntimeState.moduleHoldTimer);
+      GameRuntimeState.moduleHoldTimer = null;
       const module = Dom.characterStage.querySelector('[data-module="player"]');
       if (module) module.classList.remove("is-charging");
     }
