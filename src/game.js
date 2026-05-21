@@ -2428,12 +2428,12 @@
     }
 
     function isOwnerVulnerable(owner) {
-      return owner === "player" ? HexSnakeState.game.playerVulnerable : HexSnakeState.game.computerVulnerable;
+      return owner === "player" ? GameRuntimeState.playerVulnerable : GameRuntimeState.computerVulnerable;
     }
 
     function setOwnerVulnerable(owner, vulnerable) {
-      if (owner === "player") HexSnakeState.game.playerVulnerable = vulnerable;
-      else HexSnakeState.game.computerVulnerable = vulnerable;
+      if (owner === "player") GameRuntimeState.playerVulnerable = vulnerable;
+      else GameRuntimeState.computerVulnerable = vulnerable;
     }
 
     function applyBlastDamage(owner, damage, now = performance.now()) {
@@ -2442,16 +2442,16 @@
       const finalDamage = isOwnerVulnerable(owner) ? damage * 2 : damage;
       if (isOwnerVulnerable(owner)) setOwnerVulnerable(owner, false);
       if (owner === "player") {
-        HexSnakeState.game.playerHp = Math.max(0, HexSnakeState.game.playerHp - finalDamage);
+        GameRuntimeState.playerHp = Math.max(0, GameRuntimeState.playerHp - finalDamage);
       } else {
-        HexSnakeState.game.computerHp = Math.max(0, HexSnakeState.game.computerHp - finalDamage);
+        GameRuntimeState.computerHp = Math.max(0, GameRuntimeState.computerHp - finalDamage);
       }
     }
 
     function interruptCasting(owner) {
-      const beforeCount = HexSnakeState.game.projectiles.length;
-      HexSnakeState.game.projectiles = HexSnakeState.game.projectiles.filter(projectile => projectile.owner !== owner || projectile.ignoreCasterInterrupt);
-      return HexSnakeState.game.projectiles.length !== beforeCount;
+      const beforeCount = GameRuntimeState.projectiles.length;
+      GameRuntimeState.projectiles = GameRuntimeState.projectiles.filter(projectile => projectile.owner !== owner || projectile.ignoreCasterInterrupt);
+      return GameRuntimeState.projectiles.length !== beforeCount;
     }
 
     function applyAttackStun(owner, chance = HexSnakeState.config.baseAttackStunChance, now = performance.now(), options = {}) {
