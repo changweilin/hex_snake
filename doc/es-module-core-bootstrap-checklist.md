@@ -12,7 +12,7 @@
 - `src/main-module.js` 已可 native import platform/runtime、state registry、DOM、UI shell、leaf services、catalog/media/stats、runtime helpers 與 game shell。
 - `src/main-module.js` 可 import `src/game.js` 的 `gameShell`；`module-shadow` 仍不得呼叫 `bootstrapGame()`，正式 `module` 路徑由 `loadModuleGame()` 呼叫。
 - Production build 已決定維持 `bundled-legacy-fallback`；`dist/build-asset-manifest.json` 的 `moduleLoader` 區塊與 `check:assets` 會固定此策略。
-- Phase D 已開始 service module migration 小切片；`ui.js`、`stats.js`、`about.js`、`network.js`、`audio.js`、`characters.js`、`replay.js`、`ai.js` 與 `render.js` 已集中 dependency aliases，後續可逐步替換成 explicit imports。
+- Phase D 已開始 service module migration 小切片；`ui.js`、`stats.js`、`about.js`、`network.js`、`audio.js`、`characters.js`、`replay.js`、`ai.js`、`render.js` 與 `game.js` 已集中 dependency aliases，後續可逐步替換成 explicit imports。
 - `npm.cmd run audit:globals` 維持 42 cross-file reads；`npm.cmd run audit:state-boundary` 維持 0/0。
 
 ## Module Blockers
@@ -35,7 +35,7 @@
 
 `src/game.js` 的最小 module shell 應只依賴：
 
-- `runtime`、`state`、`uiRegistry`、`render`、`renderGame`、`controls`、`dom`。
+- `runtime`、`state`、`uiRegistry`、`render`、`renderGame`、`controls`、`dom`（目前由 `Game*` aliases 集中）。
 - service shells: `network`、`audio`、`replay`、`stats`、`about`、`ai`、`renderHooks`。
 - catalog shell: `characterCatalog`。
 
@@ -66,4 +66,4 @@ Also run `npm.cmd run test:module-loader` after each loader step. The source `mo
 
 ## Next AI Task
 
-下一個 AI 可直接處理項目是延續 Phase D service module migration：挑下一個 leaf service 或 runtime helper 做 explicit import friendly 的小切片；production default 繼續維持 `bundled-legacy-fallback`。
+下一個 AI 可直接處理項目是延續 Phase D service module migration：盤點剩餘 direct window/facade reads，挑下一個 low-risk helper 或 import preflight 小切片；production default 繼續維持 `bundled-legacy-fallback`。

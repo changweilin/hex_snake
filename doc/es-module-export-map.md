@@ -26,7 +26,7 @@
 | 10 | `src/about.js` | `src/about.js` | `HexSnakeUI.about`、`HexSnakeAbout` | game settings/version modal |
 | 11 | `src/ai.js` | `src/ai.js` | `HexSnakeUI.ai` | render、game |
 | 12 | `src/render.js` | `src/render.js` | `HexSnakeRender` | UI、replay、game |
-| 13 | `src/game.js` | `src/game.js` | `HexSnakeGame`、`HexSnakeRenderGame`、`HexSnakeUI.aiGame`、`HexSnakeUI.uiGame`、`HexSnakeUI.replayGame`、explicit `bootstrapGame()` | final bootstrap owner |
+| 13 | `src/game.js` | `src/game.js` | `HexSnakeGame`、`Game*` dependency aliases、`HexSnakeRenderGame`、`HexSnakeUI.aiGame`、`HexSnakeUI.uiGame`、`HexSnakeUI.replayGame`、explicit `bootstrapGame()` | final bootstrap owner |
 
 `src/main.js` always uses the web platform source for local browser loading. `build.js` swaps only the first source to `src/platform/mobile.js` when `--mobile` is used; the remaining order must stay identical.
 

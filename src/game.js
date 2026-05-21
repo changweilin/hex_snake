@@ -1,16 +1,25 @@
-    const { keyLabel, normalizeAutoBattleSpeed, normalizeKey } = HexSnakeControls;
-    const Dom = HexSnakeDOM;
-    const GameAI = HexSnakeUI.ai;
-    const GameAbout = HexSnakeUI.about;
-    const GameAudio = HexSnakeUI.audio;
-    const GameReplay = HexSnakeUI.replay;
+    const GameControls = HexSnakeControls;
+    const GameRuntime = HexSnakeRuntime;
+    const GameRootState = HexSnakeState;
+    const GameConfig = GameRootState.config;
+    const GameRuntimeState = GameRootState.game;
+    const GamePresentationState = GameRootState.ui;
+    const GameUI = HexSnakeUI;
+    const GameDom = HexSnakeDOM;
+    const { keyLabel, normalizeAutoBattleSpeed, normalizeKey } = GameControls;
+    const Dom = GameDom;
+    const GameAI = GameUI.ai;
+    const GameAbout = GameUI.about;
+    const GameAudio = GameUI.audio;
+    const GameReplay = GameUI.replay;
     const GameRender = HexSnakeRender;
-    const GameStats = HexSnakeUI.stats;
-    const GamePlatform = HexSnakeRuntime.platform;
-    const GameStorage = HexSnakeRuntime.storage;
+    const GameRenderGame = HexSnakeRenderGame;
+    const GameStats = GameUI.stats;
+    const GamePlatform = GameRuntime.platform;
+    const GameStorage = GameRuntime.storage;
 
     function saveKeybinds() {
-      GameStorage.setJson("hexSnakeKeybinds", HexSnakeState.game.keybinds);
+      GameStorage.setJson("hexSnakeKeybinds", GameRuntimeState.keybinds);
     }
 
     const controlProfilesKey = "hexSnakeControlProfilesV1";
@@ -19,42 +28,42 @@
     let controlProfiles = loadControlProfiles();
     let selectedControlProfileId = String(GameStorage.get(selectedControlProfileKey) || "").slice(0, 48);
 
-    function cloneKeybinds(value = HexSnakeState.game.keybinds) {
+    function cloneKeybinds(value = GameRuntimeState.keybinds) {
       return {
-        smallAttack: normalizeKey(value.smallAttack, HexSnakeState.config.defaultKeybinds.smallAttack),
-        bigAttack: normalizeKey(value.bigAttack, HexSnakeState.config.defaultKeybinds.bigAttack),
-        pause: normalizeKey(value.pause, HexSnakeState.config.defaultKeybinds.pause),
-        surrender: normalizeKey(value.surrender, HexSnakeState.config.defaultKeybinds.surrender),
-        directions: HexSnakeState.config.defaultKeybinds.directions.map((fallback, index) => normalizeKey(value.directions?.[index], fallback))
+        smallAttack: normalizeKey(value.smallAttack, GameConfig.defaultKeybinds.smallAttack),
+        bigAttack: normalizeKey(value.bigAttack, GameConfig.defaultKeybinds.bigAttack),
+        pause: normalizeKey(value.pause, GameConfig.defaultKeybinds.pause),
+        surrender: normalizeKey(value.surrender, GameConfig.defaultKeybinds.surrender),
+        directions: GameConfig.defaultKeybinds.directions.map((fallback, index) => normalizeKey(value.directions?.[index], fallback))
       };
     }
 
-    function cloneKeyboardAttackAim(value = HexSnakeState.game.keyboardAttackAim) {
+    function cloneKeyboardAttackAim(value = GameRuntimeState.keyboardAttackAim) {
       return {
         small: {
-          targetModeIndex: Math.max(0, Number(value.small?.targetModeIndex) || 0) % HexSnakeState.config.keyboardTargetModes.length,
-          direction: Math.max(0, Number(value.small?.direction) || 0) % HexSnakeState.config.directions.length
+          targetModeIndex: Math.max(0, Number(value.small?.targetModeIndex) || 0) % GameConfig.keyboardTargetModes.length,
+          direction: Math.max(0, Number(value.small?.direction) || 0) % GameConfig.directions.length
         },
         big: {
-          targetModeIndex: Math.max(0, Number(value.big?.targetModeIndex) || 0) % HexSnakeState.config.keyboardTargetModes.length,
-          direction: Math.max(0, Number(value.big?.direction) || 0) % HexSnakeState.config.directions.length
+          targetModeIndex: Math.max(0, Number(value.big?.targetModeIndex) || 0) % GameConfig.keyboardTargetModes.length,
+          direction: Math.max(0, Number(value.big?.direction) || 0) % GameConfig.directions.length
         }
       };
     }
 
-    function cloneInitialStock(value = HexSnakeState.game.initialStock) {
-      return HexSnakeState.config.foodTypes.reduce((stock, type) => {
-        stock[type.id] = clampInitialStock(value?.[type.id] ?? HexSnakeState.config.defaultSettings.initialStock[type.id] ?? 0);
+    function cloneInitialStock(value = GameRuntimeState.initialStock) {
+      return GameConfig.foodTypes.reduce((stock, type) => {
+        stock[type.id] = clampInitialStock(value?.[type.id] ?? GameConfig.defaultSettings.initialStock[type.id] ?? 0);
         return stock;
       }, {});
     }
 
     function normalizeCharacterChoice(owner, value) {
-      const fallback = owner === "computer" ? HexSnakeState.config.defaultSettings.computerCharacterId : HexSnakeState.config.defaultSettings.playerCharacterId;
+      const fallback = owner === "computer" ? GameConfig.defaultSettings.computerCharacterId : GameConfig.defaultSettings.playerCharacterId;
       const choice = String(value || fallback).slice(0, 64);
-      if (HexSnakeUI.isRandomCharacterChoiceId(choice)) return choice;
-      if (!HexSnakeUI.hasCharacterCatalog()) return choice || fallback;
-      return HexSnakeUI.hasCharacterId(choice) ? choice : fallback;
+      if (GameUI.isRandomCharacterChoiceId(choice)) return choice;
+      if (!GameUI.hasCharacterCatalog()) return choice || fallback;
+      return GameUI.hasCharacterId(choice) ? choice : fallback;
     }
 
     function normalizeGmPresetMode(value) {
@@ -62,20 +71,20 @@
     }
 
     function cloneGameSettings(value = {}) {
-      const presetMode = Object.prototype.hasOwnProperty.call(value, "gmPresetMode") ? value.gmPresetMode : HexSnakeState.game.gmPresetMode;
+      const presetMode = Object.prototype.hasOwnProperty.call(value, "gmPresetMode") ? value.gmPresetMode : GameRuntimeState.gmPresetMode;
       return {
-        computerDifficulty: ["novice", "low", "medium", "high", "extreme"].includes(value.computerDifficulty) ? value.computerDifficulty : HexSnakeState.game.computerDifficulty,
-        playerCharacterChoice: normalizeCharacterChoice("player", value.playerCharacterChoice ?? HexSnakeState.game.playerCharacterChoice),
-        computerCharacterChoice: normalizeCharacterChoice("computer", value.computerCharacterChoice ?? HexSnakeState.game.computerCharacterChoice),
-        gmMode: Boolean(value.gmMode ?? HexSnakeState.game.gmMode),
+        computerDifficulty: ["novice", "low", "medium", "high", "extreme"].includes(value.computerDifficulty) ? value.computerDifficulty : GameRuntimeState.computerDifficulty,
+        playerCharacterChoice: normalizeCharacterChoice("player", value.playerCharacterChoice ?? GameRuntimeState.playerCharacterChoice),
+        computerCharacterChoice: normalizeCharacterChoice("computer", value.computerCharacterChoice ?? GameRuntimeState.computerCharacterChoice),
+        gmMode: Boolean(value.gmMode ?? GameRuntimeState.gmMode),
         gmPresetMode: normalizeGmPresetMode(presetMode),
-        gridSize: clampGridSize(value.gridSize ?? HexSnakeState.game.gridSize),
-        foodCount: clampFoodCount(value.foodCount ?? HexSnakeState.game.foodCount),
-        initialSpeed: clampInitialSpeed(value.initialSpeed ?? HexSnakeState.game.initialSpeed),
-        initialLength: clampInitialLength(value.initialLength ?? HexSnakeState.game.initialLength),
-        initialEnergy: clampInitialEnergy(value.initialEnergy ?? HexSnakeState.game.initialEnergy),
-        initialBombs: clampInitialBombs(value.initialBombs ?? HexSnakeState.game.initialBombs),
-        initialStock: cloneInitialStock(value.initialStock ?? HexSnakeState.game.initialStock)
+        gridSize: clampGridSize(value.gridSize ?? GameRuntimeState.gridSize),
+        foodCount: clampFoodCount(value.foodCount ?? GameRuntimeState.foodCount),
+        initialSpeed: clampInitialSpeed(value.initialSpeed ?? GameRuntimeState.initialSpeed),
+        initialLength: clampInitialLength(value.initialLength ?? GameRuntimeState.initialLength),
+        initialEnergy: clampInitialEnergy(value.initialEnergy ?? GameRuntimeState.initialEnergy),
+        initialBombs: clampInitialBombs(value.initialBombs ?? GameRuntimeState.initialBombs),
+        initialStock: cloneInitialStock(value.initialStock ?? GameRuntimeState.initialStock)
       };
     }
 
@@ -83,7 +92,7 @@
       return {
         sfxMuted: Boolean(value.sfxMuted ?? GameAudio.muted),
         lowPowerMode: Boolean(value.lowPowerMode ?? GamePlatform.display.lowPowerMode()),
-        "perfStatsVisible": Boolean(value.perfStatsVisible ?? HexSnakeState.ui.perfStatsVisible)
+        "perfStatsVisible": Boolean(value.perfStatsVisible ?? GamePresentationState.perfStatsVisible)
       };
     }
 
@@ -5513,28 +5522,28 @@
     window.addEventListener("blur", clearKeyboardAimKeyLocks);
     GamePlatform.lifecycle.onPause(() => {
       clearKeyboardAimKeyLocks();
-      if (HexSnakeState.game.rafId) {
-        cancelAnimationFrame(HexSnakeState.game.rafId);
-        HexSnakeState.game.rafId = 0;
+      if (GameRuntimeState.rafId) {
+        cancelAnimationFrame(GameRuntimeState.rafId);
+        GameRuntimeState.rafId = 0;
       }
     });
     GamePlatform.lifecycle.onResume(() => {
-      if (HexSnakeState.game.rafId) return;
+      if (GameRuntimeState.rafId) return;
       const now = performance.now();
-      if (HexSnakeState.game.running && !HexSnakeState.game.gameOver) {
-        HexSnakeState.game.lastPlayerStep = now;
-        HexSnakeState.game.lastComputerStep = now;
-        HexSnakeState.game.lastTimerFrame = now;
+      if (GameRuntimeState.running && !GameRuntimeState.gameOver) {
+        GameRuntimeState.lastPlayerStep = now;
+        GameRuntimeState.lastComputerStep = now;
+        GameRuntimeState.lastTimerFrame = now;
       }
-      if (HexSnakeState.game.running || HexSnakeState.game.gameOverSettlementPending) {
-        HexSnakeState.game.rafId = requestAnimationFrame(loop);
+      if (GameRuntimeState.running || GameRuntimeState.gameOverSettlementPending) {
+        GameRuntimeState.rafId = requestAnimationFrame(loop);
       } else if (GameRender.isEffectComparisonMode()) {
-        HexSnakeState.game.rafId = requestAnimationFrame(GameRender.comparisonLoop);
+        GameRuntimeState.rafId = requestAnimationFrame(GameRender.comparisonLoop);
       }
     });
     GamePlatform.lifecycle.onBackButton?.(handlePlatformBackButton);
 
-    Object.assign(HexSnakeRenderGame, {
+    Object.assign(GameRenderGame, {
       attackStats,
       attackVisualType,
       axialToPixel,
@@ -5556,7 +5565,7 @@
       updatePerfOverlay
     });
 
-    Object.assign(HexSnakeUI.aiGame, {
+    Object.assign(GameUI.aiGame, {
       attackHitStunChances,
       attackStats,
       bandShapeFromTotalWidth,
@@ -5579,7 +5588,7 @@
       turnDistance
     });
 
-    Object.assign(HexSnakeUI.uiGame, {
+    Object.assign(GameUI.uiGame, {
       attackVisualType,
       axialToPixel,
       clampInitialBombs,
@@ -5593,7 +5602,7 @@
       setSettingsOpen
     });
 
-    Object.assign(HexSnakeUI.replayGame, {
+    Object.assign(GameUI.replayGame, {
       buildCells,
       clearRelayRestartTimer,
       returnToStartScreen,
@@ -5604,7 +5613,7 @@
       updateSettingsActionMode
     });
 
-    Object.assign(HexSnakeUI, {
+    Object.assign(GameUI, {
       clearRelayRestartTimer,
       loadSavedCharacterChoices,
       saveCharacterChoices,
@@ -5616,24 +5625,24 @@
     }
 
     async function runGameBootstrap() {
-      await HexSnakeUI.loadBalanceConfig();
+      await GameUI.loadBalanceConfig();
       await GameAI.loadHighAiStrategyConfig();
       try {
-        await HexSnakeUI.loadCharacterDatabase();
+        await GameUI.loadCharacterDatabase();
       } catch (error) {
-        HexSnakeUI.showCharacterDatabaseError(error);
+        GameUI.showCharacterDatabaseError(error);
         return gameBootstrapContract;
       }
-      HexSnakeUI.buildCharacterOptions();
-      HexSnakeUI.buildCharacterStage();
-      HexSnakeUI.buildResourceHud();
-      HexSnakeUI.buildRulesContent();
+      GameUI.buildCharacterOptions();
+      GameUI.buildCharacterStage();
+      GameUI.buildResourceHud();
+      GameUI.buildRulesContent();
       loadSavedGmSettings();
       setGridSize(Dom.gridSizeInput.value);
       setFoodCount(Dom.foodCountInput.value);
       setComputerDifficulty(Dom.computerDifficultyInput.value);
       setInitialSpeed(Dom.initialSpeedInput.value);
-      setGmMode(HexSnakeState.game.gmMode);
+      setGmMode(GameRuntimeState.gmMode);
       setInitialLength(Dom.initialLengthInput.value);
       setInitialEnergy(Dom.initialEnergyInput.value);
       setInitialBombs(Dom.initialBombsInput.value);
@@ -5645,27 +5654,27 @@
       renderControlProfiles();
       Dom.sfxMuteToggle.checked = GameAudio.muted;
       syncLowPowerMode();
-      setPerfStatsVisible(HexSnakeState.ui.perfStatsVisible);
+      setPerfStatsVisible(GamePresentationState.perfStatsVisible);
       updateAttackButtons();
       resetGame();
       resize();
-      HexSnakeUI.renderIntroPortraits(false);
+      GameUI.renderIntroPortraits(false);
       Dom.overlay.classList.add("show");
-      if (HexSnakeUI.shouldShowTutorial()) HexSnakeUI.showTutorial(0);
-      HexSnakeUI.preloadPortraitsFor("player");
-      HexSnakeUI.preloadPortraitsFor("computer");
+      if (GameUI.shouldShowTutorial()) GameUI.showTutorial(0);
+      GameUI.preloadPortraitsFor("player");
+      GameUI.preloadPortraitsFor("computer");
       if (GameRender.isEffectComparisonMode()) {
         Dom.overlay.classList.remove("show");
         Dom.characterStage.hidden = true;
-        HexSnakeUI.setCharacterStageOverlayMode(false);
+        GameUI.setCharacterStageOverlayMode(false);
         setStatus("Skill effect comparison mode.");
-        cancelAnimationFrame(HexSnakeState.game.rafId);
-        HexSnakeState.game.rafId = requestAnimationFrame(GameRender.comparisonLoop);
+        cancelAnimationFrame(GameRuntimeState.rafId);
+        GameRuntimeState.rafId = requestAnimationFrame(GameRender.comparisonLoop);
       }
       if ("requestIdleCallback" in window) {
-        requestIdleCallback(HexSnakeUI.preloadAllPortraits, { timeout: 1500 });
+        requestIdleCallback(GameUI.preloadAllPortraits, { timeout: 1500 });
       } else {
-        setTimeout(HexSnakeUI.preloadAllPortraits, 250);
+        setTimeout(GameUI.preloadAllPortraits, 250);
       }
       return gameBootstrapContract;
     }
