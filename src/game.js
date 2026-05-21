@@ -3411,27 +3411,30 @@
     }
 
     function opponentHeadTarget() {
-      return HexSnakeState.game.computerSnake?.[0] || HexSnakeState.game.snake?.[0] || HexSnakeState.game.targetCell;
+      return GameRuntimeState.computerSnake?.[0] || GameRuntimeState.snake?.[0] || GameRuntimeState.targetCell;
     }
 
     function opponentCentroidTarget() {
-      if (!HexSnakeState.game.computerSnake?.length) return opponentHeadTarget();
-      const average = HexSnakeState.game.computerSnake.reduce((total, segment) => ({
-        q: total.q + segment.q / HexSnakeState.game.computerSnake.length,
-        r: total.r + segment.r / HexSnakeState.game.computerSnake.length
+      const computerSnake = GameRuntimeState.computerSnake;
+      if (!computerSnake?.length) return opponentHeadTarget();
+      const average = computerSnake.reduce((total, segment) => ({
+        q: total.q + segment.q / computerSnake.length,
+        r: total.r + segment.r / computerSnake.length
       }), { q: 0, r: 0 });
       return nearestInsideCell(roundAxial(average.q, average.r));
     }
 
     function opponentNearestFoodTarget() {
       const head = opponentHeadTarget();
-      if (!HexSnakeState.game.foods.length || !head) return head;
-      return [...HexSnakeState.game.foods].sort((a, b) => hexDistance(head, a) - hexDistance(head, b))[0] || head;
+      const foods = GameRuntimeState.foods;
+      if (!foods.length || !head) return head;
+      return [...foods].sort((a, b) => hexDistance(head, a) - hexDistance(head, b))[0] || head;
     }
 
     function keyboardTargetMode(profile = "small") {
-      const aim = HexSnakeState.game.keyboardAttackAim[profile] || HexSnakeState.game.keyboardAttackAim.small;
-      return HexSnakeState.config.keyboardTargetModes[aim.targetModeIndex % HexSnakeState.config.keyboardTargetModes.length] || "head";
+      const aim = GameRuntimeState.keyboardAttackAim[profile] || GameRuntimeState.keyboardAttackAim.small;
+      const targetModes = GameConfig.keyboardTargetModes;
+      return targetModes[aim.targetModeIndex % targetModes.length] || "head";
     }
 
     function keyboardAttackTarget(profile = "small") {
