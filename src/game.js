@@ -4278,27 +4278,27 @@
     Dom.winnerPortrait.addEventListener("pointerdown", event => {
       const swipeZone = event.target.closest("[data-portrait-swipe-owner]");
       if (swipeZone && (event.target.closest("[data-portrait-select]") || event.target.closest(".intro-avatar-gate"))) {
-        HexSnakeState.ui.portraitSwipeStartX = event.clientX;
-        HexSnakeState.ui.portraitSwipeStartY = event.clientY;
-        HexSnakeState.ui.portraitSwipeOwner = swipeZone.dataset.portraitSwipeOwner === "computer" ? "computer" : "player";
-        HexSnakeState.ui.portraitIntroDidSwipe = false;
+        GamePresentationState.portraitSwipeStartX = event.clientX;
+        GamePresentationState.portraitSwipeStartY = event.clientY;
+        GamePresentationState.portraitSwipeOwner = swipeZone.dataset.portraitSwipeOwner === "computer" ? "computer" : "player";
+        GamePresentationState.portraitIntroDidSwipe = false;
         return;
       }
       if (event.target.closest(".portrait-copy") && event.target.closest("[data-portrait-select]")) {
-        HexSnakeState.ui.portraitInfoSwipeStartX = event.clientX;
-        HexSnakeState.ui.portraitInfoSwipeStartY = event.clientY;
-        HexSnakeState.ui.portraitIntroDidSwipe = false;
+        GamePresentationState.portraitInfoSwipeStartX = event.clientX;
+        GamePresentationState.portraitInfoSwipeStartY = event.clientY;
+        GamePresentationState.portraitIntroDidSwipe = false;
       }
     });
 
     Dom.winnerPortrait.addEventListener("click", event => {
-      if (HexSnakeState.ui.portraitIntroDidSwipe) {
-        HexSnakeState.ui.portraitIntroDidSwipe = false;
+      if (GamePresentationState.portraitIntroDidSwipe) {
+        GamePresentationState.portraitIntroDidSwipe = false;
         return;
       }
       const portraitShift = event.target.closest("[data-portrait-shift][data-portrait-owner]");
       if (portraitShift) {
-        HexSnakeUI.applyPortraitCharacter(portraitShift.dataset.portraitOwner, Number(portraitShift.dataset.portraitShift));
+        GameUI.applyPortraitCharacter(portraitShift.dataset.portraitOwner, Number(portraitShift.dataset.portraitShift));
         return;
       }
       const resultPortrait = event.target.closest("[data-result-owner]");
@@ -4309,131 +4309,131 @@
       const fullPortrait = event.target.closest("[data-full-portrait]");
       if (fullPortrait) {
         const owner = fullPortrait.dataset.fullPortrait === "computer" ? "computer" : "player";
-        if (owner !== HexSnakeState.ui.selectedPortraitOwner) {
-          HexSnakeUI.selectPortraitOwner(owner);
+        if (owner !== GamePresentationState.selectedPortraitOwner) {
+          GameUI.selectPortraitOwner(owner);
           return;
         }
-        HexSnakeUI.openPortraitLightbox(owner);
+        GameUI.openPortraitLightbox(owner);
         return;
       }
       const portraitOption = event.target.closest("[data-portrait-owner]");
       if (portraitOption) {
-        HexSnakeUI.selectPortraitOwner(portraitOption.dataset.portraitOwner === "computer" ? "computer" : "player");
+        GameUI.selectPortraitOwner(portraitOption.dataset.portraitOwner === "computer" ? "computer" : "player");
         return;
       }
       const introButton = event.target.closest("[data-open-intro]");
       if (!introButton) return;
-      HexSnakeState.ui.selectedPortraitOwner = introButton.dataset.openIntro === "computer" ? "computer" : "player";
+      GamePresentationState.selectedPortraitOwner = introButton.dataset.openIntro === "computer" ? "computer" : "player";
       Dom.overlayTitle.textContent = "角色選擇";
       Dom.overlayText.textContent = "點擊 P1 或 P2 立繪選擇要調整的角色，使用左右箭頭切換。";
       Dom.startButton.textContent = "開始";
-      HexSnakeUI.renderIntroPortraits(true);
+      GameUI.renderIntroPortraits(true);
     });
 
     Dom.winnerPortrait.addEventListener("pointerup", event => {
-      if (HexSnakeState.ui.portraitSwipeStartX !== null) {
-        const deltaX = event.clientX - HexSnakeState.ui.portraitSwipeStartX;
-        const deltaY = event.clientY - HexSnakeState.ui.portraitSwipeStartY;
-        const owner = HexSnakeState.ui.portraitSwipeOwner;
-        HexSnakeState.ui.portraitSwipeStartX = null;
-        HexSnakeState.ui.portraitSwipeStartY = null;
-        HexSnakeState.ui.portraitSwipeOwner = null;
+      if (GamePresentationState.portraitSwipeStartX !== null) {
+        const deltaX = event.clientX - GamePresentationState.portraitSwipeStartX;
+        const deltaY = event.clientY - GamePresentationState.portraitSwipeStartY;
+        const owner = GamePresentationState.portraitSwipeOwner;
+        GamePresentationState.portraitSwipeStartX = null;
+        GamePresentationState.portraitSwipeStartY = null;
+        GamePresentationState.portraitSwipeOwner = null;
         if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) >= 42) {
-          HexSnakeState.ui.portraitIntroDidSwipe = true;
+          GamePresentationState.portraitIntroDidSwipe = true;
           setTimeout(() => {
-            HexSnakeState.ui.portraitIntroDidSwipe = false;
+            GamePresentationState.portraitIntroDidSwipe = false;
           }, 160);
-          HexSnakeUI.shiftPortraitVariantMode(deltaY < 0 ? -1 : 1);
+          GameUI.shiftPortraitVariantMode(deltaY < 0 ? -1 : 1);
           return;
         }
         if (Math.abs(deltaX) < 42) return;
-        HexSnakeState.ui.portraitIntroDidSwipe = true;
+        GamePresentationState.portraitIntroDidSwipe = true;
         setTimeout(() => {
-          HexSnakeState.ui.portraitIntroDidSwipe = false;
+          GamePresentationState.portraitIntroDidSwipe = false;
         }, 160);
-        HexSnakeUI.applyPortraitCharacter(owner, deltaX < 0 ? 1 : -1);
+        GameUI.applyPortraitCharacter(owner, deltaX < 0 ? 1 : -1);
         return;
       }
-      if (HexSnakeState.ui.portraitInfoSwipeStartX !== null) {
-        const deltaX = event.clientX - HexSnakeState.ui.portraitInfoSwipeStartX;
-        const deltaY = event.clientY - HexSnakeState.ui.portraitInfoSwipeStartY;
-        HexSnakeState.ui.portraitInfoSwipeStartX = null;
-        HexSnakeState.ui.portraitInfoSwipeStartY = null;
+      if (GamePresentationState.portraitInfoSwipeStartX !== null) {
+        const deltaX = event.clientX - GamePresentationState.portraitInfoSwipeStartX;
+        const deltaY = event.clientY - GamePresentationState.portraitInfoSwipeStartY;
+        GamePresentationState.portraitInfoSwipeStartX = null;
+        GamePresentationState.portraitInfoSwipeStartY = null;
         if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) >= 42) {
-          HexSnakeState.ui.portraitIntroDidSwipe = true;
+          GamePresentationState.portraitIntroDidSwipe = true;
           setTimeout(() => {
-            HexSnakeState.ui.portraitIntroDidSwipe = false;
+            GamePresentationState.portraitIntroDidSwipe = false;
           }, 160);
-          HexSnakeUI.shiftPortraitVariantMode(deltaY < 0 ? -1 : 1);
+          GameUI.shiftPortraitVariantMode(deltaY < 0 ? -1 : 1);
           return;
         }
         if (Math.abs(deltaX) < 42) return;
-        HexSnakeState.ui.portraitIntroDidSwipe = true;
+        GamePresentationState.portraitIntroDidSwipe = true;
         setTimeout(() => {
-          HexSnakeState.ui.portraitIntroDidSwipe = false;
+          GamePresentationState.portraitIntroDidSwipe = false;
         }, 160);
-        HexSnakeUI.applyPortraitCharacter(HexSnakeState.ui.selectedPortraitOwner, deltaX < 0 ? 1 : -1);
+        GameUI.applyPortraitCharacter(GamePresentationState.selectedPortraitOwner, deltaX < 0 ? 1 : -1);
       }
     });
 
     Dom.winnerPortrait.addEventListener("pointercancel", () => {
-      HexSnakeState.ui.portraitSwipeStartX = null;
-      HexSnakeState.ui.portraitSwipeStartY = null;
-      HexSnakeState.ui.portraitSwipeOwner = null;
-      HexSnakeState.ui.portraitInfoSwipeStartX = null;
-      HexSnakeState.ui.portraitInfoSwipeStartY = null;
+      GamePresentationState.portraitSwipeStartX = null;
+      GamePresentationState.portraitSwipeStartY = null;
+      GamePresentationState.portraitSwipeOwner = null;
+      GamePresentationState.portraitInfoSwipeStartX = null;
+      GamePresentationState.portraitInfoSwipeStartY = null;
     });
 
-    Dom.portraitLightboxClose.addEventListener("click", HexSnakeUI.closePortraitLightbox);
+    Dom.portraitLightboxClose.addEventListener("click", GameUI.closePortraitLightbox);
 
     Dom.portraitLightboxShiftButtons.forEach(button => {
       button.addEventListener("click", event => {
         event.stopPropagation();
-        HexSnakeUI.shiftPortraitLightbox(Number(button.dataset.portraitLightboxShift));
+        GameUI.shiftPortraitLightbox(Number(button.dataset.portraitLightboxShift));
       });
     });
 
     Dom.portraitLightboxVariantButtons.forEach(button => {
       button.addEventListener("click", event => {
         event.stopPropagation();
-        HexSnakeUI.shiftPortraitVariantMode(button.dataset.portraitLightboxDirection === "up" ? -1 : 1);
+        GameUI.shiftPortraitVariantMode(button.dataset.portraitLightboxDirection === "up" ? -1 : 1);
       });
     });
 
     Dom.portraitLightbox.addEventListener("pointerdown", event => {
       if (event.target.closest("button")) return;
-      HexSnakeState.ui.portraitSwipeStartX = event.clientX;
-      HexSnakeState.ui.portraitSwipeStartY = event.clientY;
-      HexSnakeState.ui.portraitLightboxDidSwipe = false;
+      GamePresentationState.portraitSwipeStartX = event.clientX;
+      GamePresentationState.portraitSwipeStartY = event.clientY;
+      GamePresentationState.portraitLightboxDidSwipe = false;
     });
 
     Dom.portraitLightbox.addEventListener("pointerup", event => {
-      if (HexSnakeState.ui.portraitSwipeStartX === null) return;
-      const deltaX = event.clientX - HexSnakeState.ui.portraitSwipeStartX;
-      const deltaY = event.clientY - HexSnakeState.ui.portraitSwipeStartY;
-      HexSnakeState.ui.portraitSwipeStartX = null;
-      HexSnakeState.ui.portraitSwipeStartY = null;
+      if (GamePresentationState.portraitSwipeStartX === null) return;
+      const deltaX = event.clientX - GamePresentationState.portraitSwipeStartX;
+      const deltaY = event.clientY - GamePresentationState.portraitSwipeStartY;
+      GamePresentationState.portraitSwipeStartX = null;
+      GamePresentationState.portraitSwipeStartY = null;
       if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) >= 42) {
-        HexSnakeState.ui.portraitLightboxDidSwipe = true;
-        HexSnakeUI.shiftPortraitVariantMode(deltaY < 0 ? -1 : 1);
+        GamePresentationState.portraitLightboxDidSwipe = true;
+        GameUI.shiftPortraitVariantMode(deltaY < 0 ? -1 : 1);
         return;
       }
       if (Math.abs(deltaX) < 42) return;
-      HexSnakeState.ui.portraitLightboxDidSwipe = true;
-      HexSnakeUI.shiftPortraitLightbox(deltaX < 0 ? 1 : -1);
+      GamePresentationState.portraitLightboxDidSwipe = true;
+      GameUI.shiftPortraitLightbox(deltaX < 0 ? 1 : -1);
     });
 
     Dom.portraitLightbox.addEventListener("pointercancel", () => {
-      HexSnakeState.ui.portraitSwipeStartX = null;
-      HexSnakeState.ui.portraitSwipeStartY = null;
+      GamePresentationState.portraitSwipeStartX = null;
+      GamePresentationState.portraitSwipeStartY = null;
     });
 
     Dom.portraitLightbox.addEventListener("click", event => {
-      if (HexSnakeState.ui.portraitLightboxDidSwipe) {
-        HexSnakeState.ui.portraitLightboxDidSwipe = false;
+      if (GamePresentationState.portraitLightboxDidSwipe) {
+        GamePresentationState.portraitLightboxDidSwipe = false;
         return;
       }
-      if (event.target === Dom.portraitLightbox) HexSnakeUI.closePortraitLightbox();
+      if (event.target === Dom.portraitLightbox) GameUI.closePortraitLightbox();
     });
 
     Dom.gridSizeInput.addEventListener("change", () => {

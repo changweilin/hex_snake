@@ -872,6 +872,14 @@ expectSliceExcludes(
   ["HexSnakeState.", "HexSnakeUI."]
 );
 
+expectSliceExcludes(
+  "src/game.js",
+  "portrait interaction helper alias slice",
+  "Dom.winnerPortrait.addEventListener(\"pointerdown\"",
+  "Dom.gridSizeInput.addEventListener",
+  ["HexSnakeState.", "HexSnakeUI."]
+);
+
 const docText = read("doc/es-module-export-map.md");
 [
   "src/platform/web.js",
