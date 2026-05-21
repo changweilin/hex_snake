@@ -3302,41 +3302,41 @@
       Dom.stick.style.transform = `translate(${Math.cos(angle) * distance}px, ${Math.sin(angle) * distance}px)`;
       const newDir = pointerToDirection(event, rect);
       if (newDir !== null) {
-        HexSnakeState.game.movePointerMoved = true;
+        GameRuntimeState.movePointerMoved = true;
         setDirection(newDir, { feedbackEvent: event, feedbackStrength: 5 });
       }
     }
 
     function setMoveStickLocked(locked) {
-      HexSnakeState.game.moveStickLocked = locked;
-      HexSnakeState.game.moveStickEngaged = locked;
+      GameRuntimeState.moveStickLocked = locked;
+      GameRuntimeState.moveStickEngaged = locked;
       Dom.joyZone.querySelector(".joystick").classList.toggle("locked", locked);
       if (!locked) {
-        HexSnakeState.game.movePointerId = null;
-        HexSnakeState.game.moveStickEngaged = false;
+        GameRuntimeState.movePointerId = null;
+        GameRuntimeState.moveStickEngaged = false;
         clearMoveStickRebound();
         Dom.stick.style.transform = "translate(0, 0)";
       }
     }
 
     function clearMoveStickHoldTimer() {
-      if (!HexSnakeState.game.moveStickHoldTimer) return;
-      clearTimeout(HexSnakeState.game.moveStickHoldTimer);
-      HexSnakeState.game.moveStickHoldTimer = null;
+      if (!GameRuntimeState.moveStickHoldTimer) return;
+      clearTimeout(GameRuntimeState.moveStickHoldTimer);
+      GameRuntimeState.moveStickHoldTimer = null;
     }
 
     function clearMoveStickRebound() {
-      if (HexSnakeState.game.moveStickReboundTimer) {
-        clearTimeout(HexSnakeState.game.moveStickReboundTimer);
-        HexSnakeState.game.moveStickReboundTimer = null;
+      if (GameRuntimeState.moveStickReboundTimer) {
+        clearTimeout(GameRuntimeState.moveStickReboundTimer);
+        GameRuntimeState.moveStickReboundTimer = null;
       }
       Dom.stick.classList.remove("is-rebounding");
     }
 
     function clearAttackPointerLongPressTimer() {
-      if (!HexSnakeState.game.attackPointerLongPressTimer) return;
-      clearTimeout(HexSnakeState.game.attackPointerLongPressTimer);
-      HexSnakeState.game.attackPointerLongPressTimer = null;
+      if (!GameRuntimeState.attackPointerLongPressTimer) return;
+      clearTimeout(GameRuntimeState.attackPointerLongPressTimer);
+      GameRuntimeState.attackPointerLongPressTimer = null;
     }
 
     function pointerNearMoveCenter(event) {
@@ -3348,24 +3348,24 @@
 
     function engageMoveStick(event) {
       clearMoveStickHoldTimer();
-      if (HexSnakeState.game.movePointerId !== event.pointerId || HexSnakeState.game.moveStickEngaged) return;
-      HexSnakeState.game.moveStickEngaged = true;
+      if (GameRuntimeState.movePointerId !== event.pointerId || GameRuntimeState.moveStickEngaged) return;
+      GameRuntimeState.moveStickEngaged = true;
       Dom.joyZone.querySelector(".joystick").classList.add("locked");
       moveStick(event);
     }
 
     function releaseMoveStick(event) {
       clearMoveStickHoldTimer();
-      if (HexSnakeState.game.moveStickLocked) return;
-      HexSnakeState.game.movePointerId = null;
-      HexSnakeState.game.moveStickEngaged = false;
+      if (GameRuntimeState.moveStickLocked) return;
+      GameRuntimeState.movePointerId = null;
+      GameRuntimeState.moveStickEngaged = false;
       Dom.joyZone.querySelector(".joystick").classList.remove("locked");
       setDirectionButtonHighlight(null);
       Dom.stick.classList.add("is-rebounding");
       Dom.stick.style.transform = "translate(0, 0)";
-      if (HexSnakeState.game.moveStickReboundTimer) clearTimeout(HexSnakeState.game.moveStickReboundTimer);
-      HexSnakeState.game.moveStickReboundTimer = setTimeout(() => {
-        HexSnakeState.game.moveStickReboundTimer = null;
+      if (GameRuntimeState.moveStickReboundTimer) clearTimeout(GameRuntimeState.moveStickReboundTimer);
+      GameRuntimeState.moveStickReboundTimer = setTimeout(() => {
+        GameRuntimeState.moveStickReboundTimer = null;
         Dom.stick.classList.remove("is-rebounding");
       }, 180);
     }
