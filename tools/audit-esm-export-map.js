@@ -888,6 +888,14 @@ expectSliceExcludes(
   ["HexSnakeState.", "HexSnakeUI."]
 );
 
+expectSliceExcludes(
+  "src/game.js",
+  "reset best time / settings action button alias slice",
+  "Dom.resetBestTimeButton.addEventListener",
+  "function defaultPlayerAttackTarget",
+  ["HexSnakeState.", "HexSnakeUI."]
+);
+
 const docText = read("doc/es-module-export-map.md");
 [
   "src/platform/web.js",

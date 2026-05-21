@@ -4552,13 +4552,13 @@
     });
 
     Dom.resetBestTimeButton.addEventListener("click", () => {
-      HexSnakeState.game.bestTotalMs = 0;
+      GameRuntimeState.bestTotalMs = 0;
       GameStorage.set("hexSnakeBestTotalMs", "0");
       updateHud();
     });
 
     Dom.realModeButton.addEventListener("click", () => {
-      if (HexSnakeState.game.running) return;
+      if (GameRuntimeState.running) return;
       setGmMode(true);
       resetGmParameters();
       applyGmSettingsChanged({ presetMode: "real" });
@@ -4566,39 +4566,39 @@
     });
 
     Dom.midGameModeButton.addEventListener("click", () => {
-      if (HexSnakeState.game.running) return;
+      if (GameRuntimeState.running) return;
       applyMidGameModePreset();
       applyGmSettingsChanged({ presetMode: "mid" });
       refreshGmPreview();
     });
 
     Dom.ultimateModeButton.addEventListener("click", () => {
-      if (HexSnakeState.game.running) return;
+      if (GameRuntimeState.running) return;
       applyUltimateModePreset();
       applyGmSettingsChanged({ presetMode: "battle" });
       refreshGmPreview();
     });
 
     Dom.lateGameModeButton.addEventListener("click", () => {
-      if (HexSnakeState.game.running) return;
+      if (GameRuntimeState.running) return;
       applyLateGameModePreset();
       applyGmSettingsChanged({ presetMode: "late" });
       refreshGmPreview();
     });
 
     Dom.resetSettingsButton.addEventListener("click", () => {
-      if (HexSnakeState.game.running) return;
-      setComputerDifficulty(HexSnakeState.config.defaultSettings.computerDifficulty);
-      setGmMode(HexSnakeState.config.defaultSettings.gmMode);
+      if (GameRuntimeState.running) return;
+      setComputerDifficulty(GameConfig.defaultSettings.computerDifficulty);
+      setGmMode(GameConfig.defaultSettings.gmMode);
       resetGmParameters();
       applyGmSettingsChanged({ presetMode: "real" });
-      HexSnakeState.game.playerCharacterId = HexSnakeState.config.defaultSettings.playerCharacterId;
-      HexSnakeState.game.computerCharacterId = HexSnakeState.config.defaultSettings.computerCharacterId;
-      HexSnakeState.game.playerCharacterChoice = HexSnakeState.game.playerCharacterId;
-      HexSnakeState.game.computerCharacterChoice = HexSnakeState.game.computerCharacterId;
+      GameRuntimeState.playerCharacterId = GameConfig.defaultSettings.playerCharacterId;
+      GameRuntimeState.computerCharacterId = GameConfig.defaultSettings.computerCharacterId;
+      GameRuntimeState.playerCharacterChoice = GameRuntimeState.playerCharacterId;
+      GameRuntimeState.computerCharacterChoice = GameRuntimeState.computerCharacterId;
       syncCharacterInputs();
       saveCharacterChoices();
-      HexSnakeState.game.keybinds = structuredClone(HexSnakeState.config.defaultKeybinds);
+      GameRuntimeState.keybinds = structuredClone(GameConfig.defaultKeybinds);
       saveKeybinds();
       applyKeybinds();
       setLeftHandMode(false);
@@ -4612,7 +4612,7 @@
       Dom.overlayTitle.textContent = "已回到預設值";
       Dom.overlayText.textContent = "一般設定已恢復預設，GM 設定維持不變。";
       Dom.startButton.textContent = "開始";
-      HexSnakeUI.renderIntroPortraits(true);
+      GameUI.renderIntroPortraits(true);
       Dom.overlay.classList.add("show");
     });
 
