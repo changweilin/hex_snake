@@ -43,7 +43,7 @@ Shared order:
 | A. Loader plan gate | 文件化 modes、fallback、source order，並讓 `audit:esm-map` 檢查本文件存在關鍵契約 | `npm.cmd run audit:esm-map` |
 | B. Module shadow entry | 已新增 `src/main-module.js` 與 `?hexSnakeLoader=module-shadow`，只載入 shadow contract 並回報 ready，不啟動 gameplay | `audit:esm-map`、`build`、`test:smoke` |
 | C. Dual-mode runtime / registry exports | platform/runtime、state registry、DOM facade、`uiCore` shell、network/about leaf services、catalog/media/stats shell、runtime helper shell 與 `gameShell` 已具備正式 named exports；module shadow 已 import shell，且不呼叫 `bootstrapGame()` | `audit:esm-map`、`audit:globals` 不上升 |
-| D. Service module migration | 依 export map 順序讓 leaf services 與 runtime helpers 改成 explicit imports，legacy loader 仍可回退；`stats.js`、`about.js`、`network.js`、`audio.js`、`characters.js` 與 `replay.js` 已完成 dependency alias slices，集中 `Stats*` / `About*` / `Net*` / `Audio*` / `Character*` / `Replay*` aliases | build、quick、smoke、mobile、network、`audit:esm-map` |
+| D. Service module migration | 依 export map 順序讓 leaf services 與 runtime helpers 改成 explicit imports，legacy loader 仍可回退；`stats.js`、`about.js`、`network.js`、`audio.js`、`characters.js`、`replay.js` 與 `ai.js` 已完成 dependency alias slices，集中 `Stats*` / `About*` / `Net*` / `Audio*` / `Character*` / `Replay*` / `Ai*` aliases | build、quick、smoke、mobile、network、`audit:esm-map` |
 | E. Gameplay module bootstrap | `src/main-module.js` 已新增 `loadModuleGame()` 作為 module mode 唯一 bootstrap owner；`module-shadow` 仍只回報 contract；`test:module-loader` 已固定 source module / shadow 與 dist fallback checks；production strategy 已決定維持 `bundled-legacy-fallback` | `test:module-loader`、`check:assets`、release:check |
 
 ## Fallback Rules

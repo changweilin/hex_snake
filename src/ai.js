@@ -1,8 +1,9 @@
+    const AiRuntime = HexSnakeRuntime;
     const AiConfig = HexSnakeState.config;
     const AiState = HexSnakeState.game;
     const AiUI = HexSnakeUI;
-    const AiGame = HexSnakeUI.aiGame;
-    const AiStorage = HexSnakeRuntime.storage;
+    const AiGame = AiUI.aiGame;
+    const AiStorage = AiRuntime.storage;
 
     let wrappedDistanceBoardCache = null;
     let activeAiDecisionCache = null;
@@ -1536,7 +1537,7 @@
       updateAiVisibilityMemory
     });
 
-    Object.defineProperties(HexSnakeUI.ai, Object.getOwnPropertyDescriptors(HexSnakeAI));
+    Object.defineProperties(AiUI.ai, Object.getOwnPropertyDescriptors(HexSnakeAI));
 
 export {
   HexSnakeAI,
