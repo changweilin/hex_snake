@@ -3135,76 +3135,76 @@
 
     function loop(now) {
       if (GamePlatform.lifecycle.isPaused()) {
-        HexSnakeState.game.rafId = 0;
+        GameRuntimeState.rafId = 0;
         return;
       }
       updatePerfOverlay(GamePlatform.display.recordFrame(now || performance.now()));
-      if (!HexSnakeState.game.running) {
+      if (!GameRuntimeState.running) {
         const frameNow = now || performance.now();
-        const visualsActive = HexSnakeState.game.gameOverSettlementPending && advanceGameOverVisuals(frameNow);
+        const visualsActive = GameRuntimeState.gameOverSettlementPending && advanceGameOverVisuals(frameNow);
         GameRender.draw();
-        if (HexSnakeState.game.gameOverSettlementPending && HexSnakeState.game.gameOverLogoTransitionEndsAt) {
-          if (frameNow < HexSnakeState.game.gameOverLogoTransitionEndsAt) {
-            HexSnakeState.game.rafId = requestAnimationFrame(loop);
+        if (GameRuntimeState.gameOverSettlementPending && GameRuntimeState.gameOverLogoTransitionEndsAt) {
+          if (frameNow < GameRuntimeState.gameOverLogoTransitionEndsAt) {
+            GameRuntimeState.rafId = requestAnimationFrame(loop);
           } else {
             showGameOverSettlement();
           }
         } else if (visualsActive) {
-          HexSnakeState.game.rafId = requestAnimationFrame(loop);
-        } else if (HexSnakeState.game.gameOverSettlementPending) {
+          GameRuntimeState.rafId = requestAnimationFrame(loop);
+        } else if (GameRuntimeState.gameOverSettlementPending) {
           showGameOverSettlement();
         }
         return;
       }
-      if (!HexSnakeState.game.paused) {
-        const delta = HexSnakeState.game.lastTimerFrame ? now - HexSnakeState.game.lastTimerFrame : 0;
+      if (!GameRuntimeState.paused) {
+        const delta = GameRuntimeState.lastTimerFrame ? now - GameRuntimeState.lastTimerFrame : 0;
         const timeScale = isPlayerAutoControlActive() ? GameRuntimeState.computerBattleSpeed : 1;
-        HexSnakeState.game.totalElapsedMs += delta * timeScale;
-        HexSnakeState.game.lastFeedElapsedMs += delta * timeScale;
-        HexSnakeState.game.lastTimerFrame = now;
-        if (HexSnakeState.game.totalElapsedMs >= HexSnakeState.config.maxMatchMs) {
-          HexSnakeState.game.totalElapsedMs = HexSnakeState.config.maxMatchMs;
+        GameRuntimeState.totalElapsedMs += delta * timeScale;
+        GameRuntimeState.lastFeedElapsedMs += delta * timeScale;
+        GameRuntimeState.lastTimerFrame = now;
+        if (GameRuntimeState.totalElapsedMs >= GameConfig.maxMatchMs) {
+          GameRuntimeState.totalElapsedMs = GameConfig.maxMatchMs;
           endGame(true, true);
           return;
         }
       } else {
-        HexSnakeState.game.lastTimerFrame = now;
+        GameRuntimeState.lastTimerFrame = now;
       }
-      if (!HexSnakeState.game.paused) {
+      if (!GameRuntimeState.paused) {
         refreshSandwormProtections(now);
         resolveProjectiles(now);
         resolveHazards(now);
         refreshSandwormProtections(now);
         GameAI.updateAiVisibilityMemory(now);
       }
-      if (HexSnakeState.game.running && !HexSnakeState.game.paused) {
-        const playerDue = !HexSnakeUI.isMovementStunned("player", now) && now - HexSnakeState.game.lastPlayerStep >= HexSnakeUI.moveIntervalFor("player", now);
-        const computerDue = !HexSnakeUI.isMovementStunned("computer", now) && now - HexSnakeState.game.lastComputerStep >= HexSnakeUI.moveIntervalFor("computer", now);
+      if (GameRuntimeState.running && !GameRuntimeState.paused) {
+        const playerDue = !GameUI.isMovementStunned("player", now) && now - GameRuntimeState.lastPlayerStep >= GameUI.moveIntervalFor("player", now);
+        const computerDue = !GameUI.isMovementStunned("computer", now) && now - GameRuntimeState.lastComputerStep >= GameUI.moveIntervalFor("computer", now);
         if (playerDue && computerDue) {
-          const playerDueAt = HexSnakeState.game.lastPlayerStep + HexSnakeUI.moveIntervalFor("player", now);
-          const computerDueAt = HexSnakeState.game.lastComputerStep + HexSnakeUI.moveIntervalFor("computer", now);
+          const playerDueAt = GameRuntimeState.lastPlayerStep + GameUI.moveIntervalFor("player", now);
+          const computerDueAt = GameRuntimeState.lastComputerStep + GameUI.moveIntervalFor("computer", now);
           const headCollisionOrder = Math.abs(playerDueAt - computerDueAt) < 0.001
             ? "simultaneous"
             : playerDueAt < computerDueAt ? "playerFirst" : "computerFirst";
           step(headCollisionOrder, now);
-          HexSnakeState.game.lastPlayerStep = now;
-          HexSnakeState.game.lastComputerStep = now;
+          GameRuntimeState.lastPlayerStep = now;
+          GameRuntimeState.lastComputerStep = now;
         } else if (playerDue) {
           stepPlayerOnly(now);
-          HexSnakeState.game.lastPlayerStep = now;
+          GameRuntimeState.lastPlayerStep = now;
         } else if (computerDue) {
           stepComputerOnly(now);
-          HexSnakeState.game.lastComputerStep = now;
+          GameRuntimeState.lastComputerStep = now;
         }
       }
-      HexSnakeState.game.blasts = HexSnakeState.game.blasts.filter(blast => now <= blast.endAt);
-      HexSnakeState.game.hazards = HexSnakeState.game.hazards.filter(hazard => now <= hazard.endAt);
+      GameRuntimeState.blasts = GameRuntimeState.blasts.filter(blast => now <= blast.endAt);
+      GameRuntimeState.hazards = GameRuntimeState.hazards.filter(hazard => now <= hazard.endAt);
       updateHudThrottled(now);
       recordReplaySnapshotThrottled(now);
       broadcastNetworkSnapshot(now);
       updateAutoBattleControls();
       GameRender.draw();
-      HexSnakeState.game.rafId = requestAnimationFrame(loop);
+      GameRuntimeState.rafId = requestAnimationFrame(loop);
     }
 
     function pointerToDirection(event, rect) {
