@@ -904,6 +904,14 @@ expectSliceExcludes(
   ["HexSnakeState.", "HexSnakeUI."]
 );
 
+expectSliceExcludes(
+  "src/game.js",
+  "rules / tutorial launcher alias slice",
+  "Dom.rulesButton.addEventListener",
+  "Dom.keybindInputs.forEach",
+  ["HexSnakeState.", "HexSnakeUI."]
+);
+
 const docText = read("doc/es-module-export-map.md");
 [
   "src/platform/web.js",

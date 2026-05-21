@@ -4726,16 +4726,16 @@
     Dom.lowPowerModeInput.addEventListener("change", () => setLowPowerPreference(Dom.lowPowerModeInput.checked));
     Dom.perfStatsToggle.addEventListener("change", () => setPerfStatsVisible(Dom.perfStatsToggle.checked));
     Dom.surrenderButton.addEventListener("click", surrenderGame);
-    Dom.rulesButton.addEventListener("click", HexSnakeUI.openRulesModal);
-    Dom.rulesCloseButton.addEventListener("click", HexSnakeUI.closeRulesModal);
+    Dom.rulesButton.addEventListener("click", GameUI.openRulesModal);
+    Dom.rulesCloseButton.addEventListener("click", GameUI.closeRulesModal);
     Dom.rulesContent.addEventListener("click", event => {
-      if (event.target.closest("[data-open-tutorial]")) HexSnakeUI.showTutorial(0);
+      if (event.target.closest("[data-open-tutorial]")) GameUI.showTutorial(0);
     });
     Dom.rulesContent.addEventListener("keydown", event => {
       const tutorialCard = event.target.closest("[data-open-tutorial]");
       if (!tutorialCard || (event.key !== "Enter" && event.key !== " ")) return;
       event.preventDefault();
-      HexSnakeUI.showTutorial(0);
+      GameUI.showTutorial(0);
     });
     Dom.replayArchiveButton.addEventListener("click", GameReplay.openModal);
     Dom.settingsReplayButton.addEventListener("click", GameReplay.openModal);
@@ -4816,7 +4816,7 @@
     });
     Dom.replayExitButton.addEventListener("click", GameReplay.exitPlayback);
     Dom.rulesModal.addEventListener("pointerdown", event => {
-      if (event.target === Dom.rulesModal) HexSnakeUI.closeRulesModal();
+      if (event.target === Dom.rulesModal) GameUI.closeRulesModal();
     });
     Dom.rulesModal.querySelector(".rules-dialog").addEventListener("pointerdown", event => event.stopPropagation());
 
