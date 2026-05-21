@@ -2766,26 +2766,26 @@
     }
 
     function advanceGameOverVisuals(now) {
-      const landed = HexSnakeState.game.projectiles.filter(projectile => now >= projectile.impactAt);
+      const landed = GameRuntimeState.projectiles.filter(projectile => now >= projectile.impactAt);
       if (landed.length) {
-        HexSnakeState.game.projectiles = HexSnakeState.game.projectiles.filter(projectile => now < projectile.impactAt);
+        GameRuntimeState.projectiles = GameRuntimeState.projectiles.filter(projectile => now < projectile.impactAt);
         landed.forEach(projectile => addProjectileImpactVisual(projectile, now));
       }
-      HexSnakeState.game.blasts = HexSnakeState.game.blasts.filter(blast => now <= blast.endAt);
-      HexSnakeState.game.hazards = HexSnakeState.game.hazards.filter(hazard => now <= hazard.endAt);
-      HexSnakeState.game.hazards.forEach(hazard => {
+      GameRuntimeState.blasts = GameRuntimeState.blasts.filter(blast => now <= blast.endAt);
+      GameRuntimeState.hazards = GameRuntimeState.hazards.filter(hazard => now <= hazard.endAt);
+      GameRuntimeState.hazards.forEach(hazard => {
         if (now < hazard.startedAt || hazard.shaken) return;
         GameRender.triggerBoardShake(hazard.visualType || attackVisualType(hazard.owner, "big"), now);
         hazard.shaken = true;
       });
-      const projectilesActive = HexSnakeState.game.projectiles.some(projectile => now < projectile.impactAt);
-      const blastsActive = HexSnakeState.game.blasts.some(blast => now <= blast.endAt);
-      const continuousSkillVisualsActive = HexSnakeState.game.hazards.some(hazard => now <= hazard.endAt);
-      const boardShakeActive = now < HexSnakeState.game.boardShakeUntil;
+      const projectilesActive = GameRuntimeState.projectiles.some(projectile => now < projectile.impactAt);
+      const blastsActive = GameRuntimeState.blasts.some(blast => now <= blast.endAt);
+      const continuousSkillVisualsActive = GameRuntimeState.hazards.some(hazard => now <= hazard.endAt);
+      const boardShakeActive = now < GameRuntimeState.boardShakeUntil;
       if (
         continuousSkillVisualsActive
-        && HexSnakeState.game.gameOverContinuousVisualDeadlineAt
-        && now >= HexSnakeState.game.gameOverContinuousVisualDeadlineAt
+        && GameRuntimeState.gameOverContinuousVisualDeadlineAt
+        && now >= GameRuntimeState.gameOverContinuousVisualDeadlineAt
         && !projectilesActive
         && !blastsActive
         && !boardShakeActive
