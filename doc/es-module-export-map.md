@@ -4,7 +4,7 @@
 
 ## 目的
 
-這份文件固定正式 ESM split 前的 registry 初始化順序與 export surface。現階段仍使用 legacy concatenated loader；正式 module loader 開始前，必須先讓這張表與 `npm.cmd run audit:esm-map` 同步通過。
+這份文件固定正式 ESM split 前的 registry 初始化順序與 export surface。現階段仍使用 legacy concatenated loader；正式 module loader 開始前，必須先讓這張表、`doc/es-module-loader-plan.md` 與 `npm.cmd run audit:esm-map` 同步通過。
 
 ## Loader Order
 
@@ -63,3 +63,4 @@ The audit checks:
 - Required `window.HexSnake*` compatibility registrations.
 - Required registry extension points such as `HexSnakeUI.audio`, `HexSnakeUI.aiGame`, and `HexSnakeRender`.
 - This file mentions every source and public surface in the current map.
+- `doc/es-module-loader-plan.md` still documents the loader modes, fallback rules, source order, and next module-shadow step.

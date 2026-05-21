@@ -138,6 +138,25 @@ const docText = read("doc/es-module-export-map.md");
   if (!docText.includes(token)) fail(`doc/es-module-export-map.md is missing ${token}`);
 });
 
+const loaderPlanText = read("doc/es-module-loader-plan.md");
+[
+  "legacy",
+  "module-shadow",
+  "module",
+  "fallback",
+  "src/main-module.js",
+  "src/platform/web.js",
+  "src/platform/mobile.js",
+  "src/state.js",
+  "src/dom.js",
+  "src/ui.js",
+  "src/game.js",
+  "audit:esm-map",
+  "Next AI Task"
+].forEach(token => {
+  if (!loaderPlanText.includes(token)) fail(`doc/es-module-loader-plan.md is missing ${token}`);
+});
+
 if (errors.length) {
   console.error("ESM export map audit failed:");
   errors.forEach(error => console.error(`- ${error}`));
