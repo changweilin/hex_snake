@@ -4929,30 +4929,30 @@
 
     Dom.startButton.addEventListener("click", () => {
       if (GameReplay.isPlaybackMode()) return;
-      if (!HexSnakeUI.hasCharacterCatalog()) {
+      if (!GameUI.hasCharacterCatalog()) {
         window.location.reload();
         return;
       }
-      if (HexSnakeState.game.paused && HexSnakeState.game.running && !HexSnakeState.game.gameOver) {
-        HexSnakeState.game.paused = false;
+      if (GameRuntimeState.paused && GameRuntimeState.running && !GameRuntimeState.gameOver) {
+        GameRuntimeState.paused = false;
         setStatus("對戰中：吃食物累積能量，集滿可獲得炸彈。");
         Dom.overlay.classList.remove("show");
-        HexSnakeUI.showCharacterStage({ rebuild: false, "overlay": false });
-        HexSnakeState.game.lastPlayerStep = performance.now();
-        HexSnakeState.game.lastComputerStep = HexSnakeState.game.lastPlayerStep;
-        HexSnakeState.game.lastTimerFrame = HexSnakeState.game.lastPlayerStep;
+        GameUI.showCharacterStage({ rebuild: false, "overlay": false });
+        GameRuntimeState.lastPlayerStep = performance.now();
+        GameRuntimeState.lastComputerStep = GameRuntimeState.lastPlayerStep;
+        GameRuntimeState.lastTimerFrame = GameRuntimeState.lastPlayerStep;
         updateAutoBattleControls();
         return;
       }
-      if (HexSnakeState.game.gameOver) {
+      if (GameRuntimeState.gameOver) {
         if (!canRestartAfterGameOver()) return;
         returnToStartScreen();
         return;
       }
       Dom.overlayTitle.textContent = "準備開局";
-      Dom.overlayText.textContent = `每吃 1 個食物獲得 2 點能量，集滿 ${HexSnakeState.config.attackNeedTotal} 點獲得 1 枚炸彈，最多 ${HexSnakeState.config.maxAmmo} 枚；HP 上限為（蛇長 + 1）× ${HexSnakeState.config.hpPerSnakeUnit}；能量與炸彈都滿時，施放消耗炸彈的招式會立刻把滿能量轉為 1 枚炸彈；小招消耗目前最高的食物庫存 ${HexSnakeState.config.smallAttackFoodCost} 點與 ${HexSnakeState.config.smallAttackBombCost} 枚炸彈，大招消耗 ${HexSnakeState.config.bigAttackBombCost} 枚炸彈與四種庫存各 2 點。`;
+      Dom.overlayText.textContent = `每吃 1 個食物獲得 2 點能量，集滿 ${GameConfig.attackNeedTotal} 點獲得 1 枚炸彈，最多 ${GameConfig.maxAmmo} 枚；HP 上限為（蛇長 + 1）× ${GameConfig.hpPerSnakeUnit}；能量與炸彈都滿時，施放消耗炸彈的招式會立刻把滿能量轉為 1 枚炸彈；小招消耗目前最高的食物庫存 ${GameConfig.smallAttackFoodCost} 點與 ${GameConfig.smallAttackBombCost} 枚炸彈，大招消耗 ${GameConfig.bigAttackBombCost} 枚炸彈與四種庫存各 2 點。`;
       Dom.startButton.textContent = "開始";
-      HexSnakeUI.setOverlayChromeVisible(true);
+      GameUI.setOverlayChromeVisible(true);
       beginStartLogoCountdown();
     });
 

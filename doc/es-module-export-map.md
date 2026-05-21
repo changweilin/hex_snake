@@ -148,6 +148,7 @@ The audit checks:
 - `src/game.js` rules / tutorial launcher slice uses `GameUI` local alias instead of direct `HexSnakeUI.` reads.
 - `src/game.js` keybind input slice uses `GameRuntimeState` local alias instead of direct `HexSnakeState.` reads.
 - `src/game.js` intro / tutorial interaction slice uses `GamePresentationState` / `GameUI` local aliases instead of direct `HexSnakeState.` / `HexSnakeUI.` reads.
+- `src/game.js` start button slice uses `GameRuntimeState` / `GameConfig` / `GameUI` local aliases instead of direct `HexSnakeState.` / `HexSnakeUI.` reads.
 - This file mentions every source and public surface in the current map.
 - `doc/es-module-loader-plan.md` still documents the loader modes, fallback rules, source order, production strategy, and next Phase D step.
 - `doc/es-module-core-bootstrap-checklist.md` still documents the `ui.js` / `game.js` blockers, explicit import surface, bootstrap ownership, preflight gates, and production fallback strategy.
