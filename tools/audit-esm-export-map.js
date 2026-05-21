@@ -61,10 +61,42 @@ expectEqual(
 );
 
 expectEqual(
+  "src/main-module.js shadow source order",
+  parseConstArray(read("src/main-module.js"), "moduleShadowSourceOrder"),
+  ["src/platform/web.js", ...sharedOrder]
+);
+
+expectEqual(
   "build.js legacySources",
   parseConstArray(read("build.js"), "legacySources"),
   ["platformSource", ...sharedOrder]
 );
+
+const mainSource = read("src/main.js");
+[
+  "hexSnakeLoader",
+  "module-shadow",
+  "./main-module.js",
+  "loadModuleShadowEntry",
+  "Native module loader is not implemented yet"
+].forEach(token => {
+  if (!mainSource.includes(token)) fail(`src/main.js is missing ${token}`);
+});
+
+const mainModuleSource = read("src/main-module.js");
+[
+  "module-shadow",
+  "bootstrapsGameplay: false",
+  "loadModuleShadow",
+  "moduleShadowContract",
+  "window.__HEX_SNAKE_MODULE_SHADOW__"
+].forEach(token => {
+  if (!mainModuleSource.includes(token)) fail(`src/main-module.js is missing ${token}`);
+});
+
+if (/\bimport\s*(?:\(|[\s{*])/.test(mainModuleSource)) {
+  fail("src/main-module.js must not import gameplay files during module-shadow phase.");
+}
 
 expectToken(
   "build.js",
@@ -125,6 +157,7 @@ const docText = read("doc/es-module-export-map.md");
   "src/ai.js",
   "src/render.js",
   "src/game.js",
+  "src/main-module.js",
   "HexSnakeRuntime",
   "HexSnakeState",
   "HexSnakeDOM",
@@ -145,6 +178,7 @@ const loaderPlanText = read("doc/es-module-loader-plan.md");
   "module",
   "fallback",
   "src/main-module.js",
+  "hexSnakeLoader=module-shadow",
   "src/platform/web.js",
   "src/platform/mobile.js",
   "src/state.js",

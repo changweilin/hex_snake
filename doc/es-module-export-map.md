@@ -6,6 +6,10 @@
 
 這份文件固定正式 ESM split 前的 registry 初始化順序與 export surface。現階段仍使用 legacy concatenated loader；正式 module loader 開始前，必須先讓這張表、`doc/es-module-loader-plan.md` 與 `npm.cmd run audit:esm-map` 同步通過。
 
+## Shadow Entry
+
+`src/main-module.js` 是目前唯一的 native module shadow entry。local dev 可用 `?hexSnakeLoader=module-shadow` 觸發它；它只回報 `module-shadow` contract，不 import 尚未 dual-mode 的 gameplay files，也不啟動 bootstrap。
+
 ## Loader Order
 
 | Order | Web source | Mobile source | Creates / extends | Downstream needs |

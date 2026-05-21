@@ -187,6 +187,30 @@ async function loadLegacyModules() {
   }
 }
 
+function selectedLoaderMode() {
+  const params = new URLSearchParams(window.location.search);
+  return (params.get("hexSnakeLoader") || "legacy").trim().toLowerCase();
+}
+
+async function loadModuleShadowEntry() {
+  if (window.__HEX_SNAKE_BUNDLED_LEGACY__) {
+    return loadLegacyModules();
+  }
+
+  pageLoadingProgress.set(8, "Preparing module shadow");
+  const moduleShadow = await import("./main-module.js");
+  await moduleShadow.loadModuleShadow();
+  pageLoadingProgress.set(96, "Module shadow ready");
+}
+
+async function loadAppModules() {
+  const mode = selectedLoaderMode();
+  if (mode === "legacy") return loadLegacyModules();
+  if (mode === "module-shadow") return loadModuleShadowEntry();
+  if (mode === "module") throw new Error("Native module loader is not implemented yet. Use hexSnakeLoader=module-shadow for the shadow entry.");
+  throw new Error(`Unknown Hex Snake loader mode: ${mode}`);
+}
+
 function showBootError(error) {
   console.error(error);
   const message = document.createElement("pre");
@@ -195,7 +219,7 @@ function showBootError(error) {
   document.body.appendChild(message);
 }
 
-loadLegacyModules()
+loadAppModules()
   .then(() => {
     if (document.readyState === "complete") {
       pageLoadingProgress.finish();

@@ -13,7 +13,7 @@
 | Mode | Trigger | Behavior | Status |
 | --- | --- | --- | --- |
 | `legacy` | default | 使用現有 concatenated Blob loader；local web 載入 `src/platform/web.js`，build 依 target 換成 web/mobile platform source | 現行預設 |
-| `module-shadow` | future query flag / build flag | 只驗證 native module entry 能 import registry/runtime shell，不啟動 gameplay bootstrap | 下一批實作候選 |
+| `module-shadow` | `?hexSnakeLoader=module-shadow` in local dev | 只驗證 native module entry 能載入 shadow contract，不啟動 gameplay bootstrap | 已建立 `src/main-module.js` |
 | `module` | future query flag / build flag | 直接 import ESM entry，由 entry 依 export map 初始化 runtime、state、DOM、services、render、game | dual-mode modules 完成後才啟用 |
 
 ## Source Order Contract
@@ -41,7 +41,7 @@ Shared order:
 | Phase | Work | Gate |
 | --- | --- | --- |
 | A. Loader plan gate | 文件化 modes、fallback、source order，並讓 `audit:esm-map` 檢查本文件存在關鍵契約 | `npm.cmd run audit:esm-map` |
-| B. Module shadow entry | 新增 module entry shell，例如 `src/main-module.js`，只 import dual-mode registry/runtime shell 並回報 ready，不啟動 gameplay | `audit:esm-map`、`build`、`test:smoke` |
+| B. Module shadow entry | 已新增 `src/main-module.js` 與 `?hexSnakeLoader=module-shadow`，只載入 shadow contract 並回報 ready，不啟動 gameplay | `audit:esm-map`、`build`、`test:smoke` |
 | C. Dual-mode runtime / registry exports | 讓 platform/runtime、state registries、DOM facade 具備正式 `export` 形狀，同時保留 `window.HexSnake*` compatibility | `audit:esm-map`、`audit:globals` 不上升 |
 | D. Service module migration | 依 export map 順序讓 leaf services 與 runtime helpers 改成 explicit imports，legacy loader 仍可回退 | build、quick、smoke、mobile |
 | E. Gameplay module bootstrap | `src/game.js` 或新 bootstrap entry 接管 module mode；legacy loader 降為 fallback | release:check |
@@ -55,4 +55,4 @@ Shared order:
 
 ## Next AI Task
 
-下一個 AI 可直接處理項目是 Phase B：新增 module shadow entry 與最小 loader flag 設計，但不 import 尚未 dual-mode 的 gameplay files。
+下一個 AI 可直接處理項目是 Phase C：讓 platform/runtime 與 state registry 具備 dual-mode export/import 形狀，同時保留 legacy window compatibility。
