@@ -1371,82 +1371,82 @@
     }
 
     function resetAutoBattleStepTimers() {
-      HexSnakeState.game.lastPlayerStep = performance.now();
-      HexSnakeState.game.lastComputerStep = HexSnakeState.game.lastPlayerStep;
-      HexSnakeState.game.lastTimerFrame = HexSnakeState.game.lastPlayerStep;
+      GameRuntimeState.lastPlayerStep = performance.now();
+      GameRuntimeState.lastComputerStep = GameRuntimeState.lastPlayerStep;
+      GameRuntimeState.lastTimerFrame = GameRuntimeState.lastPlayerStep;
     }
 
     function isPlayerAutoControlActive() {
-      return (HexSnakeState.game.computerBattleMode && !HexSnakeState.game.computerBattleManualOverride) || HexSnakeState.game.playerAutoMode;
+      return (GameRuntimeState.computerBattleMode && !GameRuntimeState.computerBattleManualOverride) || GameRuntimeState.playerAutoMode;
     }
 
     function isRelayModeAvailable() {
-      return HexSnakeState.game.computerBattleMode ? !HexSnakeState.game.computerBattleManualOverride : HexSnakeState.game.playerAutoMode;
+      return GameRuntimeState.computerBattleMode ? !GameRuntimeState.computerBattleManualOverride : GameRuntimeState.playerAutoMode;
     }
 
     function clearRelayRestartTimer() {
-      if (!HexSnakeState.game.relayRestartTimer) return;
-      clearTimeout(HexSnakeState.game.relayRestartTimer);
-      HexSnakeState.game.relayRestartTimer = null;
+      if (!GameRuntimeState.relayRestartTimer) return;
+      clearTimeout(GameRuntimeState.relayRestartTimer);
+      GameRuntimeState.relayRestartTimer = null;
     }
 
     function clearGameOverSettlementTimer() {
-      HexSnakeState.game.gameOverSettlementPending = false;
-      HexSnakeState.game.gameOverRelayStartOptions = null;
-      HexSnakeState.game.gameOverContinuousVisualDeadlineAt = 0;
-      HexSnakeState.game.gameOverLogoTransitionEndsAt = 0;
-      HexSnakeState.game.gameOverResultOwner = null;
-      HexSnakeState.game.gameOverPlayerLost = false;
-      HexSnakeState.game.gameOverComputerLost = false;
-      HexSnakeUI.clearLogoTransition();
+      GameRuntimeState.gameOverSettlementPending = false;
+      GameRuntimeState.gameOverRelayStartOptions = null;
+      GameRuntimeState.gameOverContinuousVisualDeadlineAt = 0;
+      GameRuntimeState.gameOverLogoTransitionEndsAt = 0;
+      GameRuntimeState.gameOverResultOwner = null;
+      GameRuntimeState.gameOverPlayerLost = false;
+      GameRuntimeState.gameOverComputerLost = false;
+      GameUI.clearLogoTransition();
     }
 
     function resetRelayScore() {
-      HexSnakeState.game.relayPlayerWins = 0;
-      HexSnakeState.game.relayComputerWins = 0;
-      HexSnakeState.game.relayDraws = 0;
+      GameRuntimeState.relayPlayerWins = 0;
+      GameRuntimeState.relayComputerWins = 0;
+      GameRuntimeState.relayDraws = 0;
     }
 
     function setRelayMode(enabled, resetScore = false, persist = true) {
-      if (persist) HexSnakeState.game.relayModePreference = Boolean(enabled);
-      const requestedRelayMode = persist ? HexSnakeState.game.relayModePreference : Boolean(enabled);
-      HexSnakeState.game.relayMode = requestedRelayMode && isRelayModeAvailable();
-      Dom.relayModeInput.checked = HexSnakeState.game.relayMode;
-      if (persist) GameStorage.set("hexSnakeRelayMode", HexSnakeState.game.relayModePreference ? "1" : "0");
+      if (persist) GameRuntimeState.relayModePreference = Boolean(enabled);
+      const requestedRelayMode = persist ? GameRuntimeState.relayModePreference : Boolean(enabled);
+      GameRuntimeState.relayMode = requestedRelayMode && isRelayModeAvailable();
+      Dom.relayModeInput.checked = GameRuntimeState.relayMode;
+      if (persist) GameStorage.set("hexSnakeRelayMode", GameRuntimeState.relayModePreference ? "1" : "0");
       if (resetScore) resetRelayScore();
-      if (!HexSnakeState.game.relayMode) clearRelayRestartTimer();
+      if (!GameRuntimeState.relayMode) clearRelayRestartTimer();
       updateRelayControls();
     }
 
     function updateRelayControls() {
-      const visible = !GameReplay.isPlaybackMode() && (HexSnakeState.game.relayMode || (HexSnakeState.game.running && !HexSnakeState.game.gameOver && isRelayModeAvailable()));
+      const visible = !GameReplay.isPlaybackMode() && (GameRuntimeState.relayMode || (GameRuntimeState.running && !GameRuntimeState.gameOver && isRelayModeAvailable()));
       Dom.relayPanel.hidden = !visible;
-      Dom.relayModeInput.checked = HexSnakeState.game.relayMode;
-      Dom.relayScore.innerHTML = `<span class="owner-name is-p1">P1</span> ${HexSnakeState.game.relayPlayerWins} 勝 / <span class="owner-name is-p2">P2</span> ${HexSnakeState.game.relayComputerWins} 勝 / 平手 ${HexSnakeState.game.relayDraws}`;
+      Dom.relayModeInput.checked = GameRuntimeState.relayMode;
+      Dom.relayScore.innerHTML = `<span class="owner-name is-p1">P1</span> ${GameRuntimeState.relayPlayerWins} 勝 / <span class="owner-name is-p2">P2</span> ${GameRuntimeState.relayComputerWins} 勝 / 平手 ${GameRuntimeState.relayDraws}`;
     }
 
     function updateAutoBattleControls() {
-      const visible = isPlayerAutoControlActive() && HexSnakeState.game.running && !HexSnakeState.game.gameOver && !GameReplay.isPlaybackMode();
+      const visible = isPlayerAutoControlActive() && GameRuntimeState.running && !GameRuntimeState.gameOver && !GameReplay.isPlaybackMode();
       Dom.autoBattlePanel.hidden = !visible;
       Dom.autoBattleSpeedSelect.textContent = autoBattleSpeedLabel(GameRuntimeState.computerBattleSpeed);
       Dom.autoBattleSpeedSelect.dataset.value = String(GameRuntimeState.computerBattleSpeed);
       Dom.autoBattleSpeedSelect.setAttribute("aria-valuenow", String(GameRuntimeState.computerBattleSpeed));
       Dom.autoBattleSpeedSelect.setAttribute("aria-valuetext", autoBattleSpeedLabel(GameRuntimeState.computerBattleSpeed));
       if (!visible) setAutoSpeedMenuOpen(false);
-      Dom.autoPauseButton.textContent = HexSnakeState.game.paused ? "▶" : "⏸";
-      Dom.autoPauseButton.setAttribute("aria-label", HexSnakeState.game.paused ? "播放" : "暫停");
-      Dom.autoPauseButton.title = HexSnakeState.game.paused ? "播放" : "暫停";
+      Dom.autoPauseButton.textContent = GameRuntimeState.paused ? "▶" : "⏸";
+      Dom.autoPauseButton.setAttribute("aria-label", GameRuntimeState.paused ? "播放" : "暫停");
+      Dom.autoPauseButton.title = GameRuntimeState.paused ? "播放" : "暫停";
       updateRelayControls();
       updateSkillPrepVisibility();
     }
 
     function setPlayerAutoMode(active, announce = true) {
-      const nextActive = Boolean(active) && HexSnakeState.game.running && !HexSnakeState.game.gameOver && !GameReplay.isPlaybackMode();
-      if (HexSnakeState.game.playerAutoMode === nextActive) return;
-      HexSnakeState.game.playerAutoMode = nextActive;
-      if (HexSnakeState.game.playerAutoMode) {
+      const nextActive = Boolean(active) && GameRuntimeState.running && !GameRuntimeState.gameOver && !GameReplay.isPlaybackMode();
+      if (GameRuntimeState.playerAutoMode === nextActive) return;
+      GameRuntimeState.playerAutoMode = nextActive;
+      if (GameRuntimeState.playerAutoMode) {
         setComputerBattleSpeed(GameStorage.get("hexSnakeAutoBattleSpeed"), false);
-        setRelayMode(HexSnakeState.game.relayModePreference, false, false);
+        setRelayMode(GameRuntimeState.relayModePreference, false, false);
         resetAutoBattleStepTimers();
         if (announce) setStatus("Auto 已開啟，電腦接手 P1 操作。");
       } else {
@@ -1460,11 +1460,11 @@
     }
 
     function setComputerBattleManualOverride(active) {
-      if (!HexSnakeState.game.computerBattleMode || !HexSnakeState.game.running || HexSnakeState.game.gameOver || GameReplay.isPlaybackMode()) return;
-      HexSnakeState.game.computerBattleManualOverride = Boolean(active);
-      if (!HexSnakeState.game.computerBattleManualOverride) {
+      if (!GameRuntimeState.computerBattleMode || !GameRuntimeState.running || GameRuntimeState.gameOver || GameReplay.isPlaybackMode()) return;
+      GameRuntimeState.computerBattleManualOverride = Boolean(active);
+      if (!GameRuntimeState.computerBattleManualOverride) {
         setComputerBattleSpeed(GameStorage.get("hexSnakeAutoBattleSpeed"), false);
-        setRelayMode(HexSnakeState.game.relayModePreference, false, false);
+        setRelayMode(GameRuntimeState.relayModePreference, false, false);
         resetAutoBattleStepTimers();
         setStatus("Auto 已開啟，電腦接手 P1 操作。");
       } else {

@@ -520,6 +520,14 @@ expectSliceExcludes(
   ["HexSnakeState.", "HexSnakeUI."]
 );
 
+expectSliceExcludes(
+  "src/game.js",
+  "auto battle relay control state alias slice",
+  "function resetAutoBattleStepTimers",
+  "let lastNetworkSnapshotAt",
+  ["HexSnakeState.", "HexSnakeUI."]
+);
+
 const docText = read("doc/es-module-export-map.md");
 [
   "src/platform/web.js",
