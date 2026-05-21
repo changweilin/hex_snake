@@ -1,7 +1,9 @@
-const HexSnakeAbout = (() => {
-  const AboutPlatform = HexSnakeRuntime.platform;
-  const AboutDom = HexSnakeDOM;
+const AboutRuntime = HexSnakeRuntime;
+const AboutPlatform = AboutRuntime.platform;
+const AboutUI = HexSnakeUI;
+const AboutDom = HexSnakeDOM;
 
+const HexSnakeAbout = (() => {
   function yesNo(value) {
     return value ? "是" : "否";
   }
@@ -62,7 +64,7 @@ const HexSnakeAbout = (() => {
   });
 })();
 
-Object.defineProperties(HexSnakeUI.about, Object.getOwnPropertyDescriptors(HexSnakeAbout));
+Object.defineProperties(AboutUI.about, Object.getOwnPropertyDescriptors(HexSnakeAbout));
 
 window.HexSnakeAbout = HexSnakeAbout;
 
