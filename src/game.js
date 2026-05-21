@@ -2294,33 +2294,33 @@
     }
 
     function launchAttack(owner, target, now, profile = "big", options = {}) {
-      const stock = owner === "player" ? HexSnakeState.game.playerStock : HexSnakeState.game.computerStock;
-      const lastAttack = HexSnakeUI.lastAttackMsFor(owner, profile);
-      const source = owner === "player" ? HexSnakeState.game.snake[0] : HexSnakeState.game.computerSnake[0];
-      const character = HexSnakeUI.characterFor(owner);
+      const stock = owner === "player" ? GameRuntimeState.playerStock : GameRuntimeState.computerStock;
+      const lastAttack = GameUI.lastAttackMsFor(owner, profile);
+      const source = owner === "player" ? GameRuntimeState.snake[0] : GameRuntimeState.computerSnake[0];
+      const character = GameUI.characterFor(owner);
       const isSmall = profile === "small";
-      if (!HexSnakeUI.canAttack(owner, profile)) return false;
-      if (now - lastAttack < HexSnakeUI.attackProfileCooldown(stock, profile, character.id)) return false;
+      if (!GameUI.canAttack(owner, profile)) return false;
+      if (now - lastAttack < GameUI.attackProfileCooldown(stock, profile, character.id)) return false;
       const stats = attackStats(stock, profile);
       const hitStunChances = attackHitStunChances(stock);
       const stunChance = hitStunChances.body;
       const vulnerabilityChance = !isSmall && character.id === "lobster"
         ? lobsterPalmVulnerabilityChance(stock)
         : 0;
-      HexSnakeUI.consumeAttackCost(owner, stock, profile);
+      GameUI.consumeAttackCost(owner, stock, profile);
       if (owner === "player") {
-        HexSnakeUI.setLastAttackMsFor(owner, profile, now);
-        HexSnakeState.game.playerBombFlashUntil = now + 1200;
+        GameUI.setLastAttackMsFor(owner, profile, now);
+        GameRuntimeState.playerBombFlashUntil = now + 1200;
       } else {
-        HexSnakeUI.setLastAttackMsFor(owner, profile, now);
-        HexSnakeState.game.computerBombFlashUntil = now + 1200;
+        GameUI.setLastAttackMsFor(owner, profile, now);
+        GameRuntimeState.computerBombFlashUntil = now + 1200;
       }
       GameAudio.playCharacter(owner, isSmall ? "small" : "big");
       const poseDuration = isSmall
         ? stats.delay
         : scheduleCharacterBigAttack(owner, character, source, target, now, stock, stunChance, { ...options, vulnerabilityChance, hitStunChances });
       if (isSmall) {
-        HexSnakeState.game.projectiles.push({
+        GameRuntimeState.projectiles.push({
           kind: "circle",
           owner,
           profile,
@@ -2336,8 +2336,8 @@
           headStunChance: hitStunChances.head
         });
       }
-      HexSnakeUI.setFighterPose(owner, "attack", Math.max(180, Math.min(poseDuration, 520)));
-      HexSnakeUI.showAttackCallout(owner, profile);
+      GameUI.setFighterPose(owner, "attack", Math.max(180, Math.min(poseDuration, 520)));
+      GameUI.showAttackCallout(owner, profile);
       updateHud();
       return true;
     }
