@@ -39,6 +39,20 @@ function expectToken(relativePath, token) {
   }
 }
 
+function expectSliceExcludes(relativePath, label, startToken, endToken, bannedTokens) {
+  const text = read(relativePath);
+  const start = text.indexOf(startToken);
+  const end = text.indexOf(endToken);
+  if (start === -1 || end === -1 || end <= start) {
+    fail(`${relativePath} could not locate ${label}.`);
+    return;
+  }
+  const slice = text.slice(start, end);
+  bannedTokens.forEach(token => {
+    if (slice.includes(token)) fail(`${relativePath} ${label} should use local aliases instead of ${token}`);
+  });
+}
+
 const sharedOrder = [
   "src/state.js",
   "src/dom.js",
@@ -317,6 +331,14 @@ requiredRegistrations.forEach(([relativePath, token]) => expectToken(relativePat
 if (read("src/ui.js").includes("HexSnakeUI.")) {
   fail("src/ui.js should use the UiRegistry alias for HexSnakeUI property reads.");
 }
+
+expectSliceExcludes(
+  "src/game.js",
+  "control profile alias slice",
+  "function renderControlProfiles",
+  "function loadSavedCharacterChoices",
+  ["HexSnakeState.", "HexSnakeUI."]
+);
 
 const docText = read("doc/es-module-export-map.md");
 [

@@ -177,11 +177,11 @@
       Dom.controlProfileSelect.value = selectedControlProfileId;
       const selected = selectedControlProfile();
       if (selected && !Dom.controlProfileNameInput.value.trim()) Dom.controlProfileNameInput.value = selected.name;
-      Dom.controlProfileApplyButton.disabled = !selectedControlProfileId || HexSnakeState.game.running;
-      Dom.controlProfileDeleteButton.disabled = !selectedControlProfileId || HexSnakeState.game.running;
-      Dom.controlProfileSaveButton.disabled = HexSnakeState.game.running;
-      Dom.controlProfileNameInput.disabled = HexSnakeState.game.running;
-      Dom.controlProfileSelect.disabled = HexSnakeState.game.running || !controlProfiles.length;
+      Dom.controlProfileApplyButton.disabled = !selectedControlProfileId || GameRuntimeState.running;
+      Dom.controlProfileDeleteButton.disabled = !selectedControlProfileId || GameRuntimeState.running;
+      Dom.controlProfileSaveButton.disabled = GameRuntimeState.running;
+      Dom.controlProfileNameInput.disabled = GameRuntimeState.running;
+      Dom.controlProfileSelect.disabled = GameRuntimeState.running || !controlProfiles.length;
       setControlProfileStatus(message, state);
     }
 
@@ -196,25 +196,25 @@
     }
 
     function applyProfileCharacterChoices(settings) {
-      HexSnakeState.game.playerCharacterChoice = normalizeCharacterChoice("player", settings.playerCharacterChoice);
-      HexSnakeState.game.computerCharacterChoice = normalizeCharacterChoice("computer", settings.computerCharacterChoice);
-      if (HexSnakeUI.isRandomCharacterChoiceId(HexSnakeState.game.playerCharacterChoice)) {
-        HexSnakeUI.ensureStartLogoRandomCharacterId("player");
+      GameRuntimeState.playerCharacterChoice = normalizeCharacterChoice("player", settings.playerCharacterChoice);
+      GameRuntimeState.computerCharacterChoice = normalizeCharacterChoice("computer", settings.computerCharacterChoice);
+      if (GameUI.isRandomCharacterChoiceId(GameRuntimeState.playerCharacterChoice)) {
+        GameUI.ensureStartLogoRandomCharacterId("player");
       } else {
-        HexSnakeState.game.playerCharacterId = HexSnakeUI.hasCharacterId(HexSnakeState.game.playerCharacterChoice) ? HexSnakeState.game.playerCharacterChoice : HexSnakeState.config.defaultSettings.playerCharacterId;
-        HexSnakeUI.clearStartLogoRandomCharacterId("player");
+        GameRuntimeState.playerCharacterId = GameUI.hasCharacterId(GameRuntimeState.playerCharacterChoice) ? GameRuntimeState.playerCharacterChoice : GameConfig.defaultSettings.playerCharacterId;
+        GameUI.clearStartLogoRandomCharacterId("player");
       }
-      if (HexSnakeUI.isRandomCharacterChoiceId(HexSnakeState.game.computerCharacterChoice)) {
-        HexSnakeUI.ensureStartLogoRandomCharacterId("computer");
+      if (GameUI.isRandomCharacterChoiceId(GameRuntimeState.computerCharacterChoice)) {
+        GameUI.ensureStartLogoRandomCharacterId("computer");
       } else {
-        HexSnakeState.game.computerCharacterId = HexSnakeUI.hasCharacterId(HexSnakeState.game.computerCharacterChoice) ? HexSnakeState.game.computerCharacterChoice : HexSnakeState.config.defaultSettings.computerCharacterId;
-        HexSnakeUI.clearStartLogoRandomCharacterId("computer");
+        GameRuntimeState.computerCharacterId = GameUI.hasCharacterId(GameRuntimeState.computerCharacterChoice) ? GameRuntimeState.computerCharacterChoice : GameConfig.defaultSettings.computerCharacterId;
+        GameUI.clearStartLogoRandomCharacterId("computer");
       }
       syncCharacterInputs();
       saveCharacterChoices();
-      HexSnakeUI.preloadPortraitsFor("player");
-      HexSnakeUI.preloadPortraitsFor("computer");
-      HexSnakeUI.buildCharacterStage();
+      GameUI.preloadPortraitsFor("player");
+      GameUI.preloadPortraitsFor("computer");
+      GameUI.buildCharacterStage();
     }
 
     function applyProfileGameSettings(settings) {
@@ -229,8 +229,8 @@
       setInitialLength(nextSettings.initialLength);
       setInitialEnergy(nextSettings.initialEnergy);
       setInitialBombs(nextSettings.initialBombs);
-      HexSnakeState.config.foodTypes.forEach(type => setInitialStock(type.id, nextSettings.initialStock[type.id]));
-      HexSnakeState.game.gmPresetMode = normalizeGmPresetMode(nextSettings.gmPresetMode);
+      GameConfig.foodTypes.forEach(type => setInitialStock(type.id, nextSettings.initialStock[type.id]));
+      GameRuntimeState.gmPresetMode = normalizeGmPresetMode(nextSettings.gmPresetMode);
       updateGmPresetHighlight();
       saveGmSettings();
     }
@@ -244,7 +244,7 @@
     }
 
     function saveCurrentControlProfile() {
-      if (HexSnakeState.game.running) return;
+      if (GameRuntimeState.running) return;
       const name = (Dom.controlProfileNameInput.value.trim() || selectedControlProfile()?.name || uniqueControlProfileName()).slice(0, 16);
       const now = new Date().toISOString();
       const existingIndex = controlProfiles.findIndex(profile => profile.id === selectedControlProfileId);
@@ -265,14 +265,14 @@
     }
 
     function applySelectedControlProfile() {
-      if (HexSnakeState.game.running) return;
+      if (GameRuntimeState.running) return;
       const profile = selectedControlProfile();
       if (!profile) return renderControlProfiles("請先選擇配置檔。", "error");
-      HexSnakeState.game.keybinds = cloneKeybinds(profile.config.keybinds);
+      GameRuntimeState.keybinds = cloneKeybinds(profile.config.keybinds);
       saveKeybinds();
       applyKeybinds();
       setLeftHandMode(profile.config.leftHandMode);
-      HexSnakeState.game.keyboardAttackAim = cloneKeyboardAttackAim(profile.config.keyboardAttackAim);
+      GameRuntimeState.keyboardAttackAim = cloneKeyboardAttackAim(profile.config.keyboardAttackAim);
       updateTargetModeIndicator();
       const appliesGameSettings = Boolean(profile.config.gameSettings);
       applyProfileGameSettings(profile.config.gameSettings);
@@ -282,13 +282,13 @@
       if (appliesGameSettings) {
         resetGame();
         resize();
-        HexSnakeUI.renderIntroPortraits(true);
+        GameUI.renderIntroPortraits(true);
       }
       renderControlProfiles("配置檔已套用。", "success");
     }
 
     function deleteSelectedControlProfile() {
-      if (HexSnakeState.game.running) return;
+      if (GameRuntimeState.running) return;
       if (!selectedControlProfileId) return;
       controlProfiles = controlProfiles.filter(profile => profile.id !== selectedControlProfileId);
       selectedControlProfileId = resolvedControlProfileId("", true);

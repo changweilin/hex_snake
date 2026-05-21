@@ -26,7 +26,7 @@
 | Leaf services | `src/network.js`, `src/about.js` | `network.js` 已 export `network` 並註冊 `HexSnakeUI.network`，`about.js` 已 export `about`；module shadow 已 import leaf service shell，legacy `window.HexSnakeNet` / `window.HexSnakeAbout` 保留 | 已完成首批；後續等 module loader 啟用後再評估 window-only wiring |
 | Catalog / media / stats | `src/characters.js`, `src/audio.js`, `src/stats.js` | `characters.js` 已 export `characterCatalog` / `HexSnakeCharacters`；`audio.js` / `stats.js` 分別 export `audio` / `stats`，並保留 `HexSnakeUI.audio/stats` registry 註冊；module shadow 已 import 這些 shell | 已完成；後續等 module loader 啟用後再評估 explicit imports |
 | Runtime helpers | `src/ai.js`, `src/render.js`, `src/replay.js` | `replay.js` export `replay` / `HexSnakeReplay`；`ai.js` export `ai` / `HexSnakeAI`；`render.js` export `renderHooks` / `HexSnakeRenderHooks`；module shadow 已 import 這些 shell | 已完成；後續等 module loader 啟用後再評估 explicit imports |
-| Core knot | `src/ui.js`, `src/game.js` | `ui.js` 已 export `uiCore` / `HexSnakeUICore`，並集中 `Ui*` dependency aliases；`game.js` 已 export `gameShell` / `HexSnakeGame`、`loadGameShell()` 與 `bootstrapGame()`，並集中 `Game*` dependency aliases；`main-module.js` 已提供 `loadModuleGame()` 作為正式 module bootstrap owner | 下一步盤點剩餘 direct window/facade reads，不切 production default |
+| Core knot | `src/ui.js`, `src/game.js` | `ui.js` 已 export `uiCore` / `HexSnakeUICore`，並集中 `Ui*` dependency aliases；`game.js` 已 export `gameShell` / `HexSnakeGame`、`loadGameShell()` 與 `bootstrapGame()`，集中 `Game*` dependency aliases，control-profile slice 已由 `audit:esm-map` 固定改走本地 aliases；`main-module.js` 已提供 `loadModuleGame()` 作為正式 module bootstrap owner | 下一步接續 saved character choice 或 keybind slice，不切 production default |
 
 ## Recommended Split Order
 
@@ -41,7 +41,7 @@
 
 ## Immediate AI Task Queue
 
-1. 延續 Phase D service module migration：盤點剩餘 direct window/facade reads，挑下一個 low-risk helper 或 import preflight 小切片，並維持 production `bundled-legacy-fallback`。
+1. 延續 Phase D service module migration：接續 `game.js` saved character choice 或 keybind slice，並維持 production `bundled-legacy-fallback`。
 2. 若要啟動正式 module bundle，先依 `doc/es-module-production-strategy.md` 新增 opt-in module artifact / source map gate，不直接改 default。
 3. 每批只移動一層 ownership，確保 `audit:globals`、`audit:state-boundary` 與 `test:module-loader` 不退步。
 

@@ -75,6 +75,7 @@ The audit checks:
 - `build.js` and `check:assets` keep production manifest strategy at `bundled-legacy-fallback` until a formal module bundle / source map gate exists.
 - Required `window.HexSnake*` compatibility registrations.
 - Required registry extension points and exports such as `HexSnakeUI.audio`, `HexSnakeCharacters`, `HexSnakeAudio`, `HexSnakeReplay`, `HexSnakeStats`, `HexSnakeAI`, `HexSnakeUI.aiGame`, and `HexSnakeRender`.
+- `src/game.js` control-profile slice uses `GameRuntimeState` / `GameConfig` / `GameUI` local aliases instead of direct `HexSnakeState.` / `HexSnakeUI.` reads.
 - This file mentions every source and public surface in the current map.
 - `doc/es-module-loader-plan.md` still documents the loader modes, fallback rules, source order, production strategy, and next Phase D step.
 - `doc/es-module-core-bootstrap-checklist.md` still documents the `ui.js` / `game.js` blockers, explicit import surface, bootstrap ownership, preflight gates, and production fallback strategy.
