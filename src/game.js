@@ -1623,11 +1623,11 @@
     networkAdapter()?.onGameMessage?.(handleNetworkGameMessage);
 
     function sandwormUndergroundAlpha(owner, now) {
-      if (HexSnakeUI.characterFor(owner).id !== "sandworm") return 1;
-      const armorFrom = owner === "player" ? HexSnakeState.game.playerSandwormArmorFrom : HexSnakeState.game.computerSandwormArmorFrom;
-      const armorUntil = owner === "player" ? HexSnakeState.game.playerSandwormArmorUntil : HexSnakeState.game.computerSandwormArmorUntil;
-      const from = owner === "player" ? HexSnakeState.game.playerUndergroundFrom : HexSnakeState.game.computerUndergroundFrom;
-      const until = owner === "player" ? HexSnakeState.game.playerUndergroundUntil : HexSnakeState.game.computerUndergroundUntil;
+      if (GameUI.characterFor(owner).id !== "sandworm") return 1;
+      const armorFrom = owner === "player" ? GameRuntimeState.playerSandwormArmorFrom : GameRuntimeState.computerSandwormArmorFrom;
+      const armorUntil = owner === "player" ? GameRuntimeState.playerSandwormArmorUntil : GameRuntimeState.computerSandwormArmorUntil;
+      const from = owner === "player" ? GameRuntimeState.playerUndergroundFrom : GameRuntimeState.computerUndergroundFrom;
+      const until = owner === "player" ? GameRuntimeState.playerUndergroundUntil : GameRuntimeState.computerUndergroundUntil;
       if (from && now >= from && now <= until) return 0;
       if (armorFrom && now >= armorFrom && now <= armorUntil) {
         const fadeTargetAt = from && from > armorFrom ? from : armorFrom + 500;
@@ -1649,9 +1649,9 @@
     }
 
     function isOwnerSandwormArmored(owner, now) {
-      if (HexSnakeUI.characterFor(owner).id !== "sandworm") return false;
-      const from = owner === "player" ? HexSnakeState.game.playerSandwormArmorFrom : HexSnakeState.game.computerSandwormArmorFrom;
-      const until = owner === "player" ? HexSnakeState.game.playerSandwormArmorUntil : HexSnakeState.game.computerSandwormArmorUntil;
+      if (GameUI.characterFor(owner).id !== "sandworm") return false;
+      const from = owner === "player" ? GameRuntimeState.playerSandwormArmorFrom : GameRuntimeState.computerSandwormArmorFrom;
+      const until = owner === "player" ? GameRuntimeState.playerSandwormArmorUntil : GameRuntimeState.computerSandwormArmorUntil;
       return Boolean(from && now >= from && now <= until);
     }
 
@@ -1661,15 +1661,15 @@
 
     function clearOwnerAbnormalStatus(owner, now) {
       if (owner === "player") {
-        HexSnakeState.game.playerStunUntil = Math.min(HexSnakeState.game.playerStunUntil, now);
-        HexSnakeState.game.playerSlowUntil = Math.min(HexSnakeState.game.playerSlowUntil, now);
-        HexSnakeState.game.playerCollisionParalysisMs = 0;
-        HexSnakeState.game.playerVulnerable = false;
+        GameRuntimeState.playerStunUntil = Math.min(GameRuntimeState.playerStunUntil, now);
+        GameRuntimeState.playerSlowUntil = Math.min(GameRuntimeState.playerSlowUntil, now);
+        GameRuntimeState.playerCollisionParalysisMs = 0;
+        GameRuntimeState.playerVulnerable = false;
       } else {
-        HexSnakeState.game.computerStunUntil = Math.min(HexSnakeState.game.computerStunUntil, now);
-        HexSnakeState.game.computerSlowUntil = Math.min(HexSnakeState.game.computerSlowUntil, now);
-        HexSnakeState.game.computerCollisionParalysisMs = 0;
-        HexSnakeState.game.computerVulnerable = false;
+        GameRuntimeState.computerStunUntil = Math.min(GameRuntimeState.computerStunUntil, now);
+        GameRuntimeState.computerSlowUntil = Math.min(GameRuntimeState.computerSlowUntil, now);
+        GameRuntimeState.computerCollisionParalysisMs = 0;
+        GameRuntimeState.computerVulnerable = false;
       }
     }
 

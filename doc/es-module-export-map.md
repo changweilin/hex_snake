@@ -100,6 +100,7 @@ The audit checks:
 - `src/game.js` auto battle / relay control state slice uses `GameRuntimeState` / `GameUI` local aliases instead of direct `HexSnakeState.` / `HexSnakeUI.` reads.
 - `src/game.js` game-over relay settlement slice uses `GameRuntimeState` / `GameConfig` / `GamePresentationState` / `GameUI` local aliases instead of direct `HexSnakeState.` / `HexSnakeUI.` reads.
 - `src/game.js` network helper slice uses `GameRuntimeState` / `GameConfig` / `GameUI` local aliases instead of direct `HexSnakeState.` / `HexSnakeUI.` reads.
+- `src/game.js` sandworm status helper slice uses `GameRuntimeState` / `GameUI` local aliases instead of direct `HexSnakeState.` / `HexSnakeUI.` reads.
 - This file mentions every source and public surface in the current map.
 - `doc/es-module-loader-plan.md` still documents the loader modes, fallback rules, source order, production strategy, and next Phase D step.
 - `doc/es-module-core-bootstrap-checklist.md` still documents the `ui.js` / `game.js` blockers, explicit import surface, bootstrap ownership, preflight gates, and production fallback strategy.
