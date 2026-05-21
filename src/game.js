@@ -1071,8 +1071,8 @@
     }
 
     function autoStartGame() {
-      if (HexSnakeState.game.running && !HexSnakeState.game.gameOver) return true;
-      if (HexSnakeState.game.gameOver) return false;
+      if (GameRuntimeState.running && !GameRuntimeState.gameOver) return true;
+      if (GameRuntimeState.gameOver) return false;
       beginStartLogoCountdown();
       return false;
     }
