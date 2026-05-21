@@ -3792,7 +3792,7 @@
     function performModuleAttack() {
       const module = Dom.characterStage.querySelector('[data-module="player"]');
       if (module) module.classList.remove("is-charging");
-      launchPlayerAttack(HexSnakeState.game.targetCell || HexSnakeState.game.snake[0]);
+      launchPlayerAttack(GameRuntimeState.targetCell || GameRuntimeState.snake[0]);
     }
 
     function clearModuleHold() {
