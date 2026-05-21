@@ -3825,8 +3825,8 @@
 
     function surrenderGame() {
       if (GameReplay.isPlaybackMode()) return;
-      if (!HexSnakeState.game.running || HexSnakeState.game.gameOver) {
-        if (HexSnakeState.game.computerBattleMode && HexSnakeState.game.relayMode) {
+      if (!GameRuntimeState.running || GameRuntimeState.gameOver) {
+        if (GameRuntimeState.computerBattleMode && GameRuntimeState.relayMode) {
           setRelayMode(false, false, false);
           setStatus("接力賽已停止。");
         }
