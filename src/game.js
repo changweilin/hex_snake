@@ -3231,26 +3231,26 @@
     }
 
     function beginControlPadAttackPointer(event) {
-      if (HexSnakeUI.isLogoTransitionActive()) {
+      if (GameUI.isLogoTransitionActive()) {
         event.preventDefault();
         event.stopPropagation();
         return true;
       }
       if (!GameAI.shouldUseControlPadAttackDirection()) return false;
-      if (!HexSnakeState.game.running || HexSnakeState.game.gameOver) {
+      if (!GameRuntimeState.running || GameRuntimeState.gameOver) {
         if (!autoStartGame()) return true;
       }
       event.preventDefault();
       event.stopPropagation();
       const dirButton = event.target.closest("[data-dir-button]");
       const direction = dirButton ? Number(dirButton.dataset.dir) : controlPadDirectionFromEvent(event);
-      HexSnakeState.game.controlAttackPointer = {
+      GameRuntimeState.controlAttackPointer = {
         pointerId: event.pointerId,
         direction: Number.isInteger(direction) ? direction : ownerDirection("player")
       };
       triggerTouchFeedback(event, 10);
-      HexSnakeState.game.targetCell = directionalAttackTarget(HexSnakeState.game.controlAttackPointer.direction);
-      HexSnakeState.game.targetActive = true;
+      GameRuntimeState.targetCell = directionalAttackTarget(GameRuntimeState.controlAttackPointer.direction);
+      GameRuntimeState.targetActive = true;
       try {
         Dom.controlRow.setPointerCapture(event.pointerId);
       } catch (error) {
@@ -3261,31 +3261,31 @@
     }
 
     function moveControlPadAttackPointer(event) {
-      if (!HexSnakeState.game.controlAttackPointer || event.pointerId !== HexSnakeState.game.controlAttackPointer.pointerId) return;
+      if (!GameRuntimeState.controlAttackPointer || event.pointerId !== GameRuntimeState.controlAttackPointer.pointerId) return;
       event.preventDefault();
       const direction = controlPadDirectionFromEvent(event);
-      const previousDirection = HexSnakeState.game.controlAttackPointer.direction;
-      if (direction !== null) HexSnakeState.game.controlAttackPointer.direction = direction;
-      HexSnakeState.game.targetCell = directionalAttackTarget(HexSnakeState.game.controlAttackPointer.direction);
-      HexSnakeState.game.targetActive = true;
-      if (HexSnakeState.game.controlAttackPointer.direction !== previousDirection) triggerTouchFeedback(event, 5);
+      const previousDirection = GameRuntimeState.controlAttackPointer.direction;
+      if (direction !== null) GameRuntimeState.controlAttackPointer.direction = direction;
+      GameRuntimeState.targetCell = directionalAttackTarget(GameRuntimeState.controlAttackPointer.direction);
+      GameRuntimeState.targetActive = true;
+      if (GameRuntimeState.controlAttackPointer.direction !== previousDirection) triggerTouchFeedback(event, 5);
       GameRender.requestPreviewDraw();
     }
 
     function finishControlPadAttackPointer(event) {
-      if (!HexSnakeState.game.controlAttackPointer || event.pointerId !== HexSnakeState.game.controlAttackPointer.pointerId) return;
+      if (!GameRuntimeState.controlAttackPointer || event.pointerId !== GameRuntimeState.controlAttackPointer.pointerId) return;
       event.preventDefault();
-      const direction = HexSnakeState.game.controlAttackPointer.direction;
-      HexSnakeState.game.controlAttackPointer = null;
+      const direction = GameRuntimeState.controlAttackPointer.direction;
+      GameRuntimeState.controlAttackPointer = null;
       if (Dom.controlRow.hasPointerCapture?.(event.pointerId)) Dom.controlRow.releasePointerCapture(event.pointerId);
       triggerTouchFeedback(event, 6);
       launchPlayerAttackDirection(direction, "big");
     }
 
     function cancelControlPadAttackPointer(event) {
-      if (!HexSnakeState.game.controlAttackPointer || event.pointerId !== HexSnakeState.game.controlAttackPointer.pointerId) return;
-      HexSnakeState.game.controlAttackPointer = null;
-      HexSnakeState.game.targetActive = false;
+      if (!GameRuntimeState.controlAttackPointer || event.pointerId !== GameRuntimeState.controlAttackPointer.pointerId) return;
+      GameRuntimeState.controlAttackPointer = null;
+      GameRuntimeState.targetActive = false;
       if (Dom.controlRow.hasPointerCapture?.(event.pointerId)) Dom.controlRow.releasePointerCapture(event.pointerId);
       GameRender.requestPreviewDraw();
     }

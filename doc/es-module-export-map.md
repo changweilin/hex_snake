@@ -123,6 +123,7 @@ The audit checks:
 - `src/game.js` end game helper is covered by the existing game-over relay settlement slice guard and uses `Game*` local aliases instead of direct `HexSnakeState.` / `HexSnakeUI.` reads.
 - `src/game.js` loop helper slice uses `GameRuntimeState` / `GameConfig` / `GameUI` local aliases instead of direct `HexSnakeState.` / `HexSnakeUI.` reads.
 - `src/game.js` pointer direction helper slice uses `GameConfig` local alias instead of direct `HexSnakeState.` reads.
+- `src/game.js` control-pad attack pointer helper slice uses `GameRuntimeState` / `GameUI` local aliases instead of direct `HexSnakeState.` / `HexSnakeUI.` reads.
 - This file mentions every source and public surface in the current map.
 - `doc/es-module-loader-plan.md` still documents the loader modes, fallback rules, source order, production strategy, and next Phase D step.
 - `doc/es-module-core-bootstrap-checklist.md` still documents the `ui.js` / `game.js` blockers, explicit import surface, bootstrap ownership, preflight gates, and production fallback strategy.
