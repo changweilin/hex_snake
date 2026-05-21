@@ -1080,9 +1080,9 @@
     function returnToStartScreen() {
       clearGameOverSettlementTimer();
       clearRelayRestartTimer();
-      HexSnakeState.game.computerBattleMode = false;
-      HexSnakeState.game.playerAutoMode = false;
-      HexSnakeState.game.computerBattleManualOverride = false;
+      GameRuntimeState.computerBattleMode = false;
+      GameRuntimeState.playerAutoMode = false;
+      GameRuntimeState.computerBattleManualOverride = false;
       setRelayMode(false, false, false);
       updateSettingsActionMode();
       updateAutoBattleControls();
@@ -1092,7 +1092,7 @@
       Dom.startButton.textContent = "開始";
       Dom.computerBattleButton.hidden = false;
       Dom.replayArchiveButton.hidden = false;
-      HexSnakeUI.renderIntroPortraits(false);
+      GameUI.renderIntroPortraits(false);
       Dom.overlay.classList.add("show");
     }
 
