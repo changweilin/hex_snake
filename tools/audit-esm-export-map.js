@@ -230,6 +230,23 @@ const loaderPlanText = read("doc/es-module-loader-plan.md");
   if (!loaderPlanText.includes(token)) fail(`doc/es-module-loader-plan.md is missing ${token}`);
 });
 
+const coreBootstrapChecklistText = read("doc/es-module-core-bootstrap-checklist.md");
+[
+  "Core Bootstrap Checklist",
+  "Module Blockers",
+  "Explicit Import Surface",
+  "Bootstrap Ownership",
+  "Module Mode Preflight",
+  "src/ui.js",
+  "src/game.js",
+  "uiCore",
+  "bootstrapGame()",
+  "bootstrapsGameplay: false",
+  "Next AI Task"
+].forEach(token => {
+  if (!coreBootstrapChecklistText.includes(token)) fail(`doc/es-module-core-bootstrap-checklist.md is missing ${token}`);
+});
+
 if (errors.length) {
   console.error("ESM export map audit failed:");
   errors.forEach(error => console.error(`- ${error}`));

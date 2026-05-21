@@ -42,7 +42,7 @@ Shared order:
 | --- | --- | --- |
 | A. Loader plan gate | 文件化 modes、fallback、source order，並讓 `audit:esm-map` 檢查本文件存在關鍵契約 | `npm.cmd run audit:esm-map` |
 | B. Module shadow entry | 已新增 `src/main-module.js` 與 `?hexSnakeLoader=module-shadow`，只載入 shadow contract 並回報 ready，不啟動 gameplay | `audit:esm-map`、`build`、`test:smoke` |
-| C. Dual-mode runtime / registry exports | platform/runtime、state registry、DOM facade、network/about leaf services、catalog/media/stats shell 與 runtime helper shell 已具備正式 named exports，module shadow 已 import 這些 shell；下一步盤點 `ui.js` / `game.js` core module blockers | `audit:esm-map`、`audit:globals` 不上升 |
+| C. Dual-mode runtime / registry exports | platform/runtime、state registry、DOM facade、network/about leaf services、catalog/media/stats shell 與 runtime helper shell 已具備正式 named exports，module shadow 已 import 這些 shell；`ui.js` / `game.js` core blockers 已盤點到 `doc/es-module-core-bootstrap-checklist.md`；下一步處理 `uiCore` shell export | `audit:esm-map`、`audit:globals` 不上升 |
 | D. Service module migration | 依 export map 順序讓 leaf services 與 runtime helpers 改成 explicit imports，legacy loader 仍可回退 | build、quick、smoke、mobile |
 | E. Gameplay module bootstrap | `src/game.js` 或新 bootstrap entry 接管 module mode；legacy loader 降為 fallback | release:check |
 
@@ -55,4 +55,4 @@ Shared order:
 
 ## Next AI Task
 
-下一個 AI 可直接處理項目是 Phase C 下一段：盤點 `src/ui.js` / `src/game.js` 在正式 module scope 下的 blockers，先建立 core bootstrap checklist 或最小 shell 計畫；不得直接啟用 `module` mode 或移動 gameplay bootstrap。
+下一個 AI 可直接處理項目是 Phase C 下一段：讓 `src/ui.js` 提供最小 dual-mode `uiCore` shell export，並讓 `module-shadow` import UI shell 後仍不 import `src/game.js`、不啟動 gameplay。

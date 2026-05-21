@@ -26,7 +26,7 @@
 | Leaf services | `src/network.js`, `src/about.js` | `network.js` 已 export `network`，`about.js` 已 export `about`；module shadow 已 import leaf service shell，legacy `window.HexSnakeNet` / `window.HexSnakeAbout` 保留 | 已完成首批；後續等 module loader 啟用後再評估 window-only wiring |
 | Catalog / media / stats | `src/characters.js`, `src/audio.js`, `src/stats.js` | `characters.js` 已 export `characterCatalog` / `HexSnakeCharacters`；`audio.js` / `stats.js` 分別 export `audio` / `stats`，並保留 `HexSnakeUI.audio/stats` registry 註冊；module shadow 已 import 這些 shell | 已完成；後續等 module loader 啟用後再評估 explicit imports |
 | Runtime helpers | `src/ai.js`, `src/render.js`, `src/replay.js` | `replay.js` export `replay` / `HexSnakeReplay`；`ai.js` export `ai` / `HexSnakeAI`；`render.js` export `renderHooks` / `HexSnakeRenderHooks`；module shadow 已 import 這些 shell | 已完成；後續等 module loader 啟用後再評估 explicit imports |
-| Core knot | `src/ui.js`, `src/game.js` | `ui.js -> dom.js` 與 `game.js -> dom.js` 都已收斂成 `HexSnakeDOM`；`ui.js -> game.js` 已改走 `HexSnakeUI.uiGame`；`game.js -> service/render/AI/runtime` 已改走 facade；module shadow entry 已驗證 loader plumbing | 最後拆；先完成 foundation dual-mode exports |
+| Core knot | `src/ui.js`, `src/game.js` | `ui.js -> dom.js` 與 `game.js -> dom.js` 都已收斂成 `HexSnakeDOM`；`ui.js -> game.js` 已改走 `HexSnakeUI.uiGame`；`game.js -> service/render/AI/runtime` 已改走 facade；core blockers 已盤點到 `doc/es-module-core-bootstrap-checklist.md` | 下一步先補 `ui.js` 最小 `uiCore` shell export |
 
 ## Recommended Split Order
 
@@ -37,13 +37,13 @@
 | 2. DOM/helper facade | 完成 | 建立 `HexSnakeControls`、`HexSnakeDOM` 與 game/UI helper facade | `audit:globals` 486 -> 367 |
 | 3. Catalog/media cleanup | 完成 | catalog setter/list、portrait variant state getter、food label config getter；characters/audio/stats 改走 facade | `audit:globals` 367 -> 339；build、quick、smoke 通過 |
 | 4. Runtime cleanup | runtime adapter facade 收斂完成 | replay、render、AI、UI/game hooks、public services 與 platform/storage adapter 已分批改走 `HexSnakeDOM`、`HexSnakeState`、`HexSnakeUI`、`HexSnakeRender`、`HexSnakeRuntime` | `audit:globals` 339 -> 42；`audit:state-boundary` 維持 0/0 |
-| 5. Core ES module split | runtime helper shell exports 完成 | 已新增 `src/main-module.js` 與 `?hexSnakeLoader=module-shadow`；platform/runtime、state registry、DOM facade、network/about leaf services、catalog/media/stats 與 runtime helper shell 已可被 native module shadow import，且不 import `ui.js` / `game.js`；下一步盤點 core module blockers | `audit:esm-map`、legacy loader 可回退；正式 loader 可逐步啟用 |
+| 5. Core ES module split | core bootstrap checklist 完成 | 已新增 `src/main-module.js` 與 `?hexSnakeLoader=module-shadow`；platform/runtime、state registry、DOM facade、network/about leaf services、catalog/media/stats 與 runtime helper shell 已可被 native module shadow import；`ui.js` / `game.js` blockers、bootstrap ownership 與 preflight gate 已文件化；下一步處理 `uiCore` shell export | `audit:esm-map`、legacy loader 可回退；正式 loader 可逐步啟用 |
 
 ## Immediate AI Task Queue
 
-1. 盤點 `src/ui.js` / `src/game.js` 在正式 module scope 下的 blockers，先列出需要的 imports、bootstrap ownership 與 fallback gate。
-2. 若安全，先建立最小 core bootstrap checklist 或 module-mode preflight 文件，不啟用正式 `module` mode。
-3. 最後才處理 `ui.js` / `game.js` 的正式 module scope 拆分。
+1. 讓 `src/ui.js` 提供最小 dual-mode `uiCore` shell export。
+2. 讓 `src/main-module.js` shadow entry import `uiCore` 後仍不 import `src/game.js`、不啟動 gameplay。
+3. 接著才拆 `game.js` 的 shell registration 與 explicit `bootstrapGame()`。
 
 ## Do Not Start With
 

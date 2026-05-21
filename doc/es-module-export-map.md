@@ -4,7 +4,7 @@
 
 ## 目的
 
-這份文件固定正式 ESM split 前的 registry 初始化順序與 export surface。現階段仍使用 legacy concatenated loader；正式 module loader 開始前，必須先讓這張表、`doc/es-module-loader-plan.md` 與 `npm.cmd run audit:esm-map` 同步通過。
+這份文件固定正式 ESM split 前的 registry 初始化順序與 export surface。現階段仍使用 legacy concatenated loader；正式 module loader 開始前，必須先讓這張表、`doc/es-module-loader-plan.md`、`doc/es-module-core-bootstrap-checklist.md` 與 `npm.cmd run audit:esm-map` 同步通過。
 
 ## Shadow Entry
 
@@ -73,3 +73,4 @@ The audit checks:
 - Required registry extension points and exports such as `HexSnakeUI.audio`, `HexSnakeCharacters`, `HexSnakeAudio`, `HexSnakeReplay`, `HexSnakeStats`, `HexSnakeAI`, `HexSnakeUI.aiGame`, and `HexSnakeRender`.
 - This file mentions every source and public surface in the current map.
 - `doc/es-module-loader-plan.md` still documents the loader modes, fallback rules, source order, and next module-shadow step.
+- `doc/es-module-core-bootstrap-checklist.md` still documents the `ui.js` / `game.js` blockers, explicit import surface, bootstrap ownership, preflight gates, and next `uiCore` shell task.
