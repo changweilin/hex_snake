@@ -451,16 +451,16 @@
     }
 
     function setPerfStatsVisible(enabled) {
-      HexSnakeState.ui.perfStatsVisible = Boolean(enabled);
-      Dom.perfStatsToggle.checked = HexSnakeState.ui.perfStatsVisible;
-      Dom.perfOverlay.hidden = !HexSnakeState.ui.perfStatsVisible;
-      GameStorage.set(HexSnakeState.ui.perfStatsKey, HexSnakeState.ui.perfStatsVisible ? "1" : "0");
+      GamePresentationState.perfStatsVisible = Boolean(enabled);
+      Dom.perfStatsToggle.checked = GamePresentationState.perfStatsVisible;
+      Dom.perfOverlay.hidden = !GamePresentationState.perfStatsVisible;
+      GameStorage.set(GamePresentationState.perfStatsKey, GamePresentationState.perfStatsVisible ? "1" : "0");
       updatePerfOverlay();
     }
 
     function updatePerfOverlay(stats = GamePlatform.display.frameStats) {
       if (!Dom.perfOverlay) return;
-      if (!HexSnakeState.ui.perfStatsVisible) {
+      if (!GamePresentationState.perfStatsVisible) {
         Dom.perfOverlay.hidden = true;
         return;
       }
