@@ -66,4 +66,4 @@ Also run `npm.cmd run test:module-loader` after each loader step. The source `mo
 
 ## Next AI Task
 
-下一個 AI 可直接處理項目是延續 Phase D service module migration：`game.js` control-profile slice 已改走本地 `Game*` aliases 並加上 `audit:esm-map` preflight；下一輪可接續 saved character choice 或 keybind slice，production default 繼續維持 `bundled-legacy-fallback`。
+下一個 AI 可直接處理項目是延續 Phase D service module migration：`game.js` control-profile 與 saved character choice slices 已改走本地 `Game*` aliases 並加上 `audit:esm-map` preflight；下一輪可接續 keybind slice，production default 繼續維持 `bundled-legacy-fallback`。

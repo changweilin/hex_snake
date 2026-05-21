@@ -301,37 +301,37 @@
     function loadSavedCharacterChoices() {
       const savedPlayer = GameStorage.get("hexSnakePlayerCharacterId");
       const savedComputer = GameStorage.get("hexSnakeComputerCharacterId");
-      if (HexSnakeUI.isSelectableCharacterChoiceId(savedPlayer)) HexSnakeState.game.playerCharacterChoice = savedPlayer;
-      if (HexSnakeUI.isSelectableCharacterChoiceId(savedComputer)) HexSnakeState.game.computerCharacterChoice = savedComputer;
-      HexSnakeState.game.playerCharacterId = HexSnakeUI.hasCharacterId(HexSnakeState.game.playerCharacterChoice) ? HexSnakeState.game.playerCharacterChoice : HexSnakeUI.characterFallbackId("player");
-      HexSnakeState.game.computerCharacterId = HexSnakeUI.hasCharacterId(HexSnakeState.game.computerCharacterChoice) ? HexSnakeState.game.computerCharacterChoice : HexSnakeUI.characterFallbackId("computer");
+      if (GameUI.isSelectableCharacterChoiceId(savedPlayer)) GameRuntimeState.playerCharacterChoice = savedPlayer;
+      if (GameUI.isSelectableCharacterChoiceId(savedComputer)) GameRuntimeState.computerCharacterChoice = savedComputer;
+      GameRuntimeState.playerCharacterId = GameUI.hasCharacterId(GameRuntimeState.playerCharacterChoice) ? GameRuntimeState.playerCharacterChoice : GameUI.characterFallbackId("player");
+      GameRuntimeState.computerCharacterId = GameUI.hasCharacterId(GameRuntimeState.computerCharacterChoice) ? GameRuntimeState.computerCharacterChoice : GameUI.characterFallbackId("computer");
     }
 
     function saveCharacterChoices() {
-      GameStorage.set("hexSnakePlayerCharacterId", HexSnakeState.game.playerCharacterChoice);
-      GameStorage.set("hexSnakeComputerCharacterId", HexSnakeState.game.computerCharacterChoice);
+      GameStorage.set("hexSnakePlayerCharacterId", GameRuntimeState.playerCharacterChoice);
+      GameStorage.set("hexSnakeComputerCharacterId", GameRuntimeState.computerCharacterChoice);
     }
 
     function syncCharacterInputs() {
-      Dom.playerCharacterInput.value = HexSnakeState.game.playerCharacterChoice;
-      Dom.computerCharacterInput.value = HexSnakeState.game.computerCharacterChoice;
+      Dom.playerCharacterInput.value = GameRuntimeState.playerCharacterChoice;
+      Dom.computerCharacterInput.value = GameRuntimeState.computerCharacterChoice;
     }
 
     function resolveCharacterChoice(owner, choice) {
-      const fallbackId = HexSnakeUI.characterFallbackId(owner);
-      if (HexSnakeUI.isRandomCharacterChoiceId(choice)) return HexSnakeUI.consumeStartLogoRandomCharacterId(owner) || HexSnakeUI.randomCharacter().id;
-      return HexSnakeUI.hasCharacterId(choice) ? choice : fallbackId;
+      const fallbackId = GameUI.characterFallbackId(owner);
+      if (GameUI.isRandomCharacterChoiceId(choice)) return GameUI.consumeStartLogoRandomCharacterId(owner) || GameUI.randomCharacter().id;
+      return GameUI.hasCharacterId(choice) ? choice : fallbackId;
     }
 
     function resolveCharacterChoicesForStart() {
-      HexSnakeState.game.playerCharacterChoice = HexSnakeUI.isSelectableCharacterChoiceId(Dom.playerCharacterInput.value)
+      GameRuntimeState.playerCharacterChoice = GameUI.isSelectableCharacterChoiceId(Dom.playerCharacterInput.value)
         ? Dom.playerCharacterInput.value
-        : HexSnakeState.config.defaultSettings.playerCharacterId;
-      HexSnakeState.game.computerCharacterChoice = HexSnakeUI.isSelectableCharacterChoiceId(Dom.computerCharacterInput.value)
+        : GameConfig.defaultSettings.playerCharacterId;
+      GameRuntimeState.computerCharacterChoice = GameUI.isSelectableCharacterChoiceId(Dom.computerCharacterInput.value)
         ? Dom.computerCharacterInput.value
-        : HexSnakeState.config.defaultSettings.computerCharacterId;
-      HexSnakeState.game.playerCharacterId = resolveCharacterChoice("player", HexSnakeState.game.playerCharacterChoice);
-      HexSnakeState.game.computerCharacterId = resolveCharacterChoice("computer", HexSnakeState.game.computerCharacterChoice);
+        : GameConfig.defaultSettings.computerCharacterId;
+      GameRuntimeState.playerCharacterId = resolveCharacterChoice("player", GameRuntimeState.playerCharacterChoice);
+      GameRuntimeState.computerCharacterId = resolveCharacterChoice("computer", GameRuntimeState.computerCharacterChoice);
       syncCharacterInputs();
       saveCharacterChoices();
     }
