@@ -1109,51 +1109,51 @@
 
     function randomFoodType(preferredFoodId = null) {
       if (!preferredFoodId || preferredFoodId === "balanced") {
-        return HexSnakeState.config.foodTypes[Math.floor(Math.random() * HexSnakeState.config.foodTypes.length)];
+        return GameConfig.foodTypes[Math.floor(Math.random() * GameConfig.foodTypes.length)];
       }
       let roll = Math.random();
-      for (const type of HexSnakeState.config.foodTypes) {
-        const weight = type.id === preferredFoodId ? HexSnakeState.config.preferredFoodWeight : HexSnakeState.config.otherFoodWeight;
+      for (const type of GameConfig.foodTypes) {
+        const weight = type.id === preferredFoodId ? GameConfig.preferredFoodWeight : GameConfig.otherFoodWeight;
         if (roll < weight) return type;
         roll -= weight;
       }
-      return HexSnakeState.config.foodTypes[HexSnakeState.config.foodTypes.length - 1];
+      return GameConfig.foodTypes[GameConfig.foodTypes.length - 1];
     }
 
     function randomFoodTypeIds(preferredFoodId = null, dualColor = false) {
       const firstType = randomFoodType(preferredFoodId);
       if (!dualColor) return [firstType.id];
-      const secondOptions = HexSnakeState.config.foodTypes.filter(type => type.id !== firstType.id);
+      const secondOptions = GameConfig.foodTypes.filter(type => type.id !== firstType.id);
       const secondType = secondOptions[Math.floor(Math.random() * secondOptions.length)];
       return [firstType.id, secondType.id];
     }
 
     function randomFoodTypeIdsForCharacter(character) {
-      if (character?.specialFood === "black" && Math.random() < HexSnakeState.config.blackSpecialChance) {
+      if (character?.specialFood === "black" && Math.random() < GameConfig.blackSpecialChance) {
         return ["black"];
       }
       if (character?.specialFood === "black") {
         return randomFoodTypeIds(null, false);
       }
       const preferredFoodId = character ? character.food : null;
-      const dualColor = character?.food === "balanced" && Math.random() < HexSnakeState.config.balancedDualChance;
+      const dualColor = character?.food === "balanced" && Math.random() < GameConfig.balancedDualChance;
       return randomFoodTypeIds(preferredFoodId, dualColor);
     }
 
     function placeFoods(preferredOwners = []) {
       const occupied = new Set([
-        ...HexSnakeState.game.snake.map(keyOf),
-        ...HexSnakeState.game.computerSnake.map(keyOf),
-        ...HexSnakeState.game.foods.map(keyOf)
+        ...GameRuntimeState.snake.map(keyOf),
+        ...GameRuntimeState.computerSnake.map(keyOf),
+        ...GameRuntimeState.foods.map(keyOf)
       ]);
       let generated = 0;
-      while (HexSnakeState.game.foods.length < HexSnakeState.game.foodCount) {
-        const openCells = HexSnakeState.game.cells.filter(cell => !occupied.has(keyOf(cell)));
+      while (GameRuntimeState.foods.length < GameRuntimeState.foodCount) {
+        const openCells = GameRuntimeState.cells.filter(cell => !occupied.has(keyOf(cell)));
         if (!openCells.length) return;
         const cell = openCells[Math.floor(Math.random() * openCells.length)];
         const owner = preferredOwners[generated];
-        const character = owner ? HexSnakeUI.characterFor(owner) : null;
-        HexSnakeState.game.foods.push({ q: cell.q, r: cell.r, types: randomFoodTypeIdsForCharacter(character) });
+        const character = owner ? GameUI.characterFor(owner) : null;
+        GameRuntimeState.foods.push({ q: cell.q, r: cell.r, types: randomFoodTypeIdsForCharacter(character) });
         occupied.add(keyOf(cell));
         generated += 1;
       }
