@@ -944,6 +944,14 @@ expectSliceExcludes(
   ["HexSnakeState.", "HexSnakeUI."]
 );
 
+expectSliceExcludes(
+  "src/game.js",
+  "auto pause button alias slice",
+  "Dom.autoPauseButton.addEventListener",
+  "Dom.joyZone.addEventListener",
+  ["HexSnakeState.", "HexSnakeUI."]
+);
+
 const docText = read("doc/es-module-export-map.md");
 [
   "src/platform/web.js",

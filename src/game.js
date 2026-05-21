@@ -5237,12 +5237,12 @@
 
     Dom.autoPauseButton.addEventListener("click", event => {
       event.stopPropagation();
-      if (!isPlayerAutoControlActive() || !HexSnakeState.game.running || HexSnakeState.game.gameOver) return;
-      HexSnakeState.game.paused = !HexSnakeState.game.paused;
-      if (!HexSnakeState.game.paused) {
-        HexSnakeState.game.lastPlayerStep = performance.now();
-        HexSnakeState.game.lastComputerStep = HexSnakeState.game.lastPlayerStep;
-        HexSnakeState.game.lastTimerFrame = HexSnakeState.game.lastPlayerStep;
+      if (!isPlayerAutoControlActive() || !GameRuntimeState.running || GameRuntimeState.gameOver) return;
+      GameRuntimeState.paused = !GameRuntimeState.paused;
+      if (!GameRuntimeState.paused) {
+        GameRuntimeState.lastPlayerStep = performance.now();
+        GameRuntimeState.lastComputerStep = GameRuntimeState.lastPlayerStep;
+        GameRuntimeState.lastTimerFrame = GameRuntimeState.lastPlayerStep;
       }
       updateAutoBattleControls();
     });
