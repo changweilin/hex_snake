@@ -756,21 +756,21 @@
 
     function isInside(cell) {
       const s = -cell.q - cell.r;
-      return Math.max(Math.abs(cell.q), Math.abs(cell.r), Math.abs(s)) <= HexSnakeState.game.radius;
+      return Math.max(Math.abs(cell.q), Math.abs(cell.r), Math.abs(s)) <= GameRuntimeState.radius;
     }
 
     function axialToPixel(cell) {
       return {
-        x: HexSnakeState.game.center.x + HexSnakeState.game.cellSize * Math.sqrt(3) * (cell.q + cell.r / 2),
-        y: HexSnakeState.game.center.y + HexSnakeState.game.cellSize * 1.5 * cell.r
+        x: GameRuntimeState.center.x + GameRuntimeState.cellSize * Math.sqrt(3) * (cell.q + cell.r / 2),
+        y: GameRuntimeState.center.y + GameRuntimeState.cellSize * 1.5 * cell.r
       };
     }
 
     function pixelToAxial(x, y) {
-      const px = x - HexSnakeState.game.center.x;
-      const py = y - HexSnakeState.game.center.y;
-      const q = (Math.sqrt(3) / 3 * px - 1 / 3 * py) / HexSnakeState.game.cellSize;
-      const r = (2 / 3 * py) / HexSnakeState.game.cellSize;
+      const px = x - GameRuntimeState.center.x;
+      const py = y - GameRuntimeState.center.y;
+      const q = (Math.sqrt(3) / 3 * px - 1 / 3 * py) / GameRuntimeState.cellSize;
+      const r = (2 / 3 * py) / GameRuntimeState.cellSize;
       return roundAxial(q, r);
     }
 
@@ -792,9 +792,9 @@
 
     function nearestInsideCell(cell) {
       if (isInside(cell)) return cell;
-      return HexSnakeState.game.cells.reduce((bestCell, candidate) => {
+      return GameRuntimeState.cells.reduce((bestCell, candidate) => {
         return hexDistance(candidate, cell) < hexDistance(bestCell, cell) ? candidate : bestCell;
-      }, HexSnakeState.game.cells[0]);
+      }, GameRuntimeState.cells[0]);
     }
 
     function hexPath(x, y, size) {
@@ -815,10 +815,10 @@
       Dom.canvas.width = Math.floor(rect.width * dpr);
       Dom.canvas.height = Math.floor(rect.height * dpr);
       Dom.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      HexSnakeState.game.center = { x: rect.width / 2, y: rect.height / 2 };
-      const boardWidth = Math.sqrt(3) * (HexSnakeState.game.radius * 2 + 1);
-      const boardHeight = HexSnakeState.game.radius * 3 + 2;
-      HexSnakeState.game.cellSize = Math.min(rect.width / (boardWidth + 0.8), rect.height / (boardHeight + 0.8));
+      GameRuntimeState.center = { x: rect.width / 2, y: rect.height / 2 };
+      const boardWidth = Math.sqrt(3) * (GameRuntimeState.radius * 2 + 1);
+      const boardHeight = GameRuntimeState.radius * 3 + 2;
+      GameRuntimeState.cellSize = Math.min(rect.width / (boardWidth + 0.8), rect.height / (boardHeight + 0.8));
       GameRender.draw();
     }
 

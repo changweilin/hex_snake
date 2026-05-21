@@ -66,4 +66,4 @@ Also run `npm.cmd run test:module-loader` after each loader step. The source `mo
 
 ## Next AI Task
 
-下一個 AI 可直接處理項目是延續 Phase D service module migration：`game.js` control-profile、saved character choice、keybind、attack button highlight、settings / perf overlay、settings clamp / GM parameters 與 GM presets / settings action slices 已改走本地 `Game*` aliases 並加上 `audit:esm-map` preflight；下一輪可接續 board geometry helper slice，production default 繼續維持 `bundled-legacy-fallback`。
+下一個 AI 可直接處理項目是延續 Phase D service module migration：`game.js` control-profile、saved character choice、keybind、attack button highlight、settings / perf overlay、settings clamp / GM parameters、GM presets / settings action 與 board geometry helper slices 已改走本地 `Game*` aliases 並加上 `audit:esm-map` preflight；下一輪可接續 reset game setup slice，production default 繼續維持 `bundled-legacy-fallback`。
