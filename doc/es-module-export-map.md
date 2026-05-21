@@ -49,7 +49,7 @@
 | `HexSnakeReplay` | `src/replay.js` | frozen replay record/playback service using `ReplayRootState` state aliases, mirrored into `HexSnakeUI.replay` | named `replay` export implemented |
 | `HexSnakeStats` | `src/stats.js` | frozen match stats service using `StatsRootState` / `StatsGameState`, mirrored into `HexSnakeUI.stats` | named `stats` export implemented |
 | `HexSnakeAbout` | `src/about.js` | frozen version/about service, mirrored into `HexSnakeUI.about` | named `about` export implemented |
-| `HexSnakeAI` | `src/ai.js` | frozen AI decision/combat helper service, mirrored into `HexSnakeUI.ai` | named `ai` export implemented |
+| `HexSnakeAI` | `src/ai.js` | frozen AI decision/combat helper service using `AiRootState` state aliases, mirrored into `HexSnakeUI.ai` | named `ai` export implemented |
 
 ## Initialization Contract
 

@@ -1,6 +1,7 @@
     const AiRuntime = HexSnakeRuntime;
-    const AiConfig = HexSnakeState.config;
-    const AiState = HexSnakeState.game;
+    const AiRootState = HexSnakeState;
+    const AiConfig = AiRootState.config;
+    const AiState = AiRootState.game;
     const AiUI = HexSnakeUI;
     const AiGame = AiUI.aiGame;
     const AiStorage = AiRuntime.storage;
