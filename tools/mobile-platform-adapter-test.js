@@ -83,7 +83,8 @@ async function main() {
         }
       };
     });
-    await page.addScriptTag({ path: path.join(root, "src", "platform", "mobile.js") });
+    await page.addScriptTag({ path: path.join(root, "src", "platform", "mobile.js"), type: "module" });
+    await page.waitForFunction(() => window.HexSnakePlatform?.kind === "mobile", null, { timeout: actionTimeoutMs });
 
     const initialState = await page.evaluate(() => ({
       kind: window.HexSnakePlatform.kind,

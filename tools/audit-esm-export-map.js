@@ -85,8 +85,12 @@ const mainSource = read("src/main.js");
 
 const mainModuleSource = read("src/main-module.js");
 [
+  'import { runtime } from "./platform/web.js";',
+  'from "./state.js"',
   "module-shadow",
   "bootstrapsGameplay: false",
+  "runtimeKind",
+  "registryKeys",
   "loadModuleShadow",
   "moduleShadowContract",
   "window.__HEX_SNAKE_MODULE_SHADOW__"
@@ -94,9 +98,23 @@ const mainModuleSource = read("src/main-module.js");
   if (!mainModuleSource.includes(token)) fail(`src/main-module.js is missing ${token}`);
 });
 
-if (/\bimport\s*(?:\(|[\s{*])/.test(mainModuleSource)) {
-  fail("src/main-module.js must not import gameplay files during module-shadow phase.");
-}
+[
+  "./dom.js",
+  "./ui.js",
+  "./network.js",
+  "./characters.js",
+  "./audio.js",
+  "./replay.js",
+  "./stats.js",
+  "./about.js",
+  "./ai.js",
+  "./render.js",
+  "./game.js"
+].forEach(source => {
+  if (mainModuleSource.includes(source)) {
+    fail(`src/main-module.js must not import ${source} during module-shadow phase.`);
+  }
+});
 
 expectToken(
   "build.js",
@@ -106,6 +124,8 @@ expectToken(
 const requiredRegistrations = [
   ["src/platform/web.js", "window.HexSnakeRuntime = HexSnakeRuntime;"],
   ["src/platform/mobile.js", "window.HexSnakeRuntime = HexSnakeRuntime;"],
+  ["src/platform/web.js", "HexSnakeRuntime as runtime"],
+  ["src/platform/mobile.js", "HexSnakeRuntime as runtime"],
   ["src/platform/web.js", "platform: HexSnakePlatform"],
   ["src/platform/web.js", "storage: HexSnakeStorage"],
   ["src/platform/mobile.js", "platform: HexSnakePlatform"],
@@ -115,6 +135,8 @@ const requiredRegistrations = [
   ["src/state.js", "window.HexSnakeRender = HexSnakeRender;"],
   ["src/state.js", "window.HexSnakeRenderGame = HexSnakeRenderGame;"],
   ["src/state.js", "window.HexSnakeControls = HexSnakeControls;"],
+  ["src/state.js", "HexSnakeState as state"],
+  ["src/state.js", "HexSnakeUI as uiRegistry"],
   ["src/state.js", "HexSnakeUI.about = {};"],
   ["src/state.js", "HexSnakeUI.ai = {};"],
   ["src/state.js", "HexSnakeUI.aiGame = {};"],

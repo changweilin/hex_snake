@@ -68,3 +68,16 @@ window.HexSnakeUI = HexSnakeUI;
 window.HexSnakeRender = HexSnakeRender;
 window.HexSnakeRenderGame = HexSnakeRenderGame;
 window.HexSnakeControls = HexSnakeControls;
+
+export {
+  HexSnakeControls,
+  HexSnakeRender,
+  HexSnakeRenderGame,
+  HexSnakeState,
+  HexSnakeUI,
+  HexSnakeControls as controls,
+  HexSnakeRender as render,
+  HexSnakeRenderGame as renderGame,
+  HexSnakeState as state,
+  HexSnakeUI as uiRegistry
+};

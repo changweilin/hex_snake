@@ -239,3 +239,12 @@ const HexSnakeRuntime = Object.freeze({
 window.HexSnakeStorage = HexSnakeStorage;
 window.HexSnakePlatform = HexSnakePlatform;
 window.HexSnakeRuntime = HexSnakeRuntime;
+
+export {
+  HexSnakePlatform,
+  HexSnakeRuntime,
+  HexSnakeStorage,
+  HexSnakePlatform as platform,
+  HexSnakeRuntime as runtime,
+  HexSnakeStorage as storage
+};

@@ -42,7 +42,7 @@ Shared order:
 | --- | --- | --- |
 | A. Loader plan gate | 文件化 modes、fallback、source order，並讓 `audit:esm-map` 檢查本文件存在關鍵契約 | `npm.cmd run audit:esm-map` |
 | B. Module shadow entry | 已新增 `src/main-module.js` 與 `?hexSnakeLoader=module-shadow`，只載入 shadow contract 並回報 ready，不啟動 gameplay | `audit:esm-map`、`build`、`test:smoke` |
-| C. Dual-mode runtime / registry exports | 讓 platform/runtime、state registries、DOM facade 具備正式 `export` 形狀，同時保留 `window.HexSnake*` compatibility | `audit:esm-map`、`audit:globals` 不上升 |
+| C. Dual-mode runtime / registry exports | platform/runtime 與 state registry 已具備正式 named exports，module shadow 已 import 這些 shell；下一步處理 DOM facade | `audit:esm-map`、`audit:globals` 不上升 |
 | D. Service module migration | 依 export map 順序讓 leaf services 與 runtime helpers 改成 explicit imports，legacy loader 仍可回退 | build、quick、smoke、mobile |
 | E. Gameplay module bootstrap | `src/game.js` 或新 bootstrap entry 接管 module mode；legacy loader 降為 fallback | release:check |
 
@@ -55,4 +55,4 @@ Shared order:
 
 ## Next AI Task
 
-下一個 AI 可直接處理項目是 Phase C：讓 platform/runtime 與 state registry 具備 dual-mode export/import 形狀，同時保留 legacy window compatibility。
+下一個 AI 可直接處理項目是 Phase C 下一段：讓 `src/dom.js` 具備 dual-mode `dom` export，並讓 module shadow entry import DOM facade shell；仍不 import gameplay files。

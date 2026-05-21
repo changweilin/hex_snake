@@ -9,7 +9,7 @@
 目前基線：
 - `npm.cmd run audit:state-boundary`：`game.js` 對 `ui.js` top-level declaration 的 heuristic reference 維持 0，legacy name leak 維持 0。
 - `npm.cmd run audit:globals`：42 cross-file reads。Phase 4 已把 replay、render、AI、UI/game hooks、public service 與 platform/storage runtime adapter 分批收斂到 facade；一般模組現在透過 `HexSnakeRuntime.platform/storage` 取用 runtime adapter。
-- `src/main.js` 預設仍使用 legacy concatenated loader 載入 13 個 source files；local dev 可用 `?hexSnakeLoader=module-shadow` 載入 `src/main-module.js` shadow entry，尚不啟動 gameplay bootstrap。
+- `src/main.js` 預設仍使用 legacy concatenated loader 載入 13 個 source files；local dev 可用 `?hexSnakeLoader=module-shadow` 載入 `src/main-module.js` shadow entry，並已 import dual-mode runtime/state registry shell，尚不啟動 gameplay bootstrap。
 
 ## Split Principles
 
@@ -22,7 +22,7 @@
 
 | Group | Files | 現況 | Split 方向 |
 | --- | --- | --- | --- |
-| Foundation | `src/platform/web.js`, `src/platform/mobile.js`, `src/state.js`, `src/dom.js` | `state.js` 與 `dom.js` 沒有 detected cross-file globals；web/mobile platform 已註冊 `HexSnakeRuntime = { platform, storage }`，一般模組改走 `HexSnakeRuntime.platform/storage`；export map、loader plan 與 module shadow gate 已建立 | 下一步讓 platform/runtime 與 state registry 具備 dual-mode export/import 形狀 |
+| Foundation | `src/platform/web.js`, `src/platform/mobile.js`, `src/state.js`, `src/dom.js` | web/mobile platform 已 export `runtime` / `platform` / `storage`，`state.js` 已 export `state` / `uiRegistry` / `render` / `renderGame` / `controls`，module shadow 已 import runtime/state registry shell；`dom.js` 沒有 detected cross-file globals | 下一步讓 `dom.js` 具備 dual-mode `dom` export |
 | Leaf services | `src/network.js`, `src/about.js` | `network.js` 改用 `HexSnakeRuntime.storage`；`about.js` 改用 `HexSnakeRuntime.platform`、`HexSnakeDOM` 與 `HexSnakeUI.about` | 可先抽成 isolated wrapper，保留 legacy global fallback |
 | Catalog / media / stats | `src/characters.js`, `src/audio.js`, `src/stats.js` | catalog setter/list、portrait variant、food label 與角色 helper 已有 facade；`audio.js` / `stats.js` 分別註冊到 `HexSnakeUI.audio/stats`，runtime storage 改走 `HexSnakeRuntime.storage` | 補正式 catalog / service exports，再評估移除 window-only wiring |
 | Runtime helpers | `src/ai.js`, `src/render.js`, `src/replay.js` | replay 已改走 DOM/state/UI facade 與 `HexSnakeUI.replayGame`；render draw/public hooks 已改走 `HexSnakeRender` 與 `HexSnakeRenderGame`；AI helper hooks 已改走 `HexSnakeUI.aiGame`；runtime adapter 改走 `HexSnakeRuntime` | 暫不拆；等 runtime/registry dual-mode 完成後再處理 |
@@ -37,12 +37,12 @@
 | 2. DOM/helper facade | 完成 | 建立 `HexSnakeControls`、`HexSnakeDOM` 與 game/UI helper facade | `audit:globals` 486 -> 367 |
 | 3. Catalog/media cleanup | 完成 | catalog setter/list、portrait variant state getter、food label config getter；characters/audio/stats 改走 facade | `audit:globals` 367 -> 339；build、quick、smoke 通過 |
 | 4. Runtime cleanup | runtime adapter facade 收斂完成 | replay、render、AI、UI/game hooks、public services 與 platform/storage adapter 已分批改走 `HexSnakeDOM`、`HexSnakeState`、`HexSnakeUI`、`HexSnakeRender`、`HexSnakeRuntime` | `audit:globals` 339 -> 42；`audit:state-boundary` 維持 0/0 |
-| 5. Core ES module split | module shadow entry 建立完成 | 已新增 `src/main-module.js` 與 `?hexSnakeLoader=module-shadow`，保留 legacy loader default，不 import 尚未 dual-mode 的 gameplay files；下一步處理 foundation dual-mode exports | `audit:esm-map`、legacy loader 可回退；正式 loader 可逐步啟用 |
+| 5. Core ES module split | runtime/state dual-mode exports 首批完成 | 已新增 `src/main-module.js` 與 `?hexSnakeLoader=module-shadow`；platform/runtime 與 state registry 已可被 native module shadow import，且不 import 尚未 dual-mode 的 gameplay files；下一步處理 DOM facade dual-mode export | `audit:esm-map`、legacy loader 可回退；正式 loader 可逐步啟用 |
 
 ## Immediate AI Task Queue
 
-1. 依 `doc/es-module-export-map.md` 將 platform/runtime 與 state registry modules 改成可被正式 ESM entry import 的 dual-mode export 形狀。
-2. 讓 `src/main-module.js` shadow entry import dual-mode runtime/registry shell，仍不啟動 gameplay。
+1. 將 `src/dom.js` 改成可被正式 ESM entry import 的 dual-mode `dom` export。
+2. 讓 `src/main-module.js` shadow entry import DOM facade shell，仍不啟動 gameplay。
 3. 最後才處理 `ui.js` / `game.js` 的正式 module scope 拆分。
 
 ## Do Not Start With

@@ -392,3 +392,12 @@ window.HexSnakeStorage = HexSnakeStorage;
 window.HexSnakePlatform = HexSnakePlatform;
 window.HexSnakeRuntime = HexSnakeRuntime;
 window.HexSnakeMobilePlatform = HexSnakePlatform;
+
+export {
+  HexSnakePlatform,
+  HexSnakeRuntime,
+  HexSnakeStorage,
+  HexSnakePlatform as platform,
+  HexSnakeRuntime as runtime,
+  HexSnakeStorage as storage
+};

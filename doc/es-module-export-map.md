@@ -8,7 +8,7 @@
 
 ## Shadow Entry
 
-`src/main-module.js` 是目前唯一的 native module shadow entry。local dev 可用 `?hexSnakeLoader=module-shadow` 觸發它；它只回報 `module-shadow` contract，不 import 尚未 dual-mode 的 gameplay files，也不啟動 bootstrap。
+`src/main-module.js` 是目前唯一的 native module shadow entry。local dev 可用 `?hexSnakeLoader=module-shadow` 觸發它；它已 import dual-mode `runtime` 與 state registry shell，只回報 `module-shadow` contract，不 import 尚未 dual-mode 的 gameplay files，也不啟動 bootstrap。
 
 ## Loader Order
 
@@ -34,12 +34,12 @@
 
 | Surface | Current owner | Shape | Formal ESM target |
 | --- | --- | --- | --- |
-| `HexSnakeRuntime` | `src/platform/web.js` / `src/platform/mobile.js` | frozen `{ platform, storage }` adapter | `runtime` default/named export chosen by target entry |
-| `HexSnakeState` | `src/state.js` | mutable state namespaces: `audio`、`config`、`game`、`replay`、`ui` | named `state` export plus domain namespaces |
-| `HexSnakeUI` | `src/state.js` creates; `src/ui.js` and services extend | shared registry with `about`、`ai`、`aiGame`、`audio`、`replay`、`replayGame`、`stats`、`uiGame` | named `uiRegistry` export until UI/game split is complete |
-| `HexSnakeRender` | `src/state.js` creates; `src/render.js` extends | render public hooks | named `render` export |
-| `HexSnakeRenderGame` | `src/state.js` creates; `src/game.js` extends | game geometry/combat helpers used by render | named `renderGame` export; later move to pure helper module |
-| `HexSnakeControls` | `src/state.js` | frozen keyboard/control helpers | named `controls` export |
+| `HexSnakeRuntime` | `src/platform/web.js` / `src/platform/mobile.js` | frozen `{ platform, storage }` adapter | named `runtime` / `platform` / `storage` exports implemented |
+| `HexSnakeState` | `src/state.js` | mutable state namespaces: `audio`、`config`、`game`、`replay`、`ui` | named `state` export implemented |
+| `HexSnakeUI` | `src/state.js` creates; `src/ui.js` and services extend | shared registry with `about`、`ai`、`aiGame`、`audio`、`replay`、`replayGame`、`stats`、`uiGame` | named `uiRegistry` export implemented until UI/game split is complete |
+| `HexSnakeRender` | `src/state.js` creates; `src/render.js` extends | render public hooks | named `render` export implemented |
+| `HexSnakeRenderGame` | `src/state.js` creates; `src/game.js` extends | game geometry/combat helpers used by render | named `renderGame` export implemented; later move to pure helper module |
+| `HexSnakeControls` | `src/state.js` | frozen keyboard/control helpers | named `controls` export implemented |
 | `HexSnakeDOM` | `src/dom.js` | frozen DOM reference facade | named `dom` export |
 | `HexSnakeNet` | `src/network.js` | frozen LAN client/service facade | named `network` export |
 | `HexSnakeAbout` | `src/about.js` | frozen version/about service, mirrored into `HexSnakeUI.about` | named `about` export |
