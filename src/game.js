@@ -1680,15 +1680,15 @@
     }
 
     function canTurn(newDir) {
-      return HexSnakeState.game.snake.length < 2 || (newDir + 3) % 6 !== HexSnakeState.game.dir;
+      return GameRuntimeState.snake.length < 2 || (newDir + 3) % 6 !== GameRuntimeState.dir;
     }
 
     function canComputerTurn(newDir) {
-      return HexSnakeState.game.computerSnake.length < 2 || (newDir + 3) % 6 !== HexSnakeState.game.computerDir;
+      return GameRuntimeState.computerSnake.length < 2 || (newDir + 3) % 6 !== GameRuntimeState.computerDir;
     }
 
     function canOwnerTurn(owner, newDir) {
-      if (owner === "player") return HexSnakeState.game.snake.length < 2 || (newDir + 3) % 6 !== HexSnakeState.game.dir;
+      if (owner === "player") return GameRuntimeState.snake.length < 2 || (newDir + 3) % 6 !== GameRuntimeState.dir;
       return canComputerTurn(newDir);
     }
 
@@ -1699,7 +1699,7 @@
     }
 
     function nextCell(head, direction) {
-      const delta = HexSnakeState.config.directions[direction];
+      const delta = GameConfig.directions[direction];
       return { q: head.q + delta.q, r: head.r + delta.r };
     }
 
@@ -1716,8 +1716,8 @@
     }
 
     function directionalAttackTarget(direction) {
-      let target = { ...HexSnakeState.game.snake[0] };
-      for (let step = 0; step < HexSnakeState.game.targetMaxHex; step += 1) {
+      let target = { ...GameRuntimeState.snake[0] };
+      for (let step = 0; step < GameRuntimeState.targetMaxHex; step += 1) {
         const next = nextWrappedCell(target, direction);
         target = next;
       }
@@ -1731,15 +1731,15 @@
     function setDirection(newDir, options = {}) {
       if (!Number.isInteger(newDir) || newDir < 0 || newDir > 5) return;
       if (isNetworkGuestActive()) {
-        if (!HexSnakeState.game.computerSnake?.length || !canComputerTurn(newDir)) return;
+        if (!GameRuntimeState.computerSnake?.length || !canComputerTurn(newDir)) return;
         setDirectionButtonHighlight(newDir);
         sendNetworkInput({ kind: "direction", direction: newDir });
         if (options.feedbackEvent) triggerTouchFeedback(options.feedbackEvent, options.feedbackStrength ?? 6);
         return;
       }
       if (canTurn(newDir)) {
-        const changed = HexSnakeState.game.nextDir !== newDir;
-        HexSnakeState.game.nextDir = newDir;
+        const changed = GameRuntimeState.nextDir !== newDir;
+        GameRuntimeState.nextDir = newDir;
         setDirectionButtonHighlight(newDir);
         if (changed) triggerTouchFeedback(options.feedbackEvent, options.feedbackStrength ?? 6);
         updateHud();
