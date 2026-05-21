@@ -3774,7 +3774,7 @@
       return false;
     }
 
-    function launchPlayerAttackDirection(direction, profile = HexSnakeState.game.selectedAttackProfile) {
+    function launchPlayerAttackDirection(direction, profile = GameRuntimeState.selectedAttackProfile) {
       if (isNetworkGuestActive()) {
         const safeDirection = safeNetworkDirection(direction);
         if (safeDirection === null) return false;
@@ -3783,10 +3783,10 @@
         flashAttackButton(safeProfile);
         return true;
       }
-      if (!HexSnakeState.game.running || HexSnakeState.game.gameOver) {
+      if (!GameRuntimeState.running || GameRuntimeState.gameOver) {
         if (!autoStartGame()) return false;
       }
-      return launchPlayerAttack(opponentHeadTarget(), profile, { aimDirection: direction, aimOrigin: HexSnakeState.game.snake[0] });
+      return launchPlayerAttack(opponentHeadTarget(), profile, { aimDirection: direction, aimOrigin: GameRuntimeState.snake[0] });
     }
 
     function performModuleAttack() {
