@@ -2910,22 +2910,22 @@
 
     function step(headCollisionOrder = "simultaneous", now = performance.now()) {
       if (isPlayerAutoControlActive()) {
-        HexSnakeState.game.nextDir = GameAI.chooseAutoDirection("player");
-        setDirectionButtonHighlight(HexSnakeState.game.nextDir);
+        GameRuntimeState.nextDir = GameAI.chooseAutoDirection("player");
+        setDirectionButtonHighlight(GameRuntimeState.nextDir);
       }
-      HexSnakeState.game.dir = HexSnakeState.game.nextDir;
-      if (!isNetworkHostActive()) HexSnakeState.game.computerDir = GameAI.chooseComputerDirection();
+      GameRuntimeState.dir = GameRuntimeState.nextDir;
+      if (!isNetworkHostActive()) GameRuntimeState.computerDir = GameAI.chooseComputerDirection();
 
-      const next = nextWrappedCell(HexSnakeState.game.snake[0], HexSnakeState.game.dir);
-      const computerNext = nextWrappedCell(HexSnakeState.game.computerSnake[0], HexSnakeState.game.computerDir);
+      const next = nextWrappedCell(GameRuntimeState.snake[0], GameRuntimeState.dir);
+      const computerNext = nextWrappedCell(GameRuntimeState.computerSnake[0], GameRuntimeState.computerDir);
       const nextKey = keyOf(next);
       const computerNextKey = keyOf(computerNext);
-      const eatenFood = HexSnakeState.game.foods.find(food => next.q === food.q && next.r === food.r);
-      const computerEatenFood = HexSnakeState.game.foods.find(food => computerNext.q === food.q && computerNext.r === food.r);
+      const eatenFood = GameRuntimeState.foods.find(food => next.q === food.q && next.r === food.r);
+      const computerEatenFood = GameRuntimeState.foods.find(food => computerNext.q === food.q && computerNext.r === food.r);
       const eating = Boolean(eatenFood);
       const computerEating = Boolean(computerEatenFood);
-      const body = eating ? HexSnakeState.game.snake : HexSnakeState.game.snake.slice(0, -1);
-      const computerBody = computerEating ? HexSnakeState.game.computerSnake : HexSnakeState.game.computerSnake.slice(0, -1);
+      const body = eating ? GameRuntimeState.snake : GameRuntimeState.snake.slice(0, -1);
+      const computerBody = computerEating ? GameRuntimeState.computerSnake : GameRuntimeState.computerSnake.slice(0, -1);
       const playerSelfHit = body.some(segment => keyOf(segment) === nextKey);
       const computerSelfHit = computerBody.some(segment => keyOf(segment) === computerNextKey);
       let playerOpponentHit = computerBody.some(segment => keyOf(segment) === nextKey);
@@ -2940,18 +2940,18 @@
           computerOpponentHit = true;
         }
       }
-      if (nextKey === keyOf(HexSnakeState.game.computerSnake[0]) && computerNextKey === keyOf(HexSnakeState.game.snake[0])) {
+      if (nextKey === keyOf(GameRuntimeState.computerSnake[0]) && computerNextKey === keyOf(GameRuntimeState.snake[0])) {
         playerOpponentHit = true;
         computerOpponentHit = true;
       }
 
       let playerCollision = collisionSeverity(playerSelfHit, playerOpponentHit);
       let computerCollision = collisionSeverity(computerSelfHit, computerOpponentHit);
-      if (computerCollision && !playerCollision && HexSnakeState.game.computerSnake.some(segment => keyOf(segment) === nextKey)) {
+      if (computerCollision && !playerCollision && GameRuntimeState.computerSnake.some(segment => keyOf(segment) === nextKey)) {
         playerOpponentHit = true;
         playerCollision = collisionSeverity(playerSelfHit, playerOpponentHit);
       }
-      if (playerCollision && !computerCollision && HexSnakeState.game.snake.some(segment => keyOf(segment) === computerNextKey)) {
+      if (playerCollision && !computerCollision && GameRuntimeState.snake.some(segment => keyOf(segment) === computerNextKey)) {
         computerOpponentHit = true;
         computerCollision = collisionSeverity(computerSelfHit, computerOpponentHit);
       }
@@ -2969,8 +2969,8 @@
       const computerConsumedFood = !computerCollision ? advanceOwnerMovement("computer", computerNext, computerEatenFood) : null;
       replaceConsumedFoods([playerConsumedFood, computerConsumedFood], eating || computerEating);
 
-      if (!playerCollision && HexSnakeState.game.running && !HexSnakeState.game.paused) GameAI.maybeAutoBattlePlayerAttack(now);
-      if (!computerCollision && HexSnakeState.game.running && !HexSnakeState.game.paused && !isNetworkHostActive()) GameAI.maybeComputerAttack(now);
+      if (!playerCollision && GameRuntimeState.running && !GameRuntimeState.paused) GameAI.maybeAutoBattlePlayerAttack(now);
+      if (!computerCollision && GameRuntimeState.running && !GameRuntimeState.paused && !isNetworkHostActive()) GameAI.maybeComputerAttack(now);
       updateHud();
     }
 
