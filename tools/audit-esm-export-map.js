@@ -309,6 +309,10 @@ const requiredRegistrations = [
 
 requiredRegistrations.forEach(([relativePath, token]) => expectToken(relativePath, token));
 
+if (read("src/ui.js").includes("HexSnakeUI.")) {
+  fail("src/ui.js should use the UiRegistry alias for HexSnakeUI property reads.");
+}
+
 const docText = read("doc/es-module-export-map.md");
 [
   "src/platform/web.js",
@@ -331,6 +335,7 @@ const docText = read("doc/es-module-export-map.md");
   "HexSnakeState",
   "HexSnakeDOM",
   "HexSnakeUI",
+  "UiRegistry",
   "UiControls",
   "HexSnakeUI.network",
   "HexSnakeUICore",

@@ -1939,17 +1939,17 @@ function fighterArt(
   const loadMode = portrait || pose === "attack" ? "eager" : "lazy";
   const initialSize = variant === "small" ? "sm" : "md";
   const src = portrait
-    ? HexSnakeUI.portraitUrl(character, pose, initialSize)
-    : HexSnakeUI.avatarUrl(character, initialSize);
+    ? UiRegistry.portraitUrl(character, pose, initialSize)
+    : UiRegistry.avatarUrl(character, initialSize);
   const srcset = portrait
-    ? HexSnakeUI.portraitSrcset(character, pose)
-    : HexSnakeUI.avatarSrcset(character);
+    ? UiRegistry.portraitSrcset(character, pose)
+    : UiRegistry.avatarSrcset(character);
   return `
         <img
           class="${imageClass}"
           src="${src}"
           srcset="${srcset}"
-          sizes="${HexSnakeUI.portraitSizesAttribute(variant)}"
+          sizes="${UiRegistry.portraitSizesAttribute(variant)}"
           alt="${character.name}"
           decoding="async"
           loading="${loadMode}"
@@ -1964,8 +1964,8 @@ function fighterPortraitImage(character, pose = "idle") {
   return `
         <img
           class="fighter-avatar-image portrait"
-          src="${HexSnakeUI.avatarUrl(character, "sm")}"
-          srcset="${HexSnakeUI.avatarSrcset(character)}"
+          src="${UiRegistry.avatarUrl(character, "sm")}"
+          srcset="${UiRegistry.avatarSrcset(character)}"
           sizes="72px"
           alt="${character.name}"
           decoding="async"
@@ -1991,8 +1991,8 @@ function updateFighterPortraitImage(module, character, pose = "idle") {
     module.innerHTML = fighterPortraitImage(character, pose);
     return;
   }
-  const src = HexSnakeUI.avatarUrl(character, "sm");
-  const srcset = HexSnakeUI.avatarSrcset(character);
+  const src = UiRegistry.avatarUrl(character, "sm");
+  const srcset = UiRegistry.avatarSrcset(character);
   setImageAttributeIfChanged(image, "src", src);
   setImageAttributeIfChanged(image, "srcset", srcset);
   setImageAttributeIfChanged(image, "sizes", "72px");
@@ -2005,7 +2005,7 @@ function updateFighterPortraitImage(module, character, pose = "idle") {
 
 function characterStyle(character, owner = null) {
   const ownerVars = owner
-    ? `--owner-color:${HexSnakeUI.ownerMeta(owner).color};--owner-line:${HexSnakeUI.ownerMeta(owner).line};`
+    ? `--owner-color:${UiRegistry.ownerMeta(owner).color};--owner-line:${UiRegistry.ownerMeta(owner).line};`
     : "";
   return `--fighter-color:${character.color};--fighter-line:${character.line};--fighter-accent:${character.accent};${ownerVars}`;
 }
@@ -2917,8 +2917,8 @@ function buildRulesContent() {
           <li style="${characterStyle(character)}">
             <span class="rules-character-avatar" aria-hidden="true">
               <img
-                src="${HexSnakeUI.avatarUrl(character, "sm")}"
-                srcset="${HexSnakeUI.avatarSrcset(character)}"
+                src="${UiRegistry.avatarUrl(character, "sm")}"
+                srcset="${UiRegistry.avatarSrcset(character)}"
                 sizes="58px"
                 alt=""
                 decoding="async"
@@ -3093,12 +3093,12 @@ function buildCharacterStage(options = {}) {
   UiDom.characterStage.innerHTML = ["player", "computer"]
     .map((owner) => {
       const character = options.startLogoCharacters
-        ? HexSnakeUI.startLogoCharacterFor(owner)
-        : HexSnakeUI.characterFor(owner);
+        ? UiRegistry.startLogoCharacterFor(owner)
+        : UiRegistry.characterFor(owner);
       const holdHint = owner === "player" ? ' title="長按施放攻擊"' : "";
       return `
           <div class="fighter-card" data-owner="${owner}" style="${characterStyle(character, owner)}">
-            <div class="fighter-module ${owner === "player" ? "is-actionable" : ""}" data-module="${owner}" data-owner-mark="${HexSnakeUI.ownerMeta(owner).mark}"${holdHint}>
+            <div class="fighter-module ${owner === "player" ? "is-actionable" : ""}" data-module="${owner}" data-owner-mark="${UiRegistry.ownerMeta(owner).mark}"${holdHint}>
               <div class="fighter-module-clip">
                 ${fighterPortraitImage(character, "idle")}
               </div>
@@ -3134,8 +3134,8 @@ function renderWinnerPortrait(owner, playerLost = false, computerLost = false) {
   }
   const playerPose = owner === "player" ? "victory" : "defeat";
   const computerPose = owner === "computer" ? "victory" : "defeat";
-  const playerCharacter = HexSnakeUI.characterFor("player");
-  const computerCharacter = HexSnakeUI.characterFor("computer");
+  const playerCharacter = UiRegistry.characterFor("player");
+  const computerCharacter = UiRegistry.characterFor("computer");
   const playerResult = owner
     ? owner === "player"
       ? "P1 勝利"
@@ -3152,14 +3152,14 @@ function renderWinnerPortrait(owner, playerLost = false, computerLost = false) {
   UiDom.winnerPortrait.innerHTML = `
         <div class="portrait-pair result-pair">
           <div class="result-entry ${owner === "player" ? "is-winner" : ""} ${playerPose === "defeat" ? "is-defeated" : ""}" data-owner="player" data-result-owner="player" title="選擇 P1 角色" style="${characterStyle(playerCharacter, "player")}">
-            <div class="fighter-portrait result-portrait ${owner === "player" ? "is-winner" : ""} ${playerPose === "defeat" ? "is-defeated" : ""}" data-owner="player" data-owner-mark="${HexSnakeUI.ownerMeta("player").mark}">
+            <div class="fighter-portrait result-portrait ${owner === "player" ? "is-winner" : ""} ${playerPose === "defeat" ? "is-defeated" : ""}" data-owner="player" data-owner-mark="${UiRegistry.ownerMeta("player").mark}">
               <span class="result-badge">${playerResult}</span>
               ${fighterArt(playerCharacter, playerPose, true)}
             </div>
             <span class="result-quote">「${resultLineForCharacter(playerCharacter, playerPose)}」</span>
           </div>
           <div class="result-entry ${owner === "computer" ? "is-winner" : ""} ${computerPose === "defeat" ? "is-defeated" : ""}" data-owner="computer" data-result-owner="computer" title="選擇 P2 角色" style="${characterStyle(computerCharacter, "computer")}">
-            <div class="fighter-portrait result-portrait ${owner === "computer" ? "is-winner" : ""} ${computerPose === "defeat" ? "is-defeated" : ""}" data-owner="computer" data-owner-mark="${HexSnakeUI.ownerMeta("computer").mark}">
+            <div class="fighter-portrait result-portrait ${owner === "computer" ? "is-winner" : ""} ${computerPose === "defeat" ? "is-defeated" : ""}" data-owner="computer" data-owner-mark="${UiRegistry.ownerMeta("computer").mark}">
               <span class="result-badge">${computerResult}</span>
               ${fighterArt(computerCharacter, computerPose, true)}
             </div>
@@ -3173,7 +3173,7 @@ function renderIntroPortraits(showDetails = introDetailsOpen) {
   introDetailsOpen = showDetails;
   if (showDetails) setIntroDetailsChrome();
   else setIntroLobbyChrome();
-  const selectedCharacter = HexSnakeUI.selectedCharacterFor(selectedPortraitOwner);
+  const selectedCharacter = UiRegistry.selectedCharacterFor(selectedPortraitOwner);
   UiDom.winnerPortrait.hidden = false;
   hideCharacterStage();
   UiDom.characterStage.innerHTML = "";
@@ -3182,35 +3182,35 @@ function renderIntroPortraits(showDetails = introDetailsOpen) {
           <div class="intro-avatar-gate">
             ${["player", "computer"]
               .map((owner) => {
-                const character = HexSnakeUI.selectedCharacterFor(owner);
-                const isRandomChoice = HexSnakeUI.isRandomCharacterChoice(owner);
+                const character = UiRegistry.selectedCharacterFor(owner);
+                const isRandomChoice = UiRegistry.isRandomCharacterChoice(owner);
                 const logoCharacter = isRandomChoice
                   ? null
-                  : HexSnakeUI.startLogoCharacterFor(owner);
+                  : UiRegistry.startLogoCharacterFor(owner);
                 const label = owner === "player" ? "P1" : "P2";
                 const motto = character?.motto || "機緣一轉，百人角色待君擇。\n心念既定，千道關卡隨我闖。";
                 return `
                 <div class="intro-avatar-button" role="button" tabindex="0" data-owner="${owner}" data-open-intro="${owner}" style="${characterStyle(
                   character || {
-                    color: HexSnakeUI.ownerMeta(owner).color,
-                    line: HexSnakeUI.ownerMeta(owner).line,
+                    color: UiRegistry.ownerMeta(owner).color,
+                    line: UiRegistry.ownerMeta(owner).line,
                     accent: "#fbbf24",
                   },
                   owner,
                 )}" aria-label="開啟${label}角色選擇">
                   <div class="portrait-card-controls" data-portrait-swipe-owner="${owner}">
-                    ${character ? `<div class="fighter-portrait" data-owner="${owner}" data-owner-mark="${HexSnakeUI.ownerMeta(owner).mark}">${fighterArt(character, "intro", true, "small")}</div>` : HexSnakeUI.randomPortraitMarkup(owner)}
+                    ${character ? `<div class="fighter-portrait" data-owner="${owner}" data-owner-mark="${UiRegistry.ownerMeta(owner).mark}">${fighterArt(character, "intro", true, "small")}</div>` : UiRegistry.randomPortraitMarkup(owner)}
                   </div>
                   <div class="portrait-label-controls intro-avatar-label-controls">
-                    <button class="secondary portrait-arrow portrait-label-arrow" type="button" data-portrait-owner="${owner}" data-portrait-shift="-1" aria-label="${HexSnakeUI.ownerMeta(owner).label} 上一位">‹</button>
-                    <span class="intro-avatar-label"><span class="owner-name ${owner === "player" ? "is-p1" : "is-p2"}">${HexSnakeUI.ownerMeta(owner).label}</span> · ${character ? character.name : "隨機選擇"}</span>
-                    <button class="secondary portrait-arrow portrait-label-arrow" type="button" data-portrait-owner="${owner}" data-portrait-shift="1" aria-label="${HexSnakeUI.ownerMeta(owner).label} 下一位">›</button>
+                    <button class="secondary portrait-arrow portrait-label-arrow" type="button" data-portrait-owner="${owner}" data-portrait-shift="-1" aria-label="${UiRegistry.ownerMeta(owner).label} 上一位">‹</button>
+                    <span class="intro-avatar-label"><span class="owner-name ${owner === "player" ? "is-p1" : "is-p2"}">${UiRegistry.ownerMeta(owner).label}</span> · ${character ? character.name : "隨機選擇"}</span>
+                    <button class="secondary portrait-arrow portrait-label-arrow" type="button" data-portrait-owner="${owner}" data-portrait-shift="1" aria-label="${UiRegistry.ownerMeta(owner).label} 下一位">›</button>
                   </div>
                   <p class="intro-avatar-motto ${character ? "" : "is-placeholder"}">${formatIntroMotto(motto)}</p>
                   ${
                     isRandomChoice
                       ? `<span class="intro-avatar-logo" aria-hidden="true"><span class="random-portrait-mark intro-avatar-logo-mark">?</span></span>`
-                      : `<span class="intro-avatar-logo" aria-hidden="true"><img src="${HexSnakeUI.avatarUrl(logoCharacter, "sm")}" srcset="${HexSnakeUI.avatarSrcset(logoCharacter)}" sizes="52px" alt="${logoCharacter.name} 頭像" decoding="async" loading="lazy"></span>`
+                      : `<span class="intro-avatar-logo" aria-hidden="true"><img src="${UiRegistry.avatarUrl(logoCharacter, "sm")}" srcset="${UiRegistry.avatarSrcset(logoCharacter)}" sizes="52px" alt="${logoCharacter.name} 頭像" decoding="async" loading="lazy"></span>`
                   }
                 </div>
               `;
@@ -3225,24 +3225,24 @@ function renderIntroPortraits(showDetails = introDetailsOpen) {
           <div class="portrait-pair">
           ${["player", "computer"]
             .map((owner) => {
-              const character = HexSnakeUI.selectedCharacterFor(owner);
+              const character = UiRegistry.selectedCharacterFor(owner);
               const label = owner === "player" ? "P1" : "P2";
               return `
                 <div class="portrait-option ${owner === selectedPortraitOwner ? "is-selected" : ""}" role="button" tabindex="0" data-owner="${owner}" data-portrait-owner="${owner}" style="${characterStyle(
                   character || {
-                    color: HexSnakeUI.ownerMeta(owner).color,
-                    line: HexSnakeUI.ownerMeta(owner).line,
+                    color: UiRegistry.ownerMeta(owner).color,
+                    line: UiRegistry.ownerMeta(owner).line,
                     accent: "#fbbf24",
                   },
                   owner,
                 )}">
                 <div class="portrait-card-controls" data-portrait-swipe-owner="${owner}">
-                  ${character ? `<div class="fighter-portrait" data-owner="${owner}" data-owner-mark="${HexSnakeUI.ownerMeta(owner).mark}" data-full-portrait="${owner}">${fighterArt(character, "intro", true, "small")}</div>` : HexSnakeUI.randomPortraitMarkup(owner)}
+                  ${character ? `<div class="fighter-portrait" data-owner="${owner}" data-owner-mark="${UiRegistry.ownerMeta(owner).mark}" data-full-portrait="${owner}">${fighterArt(character, "intro", true, "small")}</div>` : UiRegistry.randomPortraitMarkup(owner)}
                 </div>
                 <div class="portrait-label-controls">
-                  <button class="secondary portrait-arrow portrait-label-arrow" type="button" data-portrait-owner="${owner}" data-portrait-shift="-1" aria-label="${HexSnakeUI.ownerMeta(owner).label} 上一位">‹</button>
-                  <span class="portrait-option-label"><span class="owner-name ${owner === "player" ? "is-p1" : "is-p2"}">${HexSnakeUI.ownerMeta(owner).label}</span> · ${character ? character.name : "隨機選擇"}</span>
-                  <button class="secondary portrait-arrow portrait-label-arrow" type="button" data-portrait-owner="${owner}" data-portrait-shift="1" aria-label="${HexSnakeUI.ownerMeta(owner).label} 下一位">›</button>
+                  <button class="secondary portrait-arrow portrait-label-arrow" type="button" data-portrait-owner="${owner}" data-portrait-shift="-1" aria-label="${UiRegistry.ownerMeta(owner).label} 上一位">‹</button>
+                  <span class="portrait-option-label"><span class="owner-name ${owner === "player" ? "is-p1" : "is-p2"}">${UiRegistry.ownerMeta(owner).label}</span> · ${character ? character.name : "隨機選擇"}</span>
+                  <button class="secondary portrait-arrow portrait-label-arrow" type="button" data-portrait-owner="${owner}" data-portrait-shift="1" aria-label="${UiRegistry.ownerMeta(owner).label} 下一位">›</button>
                 </div>
               </div>
             `;
@@ -3253,8 +3253,8 @@ function renderIntroPortraits(showDetails = introDetailsOpen) {
             <button class="secondary portrait-arrow" type="button" data-portrait-shift="-1" aria-label="上一位" onclick="applySelectedPortraitCharacter(-1)">‹</button>
             <div class="portrait-copy" style="${characterStyle(
               selectedCharacter || {
-                color: HexSnakeUI.ownerMeta(selectedPortraitOwner).color,
-                line: HexSnakeUI.ownerMeta(selectedPortraitOwner).line,
+                color: UiRegistry.ownerMeta(selectedPortraitOwner).color,
+                line: UiRegistry.ownerMeta(selectedPortraitOwner).line,
                 accent: "#fbbf24",
               },
               selectedPortraitOwner,
@@ -3291,24 +3291,24 @@ function setPortraitCharacterForOwner(
   if (selectedPortraitOwner === "player") {
     playerCharacterChoice = characterId;
     if (characterId === randomCharacterChoiceId) {
-      HexSnakeUI.ensureStartLogoRandomCharacterId(selectedPortraitOwner);
+      UiRegistry.ensureStartLogoRandomCharacterId(selectedPortraitOwner);
     } else {
       playerCharacterId = characterId;
-      HexSnakeUI.clearStartLogoRandomCharacterId(selectedPortraitOwner);
+      UiRegistry.clearStartLogoRandomCharacterId(selectedPortraitOwner);
     }
   } else {
     computerCharacterChoice = characterId;
     if (characterId === randomCharacterChoiceId) {
-      HexSnakeUI.ensureStartLogoRandomCharacterId(selectedPortraitOwner);
+      UiRegistry.ensureStartLogoRandomCharacterId(selectedPortraitOwner);
     } else {
       computerCharacterId = characterId;
-      HexSnakeUI.clearStartLogoRandomCharacterId(selectedPortraitOwner);
+      UiRegistry.clearStartLogoRandomCharacterId(selectedPortraitOwner);
     }
   }
-  HexSnakeUI.syncCharacterInputs();
-  HexSnakeUI.saveCharacterChoices();
+  UiRegistry.syncCharacterInputs();
+  UiRegistry.saveCharacterChoices();
   if (characterId !== randomCharacterChoiceId)
-    HexSnakeUI.preloadPortraitsFor(selectedPortraitOwner);
+    UiRegistry.preloadPortraitsFor(selectedPortraitOwner);
   renderIntroPortraits(showDetails);
   UiGame.resize();
   if (characterId !== randomCharacterChoiceId) {
@@ -3325,7 +3325,7 @@ function setSelectedPortraitCharacter(characterId) {
 
 function applyPortraitCharacter(owner, delta, showDetails = introDetailsOpen) {
   const safeOwner = owner === "computer" ? "computer" : "player";
-  const currentId = HexSnakeUI.characterChoiceFor(safeOwner);
+  const currentId = UiRegistry.characterChoiceFor(safeOwner);
   const choices = [
     randomCharacterChoiceId,
     ...characters.map((character) => character.id),
@@ -3341,14 +3341,14 @@ function applySelectedPortraitCharacter(delta) {
 }
 
 function renderPortraitLightbox() {
-  const character = HexSnakeUI.characterFor(portraitLightboxOwner);
-  UiDom.portraitLightboxImage.src = HexSnakeUI.portraitUrl(character, "intro", "md");
-  UiDom.portraitLightboxImage.srcset = HexSnakeUI.portraitSrcset(character, "intro");
-  UiDom.portraitLightboxImage.sizes = HexSnakeUI.portraitSizesAttribute("full");
+  const character = UiRegistry.characterFor(portraitLightboxOwner);
+  UiDom.portraitLightboxImage.src = UiRegistry.portraitUrl(character, "intro", "md");
+  UiDom.portraitLightboxImage.srcset = UiRegistry.portraitSrcset(character, "intro");
+  UiDom.portraitLightboxImage.sizes = UiRegistry.portraitSizesAttribute("full");
   UiDom.portraitLightboxImage.alt = character.name;
   UiDom.portraitLightboxImage.dataset.characterId = character.id;
   UiDom.portraitLightboxImage.dataset.portraitVariant = portraitVariantMode;
-  UiDom.portraitLightboxCaption.textContent = `${HexSnakeUI.ownerMeta(portraitLightboxOwner).label} / ${character.name} / ${portraitVariantLabels[portraitVariantMode] || portraitVariantMode}`;
+  UiDom.portraitLightboxCaption.textContent = `${UiRegistry.ownerMeta(portraitLightboxOwner).label} / ${character.name} / ${portraitVariantLabels[portraitVariantMode] || portraitVariantMode}`;
   updatePortraitVariantButtons();
 }
 
@@ -3409,8 +3409,8 @@ function setPortraitVariantMode(mode) {
   portraitVariantMode = nextMode;
   UiStorage.set("hexSnakePortraitVariant", portraitVariantMode);
   rerenderPortraitSurfaces();
-  HexSnakeUI.preloadPortraitsFor("player");
-  HexSnakeUI.preloadPortraitsFor("computer");
+  UiRegistry.preloadPortraitsFor("player");
+  UiRegistry.preloadPortraitsFor("computer");
 }
 
 function togglePortraitVariantMode() {
@@ -3440,7 +3440,7 @@ function openPortraitLightbox(owner) {
 function shiftPortraitLightbox(delta) {
   selectedPortraitOwner = portraitLightboxOwner;
   const choices = characters.map((character) => character.id);
-  const currentId = HexSnakeUI.characterFor(selectedPortraitOwner).id;
+  const currentId = UiRegistry.characterFor(selectedPortraitOwner).id;
   const currentIndex = Math.max(0, choices.indexOf(currentId));
   const nextChoice =
     choices[(currentIndex + delta + choices.length) % choices.length];
@@ -3468,7 +3468,7 @@ function resultLineForCharacter(character, pose) {
 function setFighterPose(owner, pose, duration = 0) {
   const module = UiDom.characterStage.querySelector(`[data-module="${owner}"]`);
   if (!module) return;
-  const character = HexSnakeUI.characterFor(owner);
+  const character = UiRegistry.characterFor(owner);
   updateFighterPortraitImage(module, character, pose);
   clearTimeout(portraitPoseTimers[owner]);
   if (duration > 0) {
@@ -3517,7 +3517,7 @@ function showFighterCallout(owner, text, options = {}) {
 }
 
 function showAttackCallout(owner, profile) {
-  const character = HexSnakeUI.characterFor(owner);
+  const character = UiRegistry.characterFor(owner);
   showFighterCallout(
     owner,
     profile === "small" ? character.smallMove : character.bigMove,
@@ -3543,7 +3543,7 @@ function showStatusCallout(owner, text, options = {}) {
 }
 
 function showResultCallout(owner, pose) {
-  showFighterCallout(owner, resultLineForCharacter(HexSnakeUI.characterFor(owner), pose), {
+  showFighterCallout(owner, resultLineForCharacter(UiRegistry.characterFor(owner), pose), {
     kind: pose === "victory" ? "victory" : "defeat",
     duration: null,
     locked: true,
@@ -3819,7 +3819,7 @@ function attackCooldownRemainingMs(
   now = performance.now(),
 ) {
   const stock = owner === "player" ? playerStock : computerStock;
-  const character = HexSnakeUI.characterFor(owner);
+  const character = UiRegistry.characterFor(owner);
   const cooldownMs = attackProfileCooldown(stock, profile, character?.id);
   return Math.max(0, cooldownMs - (now - lastAttackMsFor(owner, profile)));
 }
@@ -3967,7 +3967,7 @@ function addRandomStock(stock, candidates = stockFoodTypeIds, amount = 1) {
 }
 
 function applyCharacterFoodStockBonus(owner, stock, types) {
-  const character = HexSnakeUI.characterFor(owner);
+  const character = UiRegistry.characterFor(owner);
   const hasBlackFood = types.includes("black");
   const stockTypes = types.filter((typeId) =>
     stockFoodTypeIds.includes(typeId),

@@ -36,7 +36,7 @@
 | --- | --- | --- | --- |
 | `HexSnakeRuntime` | `src/platform/web.js` / `src/platform/mobile.js` | frozen `{ platform, storage }` adapter | named `runtime` / `platform` / `storage` exports implemented |
 | `HexSnakeState` | `src/state.js` | mutable state namespaces: `audio`、`config`、`game`、`replay`、`ui` | named `state` export implemented |
-| `HexSnakeUI` | `src/state.js` creates; `src/ui.js` and services extend | shared registry with `about`、`ai`、`aiGame`、`audio`、`replay`、`replayGame`、`stats`、`uiGame` | named `uiRegistry` export implemented until UI/game split is complete |
+| `HexSnakeUI` | `src/state.js` creates; `src/ui.js` and services extend | shared registry with `about`、`ai`、`aiGame`、`audio`、`replay`、`replayGame`、`stats`、`uiGame`; UI self-references use `UiRegistry` | named `uiRegistry` export implemented until UI/game split is complete |
 | `HexSnakeUICore` | `src/ui.js` | frozen UI config/presentation shell over existing `HexSnakeUI` registrations | named `uiCore` export implemented |
 | `HexSnakeGame` | `src/game.js` | frozen game shell with facade helpers plus `loadGameShell()` / `bootstrapGame()` | named `gameShell` export implemented; `module-shadow` imports shell but does not call bootstrap |
 | `HexSnakeRender` | `src/state.js` creates; `src/render.js` extends | render public hooks | named `render` export implemented from `state.js`; named `renderHooks` export implemented from `render.js` |
