@@ -2454,25 +2454,25 @@
       return GameRuntimeState.projectiles.length !== beforeCount;
     }
 
-    function applyAttackStun(owner, chance = HexSnakeState.config.baseAttackStunChance, now = performance.now(), options = {}) {
+    function applyAttackStun(owner, chance = GameConfig.baseAttackStunChance, now = performance.now(), options = {}) {
       if (Math.random() >= chance) return false;
       if (isOwnerSandwormArmored(owner, now)) {
         clearOwnerAbnormalStatus(owner, now);
         return false;
       }
       const interrupted = options.interrupt !== false && interruptCasting(owner);
-      const currentStunUntil = owner === "player" ? HexSnakeState.game.playerStunUntil : HexSnakeState.game.computerStunUntil;
+      const currentStunUntil = owner === "player" ? GameRuntimeState.playerStunUntil : GameRuntimeState.computerStunUntil;
       const stunBase = options.stack ? Math.max(now, currentStunUntil) : now;
-      const stunUntil = stunBase + HexSnakeState.config.attackStunMs;
-      const slowUntil = stunUntil + HexSnakeState.config.attackSlowMs;
+      const stunUntil = stunBase + GameConfig.attackStunMs;
+      const slowUntil = stunUntil + GameConfig.attackSlowMs;
       if (owner === "player") {
-        HexSnakeState.game.playerStunUntil = Math.max(HexSnakeState.game.playerStunUntil, stunUntil);
-        HexSnakeState.game.playerSlowUntil = Math.max(HexSnakeState.game.playerSlowUntil, slowUntil);
+        GameRuntimeState.playerStunUntil = Math.max(GameRuntimeState.playerStunUntil, stunUntil);
+        GameRuntimeState.playerSlowUntil = Math.max(GameRuntimeState.playerSlowUntil, slowUntil);
       } else {
-        HexSnakeState.game.computerStunUntil = Math.max(HexSnakeState.game.computerStunUntil, stunUntil);
-        HexSnakeState.game.computerSlowUntil = Math.max(HexSnakeState.game.computerSlowUntil, slowUntil);
+        GameRuntimeState.computerStunUntil = Math.max(GameRuntimeState.computerStunUntil, stunUntil);
+        GameRuntimeState.computerSlowUntil = Math.max(GameRuntimeState.computerSlowUntil, slowUntil);
       }
-      HexSnakeUI.showStatusCallout(owner, interrupted ? "暈眩！招式中斷" : "暈眩！", { interrupted });
+      GameUI.showStatusCallout(owner, interrupted ? "暈眩！招式中斷" : "暈眩！", { interrupted });
       return true;
     }
 
@@ -2482,14 +2482,14 @@
         clearOwnerAbnormalStatus(owner, now);
         return false;
       }
-      const currentSlowUntil = owner === "player" ? HexSnakeState.game.playerSlowUntil : HexSnakeState.game.computerSlowUntil;
+      const currentSlowUntil = owner === "player" ? GameRuntimeState.playerSlowUntil : GameRuntimeState.computerSlowUntil;
       const slowUntil = options.stack === false && currentSlowUntil > now
         ? currentSlowUntil
         : Math.max(currentSlowUntil, now + durationMs);
       if (owner === "player") {
-        HexSnakeState.game.playerSlowUntil = slowUntil;
+        GameRuntimeState.playerSlowUntil = slowUntil;
       } else {
-        HexSnakeState.game.computerSlowUntil = slowUntil;
+        GameRuntimeState.computerSlowUntil = slowUntil;
       }
       return true;
     }
