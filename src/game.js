@@ -5259,38 +5259,38 @@
         return;
       }
       triggerTouchFeedback(event, 5);
-      HexSnakeState.game.movePointerId = event.pointerId;
-      HexSnakeState.game.movePointerStartedAt = performance.now();
-      HexSnakeState.game.movePointerStartX = event.clientX;
-      HexSnakeState.game.movePointerStartY = event.clientY;
-      HexSnakeState.game.movePointerMoved = false;
-      HexSnakeState.game.moveStickEngaged = false;
-      Dom.joyZone.setPointerCapture(HexSnakeState.game.movePointerId);
+      GameRuntimeState.movePointerId = event.pointerId;
+      GameRuntimeState.movePointerStartedAt = performance.now();
+      GameRuntimeState.movePointerStartX = event.clientX;
+      GameRuntimeState.movePointerStartY = event.clientY;
+      GameRuntimeState.movePointerMoved = false;
+      GameRuntimeState.moveStickEngaged = false;
+      Dom.joyZone.setPointerCapture(GameRuntimeState.movePointerId);
       clearMoveStickHoldTimer();
-      HexSnakeState.game.moveStickHoldTimer = setTimeout(() => engageMoveStick(event), 80);
+      GameRuntimeState.moveStickHoldTimer = setTimeout(() => engageMoveStick(event), 80);
     });
 
     Dom.joyZone.addEventListener("pointermove", event => {
-      if (HexSnakeState.game.controlAttackPointer && event.pointerId === HexSnakeState.game.controlAttackPointer.pointerId) {
+      if (GameRuntimeState.controlAttackPointer && event.pointerId === GameRuntimeState.controlAttackPointer.pointerId) {
         moveControlPadAttackPointer(event);
         return;
       }
-      if (event.pointerId === HexSnakeState.game.movePointerId && !HexSnakeState.game.moveStickEngaged) {
-        const dragDistance = Math.hypot(event.clientX - HexSnakeState.game.movePointerStartX, event.clientY - HexSnakeState.game.movePointerStartY);
+      if (event.pointerId === GameRuntimeState.movePointerId && !GameRuntimeState.moveStickEngaged) {
+        const dragDistance = Math.hypot(event.clientX - GameRuntimeState.movePointerStartX, event.clientY - GameRuntimeState.movePointerStartY);
         if (dragDistance > 5) engageMoveStick(event);
       }
-      if (event.pointerId === HexSnakeState.game.movePointerId && HexSnakeState.game.moveStickEngaged) moveStick(event);
+      if (event.pointerId === GameRuntimeState.movePointerId && GameRuntimeState.moveStickEngaged) moveStick(event);
     });
 
     Dom.joyZone.addEventListener("pointerup", event => {
-      if (HexSnakeState.game.controlAttackPointer && event.pointerId === HexSnakeState.game.controlAttackPointer.pointerId) {
+      if (GameRuntimeState.controlAttackPointer && event.pointerId === GameRuntimeState.controlAttackPointer.pointerId) {
         finishControlPadAttackPointer(event);
         return;
       }
       releaseMoveStick(event);
     });
     Dom.joyZone.addEventListener("pointercancel", event => {
-      if (HexSnakeState.game.controlAttackPointer && event.pointerId === HexSnakeState.game.controlAttackPointer.pointerId) {
+      if (GameRuntimeState.controlAttackPointer && event.pointerId === GameRuntimeState.controlAttackPointer.pointerId) {
         cancelControlPadAttackPointer(event);
         return;
       }
