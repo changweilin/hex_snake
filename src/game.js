@@ -1019,8 +1019,8 @@
     }
 
     function skipLogoTransition() {
-      if (HexSnakeUI.logoTransitionDirection() !== "in" || HexSnakeState.game.gameOverLogoTransitionEndsAt <= 0) return false;
-      HexSnakeState.game.gameOverLogoTransitionEndsAt = 0;
+      if (GameUI.logoTransitionDirection() !== "in" || GameRuntimeState.gameOverLogoTransitionEndsAt <= 0) return false;
+      GameRuntimeState.gameOverLogoTransitionEndsAt = 0;
       showGameOverSettlement();
       return true;
     }
