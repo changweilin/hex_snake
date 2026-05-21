@@ -1325,8 +1325,8 @@
     }
 
     function renderAutoSpeedMenu() {
-      Dom.autoSpeedMenu.innerHTML = HexSnakeState.config.autoBattleSpeeds.map(speed => `
-        <button class="${speed === HexSnakeState.game.computerBattleSpeed ? "is-selected" : ""}" type="button" data-auto-speed="${speed}">${autoBattleSpeedLabel(speed)}</button>
+      Dom.autoSpeedMenu.innerHTML = GameConfig.autoBattleSpeeds.map(speed => `
+        <button class="${speed === GameRuntimeState.computerBattleSpeed ? "is-selected" : ""}" type="button" data-auto-speed="${speed}">${autoBattleSpeedLabel(speed)}</button>
       `).join("");
     }
 
@@ -1359,14 +1359,14 @@
     }
 
     function setComputerBattleSpeed(value, persist = true) {
-      HexSnakeState.game.computerBattleSpeed = normalizeAutoBattleSpeed(value);
-      Dom.autoBattleSpeedSelect.textContent = autoBattleSpeedLabel(HexSnakeState.game.computerBattleSpeed);
-      Dom.autoBattleSpeedSelect.dataset.value = String(HexSnakeState.game.computerBattleSpeed);
-      Dom.autoBattleSpeedSelect.setAttribute("aria-valuenow", String(HexSnakeState.game.computerBattleSpeed));
-      Dom.autoBattleSpeedSelect.setAttribute("aria-valuetext", autoBattleSpeedLabel(HexSnakeState.game.computerBattleSpeed));
+      GameRuntimeState.computerBattleSpeed = normalizeAutoBattleSpeed(value);
+      Dom.autoBattleSpeedSelect.textContent = autoBattleSpeedLabel(GameRuntimeState.computerBattleSpeed);
+      Dom.autoBattleSpeedSelect.dataset.value = String(GameRuntimeState.computerBattleSpeed);
+      Dom.autoBattleSpeedSelect.setAttribute("aria-valuenow", String(GameRuntimeState.computerBattleSpeed));
+      Dom.autoBattleSpeedSelect.setAttribute("aria-valuetext", autoBattleSpeedLabel(GameRuntimeState.computerBattleSpeed));
       renderAutoSpeedMenu();
       if (persist) {
-        GameStorage.set("hexSnakeAutoBattleSpeed", String(HexSnakeState.game.computerBattleSpeed));
+        GameStorage.set("hexSnakeAutoBattleSpeed", String(GameRuntimeState.computerBattleSpeed));
       }
     }
 
@@ -1428,10 +1428,10 @@
     function updateAutoBattleControls() {
       const visible = isPlayerAutoControlActive() && HexSnakeState.game.running && !HexSnakeState.game.gameOver && !GameReplay.isPlaybackMode();
       Dom.autoBattlePanel.hidden = !visible;
-      Dom.autoBattleSpeedSelect.textContent = autoBattleSpeedLabel(HexSnakeState.game.computerBattleSpeed);
-      Dom.autoBattleSpeedSelect.dataset.value = String(HexSnakeState.game.computerBattleSpeed);
-      Dom.autoBattleSpeedSelect.setAttribute("aria-valuenow", String(HexSnakeState.game.computerBattleSpeed));
-      Dom.autoBattleSpeedSelect.setAttribute("aria-valuetext", autoBattleSpeedLabel(HexSnakeState.game.computerBattleSpeed));
+      Dom.autoBattleSpeedSelect.textContent = autoBattleSpeedLabel(GameRuntimeState.computerBattleSpeed);
+      Dom.autoBattleSpeedSelect.dataset.value = String(GameRuntimeState.computerBattleSpeed);
+      Dom.autoBattleSpeedSelect.setAttribute("aria-valuenow", String(GameRuntimeState.computerBattleSpeed));
+      Dom.autoBattleSpeedSelect.setAttribute("aria-valuetext", autoBattleSpeedLabel(GameRuntimeState.computerBattleSpeed));
       if (!visible) setAutoSpeedMenuOpen(false);
       Dom.autoPauseButton.textContent = HexSnakeState.game.paused ? "▶" : "⏸";
       Dom.autoPauseButton.setAttribute("aria-label", HexSnakeState.game.paused ? "播放" : "暫停");
@@ -3156,7 +3156,7 @@
       }
       if (!HexSnakeState.game.paused) {
         const delta = HexSnakeState.game.lastTimerFrame ? now - HexSnakeState.game.lastTimerFrame : 0;
-        const timeScale = isPlayerAutoControlActive() ? HexSnakeState.game.computerBattleSpeed : 1;
+        const timeScale = isPlayerAutoControlActive() ? GameRuntimeState.computerBattleSpeed : 1;
         HexSnakeState.game.totalElapsedMs += delta * timeScale;
         HexSnakeState.game.lastFeedElapsedMs += delta * timeScale;
         HexSnakeState.game.lastTimerFrame = now;
@@ -4962,11 +4962,15 @@
     });
 
     function applyAutoBattleSpeedIndex(index) {
-      const nextIndex = Math.max(0, Math.min(HexSnakeState.config.autoBattleSpeeds.length - 1, index));
-      if (HexSnakeState.config.autoBattleSpeeds[nextIndex] === HexSnakeState.game.computerBattleSpeed) return;
-      setComputerBattleSpeed(HexSnakeState.config.autoBattleSpeeds[nextIndex]);
+      const nextIndex = Math.max(0, Math.min(GameConfig.autoBattleSpeeds.length - 1, index));
+      if (GameConfig.autoBattleSpeeds[nextIndex] === GameRuntimeState.computerBattleSpeed) return;
+      setComputerBattleSpeed(GameConfig.autoBattleSpeeds[nextIndex]);
       resetAutoBattleStepTimers();
       updateAutoBattleControls();
+    }
+
+    function autoBattleSpeedIndex() {
+      return GameConfig.autoBattleSpeeds.indexOf(GameRuntimeState.computerBattleSpeed);
     }
 
     function replayPlaybackSpeedIndex() {
@@ -5070,7 +5074,7 @@
       select: Dom.autoBattleSpeedSelect,
       menu: Dom.autoSpeedMenu,
       isActive: isPlayerAutoControlActive,
-      currentIndex: () => HexSnakeState.config.autoBattleSpeeds.indexOf(HexSnakeState.game.computerBattleSpeed),
+      currentIndex: autoBattleSpeedIndex,
       applyIndex: applyAutoBattleSpeedIndex,
       setMenuOpen: setAutoSpeedMenuOpen,
       menuButtonSelector: "[data-auto-speed]",

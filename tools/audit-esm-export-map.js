@@ -332,6 +332,10 @@ if (read("src/ui.js").includes("HexSnakeUI.")) {
   fail("src/ui.js should use the UiRegistry alias for HexSnakeUI property reads.");
 }
 
+if (read("src/game.js").includes("HexSnakeState.config.autoBattleSpeeds") || read("src/game.js").includes("HexSnakeState.game.computerBattleSpeed")) {
+  fail("src/game.js auto-battle speed reads should use GameConfig / GameRuntimeState aliases.");
+}
+
 expectSliceExcludes(
   "src/game.js",
   "control profile alias slice",
@@ -497,6 +501,22 @@ expectSliceExcludes(
   "replay snapshot throttle helper alias slice",
   "function recordReplaySnapshotThrottled",
   "function setStatus",
+  ["HexSnakeState.", "HexSnakeUI."]
+);
+
+expectSliceExcludes(
+  "src/game.js",
+  "auto battle speed menu helper alias slice",
+  "function autoBattleSpeedLabel",
+  "function resetAutoBattleStepTimers",
+  ["HexSnakeState.", "HexSnakeUI."]
+);
+
+expectSliceExcludes(
+  "src/game.js",
+  "auto battle speed index helper alias slice",
+  "function applyAutoBattleSpeedIndex",
+  "function replayPlaybackSpeedIndex",
   ["HexSnakeState.", "HexSnakeUI."]
 );
 
