@@ -1749,9 +1749,9 @@
     function attackStats(stock, profile = "big") {
       const isSmall = profile === "small";
       return {
-        delay: HexSnakeUI.attackDelay(stock) * (isSmall ? HexSnakeState.config.smallAttackDelayScale : 1),
-        radius: Math.max(1, HexSnakeUI.blastRadius(stock) + (isSmall ? -1 : 0)),
-        damage: HexSnakeUI.attackDamage(stock, profile)
+        delay: GameUI.attackDelay(stock) * (isSmall ? GameConfig.smallAttackDelayScale : 1),
+        radius: Math.max(1, GameUI.blastRadius(stock) + (isSmall ? -1 : 0)),
+        damage: GameUI.attackDamage(stock, profile)
       };
     }
 
@@ -1777,11 +1777,11 @@
     }
 
     function ownerDirection(owner) {
-      return owner === "player" ? HexSnakeState.game.nextDir : HexSnakeState.game.computerDir;
+      return owner === "player" ? GameRuntimeState.nextDir : GameRuntimeState.computerDir;
     }
 
     function directionVector(direction) {
-      const delta = HexSnakeState.config.directions[direction];
+      const delta = GameConfig.directions[direction];
       if (!delta) return { x: 1, y: 0 };
       return {
         x: Math.sqrt(3) * (delta.q + delta.r / 2),
@@ -1803,7 +1803,7 @@
       if (!vx && !vy) return fallbackDirection;
       let bestDirection = fallbackDirection;
       let bestDot = -Infinity;
-      HexSnakeState.config.directions.forEach((direction, index) => {
+      GameConfig.directions.forEach((direction, index) => {
         const vector = directionVector(index);
         const dot = vx * vector.x + vy * vector.y;
         if (dot > bestDot) {
@@ -1815,8 +1815,9 @@
     }
 
     function turnDistance(left, right) {
-      const clockwise = (right - left + HexSnakeState.config.directions.length) % HexSnakeState.config.directions.length;
-      return Math.min(clockwise, HexSnakeState.config.directions.length - clockwise);
+      const directionCount = GameConfig.directions.length;
+      const clockwise = (right - left + directionCount) % directionCount;
+      return Math.min(clockwise, directionCount - clockwise);
     }
 
     function cellsForwardFrom(source, direction, includeSource = true) {
