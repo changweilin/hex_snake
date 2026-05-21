@@ -1,8 +1,9 @@
     const replayRecentKey = "hexSnakeReplayRecent";
     const replayFavoritesKey = "hexSnakeReplayFavorites";
     const replaySpeedKey = "hexSnakeReplaySpeed";
-    const ReplayPlatform = HexSnakeRuntime.platform;
-    const ReplayStorage = HexSnakeRuntime.storage;
+    const ReplayRuntime = HexSnakeRuntime;
+    const ReplayPlatform = ReplayRuntime.platform;
+    const ReplayStorage = ReplayRuntime.storage;
     const replayLimit = 5;
     const replaySnapshotIntervalMs = 200;
     const replayMaxSnapshots = 900;
@@ -19,8 +20,9 @@
     const GameState = HexSnakeState.game;
     const UiState = HexSnakeState.ui;
     const ReplayState = HexSnakeState.replay;
+    const ReplayUI = HexSnakeUI;
     const ReplayDom = HexSnakeDOM;
-    const ReplayGame = HexSnakeUI.replayGame;
+    const ReplayGame = ReplayUI.replayGame;
     const ReplayRender = HexSnakeRender;
     ReplayState.mode = replayMode;
     ReplayState.surrendered = replaySurrendered;
@@ -43,7 +45,7 @@
     }
 
     function replayCharacterName(id) {
-      return HexSnakeUI.characterForId(id)?.name || id || "?";
+      return ReplayUI.characterForId(id)?.name || id || "?";
     }
 
     function replayTitleFor(record) {
@@ -55,7 +57,7 @@
 
     function replayMetaFor(record) {
       const mode = record.computerBattleMode ? (record.relayMode ? "連戰" : "自動對弈") : "P1 戰鬥";
-      return `${mode} · ${replayCharacterName(record.playerCharacterId)} vs ${replayCharacterName(record.computerCharacterId)} · ${HexSnakeUI.formatTime(record.durationMs || 0)} · ${record.snapshots?.length || 0} frames`;
+      return `${mode} · ${replayCharacterName(record.playerCharacterId)} vs ${replayCharacterName(record.computerCharacterId)} · ${ReplayUI.formatTime(record.durationMs || 0)} · ${record.snapshots?.length || 0} frames`;
     }
 
     function normalizeReplayRecord(record) {
@@ -378,8 +380,8 @@
       GameState.targetActive = Boolean(snapshot.targetActive);
       GameState.score = snapshot.score || 0;
       GameState.computerScore = snapshot.computerScore || 0;
-      GameState.playerHp = snapshot.playerHp ?? HexSnakeUI.maxHpForSnake(GameState.snake);
-      GameState.computerHp = snapshot.computerHp ?? HexSnakeUI.maxHpForSnake(GameState.computerSnake);
+      GameState.playerHp = snapshot.playerHp ?? ReplayUI.maxHpForSnake(GameState.snake);
+      GameState.computerHp = snapshot.computerHp ?? ReplayUI.maxHpForSnake(GameState.computerSnake);
       GameState.playerStock = replayClone(snapshot.playerStock || {});
       GameState.computerStock = replayClone(snapshot.computerStock || {});
       GameState.playerAmmo = snapshot.playerAmmo || 0;
@@ -401,7 +403,7 @@
         previousComputerCharacterId !== GameState.computerCharacterId ||
         !ReplayDom.characterStage.innerHTML
       ) {
-        HexSnakeUI.buildCharacterStage();
+        ReplayUI.buildCharacterStage();
       }
       ReplayGame.updateHud();
       ReplayRender.draw();
@@ -432,7 +434,7 @@
       ReplayDom.replayReverseButton.title = reverseLabel;
       ReplayDom.replayPrevButton.disabled = replayPlaylist.length <= 1;
       ReplayDom.replayNextButton.disabled = replayPlaylist.length <= 1;
-      ReplayDom.replayTime.textContent = `${HexSnakeUI.formatTime(replayPlayback.time)} / ${HexSnakeUI.formatTime(duration)}`;
+      ReplayDom.replayTime.textContent = `${ReplayUI.formatTime(replayPlayback.time)} / ${ReplayUI.formatTime(duration)}`;
       if (!ReplayDom.replaySpeedMenu.hidden) {
         ReplayDom.replaySpeedMenu.querySelectorAll("[data-replay-speed]").forEach(button => {
           button.classList.toggle("is-selected", Number(button.dataset.replaySpeed) === replayPlayback.speed);
@@ -585,9 +587,9 @@
       GameState.computerBattleManualOverride = false;
       ReplayGame.updateAutoBattleControls();
       ReplayGame.setSettingsLocked(true);
-      HexSnakeUI.setOverlayChromeVisible(false);
+      ReplayUI.setOverlayChromeVisible(false);
       ReplayDom.overlay.classList.remove("show");
-      HexSnakeUI.setCharacterStageOverlayMode(false);
+      ReplayUI.setCharacterStageOverlayMode(false);
       ReplayDom.replayControls.hidden = false;
       prepareReplayPlaylist(record);
       loadReplayPlaybackRecord(record);
@@ -703,7 +705,7 @@
       }
     });
 
-    Object.defineProperties(HexSnakeUI.replay, Object.getOwnPropertyDescriptors(HexSnakeReplay));
+    Object.defineProperties(ReplayUI.replay, Object.getOwnPropertyDescriptors(HexSnakeReplay));
 
 export {
   HexSnakeReplay,
