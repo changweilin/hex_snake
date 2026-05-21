@@ -1,3 +1,10 @@
+const CharacterState = HexSnakeState;
+const CharacterGameState = CharacterState.game;
+const CharacterUiState = CharacterState.ui;
+const CharacterConfig = CharacterState.config;
+const CharacterUI = HexSnakeUI;
+const CharacterDom = HexSnakeDOM;
+
     const portraitSizeWidths = {
       sm: 512,
       md: 1024,
@@ -45,11 +52,11 @@
       return url;
     }
 
-    HexSnakeDOM.bestEl.textContent = HexSnakeState.game.best;
+    CharacterDom.bestEl.textContent = CharacterGameState.best;
 
     function normalizeCharacter(entry) {
-      const labels = HexSnakeState.config.foodLabels;
-      const configuredFoodTypes = HexSnakeState.config.foodTypes;
+      const labels = CharacterConfig.foodLabels;
+      const configuredFoodTypes = CharacterConfig.foodTypes;
       const foodPreference = labels[entry.foodPreference] ? entry.foodPreference : "balanced";
       const food = configuredFoodTypes.some(type => type.id === foodPreference) ? foodPreference : "balanced";
       const colors = entry.colors || {};
@@ -78,45 +85,45 @@
       if (!Array.isArray(data) || data.length === 0) {
         throw new Error("data/characters.json must contain at least one character.");
       }
-      HexSnakeUI.setCharacterCatalog(data.map(normalizeCharacter));
-      const characterList = HexSnakeUI.characterList();
-      HexSnakeState.game.playerCharacterId = HexSnakeUI.hasCharacterId(HexSnakeState.game.playerCharacterId)
-        ? HexSnakeState.game.playerCharacterId
+      CharacterUI.setCharacterCatalog(data.map(normalizeCharacter));
+      const characterList = CharacterUI.characterList();
+      CharacterGameState.playerCharacterId = CharacterUI.hasCharacterId(CharacterGameState.playerCharacterId)
+        ? CharacterGameState.playerCharacterId
         : characterList[0].id;
-      HexSnakeState.game.computerCharacterId = HexSnakeUI.hasCharacterId(HexSnakeState.game.computerCharacterId)
-        ? HexSnakeState.game.computerCharacterId
+      CharacterGameState.computerCharacterId = CharacterUI.hasCharacterId(CharacterGameState.computerCharacterId)
+        ? CharacterGameState.computerCharacterId
         : characterList[Math.min(1, characterList.length - 1)].id;
-      HexSnakeState.game.playerCharacterChoice = HexSnakeState.game.playerCharacterId;
-      HexSnakeState.game.computerCharacterChoice = HexSnakeState.game.computerCharacterId;
-      HexSnakeUI.loadSavedCharacterChoices();
+      CharacterGameState.playerCharacterChoice = CharacterGameState.playerCharacterId;
+      CharacterGameState.computerCharacterChoice = CharacterGameState.computerCharacterId;
+      CharacterUI.loadSavedCharacterChoices();
     }
 
     function showCharacterDatabaseError(error) {
       console.error(error);
-      HexSnakeDOM.overlayTitle.textContent = "角色資料載入失敗";
-      HexSnakeDOM.overlayText.textContent = `找不到或無法解析 data/characters.json：${error.message}`;
-      HexSnakeDOM.startButton.textContent = "重新載入";
-      HexSnakeDOM.startButton.onclick = () => window.location.reload();
-      HexSnakeUI.setOverlayChromeVisible(true);
-      HexSnakeDOM.overlay.classList.add("show");
+      CharacterDom.overlayTitle.textContent = "角色資料載入失敗";
+      CharacterDom.overlayText.textContent = `找不到或無法解析 data/characters.json：${error.message}`;
+      CharacterDom.startButton.textContent = "重新載入";
+      CharacterDom.startButton.onclick = () => window.location.reload();
+      CharacterUI.setOverlayChromeVisible(true);
+      CharacterDom.overlay.classList.add("show");
     }
 
     function characterFor(owner) {
       const characterId =
         owner === "player"
-          ? HexSnakeState.game.playerCharacterId
-          : HexSnakeState.game.computerCharacterId;
-      return HexSnakeUI.characterForId(characterId) || HexSnakeUI.characterList()[0];
+          ? CharacterGameState.playerCharacterId
+          : CharacterGameState.computerCharacterId;
+      return CharacterUI.characterForId(characterId) || CharacterUI.characterList()[0];
     }
 
     function characterChoiceFor(owner) {
       return owner === "player"
-        ? HexSnakeState.game.playerCharacterChoice
-        : HexSnakeState.game.computerCharacterChoice;
+        ? CharacterGameState.playerCharacterChoice
+        : CharacterGameState.computerCharacterChoice;
     }
 
     function isRandomCharacterChoice(owner) {
-      return HexSnakeUI.isRandomCharacterChoiceId(characterChoiceFor(owner));
+      return CharacterUI.isRandomCharacterChoiceId(characterChoiceFor(owner));
     }
 
     function selectedCharacterFor(owner) {
@@ -135,7 +142,7 @@
     function ensureStartLogoRandomCharacterId(owner) {
       const safeOwner = startLogoOwner(owner);
       const existing = startLogoRandomCharacterIds[safeOwner];
-      if (existing && HexSnakeUI.hasCharacterId(existing)) return existing;
+      if (existing && CharacterUI.hasCharacterId(existing)) return existing;
       const randomId = randomCharacter().id;
       if (randomId) startLogoRandomCharacterIds[safeOwner] = randomId;
       return randomId;
@@ -155,11 +162,11 @@
 
     function startLogoCharacterFor(owner) {
       if (!isRandomCharacterChoice(owner)) return characterFor(owner);
-      return HexSnakeUI.characterForId(ensureStartLogoRandomCharacterId(owner)) || HexSnakeUI.characterList()[0];
+      return CharacterUI.characterForId(ensureStartLogoRandomCharacterId(owner)) || CharacterUI.characterList()[0];
     }
 
     function randomCharacter() {
-      const characterList = HexSnakeUI.characterList();
+      const characterList = CharacterUI.characterList();
       return characterList[Math.floor(Math.random() * characterList.length)] || characterList[0];
     }
 
@@ -176,26 +183,26 @@
     }
 
     function ownerMeta(owner) {
-      const colors = HexSnakeState.config.colors;
+      const colors = CharacterConfig.colors;
       return owner === "computer"
         ? { mark: "P2", label: "P2", color: colors.computerHead, line: colors.computerHeadLine }
         : { mark: "P1", label: "P1", color: colors.head, line: colors.headLine };
     }
 
     function buildCharacterOptions() {
-      [HexSnakeDOM.playerCharacterInput, HexSnakeDOM.computerCharacterInput].forEach(select => {
+      [CharacterDom.playerCharacterInput, CharacterDom.computerCharacterInput].forEach(select => {
         select.innerHTML = [
-          `<option value="${HexSnakeUI.randomCharacterChoiceId}">隨機選擇 / 開局抽選</option>`,
-          ...HexSnakeUI.characterList().map(character => (
+          `<option value="${CharacterUI.randomCharacterChoiceId}">隨機選擇 / 開局抽選</option>`,
+          ...CharacterUI.characterList().map(character => (
           `<option value="${character.id}">${character.name} / ${character.foodLabel}</option>`
           ))
         ].join("");
       });
-      HexSnakeUI.syncCharacterInputs();
+      CharacterUI.syncCharacterInputs();
     }
 
     function portraitLibrary(character) {
-      const variantMode = HexSnakeState.ui.portraitVariantMode;
+      const variantMode = CharacterUiState.portraitVariantMode;
       if (variantMode === "human") {
         return character.humanPortraits || character.archivedPortraits || character.portraits || {};
       }
@@ -207,7 +214,7 @@
 
     function portraitUrl(character, pose, size = "full") {
       const safePose = portraitPoses.has(pose) ? pose : "idle";
-      const semanticPose = HexSnakeState.ui.portraitVariantMode === "beast" ? "opening" : poseAliases[safePose] || "intro";
+      const semanticPose = CharacterUiState.portraitVariantMode === "beast" ? "opening" : poseAliases[safePose] || "intro";
       const deploySize = deployPortraitSize(size);
       const library = portraitLibrary(character);
       const portrait = library?.[semanticPose] || library?.intro || library?.opening;
@@ -241,7 +248,7 @@
 
     function preloadPortraitsFor(owner) {
       const character = characterFor(owner);
-      const isBeastPortrait = HexSnakeState.ui.portraitVariantMode === "beast";
+      const isBeastPortrait = CharacterUiState.portraitVariantMode === "beast";
       const smPoses = isBeastPortrait ? ["intro"] : ["intro", "idle", "attack", "victory", "defeat"];
       const mdPoses = isBeastPortrait ? ["intro"] : ["intro", "victory", "defeat"];
       smPoses.forEach(pose => preloadPortrait(character, pose, "sm"));
@@ -249,8 +256,8 @@
     }
 
     function preloadAllPortraits() {
-      HexSnakeUI.characterList().forEach(character => {
-        const poses = HexSnakeState.ui.portraitVariantMode === "beast" ? ["intro"] : ["intro", "idle"];
+      CharacterUI.characterList().forEach(character => {
+        const poses = CharacterUiState.portraitVariantMode === "beast" ? ["intro"] : ["intro", "idle"];
         poses.forEach(pose => preloadPortrait(character, pose, "sm"));
       });
     }
@@ -264,10 +271,10 @@
     function duelAvatarUrl(character, size = "sm") {
       const slug = character.slug || character.id;
       const deploySize = deployPortraitSize(size);
-      const currentVariant = HexSnakeState.ui.portraitVariantMode;
-      const variant = HexSnakeState.ui.portraitVariantModes.includes(currentVariant)
+      const currentVariant = CharacterUiState.portraitVariantMode;
+      const variant = CharacterUiState.portraitVariantModes.includes(currentVariant)
         ? currentVariant
-        : HexSnakeState.ui.defaultPortraitVariantMode;
+        : CharacterUiState.defaultPortraitVariantMode;
       return deployPortraitImageUrl(`assets/portraits/avatars/${variant}/${deploySize}/${slug}_duel.png`);
     }
 
@@ -304,7 +311,7 @@
       startLogoCharacterFor
     });
 
-    Object.assign(HexSnakeUI, HexSnakeCharacters);
+    Object.assign(CharacterUI, HexSnakeCharacters);
 
 export {
   HexSnakeCharacters,
