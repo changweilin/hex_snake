@@ -1,10 +1,16 @@
 let minGridSize = 6;
+const UiRuntime = HexSnakeRuntime;
+const UiRootState = HexSnakeState;
+const UiRegistry = HexSnakeUI;
 const UiDom = HexSnakeDOM;
-const UiAudio = HexSnakeUI.audio;
-const UiGame = HexSnakeUI.uiGame;
-const UiReplay = HexSnakeUI.replay;
+const UiAudio = UiRegistry.audio;
+const UiGame = UiRegistry.uiGame;
+const UiReplay = UiRegistry.replay;
 const UiRender = HexSnakeRender;
-const UiStorage = HexSnakeRuntime.storage;
+const UiStorage = UiRuntime.storage;
+const UiConfig = UiRootState.config;
+const UiGameState = UiRootState.game;
+const UiPresentationState = UiRootState.ui;
 let maxGridSize = 12;
 let minFoodCount = 1;
 let maxFoodCount = 4;
@@ -544,7 +550,7 @@ function isSelectableCharacterChoiceId(value) {
   return isRandomCharacterChoiceId(value) || hasCharacterId(value);
 }
 
-Object.assign(HexSnakeUI, {
+Object.assign(UiRegistry, {
   characterFallbackId,
   characterForId,
   characterList,
@@ -581,7 +587,7 @@ const defaultKeybinds = {
   directions: directions.map((direction) => direction.key),
 };
 
-Object.defineProperties(HexSnakeState.config, {
+Object.defineProperties(UiConfig, {
   autoBattleSpeeds: {
     get: () => autoBattleSpeeds,
   },
@@ -780,7 +786,7 @@ let blasts = [];
 let hazards = [];
 const elementalSpriteCache = new Map();
 
-Object.defineProperties(HexSnakeState.game, {
+Object.defineProperties(UiGameState, {
   elementalSpriteCache: {
     get: () => elementalSpriteCache,
   },
@@ -835,7 +841,7 @@ let gameOverPlayerLost = false;
 let gameOverComputerLost = false;
 let gameOver = false;
 
-Object.defineProperties(HexSnakeState.game, {
+Object.defineProperties(UiGameState, {
   running: {
     get: () => running,
     set: (value) => {
@@ -1297,7 +1303,7 @@ let playerSandwormArmorUntil = 0;
 let computerSandwormArmorFrom = 0;
 let computerSandwormArmorUntil = 0;
 
-Object.defineProperties(HexSnakeState.game, {
+Object.defineProperties(UiGameState, {
   playerStunUntil: {
     get: () => playerStunUntil,
     set: (value) => {
@@ -1413,13 +1419,13 @@ const replayRecordCheckIntervalMs = 100;
 let lastHudFrameAt = -Infinity;
 let lastReplayRecordCheckAt = -Infinity;
 
-Object.defineProperties(HexSnakeState.config, {
+Object.defineProperties(UiConfig, {
   deadEndMinSpace: {
     get: () => deadEndMinSpace,
   },
 });
 
-Object.defineProperties(HexSnakeState.game, {
+Object.defineProperties(UiGameState, {
   best: {
     get: () => best,
     set: (value) => {
@@ -1545,7 +1551,7 @@ Object.defineProperties(HexSnakeState.game, {
 let lastPlayerAttackMs = resetAttackCooldownTracker();
 let lastComputerAttackMs = resetAttackCooldownTracker();
 
-Object.defineProperties(HexSnakeState.game, {
+Object.defineProperties(UiGameState, {
   lastPlayerAttackMs: {
     get: () => lastPlayerAttackMs,
     set: (value) => {
@@ -1588,7 +1594,7 @@ let highlightedAttackProfile = null;
 let attackHighlightReleaseTimer = null;
 let moveStickReboundTimer = null;
 
-Object.defineProperties(HexSnakeState.game, {
+Object.defineProperties(UiGameState, {
   keyboardAttackPreviewTimer: {
     get: () => keyboardAttackPreviewTimer,
     set: (value) => {
@@ -1777,7 +1783,7 @@ let logoCountdownTimer = null;
 let logoTransitionSerial = 0;
 let startLogoCountdownPending = false;
 
-Object.defineProperties(HexSnakeState.game, {
+Object.defineProperties(UiGameState, {
   rafId: {
     get: () => rafId,
     set: (value) => {
@@ -1792,7 +1798,7 @@ Object.defineProperties(HexSnakeState.game, {
   },
 });
 
-Object.defineProperties(HexSnakeState.ui, {
+Object.defineProperties(UiPresentationState, {
   portraitVariantMode: {
     get: () => portraitVariantMode,
   },
@@ -3608,7 +3614,7 @@ function buildResourceHud() {
     });
 }
 
-Object.assign(HexSnakeUI, {
+Object.assign(UiRegistry, {
   applyPortraitCharacter,
   buildCharacterStage,
   buildResourceHud,
@@ -4015,7 +4021,7 @@ function formatTime(ms) {
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
-Object.assign(HexSnakeUI, {
+Object.assign(UiRegistry, {
   ammoChargeFor,
   ammoFor,
   attackBombCost,

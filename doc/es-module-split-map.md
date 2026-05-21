@@ -26,7 +26,7 @@
 | Leaf services | `src/network.js`, `src/about.js` | `network.js` 已 export `network`，`about.js` 已 export `about`；module shadow 已 import leaf service shell，legacy `window.HexSnakeNet` / `window.HexSnakeAbout` 保留 | 已完成首批；後續等 module loader 啟用後再評估 window-only wiring |
 | Catalog / media / stats | `src/characters.js`, `src/audio.js`, `src/stats.js` | `characters.js` 已 export `characterCatalog` / `HexSnakeCharacters`；`audio.js` / `stats.js` 分別 export `audio` / `stats`，並保留 `HexSnakeUI.audio/stats` registry 註冊；module shadow 已 import 這些 shell | 已完成；後續等 module loader 啟用後再評估 explicit imports |
 | Runtime helpers | `src/ai.js`, `src/render.js`, `src/replay.js` | `replay.js` export `replay` / `HexSnakeReplay`；`ai.js` export `ai` / `HexSnakeAI`；`render.js` export `renderHooks` / `HexSnakeRenderHooks`；module shadow 已 import 這些 shell | 已完成；後續等 module loader 啟用後再評估 explicit imports |
-| Core knot | `src/ui.js`, `src/game.js` | `ui.js` 已 export `uiCore` / `HexSnakeUICore`；`game.js` 已 export `gameShell` / `HexSnakeGame`、`loadGameShell()` 與 `bootstrapGame()`；`main-module.js` 已提供 `loadModuleGame()` 作為正式 module bootstrap owner | 下一步把 module loader 行為納入自動化 smoke gate |
+| Core knot | `src/ui.js`, `src/game.js` | `ui.js` 已 export `uiCore` / `HexSnakeUICore`，並集中 `Ui*` dependency aliases；`game.js` 已 export `gameShell` / `HexSnakeGame`、`loadGameShell()` 與 `bootstrapGame()`；`main-module.js` 已提供 `loadModuleGame()` 作為正式 module bootstrap owner | 下一步延續 core shell alias preflight，不切 production default |
 
 ## Recommended Split Order
 
@@ -36,12 +36,12 @@
 | 1. Low-risk module borders | 完成 | platform web/mobile、state、dom、network、about 建立 script-compatible facade 與 module borders | build、quick、smoke 通過；`audit:globals` 下降 |
 | 2. DOM/helper facade | 完成 | 建立 `HexSnakeControls`、`HexSnakeDOM` 與 game/UI helper facade | `audit:globals` 486 -> 367 |
 | 3. Catalog/media cleanup | 完成 | catalog setter/list、portrait variant state getter、food label config getter；characters/audio/stats 改走 facade | `audit:globals` 367 -> 339；build、quick、smoke 通過 |
-| 4. Runtime cleanup | service module migration 小切片進行中 | replay、render、AI、UI/game hooks、public services 與 platform/storage adapter 已分批改走 `HexSnakeDOM`、`HexSnakeState`、`HexSnakeUI`、`HexSnakeRender`、`HexSnakeRuntime`；`stats.js`、`about.js`、`network.js`、`audio.js`、`characters.js`、`replay.js`、`ai.js` 與 `render.js` 已集中 dependency aliases，方便後續替換成 explicit imports | `audit:globals` 339 -> 42；`audit:state-boundary` 維持 0/0；`audit:esm-map` 固定 stats/about/network/audio/characters/replay/ai/render alias shape |
+| 4. Runtime cleanup | service module migration 小切片進行中 | replay、render、AI、UI/game hooks、public services 與 platform/storage adapter 已分批改走 `HexSnakeDOM`、`HexSnakeState`、`HexSnakeUI`、`HexSnakeRender`、`HexSnakeRuntime`；`ui.js`、`stats.js`、`about.js`、`network.js`、`audio.js`、`characters.js`、`replay.js`、`ai.js` 與 `render.js` 已集中 dependency aliases，方便後續替換成 explicit imports | `audit:globals` 339 -> 42；`audit:state-boundary` 維持 0/0；`audit:esm-map` 固定 ui/stats/about/network/audio/characters/replay/ai/render alias shape |
 | 5. Core ES module split | production strategy 完成 | 已新增 `src/main-module.js` 與 `?hexSnakeLoader=module-shadow` / `?hexSnakeLoader=module`；platform/runtime、state registry、DOM facade、UI shell、network/about leaf services、catalog/media/stats、runtime helper 與 game shell 已可被 native module import；`test:module-loader` 固定驗證 shadow no-bootstrap、source module bootstrap 與 dist fallback；正式 production 決定維持 `bundled-legacy-fallback`，由 `check:assets` 驗證 manifest | `audit:esm-map`、`test:module-loader`、`check:assets`、legacy loader 可回退；正式 module bundle 須另走 source map gate |
 
 ## Immediate AI Task Queue
 
-1. 延續 Phase D service module migration：挑下一個 leaf service 或 runtime helper 做 explicit import friendly 的小切片，並維持 production `bundled-legacy-fallback`。
+1. 延續 Phase D service module migration：挑下一個 leaf service、runtime helper 或 core shell 做 explicit import friendly 的小切片，並維持 production `bundled-legacy-fallback`。
 2. 若要啟動正式 module bundle，先依 `doc/es-module-production-strategy.md` 新增 opt-in module artifact / source map gate，不直接改 default。
 3. 每批只移動一層 ownership，確保 `audit:globals`、`audit:state-boundary` 與 `test:module-loader` 不退步。
 
