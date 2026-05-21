@@ -1846,7 +1846,8 @@
       const bodyTarget = targetSnake.slice(1).sort((a, b) => hexDistance(cursor, a) - hexDistance(cursor, b))[0];
       const target = head && hexDistance(cursor, head) <= remainingSteps ? head : (bodyTarget || head);
       if (!target) return direction;
-      const candidates = [direction, (direction + 1) % HexSnakeState.config.directions.length, (direction + 5) % HexSnakeState.config.directions.length];
+      const directionCount = GameConfig.directions.length;
+      const candidates = [direction, (direction + 1) % directionCount, (direction + 5) % directionCount];
       candidates.sort((a, b) => {
         const nextA = nextWrappedCell(cursor, a);
         const nextB = nextWrappedCell(cursor, b);
@@ -1862,7 +1863,7 @@
       const path = [];
       let cursor = { q: source.q, r: source.r };
       let currentDirection = direction;
-      const maxSteps = Math.max(1, Math.ceil((HexSnakeState.game.radius * 2 + 1) / 2));
+      const maxSteps = Math.max(1, Math.ceil((GameRuntimeState.radius * 2 + 1) / 2));
       const turnStep = Math.ceil(maxSteps / 2);
       for (let step = 0; step < maxSteps; step += 1) {
         if (step === turnStep) {
@@ -1903,7 +1904,7 @@
 
     function cellsNearCells(effectCells, width, excludedCells = [], minDistance = 0) {
       const excluded = cellKeySet(excludedCells);
-      return HexSnakeState.game.cells.filter(cell => !excluded.has(keyOf(cell)) && effectCells.some(effectCell => {
+      return GameRuntimeState.cells.filter(cell => !excluded.has(keyOf(cell)) && effectCells.some(effectCell => {
         const distance = hexDistance(cell, effectCell);
         return distance >= minDistance && distance <= width;
       }));
