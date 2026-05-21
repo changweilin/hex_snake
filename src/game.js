@@ -4847,7 +4847,7 @@
     });
 
     Dom.introCloseButton.addEventListener("click", () => {
-      HexSnakeUI.renderIntroPortraits(false);
+      GameUI.renderIntroPortraits(false);
       Dom.overlay.classList.add("show");
     });
 
@@ -4863,8 +4863,8 @@
     };
 
     Dom.winnerPortrait.addEventListener("click", event => {
-      if (HexSnakeState.ui.tutorialSwipeDidMove) {
-        HexSnakeState.ui.tutorialSwipeDidMove = false;
+      if (GamePresentationState.tutorialSwipeDidMove) {
+        GamePresentationState.tutorialSwipeDidMove = false;
         event.preventDefault();
         return;
       }
@@ -4872,58 +4872,58 @@
       if (!button) return;
       const action = button.dataset.tutorialAction;
       if (action === "next") {
-        HexSnakeUI.moveTutorial(1);
+        GameUI.moveTutorial(1);
       } else if (action === "prev") {
-        HexSnakeUI.moveTutorial(-1);
+        GameUI.moveTutorial(-1);
       } else if (action === "skip" || action === "done") {
-        HexSnakeUI.finishTutorial(true);
+        GameUI.finishTutorial(true);
       }
     });
 
     Dom.overlay.addEventListener("pointerdown", event => {
-      if (!HexSnakeUI.isTutorialOpen() || event.button > 0) return;
+      if (!GameUI.isTutorialOpen() || event.button > 0) return;
       if (tutorialActionButtonFromEvent(event)) return;
-      HexSnakeState.ui.tutorialSwipeStartX = event.clientX;
-      HexSnakeState.ui.tutorialSwipeStartY = event.clientY;
-      HexSnakeState.ui.tutorialSwipePointerId = event.pointerId;
-      HexSnakeState.ui.tutorialSwipeDidMove = false;
+      GamePresentationState.tutorialSwipeStartX = event.clientX;
+      GamePresentationState.tutorialSwipeStartY = event.clientY;
+      GamePresentationState.tutorialSwipePointerId = event.pointerId;
+      GamePresentationState.tutorialSwipeDidMove = false;
       Dom.overlay.setPointerCapture?.(event.pointerId);
     }, true);
 
     Dom.overlay.addEventListener("pointermove", event => {
-      if (!HexSnakeUI.isTutorialOpen() || HexSnakeState.ui.tutorialSwipeStartX === null) return;
-      if (HexSnakeState.ui.tutorialSwipePointerId !== null && event.pointerId !== HexSnakeState.ui.tutorialSwipePointerId) return;
-      const deltaX = event.clientX - HexSnakeState.ui.tutorialSwipeStartX;
-      const deltaY = event.clientY - HexSnakeState.ui.tutorialSwipeStartY;
+      if (!GameUI.isTutorialOpen() || GamePresentationState.tutorialSwipeStartX === null) return;
+      if (GamePresentationState.tutorialSwipePointerId !== null && event.pointerId !== GamePresentationState.tutorialSwipePointerId) return;
+      const deltaX = event.clientX - GamePresentationState.tutorialSwipeStartX;
+      const deltaY = event.clientY - GamePresentationState.tutorialSwipeStartY;
       if (Math.abs(deltaX) > 10 && Math.abs(deltaX) > Math.abs(deltaY)) event.preventDefault();
     }, true);
 
     Dom.overlay.addEventListener("pointerup", event => {
-      if (!HexSnakeUI.isTutorialOpen() || HexSnakeState.ui.tutorialSwipeStartX === null) return;
-      if (HexSnakeState.ui.tutorialSwipePointerId !== null && event.pointerId !== HexSnakeState.ui.tutorialSwipePointerId) return;
-      const deltaX = event.clientX - HexSnakeState.ui.tutorialSwipeStartX;
-      const deltaY = event.clientY - HexSnakeState.ui.tutorialSwipeStartY;
-      const pointerId = HexSnakeState.ui.tutorialSwipePointerId;
-      HexSnakeState.ui.tutorialSwipeStartX = null;
-      HexSnakeState.ui.tutorialSwipeStartY = null;
-      HexSnakeState.ui.tutorialSwipePointerId = null;
+      if (!GameUI.isTutorialOpen() || GamePresentationState.tutorialSwipeStartX === null) return;
+      if (GamePresentationState.tutorialSwipePointerId !== null && event.pointerId !== GamePresentationState.tutorialSwipePointerId) return;
+      const deltaX = event.clientX - GamePresentationState.tutorialSwipeStartX;
+      const deltaY = event.clientY - GamePresentationState.tutorialSwipeStartY;
+      const pointerId = GamePresentationState.tutorialSwipePointerId;
+      GamePresentationState.tutorialSwipeStartX = null;
+      GamePresentationState.tutorialSwipeStartY = null;
+      GamePresentationState.tutorialSwipePointerId = null;
       if (pointerId !== null && Dom.overlay.hasPointerCapture?.(pointerId)) Dom.overlay.releasePointerCapture(pointerId);
       if (Math.max(Math.abs(deltaX), Math.abs(deltaY)) < 42) return;
       if (Math.abs(deltaX) <= Math.abs(deltaY)) return;
-      HexSnakeState.ui.tutorialSwipeDidMove = true;
+      GamePresentationState.tutorialSwipeDidMove = true;
       event.preventDefault();
-      HexSnakeUI.moveTutorial(deltaX < 0 ? 1 : -1);
+      GameUI.moveTutorial(deltaX < 0 ? 1 : -1);
       setTimeout(() => {
-        HexSnakeState.ui.tutorialSwipeDidMove = false;
+        GamePresentationState.tutorialSwipeDidMove = false;
       }, 160);
     }, true);
 
     Dom.overlay.addEventListener("pointercancel", event => {
-      if (HexSnakeState.ui.tutorialSwipePointerId === null || event.pointerId !== HexSnakeState.ui.tutorialSwipePointerId) return;
-      const pointerId = HexSnakeState.ui.tutorialSwipePointerId;
-      HexSnakeState.ui.tutorialSwipeStartX = null;
-      HexSnakeState.ui.tutorialSwipeStartY = null;
-      HexSnakeState.ui.tutorialSwipePointerId = null;
+      if (GamePresentationState.tutorialSwipePointerId === null || event.pointerId !== GamePresentationState.tutorialSwipePointerId) return;
+      const pointerId = GamePresentationState.tutorialSwipePointerId;
+      GamePresentationState.tutorialSwipeStartX = null;
+      GamePresentationState.tutorialSwipeStartY = null;
+      GamePresentationState.tutorialSwipePointerId = null;
       if (Dom.overlay.hasPointerCapture?.(pointerId)) Dom.overlay.releasePointerCapture(pointerId);
     }, true);
 
