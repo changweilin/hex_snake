@@ -1501,7 +1501,7 @@
 
     function safeNetworkDirection(value) {
       const direction = Number(value);
-      return Number.isInteger(direction) && direction >= 0 && direction < HexSnakeState.config.directions.length ? direction : null;
+      return Number.isInteger(direction) && direction >= 0 && direction < GameConfig.directions.length ? direction : null;
     }
 
     function safeNetworkAttackOptions(options = {}) {
@@ -1527,7 +1527,7 @@
     }
 
     function broadcastNetworkSnapshot(now = performance.now(), force = false, final = false) {
-      if (!isNetworkHostActive() || !HexSnakeState.game.snake || !HexSnakeState.game.computerSnake) return;
+      if (!isNetworkHostActive() || !GameRuntimeState.snake || !GameRuntimeState.computerSnake) return;
       const snapshotIntervalMs = Number(networkAdapter()?.snapshotIntervalMs?.()) || 100;
       if (!force && now - lastNetworkSnapshotAt < snapshotIntervalMs) return;
       lastNetworkSnapshotAt = now;
@@ -1552,23 +1552,23 @@
 
     function applyNetworkDirectionInput(direction) {
       const nextDirection = safeNetworkDirection(direction);
-      if (nextDirection === null || !HexSnakeState.game.computerSnake?.length) return false;
+      if (nextDirection === null || !GameRuntimeState.computerSnake?.length) return false;
       if (!canComputerTurn(nextDirection)) return false;
-      HexSnakeState.game.computerDir = nextDirection;
+      GameRuntimeState.computerDir = nextDirection;
       updateHud();
       return true;
     }
 
     function applyNetworkAttackInput(input = {}) {
-      if (!HexSnakeState.game.running || HexSnakeState.game.paused || HexSnakeState.game.gameOver || !HexSnakeState.game.computerSnake?.length || !HexSnakeState.game.snake?.length) return false;
+      if (!GameRuntimeState.running || GameRuntimeState.paused || GameRuntimeState.gameOver || !GameRuntimeState.computerSnake?.length || !GameRuntimeState.snake?.length) return false;
       const profile = input.profile === "small" ? "small" : "big";
       const direction = safeNetworkDirection(input.direction);
       const options = safeNetworkAttackOptions(input.options);
       if (direction !== null) {
         options.aimDirection = direction;
-        options.aimOrigin = { ...HexSnakeState.game.computerSnake[0] };
+        options.aimOrigin = { ...GameRuntimeState.computerSnake[0] };
       }
-      const target = safeNetworkCell(input.target) || HexSnakeState.game.snake[0];
+      const target = safeNetworkCell(input.target) || GameRuntimeState.snake[0];
       const launched = launchAttack("computer", target, performance.now(), profile, options);
       if (launched) {
         setStatus(profile === "small" ? "P2 LAN attack fired." : "P2 LAN big attack fired.");
@@ -1591,16 +1591,16 @@
     function applyNetworkSnapshotMessage(message = {}) {
       if (!isNetworkGuestActive() || !message.snapshot) return;
       const final = message.type === "end";
-      HexSnakeState.game.running = false;
-      HexSnakeState.game.paused = false;
-      HexSnakeState.game.gameOver = final;
-      HexSnakeState.game.computerBattleMode = false;
-      HexSnakeState.game.playerAutoMode = false;
-      HexSnakeState.game.computerBattleManualOverride = false;
-      HexSnakeState.game.relayMode = false;
+      GameRuntimeState.running = false;
+      GameRuntimeState.paused = false;
+      GameRuntimeState.gameOver = final;
+      GameRuntimeState.computerBattleMode = false;
+      GameRuntimeState.playerAutoMode = false;
+      GameRuntimeState.computerBattleManualOverride = false;
+      GameRuntimeState.relayMode = false;
       setSettingsLocked(!final);
       Dom.overlay.classList.remove("show");
-      HexSnakeUI.showCharacterStage({ rebuild: false, "overlay": false });
+      GameUI.showCharacterStage({ rebuild: false, "overlay": false });
       GameReplay.applySnapshot(message.snapshot, {
         playerCharacterId: message.snapshot.playerCharacterId,
         computerCharacterId: message.snapshot.computerCharacterId,
