@@ -1911,13 +1911,13 @@
     }
 
     function attackVisualType(owner, profile = "big", characterId = null) {
-      const character = HexSnakeUI.characterFor(owner);
+      const character = GameUI.characterFor(owner);
       return `${characterId || character.id}-${profile}`;
     }
 
     function characterForVisualType(owner, visualType = null) {
       const visualCharacterId = typeof visualType === "string" ? visualType.split("-")[0] : null;
-      return HexSnakeUI.characterForId(visualCharacterId) || HexSnakeUI.characterFor(owner);
+      return GameUI.characterForId(visualCharacterId) || GameUI.characterFor(owner);
     }
 
     function burstVisualType(projectile) {
@@ -1932,7 +1932,7 @@
     }
 
     function pushCircleAttack({ owner, profile, source = null, target, createdAt, impactAt, delay, radius, damage, stunChance, hidden = false, flat = false, visualType = null, ...extra }) {
-      HexSnakeState.game.projectiles.push({
+      GameRuntimeState.projectiles.push({
         kind: "circle",
         owner,
         profile,
