@@ -1243,9 +1243,9 @@
 
     function updateCooldownIndicator(profile = "small", indicator = null, valueEl = null, now = performance.now()) {
       if (!indicator || !valueEl) return;
-      const remainingMs = HexSnakeUI.attackCooldownRemainingMs("player", profile, now);
+      const remainingMs = GameUI.attackCooldownRemainingMs("player", profile, now);
       const cooling = remainingMs > 0;
-      const available = HexSnakeUI.canAttack("player", profile);
+      const available = GameUI.canAttack("player", profile);
       const label = profile === "big" ? "大招" : "小招";
       const text = cooldownTimerText(remainingMs);
       valueEl.textContent = text;
