@@ -1958,7 +1958,7 @@
         damage: damageSnake(targetSnake, currentTarget, radius, damage),
         headDistance: head ? hexDistance(currentTarget, head) : 0
       };
-      return HexSnakeState.config.directions
+      return GameConfig.directions
         .map((_, direction) => nextWrappedCell(currentTarget, direction))
         .reduce((bestCandidate, candidate) => {
           const next = {
@@ -1996,7 +1996,7 @@
       const travelPath = firstHit ? path.slice(0, firstHit.index + 1) : path;
       const endCell = firstHit?.cell || path[path.length - 1] || source;
       const travelDelay = smallDelay + travelPath.length * fistStepMs;
-      HexSnakeState.game.projectiles.push({
+      GameRuntimeState.projectiles.push({
         kind: "lobsterPalm",
         owner,
         profile: "big",
@@ -2018,7 +2018,7 @@
       });
       const burstHits = firstHit ? [firstHit] : [{ cell: endCell, index: Math.max(0, travelPath.length - 1) }];
       burstHits.forEach(hit => {
-        HexSnakeState.game.projectiles.push({
+        GameRuntimeState.projectiles.push({
           kind: "lobsterPalmBurst",
           owner,
           profile: "big",
@@ -2043,13 +2043,13 @@
     }
 
     function lobsterPalmVulnerabilityChance(stock) {
-      return HexSnakeUI.attackStunChance(stock, GameAI.ultimateSetting("lobster", "vulnerabilityChance", 0.3));
+      return GameUI.attackStunChance(stock, GameAI.ultimateSetting("lobster", "vulnerabilityChance", 0.3));
     }
 
     function attackHitStunChances(stock) {
       return {
-        body: Math.min(1, HexSnakeState.config.bodyHitStunChance + HexSnakeUI.foodBonus(stock, "carb", HexSnakeState.config.bodyHitStunChanceBonusPerPoint, HexSnakeState.config.bodyHitMaxStunChanceBonus)),
-        head: Math.min(1, HexSnakeState.config.headHitStunChance + HexSnakeUI.foodBonus(stock, "carb", HexSnakeState.config.headHitStunChanceBonusPerPoint, HexSnakeState.config.headHitMaxStunChanceBonus))
+        body: Math.min(1, GameConfig.bodyHitStunChance + GameUI.foodBonus(stock, "carb", GameConfig.bodyHitStunChanceBonusPerPoint, GameConfig.bodyHitMaxStunChanceBonus)),
+        head: Math.min(1, GameConfig.headHitStunChance + GameUI.foodBonus(stock, "carb", GameConfig.headHitStunChanceBonusPerPoint, GameConfig.headHitMaxStunChanceBonus))
       };
     }
 

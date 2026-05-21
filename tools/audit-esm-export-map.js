@@ -592,6 +592,14 @@ expectSliceExcludes(
   ["HexSnakeState.", "HexSnakeUI."]
 );
 
+expectSliceExcludes(
+  "src/game.js",
+  "Gu King lobster volley helper alias slice",
+  "function guKingBestDamageStep",
+  "function scheduleCharacterBigAttack",
+  ["HexSnakeState.", "HexSnakeUI."]
+);
+
 const docText = read("doc/es-module-export-map.md");
 [
   "src/platform/web.js",
