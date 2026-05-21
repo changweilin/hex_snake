@@ -343,3 +343,8 @@
     });
 
     Object.defineProperties(HexSnakeUI.audio, Object.getOwnPropertyDescriptors(HexSnakeAudio));
+
+export {
+  HexSnakeAudio,
+  HexSnakeAudio as audio
+};

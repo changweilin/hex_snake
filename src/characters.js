@@ -279,7 +279,7 @@
       return sizes.map(size => `${avatarUrl(character, size)} ${avatarSizeWidths[size]}w`).join(", ");
     }
 
-    Object.assign(HexSnakeUI, {
+    const HexSnakeCharacters = Object.freeze({
       avatarSrcset,
       avatarUrl,
       buildCharacterOptions,
@@ -300,5 +300,33 @@
       randomPortraitMarkup,
       selectedCharacterFor,
       showCharacterDatabaseError,
-      startLogoCharacterFor,
+      startLogoCharacterFor
     });
+
+    Object.assign(HexSnakeUI, HexSnakeCharacters);
+
+export {
+  HexSnakeCharacters,
+  avatarSrcset,
+  avatarUrl,
+  buildCharacterOptions,
+  characterChoiceFor,
+  characterFor,
+  clearStartLogoRandomCharacterId,
+  consumeStartLogoRandomCharacterId,
+  ensureStartLogoRandomCharacterId,
+  isRandomCharacterChoice,
+  loadCharacterDatabase,
+  ownerMeta,
+  portraitSizesAttribute,
+  portraitSrcset,
+  portraitUrl,
+  preloadAllPortraits,
+  preloadPortraitsFor,
+  randomCharacter,
+  randomPortraitMarkup,
+  selectedCharacterFor,
+  showCharacterDatabaseError,
+  startLogoCharacterFor,
+  HexSnakeCharacters as characterCatalog
+};

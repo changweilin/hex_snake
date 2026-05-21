@@ -308,3 +308,8 @@ const HexSnakeStats = (() => {
 })();
 
 Object.defineProperties(HexSnakeUI.stats, Object.getOwnPropertyDescriptors(HexSnakeStats));
+
+export {
+  HexSnakeStats,
+  HexSnakeStats as stats
+};
