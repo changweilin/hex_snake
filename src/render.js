@@ -1,12 +1,14 @@
+    const RenderRuntime = HexSnakeRuntime;
     const RenderConfig = HexSnakeState.config;
     const RenderDom = HexSnakeDOM;
     const RenderState = HexSnakeState.game;
     const RenderUI = HexSnakeUI;
-    const RenderAI = HexSnakeUI.ai;
+    const RenderAI = RenderUI.ai;
     const RenderGame = HexSnakeRenderGame;
-    const HexSnakeRenderHooks = HexSnakeRender;
-    const RenderPlatform = HexSnakeRuntime.platform;
-    const RenderReplay = HexSnakeUI.replay;
+    const RenderHooks = HexSnakeRender;
+    const HexSnakeRenderHooks = RenderHooks;
+    const RenderPlatform = RenderRuntime.platform;
+    const RenderReplay = RenderUI.replay;
 
     function comparisonLoop(now) {
       if (RenderPlatform.lifecycle.isPaused()) {
@@ -3985,7 +3987,7 @@
       RenderDom.ctx.restore();
     }
 
-    Object.assign(HexSnakeRender, {
+    Object.assign(RenderHooks, {
       comparisonLoop,
       draw,
       isEffectComparisonMode,

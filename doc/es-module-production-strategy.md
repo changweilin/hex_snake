@@ -59,4 +59,4 @@ npm.cmd run app:check
 
 ## Next AI Task
 
-下一個 AI 可直接處理項目是延續 Phase D service module migration：挑下一個 leaf service 或 runtime helper，把現有 window/facade read 改成 explicit import friendly 的小切片；`stats.js`、`about.js`、`network.js`、`audio.js`、`characters.js`、`replay.js` 與 `ai.js` 已完成 alias slices，production default 繼續維持 `bundled-legacy-fallback`。
+下一個 AI 可直接處理項目是延續 Phase D service module migration：挑下一個 leaf service 或 runtime helper，把現有 window/facade read 改成 explicit import friendly 的小切片；`stats.js`、`about.js`、`network.js`、`audio.js`、`characters.js`、`replay.js`、`ai.js` 與 `render.js` 已完成 alias slices，production default 繼續維持 `bundled-legacy-fallback`。
