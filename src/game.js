@@ -3446,40 +3446,40 @@
     }
 
     function keyboardAttackUsesDirection(profile = "small") {
-      return profile === "big" && GameAI.bigAttackUsesDrawnDirection(HexSnakeUI.characterFor("player").id);
+      return profile === "big" && GameAI.bigAttackUsesDrawnDirection(GameUI.characterFor("player").id);
     }
 
     function keyboardAttackDirection(profile = "big") {
-      const aim = HexSnakeState.game.keyboardAttackAim[profile] || HexSnakeState.game.keyboardAttackAim.big;
+      const aim = GameRuntimeState.keyboardAttackAim[profile] || GameRuntimeState.keyboardAttackAim.big;
       return Number.isInteger(aim.direction) ? aim.direction : ownerDirection("player");
     }
 
     function keyboardAttackOptions(profile = "small", target = null) {
-      if (!keyboardAttackUsesDirection(profile) || !HexSnakeState.game.snake?.length) return {};
-      const character = HexSnakeUI.characterFor("player");
+      if (!keyboardAttackUsesDirection(profile) || !GameRuntimeState.snake?.length) return {};
+      const character = GameUI.characterFor("player");
       const direction = keyboardAttackDirection(profile);
       return {
         aimDirection: direction,
-        aimOrigin: character.id === "moray" ? (target || opponentHeadTarget()) : HexSnakeState.game.snake[0]
+        aimOrigin: character.id === "moray" ? (target || opponentHeadTarget()) : GameRuntimeState.snake[0]
       };
     }
 
     function clearKeyboardAttackPreviewTimer() {
-      if (!HexSnakeState.game.keyboardAttackPreviewTimer) return;
-      clearTimeout(HexSnakeState.game.keyboardAttackPreviewTimer);
-      HexSnakeState.game.keyboardAttackPreviewTimer = null;
+      if (!GameRuntimeState.keyboardAttackPreviewTimer) return;
+      clearTimeout(GameRuntimeState.keyboardAttackPreviewTimer);
+      GameRuntimeState.keyboardAttackPreviewTimer = null;
     }
 
     function keyboardAttackHintLabel(profile = "small") {
       if (keyboardAttackUsesDirection(profile)) {
-        const direction = HexSnakeState.config.directions[keyboardAttackDirection(profile)];
+        const direction = GameConfig.directions[keyboardAttackDirection(profile)];
         return direction ? direction.label : "目前方向";
       }
-      return HexSnakeState.config.keyboardTargetModeLabels[keyboardTargetMode(profile)] || "目標頭部";
+      return GameConfig.keyboardTargetModeLabels[keyboardTargetMode(profile)] || "目標頭部";
     }
 
     function currentKeyboardAimProfile() {
-      return HexSnakeState.game.selectedAttackProfile === "big" ? "big" : "small";
+      return GameRuntimeState.selectedAttackProfile === "big" ? "big" : "small";
     }
 
     function targetModeCrosshairSvg(content) {
