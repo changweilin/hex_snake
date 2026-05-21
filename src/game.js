@@ -2794,21 +2794,21 @@
     }
 
     function showGameOverSettlement() {
-      HexSnakeState.game.gameOverSettlementPending = false;
-      HexSnakeState.game.gameOverLogoTransitionEndsAt = 0;
-      if (!HexSnakeState.game.gameOver || HexSnakeState.game.running || GameReplay.isPlaybackMode()) return;
-      HexSnakeUI.hideCharacterStage();
-      HexSnakeUI.clearLogoTransition();
-      HexSnakeUI.renderWinnerPortrait(HexSnakeState.game.gameOverResultOwner, HexSnakeState.game.gameOverPlayerLost, HexSnakeState.game.gameOverComputerLost);
+      GameRuntimeState.gameOverSettlementPending = false;
+      GameRuntimeState.gameOverLogoTransitionEndsAt = 0;
+      if (!GameRuntimeState.gameOver || GameRuntimeState.running || GameReplay.isPlaybackMode()) return;
+      GameUI.hideCharacterStage();
+      GameUI.clearLogoTransition();
+      GameUI.renderWinnerPortrait(GameRuntimeState.gameOverResultOwner, GameRuntimeState.gameOverPlayerLost, GameRuntimeState.gameOverComputerLost);
       Dom.overlay.classList.add("show");
-      if (HexSnakeState.game.gameOverRelayStartOptions) {
-        const nextOptions = HexSnakeState.game.gameOverRelayStartOptions;
-        HexSnakeState.game.gameOverRelayStartOptions = null;
-        HexSnakeState.game.relayRestartTimer = setTimeout(() => {
-          HexSnakeState.game.relayRestartTimer = null;
-          if (!HexSnakeState.game.relayMode) return;
+      if (GameRuntimeState.gameOverRelayStartOptions) {
+        const nextOptions = GameRuntimeState.gameOverRelayStartOptions;
+        GameRuntimeState.gameOverRelayStartOptions = null;
+        GameRuntimeState.relayRestartTimer = setTimeout(() => {
+          GameRuntimeState.relayRestartTimer = null;
+          if (!GameRuntimeState.relayMode) return;
           startGame(nextOptions);
-        }, Math.max(900, HexSnakeState.config.gameOverRestartDelayMs + 80));
+        }, Math.max(900, GameConfig.gameOverRestartDelayMs + 80));
       }
     }
 
@@ -3027,50 +3027,50 @@
     }
 
     function endGame(playerLost = true, computerLost = false) {
-      if (HexSnakeState.game.gameOver) return;
+      if (GameRuntimeState.gameOver) return;
       clearGameOverSettlementTimer();
-      const shouldContinueRelay = HexSnakeState.game.relayMode && (HexSnakeState.game.computerBattleMode || HexSnakeState.game.playerAutoMode);
+      const shouldContinueRelay = GameRuntimeState.relayMode && (GameRuntimeState.computerBattleMode || GameRuntimeState.playerAutoMode);
       const endedInAutoMode = isPlayerAutoControlActive();
       const shouldUseGameOverLogo = !endedInAutoMode && !shouldContinueRelay && !GameReplay.isPlaybackMode();
-      const nextRelayStartOptions = HexSnakeState.game.computerBattleMode
+      const nextRelayStartOptions = GameRuntimeState.computerBattleMode
         ? { computerBattle: true }
         : { playerAuto: true };
       const gameOverAt = performance.now();
       GameReplay.finishRecording(playerLost, computerLost);
-      HexSnakeState.game.running = false;
-      HexSnakeState.game.playerAutoMode = false;
-      HexSnakeState.game.computerBattleManualOverride = false;
-      HexSnakeState.game.gameOver = true;
-      if (shouldUseGameOverLogo) HexSnakeUI.showCharacterStage({ rebuild: false, "overlay": true });
-      else HexSnakeUI.hideCharacterStage();
-      HexSnakeState.game.gameOverContinuousVisualDeadlineAt = gameOverAt + HexSnakeState.config.gameOverContinuousVisualMaxWaitMs;
-      HexSnakeState.game.gameOverLogoTransitionEndsAt = shouldUseGameOverLogo ? gameOverAt + HexSnakeState.ui.logoTransitionDurationMs : 0;
+      GameRuntimeState.running = false;
+      GameRuntimeState.playerAutoMode = false;
+      GameRuntimeState.computerBattleManualOverride = false;
+      GameRuntimeState.gameOver = true;
+      if (shouldUseGameOverLogo) GameUI.showCharacterStage({ rebuild: false, "overlay": true });
+      else GameUI.hideCharacterStage();
+      GameRuntimeState.gameOverContinuousVisualDeadlineAt = gameOverAt + GameConfig.gameOverContinuousVisualMaxWaitMs;
+      GameRuntimeState.gameOverLogoTransitionEndsAt = shouldUseGameOverLogo ? gameOverAt + GamePresentationState.logoTransitionDurationMs : 0;
       updateAutoBattleControls();
-      HexSnakeState.game.restartUnlockAt = gameOverAt + (shouldUseGameOverLogo ? HexSnakeState.ui.logoTransitionDurationMs : HexSnakeState.config.gameOverRestartDelayMs);
+      GameRuntimeState.restartUnlockAt = gameOverAt + (shouldUseGameOverLogo ? GamePresentationState.logoTransitionDurationMs : GameConfig.gameOverRestartDelayMs);
       setSettingsLocked(false);
-      if (HexSnakeState.game.totalElapsedMs > HexSnakeState.game.bestTotalMs) {
-        HexSnakeState.game.bestTotalMs = HexSnakeState.game.totalElapsedMs;
-        GameStorage.set("hexSnakeBestTotalMs", String(Math.floor(HexSnakeState.game.bestTotalMs)));
+      if (GameRuntimeState.totalElapsedMs > GameRuntimeState.bestTotalMs) {
+        GameRuntimeState.bestTotalMs = GameRuntimeState.totalElapsedMs;
+        GameStorage.set("hexSnakeBestTotalMs", String(Math.floor(GameRuntimeState.bestTotalMs)));
       }
       updateHud();
       broadcastNetworkSnapshot(gameOverAt, true, true);
-      const winnerOwner = (!playerLost && computerLost) || (playerLost && computerLost && HexSnakeState.game.score > HexSnakeState.game.computerScore)
+      const winnerOwner = (!playerLost && computerLost) || (playerLost && computerLost && GameRuntimeState.score > GameRuntimeState.computerScore)
         ? "player"
-        : (playerLost && !computerLost) || (playerLost && computerLost && HexSnakeState.game.computerScore > HexSnakeState.game.score)
+        : (playerLost && !computerLost) || (playerLost && computerLost && GameRuntimeState.computerScore > GameRuntimeState.score)
           ? "computer"
           : null;
       const plainResultText = winnerOwner === "player" ? "P1 勝利" : winnerOwner === "computer" ? "P2 勝利" : "平手";
       try {
         GameStats.recordMatch({
           winnerOwner,
-          playerScore: HexSnakeState.game.score,
-          computerScore: HexSnakeState.game.computerScore,
-          durationMs: Math.round(HexSnakeState.game.totalElapsedMs),
-          playerCharacterId: HexSnakeState.game.playerCharacterId,
-          computerCharacterId: HexSnakeState.game.computerCharacterId,
-          mode: HexSnakeState.game.relayMode ? "relay" : HexSnakeState.game.computerBattleMode ? "autoBattle" : endedInAutoMode ? "playerAuto" : "player",
-          difficulty: HexSnakeState.game.computerDifficulty,
-          surrendered: Boolean(HexSnakeState.replay.surrendered)
+          playerScore: GameRuntimeState.score,
+          computerScore: GameRuntimeState.computerScore,
+          durationMs: Math.round(GameRuntimeState.totalElapsedMs),
+          playerCharacterId: GameRuntimeState.playerCharacterId,
+          computerCharacterId: GameRuntimeState.computerCharacterId,
+          mode: GameRuntimeState.relayMode ? "relay" : GameRuntimeState.computerBattleMode ? "autoBattle" : endedInAutoMode ? "playerAuto" : "player",
+          difficulty: GameRuntimeState.computerDifficulty,
+          surrendered: Boolean(GameRootState.replay.surrendered)
         });
       } catch (error) {
         console.warn("Unable to record match stats.", error);
@@ -3080,9 +3080,9 @@
         : winnerOwner === "computer"
           ? `本局結果：<span class="owner-name is-p2">P2</span> 勝利`
           : "本局結果：平手";
-      const scoreText = `比分：P1 ${HexSnakeState.game.score}：${HexSnakeState.game.computerScore} P2`;
+      const scoreText = `比分：P1 ${GameRuntimeState.score}：${GameRuntimeState.computerScore} P2`;
       const resultReason = playerLost && computerLost
-        ? HexSnakeState.game.score === HexSnakeState.game.computerScore
+        ? GameRuntimeState.score === GameRuntimeState.computerScore
           ? "雙方同時結束，分數相同。"
           : "雙方同時結束，以分數較高者勝出。"
         : winnerOwner === "player"
@@ -3090,7 +3090,7 @@
           : winnerOwner === "computer"
             ? "P1 淘汰，P2 獲勝。"
             : "雙方分數相同。";
-      HexSnakeUI.setLastResultShareData(buildResultShareData({
+      GameUI.setLastResultShareData(buildResultShareData({
         winnerOwner,
         plainResultText,
         scoreText,
@@ -3101,34 +3101,34 @@
       Dom.overlayTitle.innerHTML = resultTitleHtml;
       GameAudio.playCharacter("player", winnerOwner === "player" ? "victory" : "defeat", { gainScale: winnerOwner ? 1 : 0.82 });
       GameAudio.playCharacter("computer", winnerOwner === "computer" ? "victory" : "defeat", { delay: winnerOwner ? 0.08 : 0.12, gainScale: winnerOwner ? 1 : 0.82 });
-      HexSnakeState.game.gameOverResultOwner = winnerOwner;
-      HexSnakeState.game.gameOverPlayerLost = playerLost;
-      HexSnakeState.game.gameOverComputerLost = computerLost;
-      HexSnakeUI.showResultCallout("player", winnerOwner === "player" ? "victory" : "defeat");
-      HexSnakeUI.showResultCallout("computer", winnerOwner === "computer" ? "victory" : "defeat");
+      GameRuntimeState.gameOverResultOwner = winnerOwner;
+      GameRuntimeState.gameOverPlayerLost = playerLost;
+      GameRuntimeState.gameOverComputerLost = computerLost;
+      GameUI.showResultCallout("player", winnerOwner === "player" ? "victory" : "defeat");
+      GameUI.showResultCallout("computer", winnerOwner === "computer" ? "victory" : "defeat");
       if (shouldContinueRelay) {
-        if (winnerOwner === "player") HexSnakeState.game.relayPlayerWins += 1;
-        else if (winnerOwner === "computer") HexSnakeState.game.relayComputerWins += 1;
-        else HexSnakeState.game.relayDraws += 1;
+        if (winnerOwner === "player") GameRuntimeState.relayPlayerWins += 1;
+        else if (winnerOwner === "computer") GameRuntimeState.relayComputerWins += 1;
+        else GameRuntimeState.relayDraws += 1;
         updateRelayControls();
       }
       Dom.startButton.textContent = "重新開始";
-      HexSnakeState.game.gameOverSettlementPending = true;
-      HexSnakeState.game.gameOverRelayStartOptions = shouldContinueRelay ? nextRelayStartOptions : null;
+      GameRuntimeState.gameOverSettlementPending = true;
+      GameRuntimeState.gameOverRelayStartOptions = shouldContinueRelay ? nextRelayStartOptions : null;
       Dom.overlayText.textContent = shouldContinueRelay
-        ? `${scoreText}。${resultReason} 接力賽：P1 ${HexSnakeState.game.relayPlayerWins} 勝，P2 ${HexSnakeState.game.relayComputerWins} 勝，平手 ${HexSnakeState.game.relayDraws}。`
+        ? `${scoreText}。${resultReason} 接力賽：P1 ${GameRuntimeState.relayPlayerWins} 勝，P2 ${GameRuntimeState.relayComputerWins} 勝，平手 ${GameRuntimeState.relayDraws}。`
         : `${scoreText}。${resultReason}`;
       Dom.overlayText.hidden = true;
       if (shouldUseGameOverLogo) {
         const winnerLabel = winnerOwner === "player" ? "P1" : winnerOwner === "computer" ? "P2" : null;
-        const winnerCharacter = winnerOwner ? HexSnakeUI.characterFor(winnerOwner) : null;
+        const winnerCharacter = winnerOwner ? GameUI.characterFor(winnerOwner) : null;
         const winnerMessage = winnerOwner
           ? `\u606d\u559c ${winnerLabel}\uff08${winnerCharacter?.name || "\u96a8\u6a5f\u9078\u64c7"}\uff09\u7372\u52dd`
           : "\u672c\u5c40\u5e73\u624b";
-        HexSnakeUI.showLogoTransition("in", { message: winnerMessage });
+        GameUI.showLogoTransition("in", { message: winnerMessage });
       }
-      cancelAnimationFrame(HexSnakeState.game.rafId);
-      HexSnakeState.game.rafId = requestAnimationFrame(loop);
+      cancelAnimationFrame(GameRuntimeState.rafId);
+      GameRuntimeState.rafId = requestAnimationFrame(loop);
     }
 
     function loop(now) {

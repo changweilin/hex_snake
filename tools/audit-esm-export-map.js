@@ -528,6 +528,22 @@ expectSliceExcludes(
   ["HexSnakeState.", "HexSnakeUI."]
 );
 
+expectSliceExcludes(
+  "src/game.js",
+  "game-over settlement helper alias slice",
+  "function showGameOverSettlement",
+  "function resolveHazards",
+  ["HexSnakeState.", "HexSnakeUI."]
+);
+
+expectSliceExcludes(
+  "src/game.js",
+  "game-over relay settlement alias slice",
+  "function endGame",
+  "function loop",
+  ["HexSnakeState.", "HexSnakeUI."]
+);
+
 const docText = read("doc/es-module-export-map.md");
 [
   "src/platform/web.js",
