@@ -1280,33 +1280,33 @@
     }
 
     function updateHud() {
-      HexSnakeState.game.lastHudFrameAt = performance.now();
+      GameRuntimeState.lastHudFrameAt = performance.now();
       updateSkillPrepVisibility();
-      const playerMaxHp = HexSnakeUI.maxHpForSnake(HexSnakeState.game.snake);
-      const computerMaxHp = HexSnakeUI.maxHpForSnake(HexSnakeState.game.computerSnake);
-      Dom.scoreEl.textContent = `HP ${Math.max(0, Math.ceil(HexSnakeState.game.playerHp))}/${playerMaxHp}`;
-      Dom.computerScoreEl.textContent = `HP ${Math.max(0, Math.ceil(HexSnakeState.game.computerHp))}/${computerMaxHp}`;
-      updateHealthBar("player", HexSnakeState.game.playerHp, playerMaxHp);
-      updateHealthBar("computer", HexSnakeState.game.computerHp, computerMaxHp);
-      Dom.bestEl.textContent = HexSnakeState.game.best;
-      Dom.totalTimeEl.textContent = HexSnakeUI.formatTime(HexSnakeState.game.totalElapsedMs);
-      Dom.lastFeedTimeEl.textContent = HexSnakeUI.formatTime(HexSnakeState.game.lastFeedElapsedMs);
-      Dom.bestTimeEl.textContent = HexSnakeUI.formatTime(HexSnakeState.game.bestTotalMs);
+      const playerMaxHp = GameUI.maxHpForSnake(GameRuntimeState.snake);
+      const computerMaxHp = GameUI.maxHpForSnake(GameRuntimeState.computerSnake);
+      Dom.scoreEl.textContent = `HP ${Math.max(0, Math.ceil(GameRuntimeState.playerHp))}/${playerMaxHp}`;
+      Dom.computerScoreEl.textContent = `HP ${Math.max(0, Math.ceil(GameRuntimeState.computerHp))}/${computerMaxHp}`;
+      updateHealthBar("player", GameRuntimeState.playerHp, playerMaxHp);
+      updateHealthBar("computer", GameRuntimeState.computerHp, computerMaxHp);
+      Dom.bestEl.textContent = GameRuntimeState.best;
+      Dom.totalTimeEl.textContent = GameUI.formatTime(GameRuntimeState.totalElapsedMs);
+      Dom.lastFeedTimeEl.textContent = GameUI.formatTime(GameRuntimeState.lastFeedElapsedMs);
+      Dom.bestTimeEl.textContent = GameUI.formatTime(GameRuntimeState.bestTotalMs);
       const now = performance.now();
-      const playerSpeedValue = HexSnakeUI.isMovementStunned("player", now) ? 0 : HexSnakeUI.movementSpeed(HexSnakeState.game.playerStock) / (now < HexSnakeState.game.playerSlowUntil ? 2 : 1);
-      const computerSpeedValue = HexSnakeUI.isMovementStunned("computer", now) ? 0 : HexSnakeUI.movementSpeed(HexSnakeState.game.computerStock) / (now < HexSnakeState.game.computerSlowUntil ? 2 : 1);
+      const playerSpeedValue = GameUI.isMovementStunned("player", now) ? 0 : GameUI.movementSpeed(GameRuntimeState.playerStock) / (now < GameRuntimeState.playerSlowUntil ? 2 : 1);
+      const computerSpeedValue = GameUI.isMovementStunned("computer", now) ? 0 : GameUI.movementSpeed(GameRuntimeState.computerStock) / (now < GameRuntimeState.computerSlowUntil ? 2 : 1);
       const playerSpeed = Math.round(playerSpeedValue * 10) / 10;
       const computerSpeed = Math.round(computerSpeedValue * 10) / 10;
       Dom.playerSpeedEl.textContent = `${playerSpeed}x`;
       Dom.computerSpeedEl.textContent = `${computerSpeed}x`;
-      Dom.keyEls.forEach(el => el.classList.toggle("active", Number(el.dataset.dir) === HexSnakeState.game.nextDir));
-      updateStockHud("player", HexSnakeState.game.playerStock, HexSnakeState.game.playerAmmo, HexSnakeState.game.playerAmmoCharge);
-      updateStockHud("computer", HexSnakeState.game.computerStock, HexSnakeState.game.computerAmmo, HexSnakeState.game.computerAmmoCharge);
+      Dom.keyEls.forEach(el => el.classList.toggle("active", Number(el.dataset.dir) === GameRuntimeState.nextDir));
+      updateStockHud("player", GameRuntimeState.playerStock, GameRuntimeState.playerAmmo, GameRuntimeState.playerAmmoCharge);
+      updateStockHud("computer", GameRuntimeState.computerStock, GameRuntimeState.computerAmmo, GameRuntimeState.computerAmmoCharge);
       updateCooldownHud(now);
     }
 
     function updateHudThrottled(now = performance.now()) {
-      if (now - HexSnakeState.game.lastHudFrameAt < HexSnakeState.config.hudFrameIntervalMs) return;
+      if (now - GameRuntimeState.lastHudFrameAt < GameConfig.hudFrameIntervalMs) return;
       updateHud();
     }
 
