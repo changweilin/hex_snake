@@ -632,6 +632,14 @@ expectSliceExcludes(
   ["HexSnakeState.", "HexSnakeUI."]
 );
 
+expectSliceExcludes(
+  "src/game.js",
+  "vulnerability collision paralysis helper alias slice",
+  "function applyVulnerability",
+  "function resolveProjectiles",
+  ["HexSnakeState.", "HexSnakeUI."]
+);
+
 const docText = read("doc/es-module-export-map.md");
 [
   "src/platform/web.js",

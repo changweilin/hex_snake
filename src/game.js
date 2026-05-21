@@ -2494,14 +2494,14 @@
       return true;
     }
 
-    function applyVulnerability(owner, chance = HexSnakeState.config.baseAttackStunChance, now = performance.now()) {
+    function applyVulnerability(owner, chance = GameConfig.baseAttackStunChance, now = performance.now()) {
       if (Math.random() >= chance) return false;
       if (isOwnerSandwormArmored(owner, now)) {
         clearOwnerAbnormalStatus(owner, now);
         return false;
       }
       setOwnerVulnerable(owner, true);
-      HexSnakeUI.showStatusCallout(owner, "易傷");
+      GameUI.showStatusCallout(owner, "易傷");
       return true;
     }
 
@@ -2511,20 +2511,20 @@
         return false;
       }
       const interrupted = interruptCasting(owner);
-      const stunUntil = now + HexSnakeState.config.collisionStunMs * severity;
-      const slowUntil = stunUntil + HexSnakeState.config.collisionSlowMs * severity;
+      const stunUntil = now + GameConfig.collisionStunMs * severity;
+      const slowUntil = stunUntil + GameConfig.collisionSlowMs * severity;
       if (owner === "player") {
-        HexSnakeState.game.playerStunUntil = Math.max(HexSnakeState.game.playerStunUntil, stunUntil);
-        HexSnakeState.game.playerSlowUntil = Math.max(HexSnakeState.game.playerSlowUntil, slowUntil);
-        HexSnakeState.game.playerCollisionParalysisMs += HexSnakeState.config.collisionStunMs * severity;
-        if (interrupted) HexSnakeUI.showStatusCallout(owner, severity > 1 ? "重度麻痺！招式中斷" : "麻痺！招式中斷", { interrupted });
-        return HexSnakeState.game.playerCollisionParalysisMs > HexSnakeState.config.maxCollisionParalysisMs;
+        GameRuntimeState.playerStunUntil = Math.max(GameRuntimeState.playerStunUntil, stunUntil);
+        GameRuntimeState.playerSlowUntil = Math.max(GameRuntimeState.playerSlowUntil, slowUntil);
+        GameRuntimeState.playerCollisionParalysisMs += GameConfig.collisionStunMs * severity;
+        if (interrupted) GameUI.showStatusCallout(owner, severity > 1 ? "重度麻痺！招式中斷" : "麻痺！招式中斷", { interrupted });
+        return GameRuntimeState.playerCollisionParalysisMs > GameConfig.maxCollisionParalysisMs;
       } else {
-        HexSnakeState.game.computerStunUntil = Math.max(HexSnakeState.game.computerStunUntil, stunUntil);
-        HexSnakeState.game.computerSlowUntil = Math.max(HexSnakeState.game.computerSlowUntil, slowUntil);
-        HexSnakeState.game.computerCollisionParalysisMs += HexSnakeState.config.collisionStunMs * severity;
-        if (interrupted) HexSnakeUI.showStatusCallout(owner, severity > 1 ? "重度麻痺！招式中斷" : "麻痺！招式中斷", { interrupted });
-        return HexSnakeState.game.computerCollisionParalysisMs > HexSnakeState.config.maxCollisionParalysisMs;
+        GameRuntimeState.computerStunUntil = Math.max(GameRuntimeState.computerStunUntil, stunUntil);
+        GameRuntimeState.computerSlowUntil = Math.max(GameRuntimeState.computerSlowUntil, slowUntil);
+        GameRuntimeState.computerCollisionParalysisMs += GameConfig.collisionStunMs * severity;
+        if (interrupted) GameUI.showStatusCallout(owner, severity > 1 ? "重度麻痺！招式中斷" : "麻痺！招式中斷", { interrupted });
+        return GameRuntimeState.computerCollisionParalysisMs > GameConfig.maxCollisionParalysisMs;
       }
     }
 
@@ -2534,16 +2534,16 @@
         return false;
       }
       const interrupted = interruptCasting(owner);
-      const stunUntil = now + HexSnakeState.config.collisionStunMs;
-      const slowUntil = stunUntil + HexSnakeState.config.collisionSlowMs;
+      const stunUntil = now + GameConfig.collisionStunMs;
+      const slowUntil = stunUntil + GameConfig.collisionSlowMs;
       if (owner === "player") {
-        HexSnakeState.game.playerStunUntil = Math.max(HexSnakeState.game.playerStunUntil, stunUntil);
-        HexSnakeState.game.playerSlowUntil = Math.max(HexSnakeState.game.playerSlowUntil, slowUntil);
+        GameRuntimeState.playerStunUntil = Math.max(GameRuntimeState.playerStunUntil, stunUntil);
+        GameRuntimeState.playerSlowUntil = Math.max(GameRuntimeState.playerSlowUntil, slowUntil);
       } else {
-        HexSnakeState.game.computerStunUntil = Math.max(HexSnakeState.game.computerStunUntil, stunUntil);
-        HexSnakeState.game.computerSlowUntil = Math.max(HexSnakeState.game.computerSlowUntil, slowUntil);
+        GameRuntimeState.computerStunUntil = Math.max(GameRuntimeState.computerStunUntil, stunUntil);
+        GameRuntimeState.computerSlowUntil = Math.max(GameRuntimeState.computerSlowUntil, slowUntil);
       }
-      if (interrupted) HexSnakeUI.showStatusCallout(owner, "麻痺！招式中斷", { interrupted });
+      if (interrupted) GameUI.showStatusCallout(owner, "麻痺！招式中斷", { interrupted });
       return true;
     }
 
