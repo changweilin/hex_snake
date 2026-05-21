@@ -1,6 +1,8 @@
 let minGridSize = 6;
 const UiDom = HexSnakeDOM;
+const UiAudio = HexSnakeUI.audio;
 const UiGame = HexSnakeUI.uiGame;
+const UiReplay = HexSnakeUI.replay;
 const UiRender = HexSnakeRender;
 let maxGridSize = 12;
 let minFoodCount = 1;
@@ -3002,7 +3004,7 @@ function setResultShareStatus(text = "", state = "") {
 }
 
 function updateResultSharePanel() {
-  const replayMode = typeof HexSnakeReplay !== "undefined" && HexSnakeReplay.isPlaybackMode();
+  const replayMode = typeof UiReplay.isPlaybackMode === "function" && UiReplay.isPlaybackMode();
   const visible = Boolean(lastResultShareData) && gameOver && !replayMode && !UiDom.overlayTitle.hidden;
   UiDom.overlayText.classList.toggle("is-copyable-result", visible && !resultShareInProgress);
   if (visible) {
@@ -3302,7 +3304,7 @@ function setPortraitCharacterForOwner(
   renderIntroPortraits(showDetails);
   UiGame.resize();
   if (characterId !== randomCharacterChoiceId) {
-    HexSnakeAudio.playCharacter(owner, "select", {
+    UiAudio.playCharacter(owner, "select", {
       character: characterById.get(characterId),
       unlock: true,
     });

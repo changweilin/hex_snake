@@ -31,7 +31,7 @@
 | iOS 上架主線 | blocked | 取得 macOS / Xcode / Apple signing 環境 | 尚未驗證 |
 | LAN / Wi-Fi 多人 | Phase 2 自動化首輪完成 | 雙機長時間 reconnect / snapshot 驗證，之後規劃 WebRTC | `doc/local-multiplayer-progress-plan.md`、`test:network` |
 | AI / 規則一致性 | gate 已檢查，不套用 | 保留現行策略；若再推策略，先針對 dragon 負 delta 與 gu_king qualified 不足做新訓練 | `doc/strategy-optimization-sop.md`、`reports/` |
-| 架構整理 | Phase 4 ui/render public hooks 收斂完成 | `ui.js -> game.js` 已改走 `HexSnakeUI.uiGame`，render draw/preview/shake/comparison public hooks 已改走 `HexSnakeRender`；`render.js` 與 `game.js` 目前無 detected consumers；`audit:globals` 降至 51；下一步整理 `game.js -> audio/replay/stats/about/ai` service facade 依賴 | `npm run audit:globals`、`npm run audit:state-boundary`、`doc/state-boundary-audit.md`、`doc/es-module-split-map.md` |
+| 架構整理 | Phase 4 service facade 收斂完成 | audio/replay/stats/about/AI 已註冊到 `HexSnakeUI` service facade；`game.js`、`render.js`、`audio.js`、`replay.js`、`stats.js`、`about.js`、`ai.js` 目前都無 detected consumers；`audit:globals` 降至 44；下一步整理 platform/storage 依賴與正式 ESM export 形狀 | `npm run audit:globals`、`npm run audit:state-boundary`、`doc/state-boundary-audit.md`、`doc/es-module-split-map.md` |
 | 產品延伸 | 暫緩 | 等上架與核心穩定後再推 replay 分享、每日挑戰、觀戰聯賽 | 本文件 P3 |
 
 ## 主控看板
@@ -56,7 +56,7 @@
 
 | 項目 | 狀態 | 下一步 | 完成標準 |
 | --- | --- | --- | --- |
-| 核心 facade / ES modules | Phase 4 ui/render public hooks 收斂完成 | replay、render、ai 與小型 catalog/about 依賴已分批收斂，角色 helper 讀取已改走 `HexSnakeUI`，AI helper 讀取已改走 `HexSnakeAI`，render game helper 讀取已改走 `HexSnakeRenderGame`，replay/AI/UI game hooks 已改走 `HexSnakeUI.replayGame`、`HexSnakeUI.aiGame`、`HexSnakeUI.uiGame`，render public hooks 已改走 `HexSnakeRender`；`audit:globals` 降至 51 | build、quick、smoke、audit 通過 |
+| 核心 facade / ES modules | Phase 4 service facade 收斂完成 | replay、render、ai 與小型 catalog/about 依賴已分批收斂，角色 helper 讀取已改走 `HexSnakeUI`，AI helper 讀取已改走 `HexSnakeUI.ai`，render game helper 讀取已改走 `HexSnakeRenderGame`，replay/AI/UI game hooks 已改走 `HexSnakeUI.replayGame`、`HexSnakeUI.aiGame`、`HexSnakeUI.uiGame`，render public hooks 已改走 `HexSnakeRender`；`audit:globals` 降至 44 | build、quick、smoke、audit 通過 |
 | Browser / simulator 共用規則核心 | 未開始 | 等 AI 對齊差異明確後，先抽純函式與常數，不碰 DOM/UI state | 同 seed 關鍵差異可解釋 |
 | Render / CSS 拆分 | 未開始 | 先列 board/snake/effects 與 layout/settings/portrait/replay/HUD 搬移清單 | 桌機與手機 smoke screenshot 正常 |
 
@@ -118,6 +118,7 @@
 | ES module Phase 4 replay game hook 收斂 | 2026-05-21 新增 `HexSnakeUI.replayGame` 子 facade，讓 replay modal/playback/restore 對 game lifecycle helpers 的呼叫不再 late-read `HexSnakeGame` | `audit:globals` 從 57 降至 56，`audit:state-boundary` 維持 0/0；下一輪檢查 `ai.js -> game.js` remaining hooks |
 | ES module Phase 4 ai game hook 收斂 | 2026-05-21 新增 `HexSnakeUI.aiGame` 子 facade，讓 AI pathfinding/combat/attack helpers 不再 late-read `HexSnakeGame` | `audit:globals` 從 56 降至 55，`audit:state-boundary` 維持 0/0；下一輪檢查 `ui.js -> game.js` facade 與 render draw/public hooks |
 | ES module Phase 4 ui/render public hooks 收斂 | 2026-05-21 新增 `HexSnakeUI.uiGame` 與 `HexSnakeRender` facade，讓 UI tutorial/GM/start helpers 不再 late-read `HexSnakeGame`，並讓 UI/replay/game 不再直接讀 render public hooks | `audit:globals` 從 55 降至 51，`audit:state-boundary` 維持 0/0；`render.js` 與 `game.js` 目前無 detected consumers，下一輪檢查 `game.js -> audio/replay/stats/about/ai` service facade 依賴 |
+| ES module Phase 4 service facade 收斂 | 2026-05-21 將 audio/replay/stats/about/AI public service 註冊到 `HexSnakeUI.audio/replay/stats/about/ai`，讓 UI/render/game 不再直接讀各 service top-level facade | `audit:globals` 從 51 降至 44，`audit:state-boundary` 維持 0/0；service/runtime/core files 目前無 detected consumers，下一輪整理 platform/storage 依賴與正式 ESM export 形狀 |
 | Release gate | `release:check` 串接 build、text、data、assets、size、quick、network、mobile、smoke、offline、app readiness | `release:check` |
 | App shell 基礎封裝 | Capacitor 8、Android / iOS 專案、mobile platform adapter、APK / AAB build scripts 已建立 | `app:check`、Android build scripts |
 | Android 實機驗證 | 2026-05-20 使用者確認 debug APK 實機測試正常，返回鍵、背景暫停 / 恢復、震動、音效 unlock 與長時間效能無問題 | 後續版本若改 platform adapter 或原生設定，再重測 |
@@ -142,7 +143,7 @@
 3. iOS 目前被環境阻塞，因此不阻擋 Android 主線；取得 macOS / Xcode 後可與 Android Play 後台並行。
 4. LAN protocol hardening 的 AI 可處理首輪已完成；剩餘雙機長時間驗證屬裝置測試，不阻擋下一個 AI 可直接處理項目。
 5. AI / simulator 對齊排在策略套用與共用規則核心之前，因為尚未確認差異前，直接套策略或抽共用核心都容易把錯誤固定下來。
-6. Facade / ES modules 排在共用規則核心之前，因為先清楚模組邊界，再抽共享純函式，回歸風險較低；目前 `ui.js`、`render.js`、`ai.js` 可安全移動的執行期 game API 已完成，`running`、`paused`、`gameOver`、match collections、combat/resource state、runtime/session state、角色/方向/timer state、controls/settings state、presentation/actions API、presentation state、character catalog API、misc/render runtime state、attack/input pointer state、read-only config/helper facade、state-boundary audit cleanup、ES module split dependency map、Phase 1 module borders、Phase 2 helper extraction、game.js DOM facade、Phase 3 catalog/media/stats cleanup、Phase 4 replay cleanup 首批、Phase 4 render cleanup 第三批、Phase 4 ai cleanup 首批、dependency 精修、ui DOM facade 首批、helper facade 收斂、render/helper hooks 收斂、replay game hook 收斂、ai game hook 收斂與 ui/render public hooks 收斂已完成，下一步檢查 `game.js -> audio/replay/stats/about/ai` service facade 依賴。
+6. Facade / ES modules 排在共用規則核心之前，因為先清楚模組邊界，再抽共享純函式，回歸風險較低；目前 `ui.js`、`render.js`、`ai.js` 可安全移動的執行期 game API 已完成，`running`、`paused`、`gameOver`、match collections、combat/resource state、runtime/session state、角色/方向/timer state、controls/settings state、presentation/actions API、presentation state、character catalog API、misc/render runtime state、attack/input pointer state、read-only config/helper facade、state-boundary audit cleanup、ES module split dependency map、Phase 1 module borders、Phase 2 helper extraction、game.js DOM facade、Phase 3 catalog/media/stats cleanup、Phase 4 replay cleanup 首批、Phase 4 render cleanup 第三批、Phase 4 ai cleanup 首批、dependency 精修、ui DOM facade 首批、helper facade 收斂、render/helper hooks 收斂、replay game hook 收斂、ai game hook 收斂、ui/render public hooks 收斂與 service facade 收斂已完成，下一步整理 platform/storage 依賴與正式 ESM export 形狀。
 7. Replay 分享、每日挑戰、觀戰聯賽屬產品延伸，等上架、多人協議與核心穩定後再做，避免擴大同時變更面。
 
 ## 固定檢查
@@ -205,6 +206,6 @@ npm.cmd run evaluate:strategy-gate -- --character <id> --candidates <candidate-j
 1. 建立 Google Play internal testing，補資料安全、內容分級、截圖與商店欄位，並上傳 signed release AAB。
 2. 找 macOS / Xcode 環境執行 iOS build 與 TestFlight；若環境已備妥，可與第 1 步並行。
 3. LAN 多人剩餘雙機長時間 reconnect / snapshot 驗證；若通過，再規劃 WebRTC DataChannel。
-4. 執行 ES module split 下一批：檢查 `game.js -> audio/replay/stats/about/ai` service facade 依賴，優先收斂可用窄 facade 取代的項目。
+4. 執行 ES module split 下一批：整理 platform/storage 依賴與正式 ESM export 形狀，優先處理仍被多數檔案共用的 platform/storage adapter。
 5. 若之後要繼續 AI 訓練，先以 dragon / gu_king 為目標重跑完整 target-vs-field gate，不直接套用既有輸出。
 6. 最後再做 replay 分享、每日挑戰與觀戰聯賽。

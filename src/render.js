@@ -2,8 +2,9 @@
     const RenderDom = HexSnakeDOM;
     const RenderState = HexSnakeState.game;
     const RenderUI = HexSnakeUI;
-    const RenderAI = HexSnakeAI;
+    const RenderAI = HexSnakeUI.ai;
     const RenderGame = HexSnakeRenderGame;
+    const RenderReplay = HexSnakeUI.replay;
 
     function comparisonLoop(now) {
       if (HexSnakePlatform.lifecycle.isPaused()) {
@@ -2983,7 +2984,7 @@
     }
 
     function drawTarget() {
-      if (HexSnakeReplay.isPlaybackMode() && !RenderState.targetActive) return;
+      if (RenderReplay.isPlaybackMode() && !RenderState.targetActive) return;
       if (!RenderState.targetCell || !RenderState.snake) return;
       const profile = activeAttackPreviewProfile();
       if (!RenderState.targetActive && !RenderUI.canAttack("player", profile)) return;

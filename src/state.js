@@ -10,8 +10,13 @@ const HexSnakeState = {
 };
 
 const HexSnakeUI = {};
+HexSnakeUI.about = {};
+HexSnakeUI.ai = {};
 HexSnakeUI.aiGame = {};
+HexSnakeUI.audio = {};
+HexSnakeUI.replay = {};
 HexSnakeUI.replayGame = {};
+HexSnakeUI.stats = {};
 HexSnakeUI.uiGame = {};
 const HexSnakeRender = {};
 const HexSnakeRenderGame = {};

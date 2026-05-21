@@ -340,3 +340,5 @@
         return sfxUnlocked;
       }
     });
+
+    Object.defineProperties(HexSnakeUI.audio, Object.getOwnPropertyDescriptors(HexSnakeAudio));

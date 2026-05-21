@@ -1534,3 +1534,5 @@
       ultimateSetting,
       updateAiVisibilityMemory
     });
+
+    Object.defineProperties(HexSnakeUI.ai, Object.getOwnPropertyDescriptors(HexSnakeAI));

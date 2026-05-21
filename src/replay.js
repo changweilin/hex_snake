@@ -700,3 +700,5 @@
         return true;
       }
     });
+
+    Object.defineProperties(HexSnakeUI.replay, Object.getOwnPropertyDescriptors(HexSnakeReplay));

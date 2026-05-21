@@ -305,3 +305,5 @@ const HexSnakeStats = (() => {
     refresh: refreshModal
   });
 })();
+
+Object.defineProperties(HexSnakeUI.stats, Object.getOwnPropertyDescriptors(HexSnakeStats));
