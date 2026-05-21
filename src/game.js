@@ -4958,14 +4958,14 @@
 
     Dom.computerBattleButton.addEventListener("click", () => {
       if (GameReplay.isPlaybackMode()) return;
-      if (!HexSnakeUI.hasCharacterCatalog()) {
+      if (!GameUI.hasCharacterCatalog()) {
         window.location.reload();
         return;
       }
-      if (HexSnakeState.game.gameOver && !canRestartAfterGameOver()) return;
+      if (GameRuntimeState.gameOver && !canRestartAfterGameOver()) return;
       Dom.overlayTitle.textContent = "自動對弈";
       Dom.overlayText.textContent = "P1 / P2 皆自動操作，控制面板可調整對弈速度或暫停。";
-      HexSnakeUI.setOverlayChromeVisible(true);
+      GameUI.setOverlayChromeVisible(true);
       startGame({ computerBattle: true, resetRelayScore: true });
     });
 

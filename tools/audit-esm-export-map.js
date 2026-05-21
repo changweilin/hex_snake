@@ -936,6 +936,14 @@ expectSliceExcludes(
   ["HexSnakeState.", "HexSnakeUI."]
 );
 
+expectSliceExcludes(
+  "src/game.js",
+  "computer battle button alias slice",
+  "Dom.computerBattleButton.addEventListener",
+  "function applyAutoBattleSpeedIndex",
+  ["HexSnakeState.", "HexSnakeUI."]
+);
+
 const docText = read("doc/es-module-export-map.md");
 [
   "src/platform/web.js",
