@@ -4098,11 +4098,11 @@
 
     function handlePlatformBackButton() {
       if (!Dom.rulesModal.hidden) {
-        HexSnakeUI.closeRulesModal();
+        GameUI.closeRulesModal();
         return true;
       }
-      if (HexSnakeUI.isTutorialOpen()) {
-        HexSnakeUI.finishTutorial(true);
+      if (GameUI.isTutorialOpen()) {
+        GameUI.finishTutorial(true);
         return true;
       }
       if (!Dom.replayModal.hidden) {
@@ -4118,7 +4118,7 @@
         return true;
       }
       if (!Dom.portraitLightbox.hidden) {
-        HexSnakeUI.closePortraitLightbox();
+        GameUI.closePortraitLightbox();
         return true;
       }
       if (!Dom.settingsContent.hidden || !Dom.gmContent.hidden || !Dom.networkContent.hidden) {
@@ -4127,15 +4127,15 @@
         setNetworkOpen(false);
         return true;
       }
-      if (HexSnakeUI.isLogoTransitionActive()) {
+      if (GameUI.isLogoTransitionActive()) {
         return Boolean(skipLogoTransition());
       }
       if (GameReplay.isPlaybackMode()) {
         GameReplay.exitPlayback();
         return true;
       }
-      if (HexSnakeState.game.running && !HexSnakeState.game.gameOver) {
-        if (!HexSnakeState.game.paused) {
+      if (GameRuntimeState.running && !GameRuntimeState.gameOver) {
+        if (!GameRuntimeState.paused) {
           togglePause();
           return true;
         }
