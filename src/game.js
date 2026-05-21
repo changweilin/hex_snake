@@ -1160,65 +1160,65 @@
     }
 
     function updateStockHud(owner, stock, ammo, ammoCharge) {
-      const totalEl = HexSnakeState.game.resourceEls.get(owner);
+      const totalEl = GameRuntimeState.resourceEls.get(owner);
       if (totalEl) {
         const now = performance.now();
-        const energyFlashing = now < (owner === "player" ? HexSnakeState.game.playerEnergyFlashUntil : HexSnakeState.game.computerEnergyFlashUntil);
-        const bombFlashing = now < (owner === "player" ? HexSnakeState.game.playerBombFlashUntil : HexSnakeState.game.computerBombFlashUntil);
-        const energyRatio = Math.max(0, Math.min(1, ammoCharge / Math.max(1, HexSnakeState.config.attackNeedTotal)));
-        const bombRatio = Math.max(0, Math.min(1, ammo / Math.max(1, HexSnakeState.config.maxAmmo)));
+        const energyFlashing = now < (owner === "player" ? GameRuntimeState.playerEnergyFlashUntil : GameRuntimeState.computerEnergyFlashUntil);
+        const bombFlashing = now < (owner === "player" ? GameRuntimeState.playerBombFlashUntil : GameRuntimeState.computerBombFlashUntil);
+        const energyRatio = Math.max(0, Math.min(1, ammoCharge / Math.max(1, GameConfig.attackNeedTotal)));
+        const bombRatio = Math.max(0, Math.min(1, ammo / Math.max(1, GameConfig.maxAmmo)));
         totalEl.innerHTML = `
           <span class="resource-chip${energyFlashing ? " is-flashing" : ""}" title="能量">
             <span class="resource-icon energy-icon" aria-hidden="true"></span>
-            <span class="resource-chip-track" role="meter" aria-label="能量" aria-valuemin="0" aria-valuenow="${ammoCharge}" aria-valuemax="${HexSnakeState.config.attackNeedTotal}" aria-valuetext="${ammoCharge}/${HexSnakeState.config.attackNeedTotal}">
+            <span class="resource-chip-track" role="meter" aria-label="能量" aria-valuemin="0" aria-valuenow="${ammoCharge}" aria-valuemax="${GameConfig.attackNeedTotal}" aria-valuetext="${ammoCharge}/${GameConfig.attackNeedTotal}">
               <span class="resource-chip-fill" style="--resource-ratio: ${energyRatio.toFixed(4)}"></span>
             </span>
-            <span class="resource-chip-value">${ammoCharge}/${HexSnakeState.config.attackNeedTotal}</span>
+            <span class="resource-chip-value">${ammoCharge}/${GameConfig.attackNeedTotal}</span>
           </span>
           <span class="resource-chip${bombFlashing ? " is-flashing" : ""}" title="炸彈">
             <span class="resource-icon missile-icon" aria-hidden="true"></span>
-            <span class="resource-chip-track" role="meter" aria-label="炸彈" aria-valuemin="0" aria-valuenow="${ammo}" aria-valuemax="${HexSnakeState.config.maxAmmo}" aria-valuetext="${ammo}/${HexSnakeState.config.maxAmmo}">
+            <span class="resource-chip-track" role="meter" aria-label="炸彈" aria-valuemin="0" aria-valuenow="${ammo}" aria-valuemax="${GameConfig.maxAmmo}" aria-valuetext="${ammo}/${GameConfig.maxAmmo}">
               <span class="resource-chip-fill" style="--resource-ratio: ${bombRatio.toFixed(4)}"></span>
             </span>
-            <span class="resource-chip-value">${ammo}/${HexSnakeState.config.maxAmmo}</span>
+            <span class="resource-chip-value">${ammo}/${GameConfig.maxAmmo}</span>
           </span>
         `;
       }
       const now = performance.now();
-      const energyFlashing = now < (owner === "player" ? HexSnakeState.game.playerEnergyFlashUntil : HexSnakeState.game.computerEnergyFlashUntil);
-      const bombFlashing = now < (owner === "player" ? HexSnakeState.game.playerBombFlashUntil : HexSnakeState.game.computerBombFlashUntil);
-      const energyRatio = Math.max(0, Math.min(1, ammoCharge / Math.max(1, HexSnakeState.config.attackNeedTotal)));
-      const bombRatio = Math.max(0, Math.min(1, ammo / Math.max(1, HexSnakeState.config.maxAmmo)));
-      const energyChip = HexSnakeState.game.resourceEls.get(`${owner}-energyChip`);
-      const energyTrack = HexSnakeState.game.resourceEls.get(`${owner}-energyTrack`);
-      const energyFill = HexSnakeState.game.resourceEls.get(`${owner}-energyFill`);
-      const energyValue = HexSnakeState.game.resourceEls.get(`${owner}-energyValue`);
-      const bombChip = HexSnakeState.game.resourceEls.get(`${owner}-bombChip`);
-      const bombTrack = HexSnakeState.game.resourceEls.get(`${owner}-bombTrack`);
-      const bombFill = HexSnakeState.game.resourceEls.get(`${owner}-bombFill`);
-      const bombValue = HexSnakeState.game.resourceEls.get(`${owner}-bombValue`);
+      const energyFlashing = now < (owner === "player" ? GameRuntimeState.playerEnergyFlashUntil : GameRuntimeState.computerEnergyFlashUntil);
+      const bombFlashing = now < (owner === "player" ? GameRuntimeState.playerBombFlashUntil : GameRuntimeState.computerBombFlashUntil);
+      const energyRatio = Math.max(0, Math.min(1, ammoCharge / Math.max(1, GameConfig.attackNeedTotal)));
+      const bombRatio = Math.max(0, Math.min(1, ammo / Math.max(1, GameConfig.maxAmmo)));
+      const energyChip = GameRuntimeState.resourceEls.get(`${owner}-energyChip`);
+      const energyTrack = GameRuntimeState.resourceEls.get(`${owner}-energyTrack`);
+      const energyFill = GameRuntimeState.resourceEls.get(`${owner}-energyFill`);
+      const energyValue = GameRuntimeState.resourceEls.get(`${owner}-energyValue`);
+      const bombChip = GameRuntimeState.resourceEls.get(`${owner}-bombChip`);
+      const bombTrack = GameRuntimeState.resourceEls.get(`${owner}-bombTrack`);
+      const bombFill = GameRuntimeState.resourceEls.get(`${owner}-bombFill`);
+      const bombValue = GameRuntimeState.resourceEls.get(`${owner}-bombValue`);
       energyChip?.classList.toggle("is-flashing", energyFlashing);
       bombChip?.classList.toggle("is-flashing", bombFlashing);
       if (energyTrack) {
         energyTrack.setAttribute("aria-valuenow", String(ammoCharge));
-        energyTrack.setAttribute("aria-valuemax", String(HexSnakeState.config.attackNeedTotal));
-        energyTrack.setAttribute("aria-valuetext", `${ammoCharge}/${HexSnakeState.config.attackNeedTotal}`);
+        energyTrack.setAttribute("aria-valuemax", String(GameConfig.attackNeedTotal));
+        energyTrack.setAttribute("aria-valuetext", `${ammoCharge}/${GameConfig.attackNeedTotal}`);
       }
       if (bombTrack) {
         bombTrack.setAttribute("aria-valuenow", String(ammo));
-        bombTrack.setAttribute("aria-valuemax", String(HexSnakeState.config.maxAmmo));
-        bombTrack.setAttribute("aria-valuetext", `${ammo}/${HexSnakeState.config.maxAmmo}`);
+        bombTrack.setAttribute("aria-valuemax", String(GameConfig.maxAmmo));
+        bombTrack.setAttribute("aria-valuetext", `${ammo}/${GameConfig.maxAmmo}`);
       }
       if (energyFill) energyFill.style.setProperty("--resource-ratio", energyRatio.toFixed(4));
       if (bombFill) bombFill.style.setProperty("--resource-ratio", bombRatio.toFixed(4));
-      if (energyValue) energyValue.textContent = `${ammoCharge}/${HexSnakeState.config.attackNeedTotal}`;
-      if (bombValue) bombValue.textContent = `${ammo}/${HexSnakeState.config.maxAmmo}`;
-      HexSnakeState.config.foodTypes.forEach(type => {
-        const count = Math.max(0, Math.min(HexSnakeState.config.maxFoodStock, Math.round(stock[type.id] || 0)));
-        const countEl = HexSnakeState.game.resourceEls.get(`${owner}-${type.id}-count`);
-        const fill = HexSnakeState.game.resourceEls.get(`${owner}-${type.id}-fill`);
+      if (energyValue) energyValue.textContent = `${ammoCharge}/${GameConfig.attackNeedTotal}`;
+      if (bombValue) bombValue.textContent = `${ammo}/${GameConfig.maxAmmo}`;
+      GameConfig.foodTypes.forEach(type => {
+        const count = Math.max(0, Math.min(GameConfig.maxFoodStock, Math.round(stock[type.id] || 0)));
+        const countEl = GameRuntimeState.resourceEls.get(`${owner}-${type.id}-count`);
+        const fill = GameRuntimeState.resourceEls.get(`${owner}-${type.id}-fill`);
         if (countEl) countEl.textContent = count;
-        if (fill) fill.style.width = `${Math.min(100, count / HexSnakeState.config.maxFoodStock * 100)}%`;
+        if (fill) fill.style.width = `${Math.min(100, count / GameConfig.maxFoodStock * 100)}%`;
       });
     }
 
