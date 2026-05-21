@@ -3004,14 +3004,14 @@
     }
 
     function stepComputerOnly(now = performance.now()) {
-      if (!isNetworkHostActive()) HexSnakeState.game.computerDir = GameAI.chooseComputerDirection();
-      const computerNext = nextWrappedCell(HexSnakeState.game.computerSnake[0], HexSnakeState.game.computerDir);
+      if (!isNetworkHostActive()) GameRuntimeState.computerDir = GameAI.chooseComputerDirection();
+      const computerNext = nextWrappedCell(GameRuntimeState.computerSnake[0], GameRuntimeState.computerDir);
       const computerNextKey = keyOf(computerNext);
-      const computerEatenFood = HexSnakeState.game.foods.find(food => computerNext.q === food.q && computerNext.r === food.r);
+      const computerEatenFood = GameRuntimeState.foods.find(food => computerNext.q === food.q && computerNext.r === food.r);
       const computerEating = Boolean(computerEatenFood);
-      const computerBody = computerEating ? HexSnakeState.game.computerSnake : HexSnakeState.game.computerSnake.slice(0, -1);
+      const computerBody = computerEating ? GameRuntimeState.computerSnake : GameRuntimeState.computerSnake.slice(0, -1);
       const computerSelfHit = computerBody.some(segment => keyOf(segment) === computerNextKey);
-      const computerOpponentHit = HexSnakeState.game.snake.some(segment => keyOf(segment) === computerNextKey);
+      const computerOpponentHit = GameRuntimeState.snake.some(segment => keyOf(segment) === computerNextKey);
       const computerCollision = collisionSeverity(computerSelfHit, computerOpponentHit);
 
       if (computerCollision) {
@@ -3024,7 +3024,7 @@
 
       const consumedFood = advanceOwnerMovement("computer", computerNext, computerEatenFood);
       replaceConsumedFoods([consumedFood], computerEating);
-      if (HexSnakeState.game.running && !HexSnakeState.game.paused && !isNetworkHostActive()) GameAI.maybeComputerAttack(now);
+      if (GameRuntimeState.running && !GameRuntimeState.paused && !isNetworkHostActive()) GameAI.maybeComputerAttack(now);
       updateHud();
     }
 
