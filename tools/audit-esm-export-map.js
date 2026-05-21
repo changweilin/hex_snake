@@ -206,6 +206,8 @@ const requiredRegistrations = [
   ["src/dom.js", "window.HexSnakeDOM = HexSnakeDOM;"],
   ["src/dom.js", "HexSnakeDOM as dom"],
   ["src/ui.js", "HexSnakeUICore as uiCore"],
+  ["src/network.js", "const NetRuntime = HexSnakeRuntime;"],
+  ["src/network.js", "const NetStorage = NetRuntime.storage;"],
   ["src/network.js", "window.HexSnakeNet = HexSnakeNet;"],
   ["src/network.js", "HexSnakeNet as network"],
   ["src/characters.js", "HexSnakeCharacters as characterCatalog"],

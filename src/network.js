@@ -1,5 +1,7 @@
+const NetRuntime = HexSnakeRuntime;
+const NetStorage = NetRuntime.storage;
+
 const HexSnakeNet = (() => {
-  const NetStorage = HexSnakeRuntime.storage;
   const statusText = document.querySelector("#networkStatus");
   const panel = document.querySelector("#networkPanel");
   const roomCodeText = document.querySelector("#networkRoomCode");
