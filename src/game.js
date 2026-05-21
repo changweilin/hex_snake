@@ -3804,21 +3804,21 @@
 
     function togglePause() {
       if (GameReplay.isPlaybackMode()) return;
-      if (!HexSnakeState.game.running || HexSnakeState.game.gameOver) {
+      if (!GameRuntimeState.running || GameRuntimeState.gameOver) {
         beginStartLogoCountdown();
         return;
       }
-      HexSnakeState.game.paused = !HexSnakeState.game.paused;
-      setStatus(HexSnakeState.game.paused ? "已暫停" : "對戰中：吃食物累積能量，集滿可獲得炸彈。");
+      GameRuntimeState.paused = !GameRuntimeState.paused;
+      setStatus(GameRuntimeState.paused ? "已暫停" : "對戰中：吃食物累積能量，集滿可獲得炸彈。");
       Dom.overlayTitle.textContent = "暫停";
       Dom.overlayText.textContent = "按開始或快捷鍵繼續。";
       Dom.startButton.textContent = "繼續";
-      HexSnakeUI.setOverlayChromeVisible(true);
-      Dom.overlay.classList.toggle("show", HexSnakeState.game.paused);
-      if (!HexSnakeState.game.paused) {
-        HexSnakeState.game.lastPlayerStep = performance.now();
-        HexSnakeState.game.lastComputerStep = HexSnakeState.game.lastPlayerStep;
-        HexSnakeState.game.lastTimerFrame = HexSnakeState.game.lastPlayerStep;
+      GameUI.setOverlayChromeVisible(true);
+      Dom.overlay.classList.toggle("show", GameRuntimeState.paused);
+      if (!GameRuntimeState.paused) {
+        GameRuntimeState.lastPlayerStep = performance.now();
+        GameRuntimeState.lastComputerStep = GameRuntimeState.lastPlayerStep;
+        GameRuntimeState.lastTimerFrame = GameRuntimeState.lastPlayerStep;
       }
       updateAutoBattleControls();
     }
