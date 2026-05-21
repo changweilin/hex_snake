@@ -880,6 +880,14 @@ expectSliceExcludes(
   ["HexSnakeState.", "HexSnakeUI."]
 );
 
+expectSliceExcludes(
+  "src/game.js",
+  "setup input helper alias slice",
+  "Dom.gridSizeInput.addEventListener",
+  "Dom.resetBestTimeButton.addEventListener",
+  ["HexSnakeState.", "HexSnakeUI."]
+);
+
 const docText = read("doc/es-module-export-map.md");
 [
   "src/platform/web.js",

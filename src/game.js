@@ -4437,34 +4437,34 @@
     });
 
     Dom.gridSizeInput.addEventListener("change", () => {
-      if (HexSnakeState.game.running) return;
+      if (GameRuntimeState.running) return;
       setGridSize(Dom.gridSizeInput.value);
       applyGmSettingsChanged();
-      cancelAnimationFrame(HexSnakeState.game.rafId);
+      cancelAnimationFrame(GameRuntimeState.rafId);
       resetGame();
       resize();
       Dom.overlayTitle.textContent = "棋盤已更新";
-      Dom.overlayText.textContent = `棋盤半徑已設為 ${HexSnakeState.game.gridSize}。開始後設定會鎖定到下一局。`;
+      Dom.overlayText.textContent = `棋盤半徑已設為 ${GameRuntimeState.gridSize}。開始後設定會鎖定到下一局。`;
       Dom.startButton.textContent = "開始";
-      HexSnakeUI.renderIntroPortraits(true);
+      GameUI.renderIntroPortraits(true);
       Dom.overlay.classList.add("show");
     });
 
     Dom.foodCountInput.addEventListener("change", () => {
-      if (HexSnakeState.game.running) return;
+      if (GameRuntimeState.running) return;
       setFoodCount(Dom.foodCountInput.value);
       applyGmSettingsChanged();
       resetGame();
       resize();
       Dom.overlayTitle.textContent = "食物數量已更新";
-      Dom.overlayText.textContent = `場上會維持 ${HexSnakeState.game.foodCount} 個蛋白、脂肪、纖維、碳水隨機食物。`;
+      Dom.overlayText.textContent = `場上會維持 ${GameRuntimeState.foodCount} 個蛋白、脂肪、纖維、碳水隨機食物。`;
       Dom.startButton.textContent = "開始";
-      HexSnakeUI.renderIntroPortraits(true);
+      GameUI.renderIntroPortraits(true);
       Dom.overlay.classList.add("show");
     });
 
     Dom.computerDifficultyInput.addEventListener("change", () => {
-      if (HexSnakeState.game.running) return;
+      if (GameRuntimeState.running) return;
       setComputerDifficulty(Dom.computerDifficultyInput.value);
       saveGmSettings();
       resetGame();
@@ -4472,25 +4472,25 @@
       Dom.overlayTitle.textContent = "難度已更新";
       Dom.overlayText.textContent = `電腦難度設為 ${computerDifficultyInput.selectedOptions[0].textContent}。`;
       Dom.startButton.textContent = "開始";
-      HexSnakeUI.renderIntroPortraits(true);
+      GameUI.renderIntroPortraits(true);
       Dom.overlay.classList.add("show");
     });
 
     Dom.initialSpeedInput.addEventListener("change", () => {
-      if (HexSnakeState.game.running) return;
+      if (GameRuntimeState.running) return;
       setInitialSpeed(Dom.initialSpeedInput.value);
       applyGmSettingsChanged();
       resetGame();
       resize();
       Dom.overlayTitle.textContent = "初始速度已更新";
-      Dom.overlayText.textContent = `初始速度已設為 ${HexSnakeState.game.initialSpeed}x。`;
+      Dom.overlayText.textContent = `初始速度已設為 ${GameRuntimeState.initialSpeed}x。`;
       Dom.startButton.textContent = "開始";
-      HexSnakeUI.renderIntroPortraits(true);
+      GameUI.renderIntroPortraits(true);
       Dom.overlay.classList.add("show");
     });
 
     Dom.initialLengthInput.addEventListener("change", () => {
-      if (HexSnakeState.game.running) return;
+      if (GameRuntimeState.running) return;
       setInitialLength(Dom.initialLengthInput.value);
       applyGmSettingsChanged();
       resetGame();
@@ -4498,7 +4498,7 @@
     });
 
     Dom.initialEnergyInput.addEventListener("change", () => {
-      if (HexSnakeState.game.running) return;
+      if (GameRuntimeState.running) return;
       setInitialEnergy(Dom.initialEnergyInput.value);
       applyGmSettingsChanged();
       resetGame();
@@ -4506,7 +4506,7 @@
     });
 
     Dom.initialBombsInput.addEventListener("change", () => {
-      if (HexSnakeState.game.running) return;
+      if (GameRuntimeState.running) return;
       setInitialBombs(Dom.initialBombsInput.value);
       applyGmSettingsChanged();
       resetGame();
@@ -4515,7 +4515,7 @@
 
     Dom.initialStockInputs.forEach(input => {
       input.addEventListener("change", () => {
-        if (HexSnakeState.game.running) return;
+        if (GameRuntimeState.running) return;
         setInitialStock(input.dataset.initialStock, input.value);
         applyGmSettingsChanged();
         resetGame();
@@ -4525,26 +4525,26 @@
 
     [Dom.playerCharacterInput, Dom.computerCharacterInput].forEach(input => {
       input.addEventListener("change", () => {
-        if (HexSnakeState.game.running) return;
+        if (GameRuntimeState.running) return;
         const changedOwner = input === Dom.computerCharacterInput ? "computer" : "player";
-        HexSnakeState.game.playerCharacterChoice = HexSnakeUI.isSelectableCharacterChoiceId(Dom.playerCharacterInput.value) ? Dom.playerCharacterInput.value : HexSnakeState.config.defaultSettings.playerCharacterId;
-        HexSnakeState.game.computerCharacterChoice = HexSnakeUI.isSelectableCharacterChoiceId(Dom.computerCharacterInput.value) ? Dom.computerCharacterInput.value : HexSnakeState.config.defaultSettings.computerCharacterId;
-        if (HexSnakeUI.hasCharacterId(HexSnakeState.game.playerCharacterChoice)) HexSnakeState.game.playerCharacterId = HexSnakeState.game.playerCharacterChoice;
-        if (HexSnakeUI.hasCharacterId(HexSnakeState.game.computerCharacterChoice)) HexSnakeState.game.computerCharacterId = HexSnakeState.game.computerCharacterChoice;
+        GameRuntimeState.playerCharacterChoice = GameUI.isSelectableCharacterChoiceId(Dom.playerCharacterInput.value) ? Dom.playerCharacterInput.value : GameConfig.defaultSettings.playerCharacterId;
+        GameRuntimeState.computerCharacterChoice = GameUI.isSelectableCharacterChoiceId(Dom.computerCharacterInput.value) ? Dom.computerCharacterInput.value : GameConfig.defaultSettings.computerCharacterId;
+        if (GameUI.hasCharacterId(GameRuntimeState.playerCharacterChoice)) GameRuntimeState.playerCharacterId = GameRuntimeState.playerCharacterChoice;
+        if (GameUI.hasCharacterId(GameRuntimeState.computerCharacterChoice)) GameRuntimeState.computerCharacterId = GameRuntimeState.computerCharacterChoice;
         syncCharacterInputs();
         saveCharacterChoices();
-        HexSnakeUI.preloadPortraitsFor("player");
-        HexSnakeUI.preloadPortraitsFor("computer");
-        HexSnakeUI.buildCharacterStage();
+        GameUI.preloadPortraitsFor("player");
+        GameUI.preloadPortraitsFor("computer");
+        GameUI.buildCharacterStage();
         resetGame();
         resize();
         Dom.overlayTitle.textContent = "角色已更新";
-        Dom.overlayText.textContent = `P1 選擇 ${HexSnakeUI.selectedCharacterFor("player")?.name || "隨機選擇"}，P2 選擇 ${HexSnakeUI.selectedCharacterFor("computer")?.name || "隨機選擇"}。`;
+        Dom.overlayText.textContent = `P1 選擇 ${GameUI.selectedCharacterFor("player")?.name || "隨機選擇"}，P2 選擇 ${GameUI.selectedCharacterFor("computer")?.name || "隨機選擇"}。`;
         Dom.startButton.textContent = "開始";
-        HexSnakeUI.renderIntroPortraits(true);
+        GameUI.renderIntroPortraits(true);
         Dom.overlay.classList.add("show");
-        const selectedId = changedOwner === "computer" ? HexSnakeState.game.computerCharacterChoice : HexSnakeState.game.playerCharacterChoice;
-        const selectedCharacter = HexSnakeUI.characterForId(selectedId);
+        const selectedId = changedOwner === "computer" ? GameRuntimeState.computerCharacterChoice : GameRuntimeState.playerCharacterChoice;
+        const selectedCharacter = GameUI.characterForId(selectedId);
         if (selectedCharacter) {
           GameAudio.playCharacter(changedOwner, "select", { character: selectedCharacter, unlock: true });
         }
