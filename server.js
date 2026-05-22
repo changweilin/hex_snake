@@ -174,29 +174,22 @@ function leaveRoom(client, reason = "left") {
   client.roomCode = null;
   client.role = null;
 
-  if (previousRole === "host") {
-    room.clients.forEach(peer => {
-      peer.roomCode = null;
-      peer.role = null;
-      sendWebSocket(peer, { type: "room-closed", roomCode: room.code, reason });
-    });
-    rooms.delete(room.code);
-    return;
-  }
-
   if (room.clients.size === 0) {
     rooms.delete(room.code);
     return;
   }
 
-  room.clients.forEach(peer => sendWebSocket(peer, {
-    type: "peer-left",
-    roomCode: room.code,
-    role: previousRole,
-    reason
-  }));
-  refreshRoomLifecycle(room);
-  sendRoomState(room);
+  room.clients.forEach(peer => {
+    peer.roomCode = null;
+    peer.role = null;
+    sendWebSocket(peer, {
+      type: "room-closed",
+      roomCode: room.code,
+      role: previousRole,
+      reason
+    });
+  });
+  rooms.delete(room.code);
 }
 
 function joinRoom(client, code) {

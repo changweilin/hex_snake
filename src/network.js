@@ -157,21 +157,21 @@ const HexSnakeNet = (() => {
     }
     if (message.type === "peer-left") {
       const wasInGame = inGame;
+      const previousRole = role;
       peerCount = Math.max(1, peerCount - 1);
-      inGame = false;
-      lifecycle = message.lifecycle || "waiting";
+      resetRoomState();
       setStatus("Peer left the LAN room.", "warn");
-      updateUi();
-      emitGameMessage({ type: "disconnect", reason: message.reason || "left", role: message.role, wasInGame }, message.role, message);
+      emitGameMessage({ type: "disconnect", reason: message.reason || "left", role: message.role, localRole: previousRole, wasInGame }, message.role, message);
       return;
     }
     if (message.type === "room-closed" || message.type === "room-left") {
       const wasInGame = inGame;
       const previousRole = role;
+      const closedByRole = message.role === "guest" ? "guest" : "host";
       resetRoomState();
-      setStatus(message.type === "room-closed" ? "Host closed the LAN room." : "Left LAN room.", "warn");
+      setStatus(message.type === "room-closed" && closedByRole === "host" ? "Host closed the LAN room." : message.type === "room-closed" ? "Peer left the LAN room." : "Left LAN room.", "warn");
       if (message.type === "room-closed") {
-        emitGameMessage({ type: "disconnect", reason: message.reason || "closed", role: "host", wasInGame }, "host", message);
+        emitGameMessage({ type: "disconnect", reason: message.reason || "closed", role: closedByRole, localRole: previousRole, wasInGame }, closedByRole, message);
       } else {
         emitGameMessage({ type: "network-state", event: "room-left", role: previousRole, wasInGame }, previousRole, message);
       }

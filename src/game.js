@@ -704,7 +704,7 @@
     }
 
     function updateSettingsActionMode() {
-      const showSurrender = GameRuntimeState.running && !GameRuntimeState.gameOver && !GameReplay.isPlaybackMode();
+      const showSurrender = (GameRuntimeState.running || isNetworkMatchInProgress()) && !GameRuntimeState.gameOver && !GameReplay.isPlaybackMode();
       const networkRoomActive = isNetworkRoomActive();
       if (showSurrender) {
         setSettingsOpen(false);
@@ -1728,6 +1728,10 @@
     function updateNetworkStartButton() {
       Dom.startButton.classList.remove("is-network-waiting", "is-network-peer-ready");
       if (!isNetworkRoomActive() || GameRuntimeState.running || GameRuntimeState.gameOver || GameReplay.isPlaybackMode()) return;
+      if (GamePresentationState.startLogoCountdownPending || networkCountdownPending) {
+        Dom.startButton.hidden = true;
+        return;
+      }
       const role = localNetworkRole();
       if (role !== "host" && role !== "guest") return;
       const peerRole = peerNetworkRole(role);
@@ -2011,7 +2015,7 @@
     function applyNetworkLobbyMessage(message = {}, fromRole = null) {
       const role = fromRole === "guest" ? "guest" : fromRole === "host" ? "host" : null;
       if (!role) return;
-      if (typeof message.roleReveal === "boolean") {
+      if (role === "host" && typeof message.roleReveal === "boolean") {
         networkRoleReveal = message.roleReveal;
         if (Dom.networkRevealRolesInput) Dom.networkRevealRolesInput.checked = networkRoleReveal;
       }
@@ -2064,11 +2068,11 @@
       setSettingsLocked(false);
     }
 
-    function handleNetworkCountdownMessage(message = {}) {
+    function handleNetworkCountdownMessage(message = {}, fromRole = null) {
       if (!isNetworkGuestActive()) return;
       networkReadyByRole.host = true;
       networkReadyByRole.guest = true;
-      if (typeof message.roleReveal === "boolean") networkRoleReveal = message.roleReveal;
+      if (fromRole === "host" && typeof message.roleReveal === "boolean") networkRoleReveal = message.roleReveal;
       beginNetworkCountdown(message, { hostStart: false });
     }
 
@@ -2093,7 +2097,7 @@
         return;
       }
       if (message.type === "countdown") {
-        handleNetworkCountdownMessage(message);
+        handleNetworkCountdownMessage(message, fromRole);
         return;
       }
       if (message.type === "forfeit") {
@@ -4320,7 +4324,8 @@
 
     function surrenderGame() {
       if (GameReplay.isPlaybackMode()) return;
-      if (!GameRuntimeState.running || GameRuntimeState.gameOver) {
+      const networkMatchActive = isNetworkMatchInProgress();
+      if ((!GameRuntimeState.running && !networkMatchActive) || GameRuntimeState.gameOver) {
         if (GameRuntimeState.computerBattleMode && GameRuntimeState.relayMode) {
           setRelayMode(false, false, false);
           setStatus("接力賽已停止。");
