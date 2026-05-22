@@ -41,7 +41,7 @@
 | `HexSnakeGame` | `src/game.js` | frozen game shell with facade helpers plus `loadGameShell()` / `bootstrapGame()` | named `gameShell` export implemented; `module-shadow` imports shell but does not call bootstrap |
 | `HexSnakeRender` | `src/state.js` creates; `src/render.js` extends | render public hooks using `RenderRootState` state aliases | named `render` export implemented from `state.js`; named `renderHooks` export implemented from `render.js` |
 | `HexSnakeRenderGame` | `src/state.js` creates; `src/game.js` extends | game geometry/combat helpers used by render | named `renderGame` export implemented; later move to pure helper module |
-| `HexSnakeControls` | `src/state.js` | frozen keyboard/control helpers using `StateStorage` for keybind persistence; UI/game access through `UiControls` / `GameControls` aliases | named `controls` export implemented |
+| `HexSnakeControls` | `src/state.js` | frozen keyboard/control helpers using `StateStorage` for keybind persistence and `StateConfig` for control defaults / speed validation; UI/game access through `UiControls` / `GameControls` aliases | named `controls` export implemented |
 | `HexSnakeDOM` | `src/dom.js` | frozen DOM reference facade | named `dom` export implemented |
 | `HexSnakeNet` | `src/network.js` | frozen LAN client/service facade plus `HexSnakeUI.network` registry copy | named `network` export implemented |
 | `HexSnakeCharacters` | `src/characters.js` | frozen character catalog / portrait helper facade, mirrored into `HexSnakeUI` | named `characterCatalog` export implemented |
@@ -155,6 +155,7 @@ The audit checks:
 - `src/game.js` window pointer slice uses `GameRuntimeState` local alias instead of direct `HexSnakeState.` reads.
 - `src/game.js` window keydown slice uses `GameRuntimeState` / `GameConfig` / `GameUI` local aliases instead of direct `HexSnakeState.` / `HexSnakeUI.` reads.
 - `src/game.js` has a whole-file direct facade residual guard preventing direct `HexSnakeState.` / `HexSnakeUI.` reads from returning.
+- `src/state.js` controls config self-read slice uses the `StateConfig` local alias instead of direct `HexSnakeState.config` reads.
 - This file mentions every source and public surface in the current map.
 - `doc/es-module-loader-plan.md` still documents the loader modes, fallback rules, source order, production strategy, and next Phase D step.
 - `doc/es-module-core-bootstrap-checklist.md` still documents the `ui.js` / `game.js` blockers, explicit import surface, bootstrap ownership, preflight gates, and production fallback strategy.

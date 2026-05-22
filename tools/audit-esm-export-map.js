@@ -211,6 +211,7 @@ const requiredRegistrations = [
   ["src/platform/mobile.js", "storage: HexSnakeStorage"],
   ["src/state.js", "const StateRuntime = HexSnakeRuntime;"],
   ["src/state.js", "const StateStorage = StateRuntime.storage;"],
+  ["src/state.js", "const StateConfig = HexSnakeState.config;"],
   ["src/state.js", "window.HexSnakeState = HexSnakeState;"],
   ["src/state.js", "window.HexSnakeUI = HexSnakeUI;"],
   ["src/state.js", "window.HexSnakeRender = HexSnakeRender;"],
@@ -334,6 +335,14 @@ const requiredRegistrations = [
 ];
 
 requiredRegistrations.forEach(([relativePath, token]) => expectToken(relativePath, token));
+
+expectSliceExcludes(
+  "src/state.js",
+  "config self-read alias slice",
+  "const HexSnakeControls = (() => {",
+  "window.HexSnakeState = HexSnakeState;",
+  ["HexSnakeState.config"]
+);
 
 if (read("src/ui.js").includes("HexSnakeUI.")) {
   fail("src/ui.js should use the UiRegistry alias for HexSnakeUI property reads.");
@@ -1008,6 +1017,7 @@ const docText = read("doc/es-module-export-map.md");
   "src/main-module.js",
   "HexSnakeRuntime",
   "StateStorage",
+  "StateConfig",
   "HexSnakeState",
   "HexSnakeDOM",
   "HexSnakeUI",

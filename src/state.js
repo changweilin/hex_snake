@@ -12,6 +12,7 @@ const HexSnakeState = {
   ui: {}
 };
 
+const StateConfig = HexSnakeState.config;
 const HexSnakeUI = {};
 HexSnakeUI.about = {};
 HexSnakeUI.ai = {};
@@ -41,22 +42,22 @@ const HexSnakeControls = (() => {
     try {
       const storage = StateStorage;
       const saved = storage?.getJson?.("hexSnakeKeybinds", null);
-      if (!saved || !Array.isArray(saved.directions)) return structuredClone(HexSnakeState.config.defaultKeybinds);
+      if (!saved || !Array.isArray(saved.directions)) return structuredClone(StateConfig.defaultKeybinds);
       return {
-        smallAttack: normalizeKey(saved.smallAttack, HexSnakeState.config.defaultKeybinds.smallAttack),
-        bigAttack: normalizeKey(saved.bigAttack, HexSnakeState.config.defaultKeybinds.bigAttack),
-        pause: normalizeKey(saved.pause, HexSnakeState.config.defaultKeybinds.pause),
-        surrender: normalizeKey(saved.surrender, HexSnakeState.config.defaultKeybinds.surrender),
-        "directions": HexSnakeState.config.defaultKeybinds.directions.map((fallback, index) => normalizeKey(saved.directions[index], fallback))
+        smallAttack: normalizeKey(saved.smallAttack, StateConfig.defaultKeybinds.smallAttack),
+        bigAttack: normalizeKey(saved.bigAttack, StateConfig.defaultKeybinds.bigAttack),
+        pause: normalizeKey(saved.pause, StateConfig.defaultKeybinds.pause),
+        surrender: normalizeKey(saved.surrender, StateConfig.defaultKeybinds.surrender),
+        "directions": StateConfig.defaultKeybinds.directions.map((fallback, index) => normalizeKey(saved.directions[index], fallback))
       };
     } catch {
-      return structuredClone(HexSnakeState.config.defaultKeybinds);
+      return structuredClone(StateConfig.defaultKeybinds);
     }
   }
 
   function normalizeAutoBattleSpeed(value) {
     const parsed = Number(value);
-    return HexSnakeState.config.autoBattleSpeeds.includes(parsed) ? parsed : 1;
+    return StateConfig.autoBattleSpeeds.includes(parsed) ? parsed : 1;
   }
 
   return Object.freeze({
