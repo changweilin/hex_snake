@@ -36,7 +36,7 @@
 | --- | --- | --- | --- |
 | `HexSnakeRuntime` | `src/platform/web.js` / `src/platform/mobile.js` | frozen `{ platform, storage }` adapter | named `runtime` / `platform` / `storage` exports implemented |
 | `HexSnakeState` | `src/state.js` | mutable state namespaces: `audio`、`config`、`game`、`replay`、`ui` | named `state` export implemented |
-| `HexSnakeUI` | `src/state.js` creates; `src/ui.js` and services extend | shared registry with `about`、`ai`、`aiGame`、`audio`、`replay`、`replayGame`、`stats`、`uiGame`; UI self-references use `UiRegistry` | named `uiRegistry` export implemented until UI/game split is complete |
+| `HexSnakeUI` | `src/state.js` creates via `StateUIRegistry`; `src/ui.js` and services extend | shared registry with `about`、`ai`、`aiGame`、`audio`、`replay`、`replayGame`、`stats`、`uiGame`; UI self-references use `UiRegistry` | named `uiRegistry` export implemented until UI/game split is complete |
 | `HexSnakeUICore` | `src/ui.js` | frozen UI config/presentation shell over existing `HexSnakeUI` registrations | named `uiCore` export implemented |
 | `HexSnakeGame` | `src/game.js` | frozen game shell with facade helpers plus `loadGameShell()` / `bootstrapGame()` | named `gameShell` export implemented; `module-shadow` imports shell but does not call bootstrap |
 | `HexSnakeRender` | `src/state.js` creates; `src/render.js` extends | render public hooks using `RenderRootState` state aliases | named `render` export implemented from `state.js`; named `renderHooks` export implemented from `render.js` |
@@ -156,6 +156,7 @@ The audit checks:
 - `src/game.js` window keydown slice uses `GameRuntimeState` / `GameConfig` / `GameUI` local aliases instead of direct `HexSnakeState.` / `HexSnakeUI.` reads.
 - `src/game.js` has a whole-file direct facade residual guard preventing direct `HexSnakeState.` / `HexSnakeUI.` reads from returning.
 - `src/state.js` controls config self-read slice uses the `StateConfig` local alias instead of direct `HexSnakeState.config` reads.
+- `src/state.js` UI registry bootstrap slice uses the `StateUIRegistry` local alias instead of direct `HexSnakeUI.` child registry writes.
 - This file mentions every source and public surface in the current map.
 - `doc/es-module-loader-plan.md` still documents the loader modes, fallback rules, source order, production strategy, and next Phase D step.
 - `doc/es-module-core-bootstrap-checklist.md` still documents the `ui.js` / `game.js` blockers, explicit import surface, bootstrap ownership, preflight gates, and production fallback strategy.

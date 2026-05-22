@@ -212,6 +212,7 @@ const requiredRegistrations = [
   ["src/state.js", "const StateRuntime = HexSnakeRuntime;"],
   ["src/state.js", "const StateStorage = StateRuntime.storage;"],
   ["src/state.js", "const StateConfig = HexSnakeState.config;"],
+  ["src/state.js", "const StateUIRegistry = HexSnakeUI;"],
   ["src/state.js", "window.HexSnakeState = HexSnakeState;"],
   ["src/state.js", "window.HexSnakeUI = HexSnakeUI;"],
   ["src/state.js", "window.HexSnakeRender = HexSnakeRender;"],
@@ -219,15 +220,15 @@ const requiredRegistrations = [
   ["src/state.js", "window.HexSnakeControls = HexSnakeControls;"],
   ["src/state.js", "HexSnakeState as state"],
   ["src/state.js", "HexSnakeUI as uiRegistry"],
-  ["src/state.js", "HexSnakeUI.about = {};"],
-  ["src/state.js", "HexSnakeUI.ai = {};"],
-  ["src/state.js", "HexSnakeUI.aiGame = {};"],
-  ["src/state.js", "HexSnakeUI.audio = {};"],
-  ["src/state.js", "HexSnakeUI.network = {};"],
-  ["src/state.js", "HexSnakeUI.replay = {};"],
-  ["src/state.js", "HexSnakeUI.replayGame = {};"],
-  ["src/state.js", "HexSnakeUI.stats = {};"],
-  ["src/state.js", "HexSnakeUI.uiGame = {};"],
+  ["src/state.js", "StateUIRegistry.about = {};"],
+  ["src/state.js", "StateUIRegistry.ai = {};"],
+  ["src/state.js", "StateUIRegistry.aiGame = {};"],
+  ["src/state.js", "StateUIRegistry.audio = {};"],
+  ["src/state.js", "StateUIRegistry.network = {};"],
+  ["src/state.js", "StateUIRegistry.replay = {};"],
+  ["src/state.js", "StateUIRegistry.replayGame = {};"],
+  ["src/state.js", "StateUIRegistry.stats = {};"],
+  ["src/state.js", "StateUIRegistry.uiGame = {};"],
   ["src/dom.js", "window.HexSnakeDOM = HexSnakeDOM;"],
   ["src/dom.js", "HexSnakeDOM as dom"],
   ["src/ui.js", "const UiRuntime = HexSnakeRuntime;"],
@@ -342,6 +343,14 @@ expectSliceExcludes(
   "const HexSnakeControls = (() => {",
   "window.HexSnakeState = HexSnakeState;",
   ["HexSnakeState.config"]
+);
+
+expectSliceExcludes(
+  "src/state.js",
+  "UI registry bootstrap alias slice",
+  "const StateUIRegistry = HexSnakeUI;",
+  "const HexSnakeRender = {};",
+  ["HexSnakeUI."]
 );
 
 if (read("src/ui.js").includes("HexSnakeUI.")) {
@@ -1018,6 +1027,7 @@ const docText = read("doc/es-module-export-map.md");
   "HexSnakeRuntime",
   "StateStorage",
   "StateConfig",
+  "StateUIRegistry",
   "HexSnakeState",
   "HexSnakeDOM",
   "HexSnakeUI",

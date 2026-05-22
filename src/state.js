@@ -14,15 +14,16 @@ const HexSnakeState = {
 
 const StateConfig = HexSnakeState.config;
 const HexSnakeUI = {};
-HexSnakeUI.about = {};
-HexSnakeUI.ai = {};
-HexSnakeUI.aiGame = {};
-HexSnakeUI.audio = {};
-HexSnakeUI.network = {};
-HexSnakeUI.replay = {};
-HexSnakeUI.replayGame = {};
-HexSnakeUI.stats = {};
-HexSnakeUI.uiGame = {};
+const StateUIRegistry = HexSnakeUI;
+StateUIRegistry.about = {};
+StateUIRegistry.ai = {};
+StateUIRegistry.aiGame = {};
+StateUIRegistry.audio = {};
+StateUIRegistry.network = {};
+StateUIRegistry.replay = {};
+StateUIRegistry.replayGame = {};
+StateUIRegistry.stats = {};
+StateUIRegistry.uiGame = {};
 const HexSnakeRender = {};
 const HexSnakeRenderGame = {};
 
