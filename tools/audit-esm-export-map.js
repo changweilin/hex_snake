@@ -53,6 +53,13 @@ function expectSliceExcludes(relativePath, label, startToken, endToken, bannedTo
   });
 }
 
+function expectFileExcludes(relativePath, label, bannedTokens) {
+  const text = read(relativePath);
+  bannedTokens.forEach(token => {
+    if (text.includes(token)) fail(`${relativePath} ${label} should use local aliases instead of ${token}`);
+  });
+}
+
 const sharedOrder = [
   "src/state.js",
   "src/dom.js",
@@ -335,6 +342,12 @@ if (read("src/ui.js").includes("HexSnakeUI.")) {
 if (read("src/game.js").includes("HexSnakeState.config.autoBattleSpeeds") || read("src/game.js").includes("HexSnakeState.game.computerBattleSpeed")) {
   fail("src/game.js auto-battle speed reads should use GameConfig / GameRuntimeState aliases.");
 }
+
+expectFileExcludes(
+  "src/game.js",
+  "direct facade residual audit guard",
+  ["HexSnakeState.", "HexSnakeUI."]
+);
 
 expectSliceExcludes(
   "src/game.js",
