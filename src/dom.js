@@ -133,6 +133,7 @@
     const settingsPageButtons = [...document.querySelectorAll("[data-settings-page-button]")];
     const networkContent = document.querySelector("#networkContent");
     const networkCloseButton = document.querySelector("#networkCloseButton");
+    const networkRevealRolesInput = document.querySelector("#networkRevealRolesInput");
     const settingsToggle = document.querySelector("#settingsToggle");
     const settingsContent = document.querySelector("#settingsContent");
     const settingsCloseButton = document.querySelector("#settingsCloseButton");
@@ -274,6 +275,7 @@
       settingsPageButtons,
       networkContent,
       networkCloseButton,
+      networkRevealRolesInput,
       settingsToggle,
       settingsContent,
       settingsCloseButton,

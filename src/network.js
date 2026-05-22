@@ -82,6 +82,16 @@ const HexSnakeNet = (() => {
     return true;
   }
 
+  function emitGameMessage(payload, fromRole = null, envelope = {}) {
+    listeners.forEach(listener => {
+      try {
+        listener(payload, fromRole, envelope);
+      } catch (error) {
+        console.warn("Network game message failed:", error);
+      }
+    });
+  }
+
   function resetRoomState(options = {}) {
     role = null;
     roomCode = "";
@@ -103,13 +113,7 @@ const HexSnakeNet = (() => {
       if (serverSeq <= lastServerSeq) return;
       lastServerSeq = serverSeq;
     }
-    listeners.forEach(listener => {
-      try {
-        listener(message.payload, message.fromRole, message);
-      } catch (error) {
-        console.warn("Network game message failed:", error);
-      }
-    });
+    emitGameMessage(message.payload, message.fromRole, message);
   }
 
   function handleMessage(event) {
@@ -132,6 +136,7 @@ const HexSnakeNet = (() => {
       lifecycle = message.lifecycle || lifecycle;
       setStatus(role === "host" ? "Hosting LAN room. Share the code." : "Joined LAN room as P2.", "ok");
       updateUi();
+      emitGameMessage({ type: "network-state", event: message.type, role, roomCode, lifecycle }, role, message);
       return;
     }
     if (message.type === "peer-state") {
@@ -142,23 +147,34 @@ const HexSnakeNet = (() => {
       const waiting = role === "host" && peerCount < 2;
       setStatus(waiting ? "Waiting for P2 on the same Wi-Fi." : `LAN room ready (${peerCount}/2).`, "ok");
       updateUi();
+      emitGameMessage({ type: "network-state", event: "peer-state", role, roomCode, peerCount, lifecycle }, role, message);
       return;
     }
     if (message.type === "peer-joined") {
       setStatus("P2 joined. Host can start the match.", "ok");
+      emitGameMessage({ type: "network-state", event: "peer-joined", role, roomCode, peerCount, lifecycle }, message.role, message);
       return;
     }
     if (message.type === "peer-left") {
+      const wasInGame = inGame;
       peerCount = Math.max(1, peerCount - 1);
       inGame = false;
       lifecycle = message.lifecycle || "waiting";
       setStatus("Peer left the LAN room.", "warn");
       updateUi();
+      emitGameMessage({ type: "disconnect", reason: message.reason || "left", role: message.role, wasInGame }, message.role, message);
       return;
     }
     if (message.type === "room-closed" || message.type === "room-left") {
+      const wasInGame = inGame;
+      const previousRole = role;
       resetRoomState();
       setStatus(message.type === "room-closed" ? "Host closed the LAN room." : "Left LAN room.", "warn");
+      if (message.type === "room-closed") {
+        emitGameMessage({ type: "disconnect", reason: message.reason || "closed", role: "host", wasInGame }, "host", message);
+      } else {
+        emitGameMessage({ type: "network-state", event: "room-left", role: previousRole, wasInGame }, previousRole, message);
+      }
       return;
     }
     if (message.type === "peer-message") {
@@ -246,11 +262,16 @@ const HexSnakeNet = (() => {
     socket.addEventListener("close", () => {
       const previousRole = desiredRole || role;
       const previousRoomCode = desiredRoomCode || roomCode;
+      const wasInGame = inGame;
       connectPromise = null;
       socket = null;
       stopLatencyProbe();
       resetRoomState({ preserveDesired: !manualDisconnect });
-      if (manualDisconnect) {
+      if (wasInGame) {
+        manualDisconnect = true;
+        setStatus("LAN relay disconnected during match.", "warn");
+        emitGameMessage({ type: "disconnect", local: true, reason: "connection-lost", role: previousRole, wasInGame }, previousRole, { type: "socket-close" });
+      } else if (manualDisconnect) {
         setStatus("LAN relay disconnected.", "warn");
       } else {
         scheduleReconnect(previousRole, previousRoomCode);
@@ -352,6 +373,9 @@ const HexSnakeNet = (() => {
     },
     hasPeer() {
       return peerCount >= 2;
+    },
+    isRoomActive() {
+      return Boolean(role);
     },
     lifecycle() {
       return lifecycle;

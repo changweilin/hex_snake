@@ -2959,6 +2959,26 @@
       filter: brightness(1.05);
     }
 
+    #startButton.is-network-peer-ready {
+      animation: network-start-flash 920ms ease-in-out infinite;
+    }
+
+    #startButton.is-network-waiting {
+      background: #fde68a;
+      color: #171006;
+    }
+
+    @keyframes network-start-flash {
+      0%, 100% {
+        box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.18);
+        filter: brightness(1);
+      }
+      50% {
+        box-shadow: 0 0 0 6px rgba(251, 191, 36, 0.24), 0 0 28px rgba(251, 191, 36, 0.28);
+        filter: brightness(1.16);
+      }
+    }
+
     button.secondary {
       width: 100%;
       background: #151b25;
@@ -3154,6 +3174,15 @@
       color: #fecaca;
     }
 
+    .network-reveal-field {
+      margin-top: 2px;
+    }
+
+    .network-reveal-field input:disabled {
+      cursor: not-allowed;
+      opacity: 0.58;
+    }
+
     .settings-section {
       position: relative;
       display: grid;
@@ -3219,6 +3248,12 @@
       box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.22) inset;
     }
 
+    .network-toggle.is-disconnect {
+      border-color: rgba(248, 113, 113, 0.76);
+      color: #fecaca;
+      background: rgba(127, 29, 29, 0.34);
+    }
+
     .gm-letter {
       font-weight: 800;
       font-size: 1.12rem;
@@ -3229,6 +3264,10 @@
     .network-toggle.is-auto .gm-letter,
     .gm-toggle.is-auto .gm-letter {
       font-size: 0.72rem;
+    }
+
+    .network-toggle.is-disconnect .gm-letter {
+      font-size: 1.25rem;
     }
 
     .settings-toggle:hover,
@@ -4288,6 +4327,16 @@
       aspect-ratio: 1.05;
       border-radius: 8px;
       transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+    }
+
+    .intro-avatar-button.is-network-locked,
+    .portrait-option.is-network-locked {
+      cursor: default;
+    }
+
+    .intro-avatar-button.is-network-locked .fighter-portrait,
+    .portrait-option.is-network-locked .fighter-portrait {
+      opacity: 0.88;
     }
 
     .intro-avatar-button:hover .fighter-portrait,

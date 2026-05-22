@@ -631,7 +631,7 @@
     }
 
     function updateGmControlState() {
-      const disabled = GameRuntimeState.running;
+      const disabled = GameRuntimeState.running || isNetworkRoomActive();
       Dom.initialLengthInput.disabled = disabled;
       Dom.initialEnergyInput.disabled = disabled;
       Dom.initialBombsInput.disabled = disabled;
@@ -686,24 +686,26 @@
     }
 
     function setGmSettingsLocked(locked) {
-      Dom.gridSizeInput.disabled = locked;
-      Dom.foodCountInput.disabled = locked;
-      Dom.initialSpeedInput.disabled = locked;
-      Dom.initialLengthInput.disabled = locked;
-      Dom.initialEnergyInput.disabled = locked;
-      Dom.initialBombsInput.disabled = locked;
+      const gmLocked = locked || isNetworkRoomActive();
+      Dom.gridSizeInput.disabled = gmLocked;
+      Dom.foodCountInput.disabled = gmLocked;
+      Dom.initialSpeedInput.disabled = gmLocked;
+      Dom.initialLengthInput.disabled = gmLocked;
+      Dom.initialEnergyInput.disabled = gmLocked;
+      Dom.initialBombsInput.disabled = gmLocked;
       Dom.initialStockInputs.forEach(input => {
-        input.disabled = locked;
+        input.disabled = gmLocked;
       });
-      Dom.networkToggle.disabled = locked;
-      Dom.realModeButton.disabled = locked;
-      Dom.midGameModeButton.disabled = locked;
-      Dom.ultimateModeButton.disabled = locked;
-      Dom.lateGameModeButton.disabled = locked;
+      Dom.networkToggle.disabled = locked && !isNetworkRoomActive();
+      Dom.realModeButton.disabled = gmLocked;
+      Dom.midGameModeButton.disabled = gmLocked;
+      Dom.ultimateModeButton.disabled = gmLocked;
+      Dom.lateGameModeButton.disabled = gmLocked;
     }
 
     function updateSettingsActionMode() {
       const showSurrender = GameRuntimeState.running && !GameRuntimeState.gameOver && !GameReplay.isPlaybackMode();
+      const networkRoomActive = isNetworkRoomActive();
       if (showSurrender) {
         setSettingsOpen(false);
         setGmOpen(false);
@@ -712,13 +714,14 @@
       Dom.settingsToggle.hidden = showSurrender;
       Dom.surrenderButton.hidden = !showSurrender;
       Dom.surrenderButton.disabled = !showSurrender;
-      Dom.networkToggle.classList.toggle("is-auto", showSurrender);
-      Dom.networkToggle.classList.toggle("is-active", showSurrender ? isPlayerAutoControlActive() : !Dom.networkContent.hidden);
-      Dom.gmLetter.textContent = showSurrender ? "Auto" : "LAN";
-      Dom.networkToggle.title = showSurrender ? "Auto 操作" : "LAN / Wi-Fi";
-      Dom.networkToggle.setAttribute("aria-label", showSurrender ? "Auto 操作" : "LAN / Wi-Fi");
+      Dom.networkToggle.classList.toggle("is-auto", showSurrender && !networkRoomActive);
+      Dom.networkToggle.classList.toggle("is-disconnect", networkRoomActive);
+      Dom.networkToggle.classList.toggle("is-active", networkRoomActive || (showSurrender ? isPlayerAutoControlActive() : !Dom.networkContent.hidden));
+      Dom.gmLetter.textContent = networkRoomActive ? "⏻" : showSurrender ? "Auto" : "LAN";
+      Dom.networkToggle.title = networkRoomActive ? "斷線" : showSurrender ? "Auto 操作" : "LAN / Wi-Fi";
+      Dom.networkToggle.setAttribute("aria-label", networkRoomActive ? "斷線" : showSurrender ? "Auto 操作" : "LAN / Wi-Fi");
       Dom.networkToggle.setAttribute("aria-expanded", showSurrender ? "false" : Dom.networkToggle.getAttribute("aria-expanded"));
-      Dom.networkToggle.disabled = showSurrender ? false : Dom.networkToggle.disabled;
+      Dom.networkToggle.disabled = networkRoomActive ? false : showSurrender ? false : Dom.networkToggle.disabled;
     }
 
     function setSettingsLocked(locked) {
@@ -740,6 +743,7 @@
       Dom.playerCharacterInput.disabled = locked;
       Dom.computerCharacterInput.disabled = locked;
       setGmSettingsLocked(locked);
+      updateNetworkLobbyControls();
       updateSettingsActionMode();
     }
 
@@ -1026,6 +1030,9 @@
     }
 
     function startGame(options = {}) {
+      if (isNetworkRoomActive() && !options.networkStart) {
+        return toggleNetworkReadyFromStartButton();
+      }
       if (isNetworkGuestActive()) {
         setStatus("LAN guest cannot start the host simulation.");
         return false;
@@ -1065,6 +1072,7 @@
       GameRuntimeState.lastTimerFrame = GameRuntimeState.lastPlayerStep;
       GameReplay.startRecording();
       broadcastNetworkStart(GameRuntimeState.lastPlayerStep);
+      networkCountdownPending = false;
       cancelAnimationFrame(GameRuntimeState.rafId);
       GameRuntimeState.rafId = requestAnimationFrame(loop);
       return true;
@@ -1094,6 +1102,8 @@
       Dom.replayArchiveButton.hidden = false;
       GameUI.renderIntroPortraits(false);
       Dom.overlay.classList.add("show");
+      resetNetworkReadyState();
+      refreshNetworkLobbyPresentation();
     }
 
     function openGameOverCharacterSelect(owner) {
@@ -1483,6 +1493,21 @@
       return GameNetwork || null;
     }
 
+    const networkReadyByRole = {
+      host: false,
+      guest: false
+    };
+    const networkLobbyChoices = {
+      host: null,
+      guest: null
+    };
+    let networkRoleReveal = false;
+    let networkCountdownPending = false;
+
+    function isNetworkRoomActive() {
+      return Boolean(networkAdapter()?.isRoomActive?.() || networkAdapter()?.role?.());
+    }
+
     function isNetworkHostActive() {
       const net = networkAdapter();
       return Boolean(net?.isHost?.() && net?.hasPeer?.());
@@ -1490,6 +1515,360 @@
 
     function isNetworkGuestActive() {
       return Boolean(networkAdapter()?.isGuest?.());
+    }
+
+    function localNetworkRole() {
+      return networkAdapter()?.role?.() || null;
+    }
+
+    function ownerForNetworkRole(role) {
+      return role === "guest" ? "computer" : "player";
+    }
+
+    function localNetworkOwner() {
+      return ownerForNetworkRole(localNetworkRole());
+    }
+
+    function peerNetworkRole(role = localNetworkRole()) {
+      return role === "guest" ? "host" : "guest";
+    }
+
+    function networkOwnerIsLocal(owner) {
+      return !isNetworkRoomActive() || owner === localNetworkOwner();
+    }
+
+    function cloneNetworkChoiceForRole(role) {
+      const owner = ownerForNetworkRole(role);
+      const characterChoice = owner === "computer"
+        ? GameRuntimeState.computerCharacterChoice
+        : GameRuntimeState.playerCharacterChoice;
+      const characterId = owner === "computer"
+        ? GameRuntimeState.computerCharacterId
+        : GameRuntimeState.playerCharacterId;
+      return {
+        characterChoice,
+        characterId: GameUI.hasCharacterId(characterId) ? characterId : null
+      };
+    }
+
+    function applyNetworkChoice(role, choice = {}) {
+      if (role !== "host" && role !== "guest") return;
+      const owner = ownerForNetworkRole(role);
+      const nextChoice = normalizeCharacterChoice(owner, choice.characterChoice || choice.characterId);
+      if (owner === "computer") {
+        GameRuntimeState.computerCharacterChoice = nextChoice;
+        if (GameUI.hasCharacterId(nextChoice)) {
+          GameRuntimeState.computerCharacterId = nextChoice;
+          GameUI.clearStartLogoRandomCharacterId("computer");
+        }
+      } else {
+        GameRuntimeState.playerCharacterChoice = nextChoice;
+        if (GameUI.hasCharacterId(nextChoice)) {
+          GameRuntimeState.playerCharacterId = nextChoice;
+          GameUI.clearStartLogoRandomCharacterId("player");
+        }
+      }
+      networkLobbyChoices[role] = {
+        characterChoice: nextChoice,
+        characterId: GameUI.hasCharacterId(choice.characterId) ? choice.characterId : GameUI.hasCharacterId(nextChoice) ? nextChoice : null
+      };
+      syncCharacterInputs();
+      GameUI.preloadPortraitsFor(owner);
+      GameUI.buildCharacterStage();
+    }
+
+    function resetNetworkReadyState() {
+      networkReadyByRole.host = false;
+      networkReadyByRole.guest = false;
+      networkCountdownPending = false;
+      Dom.startButton.classList.remove("is-network-waiting", "is-network-peer-ready");
+    }
+
+    function resetNetworkLobbyState(options = {}) {
+      resetNetworkReadyState();
+      networkLobbyChoices.host = null;
+      networkLobbyChoices.guest = null;
+      if (!options.preserveRoleReveal) networkRoleReveal = false;
+      if (Dom.networkRevealRolesInput) Dom.networkRevealRolesInput.checked = networkRoleReveal;
+      refreshNetworkLobbyPresentation();
+    }
+
+    function applyNetworkRealMode() {
+      setGmMode(true);
+      resetGmParameters();
+      GameRuntimeState.gmPresetMode = "real";
+      updateGmPresetHighlight();
+      updateGmControlState();
+    }
+
+    function networkStartSettings() {
+      return {
+        computerDifficulty: GameRuntimeState.computerDifficulty,
+        gridSize: GameRuntimeState.gridSize,
+        foodCount: GameRuntimeState.foodCount,
+        initialSpeed: GameRuntimeState.initialSpeed,
+        gmMode: true,
+        initialLength: GameRuntimeState.initialLength,
+        initialEnergy: GameRuntimeState.initialEnergy,
+        initialBombs: GameRuntimeState.initialBombs,
+        initialStock: cloneInitialStock(GameRuntimeState.initialStock),
+        gmPresetMode: "real"
+      };
+    }
+
+    function applyNetworkStartSettings(settings = {}) {
+      applyNetworkRealMode();
+      setComputerDifficulty(settings.computerDifficulty ?? GameRuntimeState.computerDifficulty);
+      setGridSize(settings.gridSize ?? GameRuntimeState.gridSize);
+      setFoodCount(settings.foodCount ?? GameRuntimeState.foodCount);
+      setInitialSpeed(settings.initialSpeed ?? GameRuntimeState.initialSpeed);
+      setInitialLength(settings.initialLength ?? GameRuntimeState.initialLength);
+      setInitialEnergy(settings.initialEnergy ?? GameRuntimeState.initialEnergy);
+      setInitialBombs(settings.initialBombs ?? GameRuntimeState.initialBombs);
+      GameConfig.foodTypes.forEach(type => setInitialStock(type.id, settings.initialStock?.[type.id] ?? GameRuntimeState.initialStock[type.id]));
+      GameRuntimeState.gmPresetMode = "real";
+      updateGmPresetHighlight();
+    }
+
+    function applyNetworkStartCharacters(message = {}) {
+      if (GameUI.hasCharacterId(message.playerCharacterId)) {
+        GameRuntimeState.playerCharacterId = message.playerCharacterId;
+        GameRuntimeState.playerCharacterChoice = message.playerCharacterChoice || message.playerCharacterId;
+        GameUI.clearStartLogoRandomCharacterId("player");
+      }
+      if (GameUI.hasCharacterId(message.computerCharacterId)) {
+        GameRuntimeState.computerCharacterId = message.computerCharacterId;
+        GameRuntimeState.computerCharacterChoice = message.computerCharacterChoice || message.computerCharacterId;
+        GameUI.clearStartLogoRandomCharacterId("computer");
+      }
+      syncCharacterInputs();
+      GameUI.preloadPortraitsFor("player");
+      GameUI.preloadPortraitsFor("computer");
+      GameUI.buildCharacterStage();
+    }
+
+    function applyNetworkStartPayload(message = {}) {
+      applyNetworkStartSettings(message.settings || {});
+      applyNetworkStartCharacters(message);
+      refreshNetworkLobbyPresentation();
+    }
+
+    function resolveNetworkCharactersForStart() {
+      const hostChoice = networkLobbyChoices.host?.characterChoice || GameRuntimeState.playerCharacterChoice;
+      const guestChoice = networkLobbyChoices.guest?.characterChoice || GameRuntimeState.computerCharacterChoice;
+      GameRuntimeState.playerCharacterChoice = normalizeCharacterChoice("player", hostChoice);
+      GameRuntimeState.computerCharacterChoice = normalizeCharacterChoice("computer", guestChoice);
+      GameRuntimeState.playerCharacterId = resolveCharacterChoice("player", GameRuntimeState.playerCharacterChoice);
+      GameRuntimeState.computerCharacterId = resolveCharacterChoice("computer", GameRuntimeState.computerCharacterChoice);
+      syncCharacterInputs();
+      saveCharacterChoices();
+      networkLobbyChoices.host = cloneNetworkChoiceForRole("host");
+      networkLobbyChoices.guest = cloneNetworkChoiceForRole("guest");
+    }
+
+    function currentNetworkStartPayload() {
+      applyNetworkRealMode();
+      resolveNetworkCharactersForStart();
+      return {
+        type: "countdown",
+        roleReveal: networkRoleReveal,
+        settings: networkStartSettings(),
+        playerCharacterChoice: GameRuntimeState.playerCharacterChoice,
+        computerCharacterChoice: GameRuntimeState.computerCharacterChoice,
+        playerCharacterId: GameRuntimeState.playerCharacterId,
+        computerCharacterId: GameRuntimeState.computerCharacterId,
+        countdownStartedAt: Date.now()
+      };
+    }
+
+    function sendNetworkLobbyState() {
+      const net = networkAdapter();
+      const role = localNetworkRole();
+      if (!net?.sendGameMessage || (role !== "host" && role !== "guest")) return false;
+      networkLobbyChoices[role] = cloneNetworkChoiceForRole(role);
+      const payload = {
+        type: "lobby",
+        ready: Boolean(networkReadyByRole[role]),
+        choice: networkLobbyChoices[role]
+      };
+      if (role === "host") payload.roleReveal = networkRoleReveal;
+      return net.sendGameMessage(payload);
+    }
+
+    function handleLocalNetworkChoiceChanged(owner) {
+      if (!isNetworkRoomActive()) return;
+      if (!networkOwnerIsLocal(owner)) {
+        syncCharacterInputs();
+        refreshNetworkLobbyPresentation();
+        return;
+      }
+      sendNetworkLobbyState();
+      refreshNetworkLobbyPresentation();
+    }
+
+    function updateNetworkLobbyControls() {
+      const active = isNetworkRoomActive();
+      const role = localNetworkRole();
+      const ownOwner = localNetworkOwner();
+      const hardLocked = GameRuntimeState.running || GamePresentationState.startLogoCountdownPending || GameReplay.isPlaybackMode();
+      if (Dom.networkRevealRolesInput) {
+        Dom.networkRevealRolesInput.checked = networkRoleReveal;
+        Dom.networkRevealRolesInput.disabled = active ? role !== "host" || hardLocked : false;
+      }
+      if (active) {
+        Dom.playerCharacterInput.disabled = hardLocked || ownOwner !== "player";
+        Dom.computerCharacterInput.disabled = hardLocked || ownOwner !== "computer";
+        Dom.computerBattleButton.hidden = true;
+      }
+      Dom.settingsPageButtons.forEach(button => {
+        if (button.dataset.settingsPageButton === "gm") button.disabled = active || hardLocked;
+      });
+    }
+
+    function updateNetworkStartButton() {
+      Dom.startButton.classList.remove("is-network-waiting", "is-network-peer-ready");
+      if (!isNetworkRoomActive() || GameRuntimeState.running || GameRuntimeState.gameOver || GameReplay.isPlaybackMode()) return;
+      const role = localNetworkRole();
+      if (role !== "host" && role !== "guest") return;
+      const peerRole = peerNetworkRole(role);
+      const localReady = Boolean(networkReadyByRole[role]);
+      const peerReady = Boolean(networkReadyByRole[peerRole]);
+      Dom.startButton.hidden = false;
+      Dom.startButton.textContent = localReady && !peerReady ? "等待中" : "開始";
+      Dom.startButton.classList.toggle("is-network-waiting", localReady && !peerReady);
+      Dom.startButton.classList.toggle("is-network-peer-ready", peerReady && !localReady);
+    }
+
+    function refreshNetworkLobbyPresentation() {
+      const active = isNetworkRoomActive();
+      const role = localNetworkRole();
+      const ownOwner = ownerForNetworkRole(role);
+      const knownChoices = {
+        player: !active || ownOwner === "player" || Boolean(networkLobbyChoices.host),
+        computer: !active || ownOwner === "computer" || Boolean(networkLobbyChoices.guest)
+      };
+      GameUI.setNetworkIntroState?.({
+        active,
+        ownOwner,
+        revealOpponent: networkRoleReveal,
+        knownChoices
+      });
+      updateNetworkLobbyControls();
+      updateNetworkStartButton();
+      updateSettingsActionMode();
+    }
+
+    function bothNetworkPlayersReady() {
+      return Boolean(networkReadyByRole.host && networkReadyByRole.guest);
+    }
+
+    function beginNetworkCountdown(message = {}, options = {}) {
+      if (GameReplay.isPlaybackMode() || GameRuntimeState.running || GamePresentationState.startLogoCountdownPending || GameUI.isLogoTransitionActive()) return false;
+      if (GameRuntimeState.gameOver) return false;
+      networkCountdownPending = true;
+      networkAdapter()?.setInGame?.(true);
+      applyNetworkStartPayload(message);
+      GameUI.showCharacterStage({ startLogoCharacters: true, "overlay": true });
+      GamePresentationState.startLogoCountdownPending = true;
+      setSettingsLocked(true);
+      setStatus("LAN 雙方已開始，倒數 3 秒。");
+      GameUI.playStartLogoCountdown().then(ready => {
+        GamePresentationState.startLogoCountdownPending = false;
+        if (!ready || GameRuntimeState.running || GameRuntimeState.gameOver || GameReplay.isPlaybackMode()) {
+          if (!GameRuntimeState.running && !GameRuntimeState.gameOver) setSettingsLocked(false);
+          return;
+        }
+        if (options.hostStart) {
+          startGame({ networkStart: true });
+        } else {
+          setStatus("LAN 倒數完成，等待 Host 同步開局。");
+        }
+        updateNetworkStartButton();
+      });
+      updateNetworkStartButton();
+      return true;
+    }
+
+    function maybeBeginNetworkHostCountdown() {
+      if (!networkAdapter()?.isHost?.() || !networkAdapter()?.hasPeer?.() || !bothNetworkPlayersReady()) return false;
+      if (networkCountdownPending || GameRuntimeState.running || GameRuntimeState.gameOver || GamePresentationState.startLogoCountdownPending) return false;
+      const payload = currentNetworkStartPayload();
+      broadcastNetworkGameMessage(payload);
+      return beginNetworkCountdown(payload, { hostStart: true });
+    }
+
+    function toggleNetworkReadyFromStartButton() {
+      const net = networkAdapter();
+      const role = localNetworkRole();
+      if (!isNetworkRoomActive() || role !== "host" && role !== "guest") return false;
+      if (!net?.hasPeer?.()) {
+        setStatus(role === "host" ? "等待 P2 加入 LAN 房間。" : "等待 Host 準備。");
+        return true;
+      }
+      if (networkCountdownPending || GamePresentationState.startLogoCountdownPending) return true;
+      networkReadyByRole[role] = !networkReadyByRole[role];
+      sendNetworkLobbyState();
+      refreshNetworkLobbyPresentation();
+      if (networkReadyByRole[role]) {
+        setStatus(networkReadyByRole[peerNetworkRole(role)] ? "雙方都已開始，準備倒數。" : "等待對方按開始。");
+      } else {
+        setStatus("已取消開始。");
+      }
+      maybeBeginNetworkHostCountdown();
+      return true;
+    }
+
+    function localNetworkLossFlags(role = localNetworkRole()) {
+      return role === "guest"
+        ? { playerLost: false, computerLost: true }
+        : { playerLost: true, computerLost: false };
+    }
+
+    function remoteNetworkLossFlags(role = peerNetworkRole()) {
+      return role === "guest"
+        ? { playerLost: false, computerLost: true }
+        : { playerLost: true, computerLost: false };
+    }
+
+    function isNetworkMatchInProgress() {
+      return isNetworkRoomActive() && !GameRuntimeState.gameOver && (
+        GameRuntimeState.running ||
+        GamePresentationState.startLogoCountdownPending ||
+        networkCountdownPending ||
+        networkAdapter()?.isInGame?.()
+      );
+    }
+
+    function clearNetworkCountdownState() {
+      networkCountdownPending = false;
+      GamePresentationState.startLogoCountdownPending = false;
+      Dom.startButton.classList.remove("is-network-waiting", "is-network-peer-ready");
+    }
+
+    function settleNetworkForfeit(flags, statusText = "LAN 斷線，依投降結算。") {
+      if (GameRuntimeState.gameOver) return false;
+      clearNetworkCountdownState();
+      GameReplay.markSurrendered();
+      setStatus(statusText);
+      endGame(flags.playerLost, flags.computerLost);
+      return true;
+    }
+
+    function disconnectNetworkRoom() {
+      const net = networkAdapter();
+      if (!isNetworkRoomActive()) return false;
+      const role = localNetworkRole();
+      if (isNetworkMatchInProgress()) {
+        const flags = localNetworkLossFlags(role);
+        if (role === "guest") {
+          net?.sendGameMessage?.({ type: "forfeit", role });
+        }
+        settleNetworkForfeit(flags, "已斷線，依投降結算。");
+      }
+      net?.leaveRoom?.();
+      resetNetworkLobbyState();
+      setSettingsLocked(false);
+      return true;
     }
 
     function safeNetworkCell(value) {
@@ -1526,7 +1905,7 @@
       return net.sendGameMessage(payload);
     }
 
-    function broadcastNetworkSnapshot(now = performance.now(), force = false, final = false) {
+    function broadcastNetworkSnapshot(now = performance.now(), force = false, final = false, result = {}) {
       if (!isNetworkHostActive() || !GameRuntimeState.snake || !GameRuntimeState.computerSnake) return;
       const snapshotIntervalMs = Number(networkAdapter()?.snapshotIntervalMs?.()) || 100;
       if (!force && now - lastNetworkSnapshotAt < snapshotIntervalMs) return;
@@ -1535,7 +1914,8 @@
       broadcastNetworkGameMessage({
         type: final ? "end" : "snapshot",
         force: Boolean(force),
-        snapshot: GameReplay.createSnapshot(now, final)
+        snapshot: GameReplay.createSnapshot(now, final),
+        ...result
       });
     }
 
@@ -1543,6 +1923,7 @@
       if (!isNetworkHostActive()) return;
       lastNetworkSnapshotAt = now;
       networkAdapter()?.setInGame?.(true);
+      resetNetworkReadyState();
       broadcastNetworkGameMessage({
         type: "start",
         snapshot: GameReplay.createSnapshot(now, true)
@@ -1591,9 +1972,15 @@
     function applyNetworkSnapshotMessage(message = {}) {
       if (!isNetworkGuestActive() || !message.snapshot) return;
       const final = message.type === "end";
+      if (final && GameRuntimeState.gameOver) {
+        networkAdapter()?.setInGame?.(false);
+        resetNetworkReadyState();
+        return;
+      }
+      clearNetworkCountdownState();
       GameRuntimeState.running = false;
       GameRuntimeState.paused = false;
-      GameRuntimeState.gameOver = final;
+      GameRuntimeState.gameOver = false;
       GameRuntimeState.computerBattleMode = false;
       GameRuntimeState.playerAutoMode = false;
       GameRuntimeState.computerBattleManualOverride = false;
@@ -1607,10 +1994,112 @@
         settings: { gridSize: message.snapshot.gridSize }
       });
       networkAdapter()?.setInGame?.(!final);
-      setStatus(final ? "LAN match ended." : "LAN match: you control P2.");
+      if (final) {
+        const fallbackPlayerLost = (GameRuntimeState.playerHp || 0) <= 0;
+        const fallbackComputerLost = (GameRuntimeState.computerHp || 0) <= 0;
+        const playerLost = typeof message.playerLost === "boolean" ? message.playerLost : fallbackPlayerLost;
+        const computerLost = typeof message.computerLost === "boolean" ? message.computerLost : fallbackComputerLost;
+        if (message.surrendered) GameReplay.markSurrendered();
+        endGame(playerLost, computerLost);
+        resetNetworkReadyState();
+        setStatus("LAN match ended.");
+        return;
+      }
+      setStatus(message.type === "start" ? "LAN match started. You control P2." : "LAN match: you control P2.");
     }
 
-    function handleNetworkGameMessage(message = {}) {
+    function applyNetworkLobbyMessage(message = {}, fromRole = null) {
+      const role = fromRole === "guest" ? "guest" : fromRole === "host" ? "host" : null;
+      if (!role) return;
+      if (typeof message.roleReveal === "boolean") {
+        networkRoleReveal = message.roleReveal;
+        if (Dom.networkRevealRolesInput) Dom.networkRevealRolesInput.checked = networkRoleReveal;
+      }
+      if (typeof message.ready === "boolean") networkReadyByRole[role] = message.ready;
+      if (message.choice) applyNetworkChoice(role, message.choice);
+      refreshNetworkLobbyPresentation();
+      maybeBeginNetworkHostCountdown();
+    }
+
+    function handleNetworkStateMessage(message = {}) {
+      const lobbyOpen = !GameRuntimeState.running && !GamePresentationState.startLogoCountdownPending && !GameRuntimeState.gameOverSettlementPending;
+      if (message.event === "room-created") {
+        networkRoleReveal = Boolean(Dom.networkRevealRolesInput?.checked);
+        resetNetworkLobbyState({ preserveRoleReveal: true });
+        applyNetworkRealMode();
+        networkLobbyChoices[localNetworkRole()] = cloneNetworkChoiceForRole(localNetworkRole());
+        sendNetworkLobbyState();
+      }
+      if (message.event === "room-joined") {
+        resetNetworkLobbyState();
+        applyNetworkRealMode();
+        networkLobbyChoices[localNetworkRole()] = cloneNetworkChoiceForRole(localNetworkRole());
+        sendNetworkLobbyState();
+      }
+      if (message.event === "peer-state") {
+        if (!networkAdapter()?.hasPeer?.()) networkReadyByRole.guest = false;
+        if (lobbyOpen && networkAdapter()?.hasPeer?.()) sendNetworkLobbyState();
+      }
+      if (message.event === "peer-joined") {
+        networkReadyByRole.guest = false;
+        if (lobbyOpen) sendNetworkLobbyState();
+      }
+      if (message.event === "room-left") {
+        resetNetworkLobbyState();
+      }
+      refreshNetworkLobbyPresentation();
+      if (!GameRuntimeState.running && !GamePresentationState.startLogoCountdownPending && !GameRuntimeState.gameOverSettlementPending) {
+        setSettingsLocked(false);
+      }
+    }
+
+    function handleNetworkDisconnectMessage(message = {}, fromRole = null) {
+      const activeMatch = message.wasInGame || isNetworkMatchInProgress();
+      const role = message.local ? message.role || localNetworkRole() : message.role || fromRole || peerNetworkRole();
+      if (activeMatch && !GameRuntimeState.gameOver) {
+        const flags = message.local ? localNetworkLossFlags(role) : remoteNetworkLossFlags(role);
+        settleNetworkForfeit(flags, message.local ? "LAN 連線中斷，依投降結算。" : "對手斷線，依投降結算。");
+      }
+      resetNetworkLobbyState();
+      setSettingsLocked(false);
+    }
+
+    function handleNetworkCountdownMessage(message = {}) {
+      if (!isNetworkGuestActive()) return;
+      networkReadyByRole.host = true;
+      networkReadyByRole.guest = true;
+      if (typeof message.roleReveal === "boolean") networkRoleReveal = message.roleReveal;
+      beginNetworkCountdown(message, { hostStart: false });
+    }
+
+    function handleNetworkForfeitMessage(message = {}, fromRole = null) {
+      if (GameRuntimeState.gameOver) return;
+      const role = message.role || fromRole || peerNetworkRole();
+      const flags = remoteNetworkLossFlags(role);
+      settleNetworkForfeit(flags, "對手斷線，依投降結算。");
+    }
+
+    function handleNetworkGameMessage(message = {}, fromRole = null) {
+      if (message.type === "network-state") {
+        handleNetworkStateMessage(message);
+        return;
+      }
+      if (message.type === "disconnect") {
+        handleNetworkDisconnectMessage(message, fromRole);
+        return;
+      }
+      if (message.type === "lobby") {
+        applyNetworkLobbyMessage(message, fromRole);
+        return;
+      }
+      if (message.type === "countdown") {
+        handleNetworkCountdownMessage(message);
+        return;
+      }
+      if (message.type === "forfeit") {
+        handleNetworkForfeitMessage(message, fromRole);
+        return;
+      }
       if (message.type === "input") {
         applyNetworkInput(message.input);
         return;
@@ -1621,6 +2110,7 @@
     }
 
     networkAdapter()?.onGameMessage?.(handleNetworkGameMessage);
+    GameUI.onPortraitChoiceChanged = handleLocalNetworkChoiceChanged;
 
     function sandwormUndergroundAlpha(owner, now) {
       if (GameUI.characterFor(owner).id !== "sandworm") return 1;
@@ -3055,7 +3545,11 @@
         GameStorage.set("hexSnakeBestTotalMs", String(Math.floor(GameRuntimeState.bestTotalMs)));
       }
       updateHud();
-      broadcastNetworkSnapshot(gameOverAt, true, true);
+      broadcastNetworkSnapshot(gameOverAt, true, true, {
+        playerLost,
+        computerLost,
+        surrendered: Boolean(GameRootState.replay.surrendered)
+      });
       const winnerOwner = (!playerLost && computerLost) || (playerLost && computerLost && GameRuntimeState.score > GameRuntimeState.computerScore)
         ? "player"
         : (playerLost && !computerLost) || (playerLost && computerLost && GameRuntimeState.computerScore > GameRuntimeState.score)
@@ -3115,6 +3609,7 @@
         updateRelayControls();
       }
       Dom.startButton.textContent = "重新開始";
+      resetNetworkReadyState();
       GameRuntimeState.gameOverSettlementPending = true;
       GameRuntimeState.gameOverRelayStartOptions = shouldContinueRelay ? nextRelayStartOptions : null;
       Dom.overlayText.textContent = shouldContinueRelay
@@ -3832,6 +4327,13 @@
         }
         return;
       }
+      if (isNetworkRoomActive()) {
+        const role = localNetworkRole();
+        if (role === "guest") networkAdapter()?.sendGameMessage?.({ type: "forfeit", role });
+        setRelayMode(false, false, false);
+        settleNetworkForfeit(localNetworkLossFlags(role), "你已投降。");
+        return;
+      }
       setStatus("你已投降。");
       setRelayMode(false, false, false);
       GameReplay.markSurrendered();
@@ -3940,6 +4442,10 @@
     function openSettingsPage(page) {
       const previousPage = currentSettingsPage();
       if (page === "gm") {
+        if (isNetworkRoomActive()) {
+          setStatus("LAN 連線中鎖定 GM 設定，採用真實模式。");
+          return;
+        }
         setGmOpen(true, { direction: previousPage === "settings" ? "next" : "", focus: false });
         return;
       }
@@ -3990,6 +4496,12 @@
 
     function setGmOpen(open, options = {}) {
       const previousPage = currentSettingsPage();
+      if (open && isNetworkRoomActive()) {
+        Dom.gmContent.hidden = true;
+        updateSettingsPanelState();
+        setStatus("LAN 連線中鎖定 GM 設定，採用真實模式。");
+        return;
+      }
       Dom.gmContent.hidden = !open;
       if (open && !GameRuntimeState.running) {
         closeRulesPanelForOverlay();
@@ -4017,6 +4529,10 @@
     }
 
     function toggleNetworkSettings() {
+      if (isNetworkRoomActive()) {
+        disconnectNetworkRoom();
+        return;
+      }
       if (GameRuntimeState.running && !GameRuntimeState.gameOver && !GameReplay.isPlaybackMode()) {
         if (GameRuntimeState.computerBattleMode) setComputerBattleManualOverride(!GameRuntimeState.computerBattleManualOverride);
         else setPlayerAutoMode(!GameRuntimeState.playerAutoMode);
@@ -4218,6 +4734,19 @@
     Dom.settingsCloseButton.addEventListener("click", () => setSettingsOpen(false));
     Dom.gmCloseButton.addEventListener("click", () => setGmOpen(false));
     Dom.networkCloseButton.addEventListener("click", () => setNetworkOpen(false));
+    Dom.networkRevealRolesInput?.addEventListener("change", () => {
+      if (!isNetworkRoomActive()) {
+        networkRoleReveal = Boolean(Dom.networkRevealRolesInput.checked);
+        return;
+      }
+      if (!networkAdapter()?.isHost?.() || GameRuntimeState.running || GamePresentationState.startLogoCountdownPending) {
+        Dom.networkRevealRolesInput.checked = networkRoleReveal;
+        return;
+      }
+      networkRoleReveal = Boolean(Dom.networkRevealRolesInput.checked);
+      sendNetworkLobbyState();
+      refreshNetworkLobbyPresentation();
+    });
     Dom.settingsPageButtons.forEach(button => {
       button.addEventListener("click", () => openSettingsPage(button.dataset.settingsPageButton));
     });
@@ -4298,6 +4827,7 @@
       }
       const portraitShift = event.target.closest("[data-portrait-shift][data-portrait-owner]");
       if (portraitShift) {
+        if (!networkOwnerIsLocal(portraitShift.dataset.portraitOwner)) return;
         GameUI.applyPortraitCharacter(portraitShift.dataset.portraitOwner, Number(portraitShift.dataset.portraitShift));
         return;
       }
@@ -4309,6 +4839,7 @@
       const fullPortrait = event.target.closest("[data-full-portrait]");
       if (fullPortrait) {
         const owner = fullPortrait.dataset.fullPortrait === "computer" ? "computer" : "player";
+        if (!networkOwnerIsLocal(owner)) return;
         if (owner !== GamePresentationState.selectedPortraitOwner) {
           GameUI.selectPortraitOwner(owner);
           return;
@@ -4318,11 +4849,13 @@
       }
       const portraitOption = event.target.closest("[data-portrait-owner]");
       if (portraitOption) {
+        if (!networkOwnerIsLocal(portraitOption.dataset.portraitOwner)) return;
         GameUI.selectPortraitOwner(portraitOption.dataset.portraitOwner === "computer" ? "computer" : "player");
         return;
       }
       const introButton = event.target.closest("[data-open-intro]");
       if (!introButton) return;
+      if (!networkOwnerIsLocal(introButton.dataset.openIntro === "computer" ? "computer" : "player")) return;
       GamePresentationState.selectedPortraitOwner = introButton.dataset.openIntro === "computer" ? "computer" : "player";
       Dom.overlayTitle.textContent = "角色選擇";
       Dom.overlayText.textContent = "點擊 P1 或 P2 立繪選擇要調整的角色，使用左右箭頭切換。";
@@ -4351,6 +4884,7 @@
         setTimeout(() => {
           GamePresentationState.portraitIntroDidSwipe = false;
         }, 160);
+        if (!networkOwnerIsLocal(owner)) return;
         GameUI.applyPortraitCharacter(owner, deltaX < 0 ? 1 : -1);
         return;
       }
@@ -4372,6 +4906,7 @@
         setTimeout(() => {
           GamePresentationState.portraitIntroDidSwipe = false;
         }, 160);
+        if (!networkOwnerIsLocal(GamePresentationState.selectedPortraitOwner)) return;
         GameUI.applyPortraitCharacter(GamePresentationState.selectedPortraitOwner, deltaX < 0 ? 1 : -1);
       }
     });
@@ -4527,6 +5062,11 @@
       input.addEventListener("change", () => {
         if (GameRuntimeState.running) return;
         const changedOwner = input === Dom.computerCharacterInput ? "computer" : "player";
+        if (!networkOwnerIsLocal(changedOwner)) {
+          syncCharacterInputs();
+          refreshNetworkLobbyPresentation();
+          return;
+        }
         GameRuntimeState.playerCharacterChoice = GameUI.isSelectableCharacterChoiceId(Dom.playerCharacterInput.value) ? Dom.playerCharacterInput.value : GameConfig.defaultSettings.playerCharacterId;
         GameRuntimeState.computerCharacterChoice = GameUI.isSelectableCharacterChoiceId(Dom.computerCharacterInput.value) ? Dom.computerCharacterInput.value : GameConfig.defaultSettings.computerCharacterId;
         if (GameUI.hasCharacterId(GameRuntimeState.playerCharacterChoice)) GameRuntimeState.playerCharacterId = GameRuntimeState.playerCharacterChoice;
@@ -4548,6 +5088,7 @@
         if (selectedCharacter) {
           GameAudio.playCharacter(changedOwner, "select", { character: selectedCharacter, unlock: true });
         }
+        handleLocalNetworkChoiceChanged(changedOwner);
       });
     });
 
@@ -4558,7 +5099,7 @@
     });
 
     Dom.realModeButton.addEventListener("click", () => {
-      if (GameRuntimeState.running) return;
+      if (GameRuntimeState.running || isNetworkRoomActive()) return;
       setGmMode(true);
       resetGmParameters();
       applyGmSettingsChanged({ presetMode: "real" });
@@ -4566,28 +5107,28 @@
     });
 
     Dom.midGameModeButton.addEventListener("click", () => {
-      if (GameRuntimeState.running) return;
+      if (GameRuntimeState.running || isNetworkRoomActive()) return;
       applyMidGameModePreset();
       applyGmSettingsChanged({ presetMode: "mid" });
       refreshGmPreview();
     });
 
     Dom.ultimateModeButton.addEventListener("click", () => {
-      if (GameRuntimeState.running) return;
+      if (GameRuntimeState.running || isNetworkRoomActive()) return;
       applyUltimateModePreset();
       applyGmSettingsChanged({ presetMode: "battle" });
       refreshGmPreview();
     });
 
     Dom.lateGameModeButton.addEventListener("click", () => {
-      if (GameRuntimeState.running) return;
+      if (GameRuntimeState.running || isNetworkRoomActive()) return;
       applyLateGameModePreset();
       applyGmSettingsChanged({ presetMode: "late" });
       refreshGmPreview();
     });
 
     Dom.resetSettingsButton.addEventListener("click", () => {
-      if (GameRuntimeState.running) return;
+      if (GameRuntimeState.running || isNetworkRoomActive()) return;
       setComputerDifficulty(GameConfig.defaultSettings.computerDifficulty);
       setGmMode(GameConfig.defaultSettings.gmMode);
       resetGmParameters();
@@ -4949,6 +5490,10 @@
         returnToStartScreen();
         return;
       }
+      if (isNetworkRoomActive()) {
+        toggleNetworkReadyFromStartButton();
+        return;
+      }
       Dom.overlayTitle.textContent = "準備開局";
       Dom.overlayText.textContent = `每吃 1 個食物獲得 2 點能量，集滿 ${GameConfig.attackNeedTotal} 點獲得 1 枚炸彈，最多 ${GameConfig.maxAmmo} 枚；HP 上限為（蛇長 + 1）× ${GameConfig.hpPerSnakeUnit}；能量與炸彈都滿時，施放消耗炸彈的招式會立刻把滿能量轉為 1 枚炸彈；小招消耗目前最高的食物庫存 ${GameConfig.smallAttackFoodCost} 點與 ${GameConfig.smallAttackBombCost} 枚炸彈，大招消耗 ${GameConfig.bigAttackBombCost} 枚炸彈與四種庫存各 2 點。`;
       Dom.startButton.textContent = "開始";
@@ -4962,6 +5507,7 @@
         window.location.reload();
         return;
       }
+      if (isNetworkRoomActive()) return;
       if (GameRuntimeState.gameOver && !canRestartAfterGameOver()) return;
       Dom.overlayTitle.textContent = "自動對弈";
       Dom.overlayText.textContent = "P1 / P2 皆自動操作，控制面板可調整對弈速度或暫停。";

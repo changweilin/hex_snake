@@ -1765,6 +1765,15 @@ let portraitInfoSwipeStartX = null;
 let portraitInfoSwipeStartY = null;
 let portraitIntroDidSwipe = false;
 let portraitLightboxDidSwipe = false;
+let networkIntroState = {
+  active: false,
+  ownOwner: "player",
+  revealOpponent: false,
+  knownChoices: {
+    player: true,
+    computer: true,
+  },
+};
 const portraitVariantModes = ["human", "beast", "chibi"];
 const defaultPortraitVariantMode = "human";
 const portraitVariantLabels = {
@@ -1814,6 +1823,9 @@ Object.defineProperties(UiPresentationState, {
     set: (value) => {
       introDetailsOpen = Boolean(value);
     },
+  },
+  networkIntroState: {
+    get: () => networkIntroState,
   },
   perfStatsKey: {
     get: () => perfStatsKey,
@@ -3169,8 +3181,57 @@ function renderWinnerPortrait(owner, playerLost = false, computerLost = false) {
       `;
 }
 
+function normalizeNetworkIntroState(state = {}) {
+  const ownOwner = state.ownOwner === "computer" ? "computer" : "player";
+  return {
+    active: Boolean(state.active),
+    ownOwner,
+    revealOpponent: Boolean(state.revealOpponent),
+    knownChoices: {
+      player: state.knownChoices?.player !== false,
+      computer: state.knownChoices?.computer !== false,
+    },
+  };
+}
+
+function setNetworkIntroState(state = {}) {
+  networkIntroState = normalizeNetworkIntroState(state);
+  if (
+    UiDom.overlay.classList.contains("show") &&
+    !UiDom.winnerPortrait.hidden &&
+    !UiDom.winnerPortrait.querySelector("[data-result-owner]") &&
+    !isLogoTransitionActive()
+  ) {
+    renderIntroPortraits(introDetailsOpen);
+  }
+}
+
+function isNetworkOpponentOwner(owner) {
+  return networkIntroState.active && owner !== networkIntroState.ownOwner;
+}
+
+function shouldHideNetworkOwner(owner) {
+  if (!isNetworkOpponentOwner(owner)) return false;
+  return !networkIntroState.revealOpponent || networkIntroState.knownChoices[owner] === false;
+}
+
+function networkHiddenPortraitMarkup(owner) {
+  return `
+        <div class="fighter-portrait is-random is-network-hidden" data-owner="${owner}" data-owner-mark="${UiRegistry.ownerMeta(owner).mark}" style="${characterStyle({
+          color: UiRegistry.ownerMeta(owner).color,
+          line: UiRegistry.ownerMeta(owner).line,
+          accent: "#fbbf24",
+        }, owner)}">
+          <span class="fighter-avatar-image random-portrait-mark" aria-hidden="true">?</span>
+        </div>
+      `;
+}
+
 function renderIntroPortraits(showDetails = introDetailsOpen) {
   introDetailsOpen = showDetails;
+  if (networkIntroState.active && selectedPortraitOwner !== networkIntroState.ownOwner) {
+    selectedPortraitOwner = networkIntroState.ownOwner;
+  }
   if (showDetails) setIntroDetailsChrome();
   else setIntroLobbyChrome();
   const selectedCharacter = UiRegistry.selectedCharacterFor(selectedPortraitOwner);
@@ -3182,33 +3243,45 @@ function renderIntroPortraits(showDetails = introDetailsOpen) {
           <div class="intro-avatar-gate">
             ${["player", "computer"]
               .map((owner) => {
-                const character = UiRegistry.selectedCharacterFor(owner);
+                const hideNetworkOwner = shouldHideNetworkOwner(owner);
+                const networkLocked = isNetworkOpponentOwner(owner);
+                const character = hideNetworkOwner ? null : UiRegistry.selectedCharacterFor(owner);
                 const isRandomChoice = UiRegistry.isRandomCharacterChoice(owner);
                 const logoCharacter = isRandomChoice
                   ? null
                   : UiRegistry.startLogoCharacterFor(owner);
                 const label = owner === "player" ? "P1" : "P2";
-                const motto = character?.motto || "機緣一轉，百人角色待君擇。\n心念既定，千道關卡隨我闖。";
+                const displayName = hideNetworkOwner
+                  ? "?"
+                  : character
+                    ? character.name
+                    : "隨機選擇";
+                const motto = hideNetworkOwner
+                  ? "?"
+                  : character?.motto || "機緣一轉，百人角色待君擇。\n心念既定，千道關卡隨我闖。";
+                const introAttrs = networkLocked
+                  ? `aria-label="${label} 角色由對手選擇" aria-disabled="true"`
+                  : `role="button" tabindex="0" data-open-intro="${owner}" aria-label="開啟${label}角色選擇"`;
                 return `
-                <div class="intro-avatar-button" role="button" tabindex="0" data-owner="${owner}" data-open-intro="${owner}" style="${characterStyle(
-                  character || {
-                    color: UiRegistry.ownerMeta(owner).color,
-                    line: UiRegistry.ownerMeta(owner).line,
+                <div class="intro-avatar-button ${networkLocked ? "is-network-locked" : ""}" data-owner="${owner}" style="${characterStyle(
+                   character || {
+                     color: UiRegistry.ownerMeta(owner).color,
+                     line: UiRegistry.ownerMeta(owner).line,
                     accent: "#fbbf24",
-                  },
-                  owner,
-                )}" aria-label="開啟${label}角色選擇">
+                   },
+                   owner,
+                )}" ${introAttrs}>
                   <div class="portrait-card-controls" data-portrait-swipe-owner="${owner}">
-                    ${character ? `<div class="fighter-portrait" data-owner="${owner}" data-owner-mark="${UiRegistry.ownerMeta(owner).mark}">${fighterArt(character, "intro", true, "small")}</div>` : UiRegistry.randomPortraitMarkup(owner)}
+                    ${hideNetworkOwner ? networkHiddenPortraitMarkup(owner) : character ? `<div class="fighter-portrait" data-owner="${owner}" data-owner-mark="${UiRegistry.ownerMeta(owner).mark}">${fighterArt(character, "intro", true, "small")}</div>` : UiRegistry.randomPortraitMarkup(owner)}
                   </div>
                   <div class="portrait-label-controls intro-avatar-label-controls">
-                    <button class="secondary portrait-arrow portrait-label-arrow" type="button" data-portrait-owner="${owner}" data-portrait-shift="-1" aria-label="${UiRegistry.ownerMeta(owner).label} 上一位">‹</button>
-                    <span class="intro-avatar-label"><span class="owner-name ${owner === "player" ? "is-p1" : "is-p2"}">${UiRegistry.ownerMeta(owner).label}</span> · ${character ? character.name : "隨機選擇"}</span>
-                    <button class="secondary portrait-arrow portrait-label-arrow" type="button" data-portrait-owner="${owner}" data-portrait-shift="1" aria-label="${UiRegistry.ownerMeta(owner).label} 下一位">›</button>
+                    ${networkLocked ? "" : `<button class="secondary portrait-arrow portrait-label-arrow" type="button" data-portrait-owner="${owner}" data-portrait-shift="-1" aria-label="${UiRegistry.ownerMeta(owner).label} 上一位">‹</button>`}
+                    <span class="intro-avatar-label"><span class="owner-name ${owner === "player" ? "is-p1" : "is-p2"}">${UiRegistry.ownerMeta(owner).label}</span> · ${displayName}</span>
+                    ${networkLocked ? "" : `<button class="secondary portrait-arrow portrait-label-arrow" type="button" data-portrait-owner="${owner}" data-portrait-shift="1" aria-label="${UiRegistry.ownerMeta(owner).label} 下一位">›</button>`}
                   </div>
-                  <p class="intro-avatar-motto ${character ? "" : "is-placeholder"}">${formatIntroMotto(motto)}</p>
+                  <p class="intro-avatar-motto ${character && !hideNetworkOwner ? "" : "is-placeholder"}">${formatIntroMotto(motto)}</p>
                   ${
-                    isRandomChoice
+                    hideNetworkOwner || isRandomChoice
                       ? `<span class="intro-avatar-logo" aria-hidden="true"><span class="random-portrait-mark intro-avatar-logo-mark">?</span></span>`
                       : `<span class="intro-avatar-logo" aria-hidden="true"><img src="${UiRegistry.avatarUrl(logoCharacter, "sm")}" srcset="${UiRegistry.avatarSrcset(logoCharacter)}" sizes="52px" alt="${logoCharacter.name} 頭像" decoding="async" loading="lazy"></span>`
                   }
@@ -3225,24 +3298,34 @@ function renderIntroPortraits(showDetails = introDetailsOpen) {
           <div class="portrait-pair">
           ${["player", "computer"]
             .map((owner) => {
-              const character = UiRegistry.selectedCharacterFor(owner);
+              const hideNetworkOwner = shouldHideNetworkOwner(owner);
+              const networkLocked = isNetworkOpponentOwner(owner);
+              const character = hideNetworkOwner ? null : UiRegistry.selectedCharacterFor(owner);
               const label = owner === "player" ? "P1" : "P2";
+              const displayName = hideNetworkOwner
+                ? "?"
+                : character
+                  ? character.name
+                  : "隨機選擇";
+              const optionAttrs = networkLocked
+                ? `aria-label="${label} 角色由對手選擇" aria-disabled="true"`
+                : `role="button" tabindex="0" data-portrait-owner="${owner}"`;
               return `
-                <div class="portrait-option ${owner === selectedPortraitOwner ? "is-selected" : ""}" role="button" tabindex="0" data-owner="${owner}" data-portrait-owner="${owner}" style="${characterStyle(
-                  character || {
-                    color: UiRegistry.ownerMeta(owner).color,
-                    line: UiRegistry.ownerMeta(owner).line,
+                <div class="portrait-option ${owner === selectedPortraitOwner ? "is-selected" : ""} ${networkLocked ? "is-network-locked" : ""}" data-owner="${owner}" ${optionAttrs} style="${characterStyle(
+                   character || {
+                     color: UiRegistry.ownerMeta(owner).color,
+                     line: UiRegistry.ownerMeta(owner).line,
                     accent: "#fbbf24",
                   },
                   owner,
                 )}">
                 <div class="portrait-card-controls" data-portrait-swipe-owner="${owner}">
-                  ${character ? `<div class="fighter-portrait" data-owner="${owner}" data-owner-mark="${UiRegistry.ownerMeta(owner).mark}" data-full-portrait="${owner}">${fighterArt(character, "intro", true, "small")}</div>` : UiRegistry.randomPortraitMarkup(owner)}
+                  ${hideNetworkOwner ? networkHiddenPortraitMarkup(owner) : character ? `<div class="fighter-portrait" data-owner="${owner}" data-owner-mark="${UiRegistry.ownerMeta(owner).mark}" data-full-portrait="${owner}">${fighterArt(character, "intro", true, "small")}</div>` : UiRegistry.randomPortraitMarkup(owner)}
                 </div>
                 <div class="portrait-label-controls">
-                  <button class="secondary portrait-arrow portrait-label-arrow" type="button" data-portrait-owner="${owner}" data-portrait-shift="-1" aria-label="${UiRegistry.ownerMeta(owner).label} 上一位">‹</button>
-                  <span class="portrait-option-label"><span class="owner-name ${owner === "player" ? "is-p1" : "is-p2"}">${UiRegistry.ownerMeta(owner).label}</span> · ${character ? character.name : "隨機選擇"}</span>
-                  <button class="secondary portrait-arrow portrait-label-arrow" type="button" data-portrait-owner="${owner}" data-portrait-shift="1" aria-label="${UiRegistry.ownerMeta(owner).label} 下一位">›</button>
+                  ${networkLocked ? "" : `<button class="secondary portrait-arrow portrait-label-arrow" type="button" data-portrait-owner="${owner}" data-portrait-shift="-1" aria-label="${UiRegistry.ownerMeta(owner).label} 上一位">‹</button>`}
+                  <span class="portrait-option-label"><span class="owner-name ${owner === "player" ? "is-p1" : "is-p2"}">${UiRegistry.ownerMeta(owner).label}</span> · ${displayName}</span>
+                  ${networkLocked ? "" : `<button class="secondary portrait-arrow portrait-label-arrow" type="button" data-portrait-owner="${owner}" data-portrait-shift="1" aria-label="${UiRegistry.ownerMeta(owner).label} 下一位">›</button>`}
                 </div>
               </div>
             `;
@@ -3311,6 +3394,9 @@ function setPortraitCharacterForOwner(
     UiRegistry.preloadPortraitsFor(selectedPortraitOwner);
   renderIntroPortraits(showDetails);
   UiGame.resize();
+  if (typeof UiRegistry.onPortraitChoiceChanged === "function") {
+    UiRegistry.onPortraitChoiceChanged(selectedPortraitOwner);
+  }
   if (characterId !== randomCharacterChoiceId) {
     UiAudio.playCharacter(owner, "select", {
       character: characterById.get(characterId),
@@ -3647,6 +3733,7 @@ Object.assign(UiRegistry, {
   setCharacterStageOverlayMode,
   setFighterPose,
   setLastResultShareData,
+  setNetworkIntroState,
   setOverlayChromeVisible,
   setResultShareStatus,
   shiftPortraitLightbox,
