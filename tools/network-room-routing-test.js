@@ -154,6 +154,32 @@ function listen(server) {
   });
 }
 
+async function nextRoomState(client, expectedLifecycle, timeoutMs = 2000) {
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const state = await client.next("peer-state", timeoutMs);
+    if (!expectedLifecycle || state.lifecycle === expectedLifecycle) return state;
+  }
+  throw new Error(`${client.name} did not receive peer-state ${expectedLifecycle}`);
+}
+
+async function expectRelayAck(client, expected) {
+  const ack = await client.next("relay-ack");
+  assert.equal(ack.serverSeq, expected.serverSeq);
+  assert.equal(ack.clientSeq, expected.clientSeq);
+  if (expected.lifecycle) assert.equal(ack.lifecycle, expected.lifecycle);
+  return ack;
+}
+
+async function expectPeerMessage(client, expected) {
+  const message = await client.next("peer-message");
+  assert.equal(message.fromRole, expected.fromRole);
+  assert.equal(message.serverSeq, expected.serverSeq);
+  assert.equal(message.clientSeq, expected.clientSeq);
+  if (expected.lifecycle) assert.equal(message.lifecycle, expected.lifecycle);
+  if (expected.payloadType) assert.equal(message.payload.type, expected.payloadType);
+  return message;
+}
+
 async function main() {
   const server = createServer();
   const port = await listen(server);
@@ -179,8 +205,8 @@ async function main() {
     assert.equal(joined.role, "guest");
     assert.equal(joined.roomCode, created.roomCode);
     assert.equal((await host.next("peer-joined")).role, "guest");
-    const hostReady = await host.next("peer-state");
-    const guestReady = await guest.next("peer-state");
+    const hostReady = await nextRoomState(host, "ready");
+    const guestReady = await nextRoomState(guest, "ready");
     assert.equal(hostReady.lifecycle, "ready");
     assert.equal(guestReady.lifecycle, "ready");
     assert.equal(hostReady.peerCount, 2);
@@ -194,32 +220,139 @@ async function main() {
       sentAt: 10,
       payload: { type: "input", input: { kind: "direction", direction: 2 } }
     });
-    const input = await host.next("peer-message");
-    assert.equal(input.fromRole, "guest");
-    assert.equal(input.serverSeq, 1);
-    assert.equal(input.clientSeq, 1);
-    assert.equal(input.payload.type, "input");
-    assert.equal((await guest.next("relay-ack")).serverSeq, 1);
+    let serverSeq = 1;
+    const input = await expectPeerMessage(host, {
+      fromRole: "guest",
+      serverSeq,
+      clientSeq: 1,
+      payloadType: "input"
+    });
+    assert.equal(input.payload.input.direction, 2);
+    await expectRelayAck(guest, { serverSeq, clientSeq: 1 });
 
     host.send({ type: "relay", seq: 1, sentAt: 20, payload: { type: "start", snapshot: { t: 20 } } });
-    const start = await guest.next("peer-message");
-    assert.equal(start.fromRole, "host");
-    assert.equal(start.serverSeq, 2);
-    assert.equal(start.lifecycle, "running");
-    assert.equal(start.payload.type, "start");
-    assert.equal((await host.next("relay-ack")).lifecycle, "running");
+    serverSeq += 1;
+    await expectPeerMessage(guest, {
+      fromRole: "host",
+      serverSeq,
+      clientSeq: 1,
+      lifecycle: "running",
+      payloadType: "start"
+    });
+    await expectRelayAck(host, { serverSeq, clientSeq: 1, lifecycle: "running" });
+
+    for (let frame = 0; frame < 36; frame += 1) {
+      const clientSeq = frame + 2;
+      host.send({
+        type: "relay",
+        seq: clientSeq,
+        sentAt: 30 + frame,
+        payload: {
+          type: "snapshot",
+          frame,
+          snapshot: {
+            t: 30 + frame,
+            playerHp: 100 - (frame % 7),
+            computerHp: 100 - (frame % 5),
+            snake: [{ q: frame % 3, r: 0 }],
+            computerSnake: [{ q: 0, r: frame % 3 }]
+          }
+        }
+      });
+      serverSeq += 1;
+      const snapshot = await expectPeerMessage(guest, {
+        fromRole: "host",
+        serverSeq,
+        clientSeq,
+        lifecycle: "running",
+        payloadType: "snapshot"
+      });
+      assert.equal(snapshot.payload.frame, frame);
+      assert.equal(snapshot.payload.seq, clientSeq);
+      await expectRelayAck(host, { serverSeq, clientSeq, lifecycle: "running" });
+    }
 
     host.send({ type: "ping", t: 123 });
     const pong = await host.next("pong");
     assert.equal(pong.t, 123);
     assert.equal(typeof pong.serverTime, "number");
 
-    guest.send({ type: "leave-room" });
-    assert.equal((await guest.next("room-left")).type, "room-left");
+    guest.close();
     assert.equal((await host.next("peer-left")).role, "guest");
-    let hostWaiting = await host.next("peer-state");
-    if (hostWaiting.lifecycle !== "waiting") hostWaiting = await host.next("peer-state");
+    const hostWaiting = await nextRoomState(host, "waiting");
     assert.equal(hostWaiting.lifecycle, "waiting");
+
+    host.send({
+      type: "relay",
+      seq: 100,
+      sentAt: 1000,
+      payload: { type: "snapshot", reconnectProbe: "host-kept-running", snapshot: { t: 1000 } }
+    });
+    serverSeq += 1;
+    await expectRelayAck(host, { serverSeq, clientSeq: 100, lifecycle: "running" });
+
+    const rejoinedGuest = await createWsClient(port, "guest-rejoin");
+    clients.push(rejoinedGuest);
+    assert.equal((await rejoinedGuest.next("hello")).type, "hello");
+    rejoinedGuest.send({ type: "join-room", roomCode: created.roomCode });
+    const rejoined = await rejoinedGuest.next("room-joined");
+    assert.equal(rejoined.role, "guest");
+    assert.equal(rejoined.roomCode, created.roomCode);
+    assert.equal((await host.next("peer-joined")).role, "guest");
+    const hostRunning = await nextRoomState(host, "running");
+    const guestRunning = await nextRoomState(rejoinedGuest, "running");
+    assert.equal(hostRunning.peerCount, 2);
+    assert.equal(guestRunning.lifecycle, "running");
+
+    host.send({
+      type: "relay",
+      seq: 101,
+      sentAt: 1010,
+      payload: { type: "snapshot", reconnectProbe: "guest-restored", snapshot: { t: 1010 } }
+    });
+    serverSeq += 1;
+    const restored = await expectPeerMessage(rejoinedGuest, {
+      fromRole: "host",
+      serverSeq,
+      clientSeq: 101,
+      lifecycle: "running",
+      payloadType: "snapshot"
+    });
+    assert.equal(restored.payload.reconnectProbe, "guest-restored");
+    await expectRelayAck(host, { serverSeq, clientSeq: 101, lifecycle: "running" });
+
+    rejoinedGuest.send({
+      type: "relay",
+      seq: 2,
+      sentAt: 1020,
+      payload: { type: "input", input: { kind: "attack", profile: "small" } }
+    });
+    serverSeq += 1;
+    const rejoinedInput = await expectPeerMessage(host, {
+      fromRole: "guest",
+      serverSeq,
+      clientSeq: 2,
+      lifecycle: "running",
+      payloadType: "input"
+    });
+    assert.equal(rejoinedInput.payload.input.profile, "small");
+    await expectRelayAck(rejoinedGuest, { serverSeq, clientSeq: 2, lifecycle: "running" });
+
+    host.send({ type: "relay", seq: 102, sentAt: 1030, payload: { type: "end", snapshot: { t: 1030 } } });
+    serverSeq += 1;
+    await expectPeerMessage(rejoinedGuest, {
+      fromRole: "host",
+      serverSeq,
+      clientSeq: 102,
+      lifecycle: "ended",
+      payloadType: "end"
+    });
+    await expectRelayAck(host, { serverSeq, clientSeq: 102, lifecycle: "ended" });
+
+    rejoinedGuest.send({ type: "leave-room" });
+    assert.equal((await rejoinedGuest.next("room-left")).type, "room-left");
+    assert.equal((await host.next("peer-left")).role, "guest");
+    assert.equal((await nextRoomState(host, "waiting")).lifecycle, "waiting");
 
     console.log("Network room routing test passed.");
   } finally {

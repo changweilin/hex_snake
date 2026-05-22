@@ -59,7 +59,7 @@ Verification:
 
 ## Phase 2 - Protocol Hardening
 
-Status: automated first pass implemented on 2026-05-20.
+Status: automated stability pass completed on 2026-05-22.
 
 Tasks:
 
@@ -69,6 +69,7 @@ Tasks:
 - Done: add configurable snapshot throttling through the network adapter.
 - Done: add clear room lifecycle states for waiting, ready, running, and ended.
 - Done: add server room routing and protocol metadata coverage in `tools/network-room-routing-test.js`.
+- Done: add automated reconnect / rejoin and snapshot stability coverage in `tools/network-room-routing-test.js`; the test now keeps a room running through a guest disconnect, host-only snapshot relay, same-code guest rejoin, resumed snapshots, P2 input, and match end lifecycle.
 
 Verification:
 
@@ -80,8 +81,8 @@ Verification:
 
 Remaining:
 
-- Run a real two-device long-session reconnect and snapshot stability check before treating LAN multiplayer as fully hardened.
-- After the real-device pass, decide whether Phase 3 should keep WebSocket-only LAN support longer or start WebRTC DataChannel work.
+- Real two-device long-session reconnect and snapshot stability is now an app-store preflight manual acceptance item, not an AI-blocking implementation task.
+- Keep Phase 3 WebRTC DataChannel pending until WebSocket LAN has shipped or real-device feedback shows the relay path is not enough.
 
 ## Phase 3 - WebRTC DataChannel
 
