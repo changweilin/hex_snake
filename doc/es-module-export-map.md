@@ -157,6 +157,7 @@ The audit checks:
 - `src/game.js` has a whole-file direct facade residual guard preventing direct `HexSnakeState.` / `HexSnakeUI.` reads from returning.
 - `src/state.js` controls config self-read slice uses the `StateConfig` local alias instead of direct `HexSnakeState.config` reads.
 - `src/state.js` UI registry bootstrap slice uses the `StateUIRegistry` local alias instead of direct `HexSnakeUI.` child registry writes.
+- `src/state.js` UI registry export slice uses the `StateUIRegistry` local alias for `window.HexSnakeUI` and the named `uiRegistry` export.
 - This file mentions every source and public surface in the current map.
 - `doc/es-module-loader-plan.md` still documents the loader modes, fallback rules, source order, production strategy, and next Phase D step.
 - `doc/es-module-core-bootstrap-checklist.md` still documents the `ui.js` / `game.js` blockers, explicit import surface, bootstrap ownership, preflight gates, and production fallback strategy.

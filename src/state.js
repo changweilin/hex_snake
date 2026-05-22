@@ -70,7 +70,7 @@ const HexSnakeControls = (() => {
 })();
 
 window.HexSnakeState = HexSnakeState;
-window.HexSnakeUI = HexSnakeUI;
+window.HexSnakeUI = StateUIRegistry;
 window.HexSnakeRender = HexSnakeRender;
 window.HexSnakeRenderGame = HexSnakeRenderGame;
 window.HexSnakeControls = HexSnakeControls;
@@ -81,9 +81,10 @@ export {
   HexSnakeRenderGame,
   HexSnakeState,
   HexSnakeUI,
+  StateUIRegistry,
   HexSnakeControls as controls,
   HexSnakeRender as render,
   HexSnakeRenderGame as renderGame,
   HexSnakeState as state,
-  HexSnakeUI as uiRegistry
+  StateUIRegistry as uiRegistry
 };

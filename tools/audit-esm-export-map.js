@@ -214,12 +214,13 @@ const requiredRegistrations = [
   ["src/state.js", "const StateConfig = HexSnakeState.config;"],
   ["src/state.js", "const StateUIRegistry = HexSnakeUI;"],
   ["src/state.js", "window.HexSnakeState = HexSnakeState;"],
-  ["src/state.js", "window.HexSnakeUI = HexSnakeUI;"],
+  ["src/state.js", "window.HexSnakeUI = StateUIRegistry;"],
   ["src/state.js", "window.HexSnakeRender = HexSnakeRender;"],
   ["src/state.js", "window.HexSnakeRenderGame = HexSnakeRenderGame;"],
   ["src/state.js", "window.HexSnakeControls = HexSnakeControls;"],
   ["src/state.js", "HexSnakeState as state"],
-  ["src/state.js", "HexSnakeUI as uiRegistry"],
+  ["src/state.js", "StateUIRegistry,"],
+  ["src/state.js", "StateUIRegistry as uiRegistry"],
   ["src/state.js", "StateUIRegistry.about = {};"],
   ["src/state.js", "StateUIRegistry.ai = {};"],
   ["src/state.js", "StateUIRegistry.aiGame = {};"],
@@ -351,6 +352,12 @@ expectSliceExcludes(
   "const StateUIRegistry = HexSnakeUI;",
   "const HexSnakeRender = {};",
   ["HexSnakeUI."]
+);
+
+expectFileExcludes(
+  "src/state.js",
+  "UI registry export alias slice",
+  ["window.HexSnakeUI = HexSnakeUI;", "HexSnakeUI as uiRegistry"]
 );
 
 if (read("src/ui.js").includes("HexSnakeUI.")) {
