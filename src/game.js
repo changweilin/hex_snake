@@ -5349,7 +5349,7 @@
     });
 
     window.addEventListener("keydown", event => {
-      if (HexSnakeState.game.pendingDirectionKeybind !== null) {
+      if (GameRuntimeState.pendingDirectionKeybind !== null) {
         event.preventDefault();
         event.stopPropagation();
         if (event.key === "Escape" || event.key === "Esc") setPendingDirectionKeybind(null);
@@ -5393,23 +5393,23 @@
         return;
       }
       if (!Dom.rulesModal.hidden) {
-        if (event.key === "Escape" || event.key === "Esc") HexSnakeUI.closeRulesModal();
+        if (event.key === "Escape" || event.key === "Esc") GameUI.closeRulesModal();
         return;
       }
-      if (HexSnakeUI.isTutorialOpen()) {
+      if (GameUI.isTutorialOpen()) {
         if (event.key === "Escape" || event.key === "Esc") {
           event.preventDefault();
-          HexSnakeUI.finishTutorial(true);
+          GameUI.finishTutorial(true);
           return;
         }
         if (event.key === "PageDown" || event.key === "ArrowDown" || event.key === "ArrowRight") {
           event.preventDefault();
-          HexSnakeUI.moveTutorial(1);
+          GameUI.moveTutorial(1);
           return;
         }
         if (event.key === "PageUp" || event.key === "ArrowUp" || event.key === "ArrowLeft") {
           event.preventDefault();
-          HexSnakeUI.moveTutorial(-1);
+          GameUI.moveTutorial(-1);
           return;
         }
       }
@@ -5421,7 +5421,7 @@
         if (event.key === "Escape" || event.key === "Esc") GameStats.closeModal();
         return;
       }
-      if (HexSnakeUI.isLogoTransitionActive()) {
+      if (GameUI.isLogoTransitionActive()) {
         if ((event.key === "Enter" || event.key === " ") && skipLogoTransition()) {
           event.preventDefault();
           event.stopPropagation();
@@ -5432,22 +5432,22 @@
         return;
       }
       if (!Dom.portraitLightbox.hidden) {
-        if (event.key === "Escape" || event.key === "Esc") HexSnakeUI.closePortraitLightbox();
+        if (event.key === "Escape" || event.key === "Esc") GameUI.closePortraitLightbox();
         if (event.key === "ArrowLeft") {
           event.preventDefault();
-          HexSnakeUI.shiftPortraitLightbox(-1);
+          GameUI.shiftPortraitLightbox(-1);
         }
         if (event.key === "ArrowRight") {
           event.preventDefault();
-          HexSnakeUI.shiftPortraitLightbox(1);
+          GameUI.shiftPortraitLightbox(1);
         }
         if (event.key === "ArrowUp") {
           event.preventDefault();
-          HexSnakeUI.shiftPortraitVariantMode(-1);
+          GameUI.shiftPortraitVariantMode(-1);
         }
         if (event.key === "ArrowDown") {
           event.preventDefault();
-          HexSnakeUI.shiftPortraitVariantMode(1);
+          GameUI.shiftPortraitVariantMode(1);
         }
         return;
       }
@@ -5455,12 +5455,12 @@
       if (event.target && ["INPUT", "SELECT", "TEXTAREA"].includes(event.target.tagName)) return;
 
       const pressedKey = event.key === " " ? " " : event.key.toLowerCase();
-      if (pressedKey === HexSnakeState.game.keybinds.pause) {
+      if (pressedKey === GameRuntimeState.keybinds.pause) {
         event.preventDefault();
         togglePause();
         return;
       }
-      if (pressedKey === HexSnakeState.game.keybinds.surrender) {
+      if (pressedKey === GameRuntimeState.keybinds.surrender) {
         event.preventDefault();
         surrenderGame();
         return;
@@ -5469,59 +5469,59 @@
         handleKeyboardAimKeyDown(event, pressedKey === "x" ? "small" : "big", pressedKey);
         return;
       }
-      if (pressedKey === HexSnakeState.game.keybinds.smallAttack || pressedKey === HexSnakeState.game.keybinds.bigAttack) {
+      if (pressedKey === GameRuntimeState.keybinds.smallAttack || pressedKey === GameRuntimeState.keybinds.bigAttack) {
         event.preventDefault();
-        const profile = pressedKey === HexSnakeState.game.keybinds.smallAttack ? "small" : "big";
+        const profile = pressedKey === GameRuntimeState.keybinds.smallAttack ? "small" : "big";
         launchKeyboardPlayerAttack(profile);
         return;
       }
-      if (HexSnakeState.game.keyToDir.has(pressedKey)) {
+      if (GameRuntimeState.keyToDir.has(pressedKey)) {
         event.preventDefault();
-        setDirection(HexSnakeState.game.keyToDir.get(pressedKey));
+        setDirection(GameRuntimeState.keyToDir.get(pressedKey));
         return;
       }
-      if ((pressedKey === " " && HexSnakeState.game.keybinds.pause !== " ") || (pressedKey === "q" && HexSnakeState.game.keybinds.smallAttack !== "q" && HexSnakeState.game.keybinds.bigAttack !== "q")) {
+      if ((pressedKey === " " && GameRuntimeState.keybinds.pause !== " ") || (pressedKey === "q" && GameRuntimeState.keybinds.smallAttack !== "q" && GameRuntimeState.keybinds.bigAttack !== "q")) {
         event.preventDefault();
         return;
       }
 
       const key = event.key.toLowerCase();
       if (key === " ") {
-        if (!HexSnakeState.game.running || HexSnakeState.game.gameOver) {
+        if (!GameRuntimeState.running || GameRuntimeState.gameOver) {
           beginStartLogoCountdown();
           return;
         }
-        HexSnakeState.game.paused = !HexSnakeState.game.paused;
-        setStatus(HexSnakeState.game.paused ? "已暫停" : "對戰中：吃食物累積能量，集滿可獲得炸彈。");
+        GameRuntimeState.paused = !GameRuntimeState.paused;
+        setStatus(GameRuntimeState.paused ? "已暫停" : "對戰中：吃食物累積能量，集滿可獲得炸彈。");
         Dom.overlayTitle.textContent = "暫停";
         Dom.overlayText.textContent = "按繼續回到對戰。";
         Dom.startButton.textContent = "繼續";
-        HexSnakeUI.setOverlayChromeVisible(true);
-        Dom.overlay.classList.toggle("show", HexSnakeState.game.paused);
-        if (!HexSnakeState.game.paused) {
-          HexSnakeState.game.lastPlayerStep = performance.now();
-          HexSnakeState.game.lastComputerStep = HexSnakeState.game.lastPlayerStep;
-          HexSnakeState.game.lastTimerFrame = HexSnakeState.game.lastPlayerStep;
+        GameUI.setOverlayChromeVisible(true);
+        Dom.overlay.classList.toggle("show", GameRuntimeState.paused);
+        if (!GameRuntimeState.paused) {
+          GameRuntimeState.lastPlayerStep = performance.now();
+          GameRuntimeState.lastComputerStep = GameRuntimeState.lastPlayerStep;
+          GameRuntimeState.lastTimerFrame = GameRuntimeState.lastPlayerStep;
         }
         updateAutoBattleControls();
         return;
       }
 
       if (key === "q") {
-        if (!HexSnakeState.game.running || HexSnakeState.game.gameOver) {
+        if (!GameRuntimeState.running || GameRuntimeState.gameOver) {
           if (!autoStartGame()) return;
         }
-        if (launchAttack("player", HexSnakeState.game.targetCell || HexSnakeState.game.snake[0], performance.now())) {
+        if (launchAttack("player", GameRuntimeState.targetCell || GameRuntimeState.snake[0], performance.now())) {
           setStatus("P1 施放炸彈，2 秒後落地。");
         } else {
-          setStatus(`大招需要 ${HexSnakeState.config.bigAttackBombCost} 枚炸彈，且四種庫存各至少 2。`);
+          setStatus(`大招需要 ${GameConfig.bigAttackBombCost} 枚炸彈，且四種庫存各至少 2。`);
         }
         return;
       }
 
-      if (HexSnakeState.game.keyToDir.has(key)) {
+      if (GameRuntimeState.keyToDir.has(key)) {
         event.preventDefault();
-        setDirection(HexSnakeState.game.keyToDir.get(key));
+        setDirection(GameRuntimeState.keyToDir.get(key));
         return;
       }
     });
