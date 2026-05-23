@@ -1728,7 +1728,7 @@
     function updateNetworkStartButton() {
       Dom.startButton.classList.remove("is-network-waiting", "is-network-peer-ready");
       if (!isNetworkRoomActive() || GameRuntimeState.running || GameRuntimeState.gameOver || GameReplay.isPlaybackMode()) return;
-      if (GamePresentationState.startLogoCountdownPending || networkCountdownPending) {
+      if (GamePresentationState.startLogoCountdownPending || networkCountdownPending || networkAdapter()?.isInGame?.()) {
         Dom.startButton.hidden = true;
         return;
       }
@@ -1760,6 +1760,14 @@
       updateNetworkLobbyControls();
       updateNetworkStartButton();
       updateSettingsActionMode();
+    }
+
+    function showNetworkStartPage() {
+      if (GameRuntimeState.running || GamePresentationState.startLogoCountdownPending || GameRuntimeState.gameOverSettlementPending || GameReplay.isPlaybackMode()) return;
+      if (GameRuntimeState.gameOver && !canRestartAfterGameOver()) return;
+      setNetworkOpen(false);
+      returnToStartScreen();
+      setStatus("LAN room ready. Both players can press Start when ready.");
     }
 
     function bothNetworkPlayersReady() {
@@ -1852,6 +1860,7 @@
     function settleNetworkForfeit(flags, statusText = "LAN 斷線，依投降結算。") {
       if (GameRuntimeState.gameOver) return false;
       clearNetworkCountdownState();
+      networkAdapter()?.setInGame?.(false);
       GameReplay.markSurrendered();
       setStatus(statusText);
       endGame(flags.playerLost, flags.computerLost);
@@ -1862,7 +1871,8 @@
       const net = networkAdapter();
       if (!isNetworkRoomActive()) return false;
       const role = localNetworkRole();
-      if (isNetworkMatchInProgress()) {
+      const activeMatch = isNetworkMatchInProgress();
+      if (activeMatch) {
         const flags = localNetworkLossFlags(role);
         if (role === "guest") {
           net?.sendGameMessage?.({ type: "forfeit", role });
@@ -1870,8 +1880,13 @@
         settleNetworkForfeit(flags, "已斷線，依投降結算。");
       }
       net?.leaveRoom?.();
+      setNetworkOpen(false);
       resetNetworkLobbyState();
+      if (!activeMatch && !GameRuntimeState.running && !GameRuntimeState.gameOver && !GameRuntimeState.gameOverSettlementPending) {
+        returnToStartScreen();
+      }
       setSettingsLocked(false);
+      updateSettingsActionMode();
       return true;
     }
 
@@ -1981,6 +1996,7 @@
         resetNetworkReadyState();
         return;
       }
+      networkAdapter()?.setInGame?.(!final);
       clearNetworkCountdownState();
       GameRuntimeState.running = false;
       GameRuntimeState.paused = false;
@@ -1997,7 +2013,6 @@
         computerCharacterId: message.snapshot.computerCharacterId,
         settings: { gridSize: message.snapshot.gridSize }
       });
-      networkAdapter()?.setInGame?.(!final);
       if (final) {
         const fallbackPlayerLost = (GameRuntimeState.playerHp || 0) <= 0;
         const fallbackComputerLost = (GameRuntimeState.computerHp || 0) <= 0;
@@ -2026,7 +2041,11 @@
     }
 
     function handleNetworkStateMessage(message = {}) {
-      const lobbyOpen = !GameRuntimeState.running && !GamePresentationState.startLogoCountdownPending && !GameRuntimeState.gameOverSettlementPending;
+      const lobbyOpen = !GameRuntimeState.running &&
+        !GamePresentationState.startLogoCountdownPending &&
+        !GameRuntimeState.gameOverSettlementPending &&
+        !networkAdapter()?.isInGame?.() &&
+        message.lifecycle !== "running";
       if (message.event === "room-created") {
         networkRoleReveal = Boolean(Dom.networkRevealRolesInput?.checked);
         resetNetworkLobbyState({ preserveRoleReveal: true });
@@ -2043,10 +2062,12 @@
       if (message.event === "peer-state") {
         if (!networkAdapter()?.hasPeer?.()) networkReadyByRole.guest = false;
         if (lobbyOpen && networkAdapter()?.hasPeer?.()) sendNetworkLobbyState();
+        if (lobbyOpen && networkAdapter()?.hasPeer?.()) showNetworkStartPage();
       }
       if (message.event === "peer-joined") {
         networkReadyByRole.guest = false;
         if (lobbyOpen) sendNetworkLobbyState();
+        if (lobbyOpen) showNetworkStartPage();
       }
       if (message.event === "room-left") {
         resetNetworkLobbyState();
@@ -2060,12 +2081,19 @@
     function handleNetworkDisconnectMessage(message = {}, fromRole = null) {
       const activeMatch = message.wasInGame || isNetworkMatchInProgress();
       const role = message.local ? message.role || localNetworkRole() : message.role || fromRole || peerNetworkRole();
+      networkAdapter()?.setInGame?.(false);
+      clearNetworkCountdownState();
       if (activeMatch && !GameRuntimeState.gameOver) {
         const flags = message.local ? localNetworkLossFlags(role) : remoteNetworkLossFlags(role);
         settleNetworkForfeit(flags, message.local ? "LAN 連線中斷，依投降結算。" : "對手斷線，依投降結算。");
       }
+      setNetworkOpen(false);
       resetNetworkLobbyState();
+      if (!activeMatch && !GameRuntimeState.running && !GameRuntimeState.gameOver && !GameRuntimeState.gameOverSettlementPending) {
+        returnToStartScreen();
+      }
       setSettingsLocked(false);
+      updateSettingsActionMode();
     }
 
     function handleNetworkCountdownMessage(message = {}, fromRole = null) {

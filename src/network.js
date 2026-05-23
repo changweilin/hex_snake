@@ -26,6 +26,7 @@ const HexSnakeNet = (() => {
   let manualDisconnect = false;
   let desiredRole = null;
   let desiredRoomCode = "";
+  let pendingJoinCode = "";
   let lastSnapshotSentAt = -Infinity;
   let snapshotIntervalMs = clampSnapshotInterval(NetStorage?.get?.("hexSnakeLanSnapshotIntervalMs") || 100);
   let baseStatusText = "";
@@ -58,7 +59,7 @@ const HexSnakeNet = (() => {
     if (roomCodeText) roomCodeText.textContent = roomCode || "----";
     if (roomCodeInput && !roomCodeInput.matches(":focus")) roomCodeInput.value = roomCodeInput.value.toUpperCase();
     if (createButton) createButton.disabled = Boolean(role);
-    if (joinButton) joinButton.disabled = Boolean(role);
+    if (joinButton) joinButton.disabled = Boolean(role) || Boolean(pendingJoinCode);
     if (leaveButton) {
       leaveButton.hidden = !role;
       leaveButton.disabled = !role;
@@ -107,6 +108,20 @@ const HexSnakeNet = (() => {
     renderStatus();
   }
 
+  function showJoinFailure(message) {
+    const attemptedCode = pendingJoinCode;
+    pendingJoinCode = "";
+    updateUi();
+    const text = message || "Room pairing failed.";
+    setStatus(text, "error");
+    if (roomCodeInput && attemptedCode) {
+      roomCodeInput.value = attemptedCode;
+      roomCodeInput.focus();
+      roomCodeInput.select?.();
+    }
+    window.alert?.(`配對失敗：${text}`);
+  }
+
   function handlePeerMessage(message) {
     const serverSeq = Number(message.serverSeq);
     if (Number.isFinite(serverSeq)) {
@@ -129,6 +144,7 @@ const HexSnakeNet = (() => {
       return;
     }
     if (message.type === "room-created" || message.type === "room-joined") {
+      pendingJoinCode = "";
       role = message.role;
       roomCode = message.roomCode;
       desiredRole = role;
@@ -197,7 +213,8 @@ const HexSnakeNet = (() => {
       return;
     }
     if (message.type === "error") {
-      setStatus(message.message || "LAN relay error.", "error");
+      if (pendingJoinCode) showJoinFailure(message.message || "LAN relay error.");
+      else setStatus(message.message || "LAN relay error.", "error");
     }
   }
 
@@ -288,10 +305,13 @@ const HexSnakeNet = (() => {
 
   async function joinRoom(code) {
     const nextCode = String(code || roomCodeInput?.value || "").trim().toUpperCase();
-    if (!nextCode) {
-      setStatus("Enter a room code first.", "error");
+    if (nextCode.length !== 4) {
+      setStatus("Enter a 4-character room code first.", "error");
       return;
     }
+    if (role || pendingJoinCode) return;
+    pendingJoinCode = nextCode;
+    updateUi();
     await ensureSocket();
     manualDisconnect = false;
     send({ type: "join-room", roomCode: nextCode });
@@ -339,16 +359,19 @@ const HexSnakeNet = (() => {
     createRoom().catch(error => setStatus(error.message, "error"));
   });
   joinButton?.addEventListener("click", () => {
-    joinRoom().catch(error => setStatus(error.message, "error"));
+    joinRoom().catch(error => showJoinFailure(error.message));
   });
   leaveButton?.addEventListener("click", leaveRoom);
   roomCodeInput?.addEventListener("input", () => {
     roomCodeInput.value = roomCodeInput.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4);
+    if (roomCodeInput.value.length === 4) {
+      joinRoom(roomCodeInput.value).catch(error => showJoinFailure(error.message));
+    }
   });
   roomCodeInput?.addEventListener("keydown", event => {
     if (event.key !== "Enter") return;
     event.preventDefault();
-    joinRoom().catch(error => setStatus(error.message, "error"));
+    joinRoom().catch(error => showJoinFailure(error.message));
   });
 
   updateUi();
