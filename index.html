@@ -6,6 +6,11 @@
   <link rel="icon" href="assets/logos/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" sizes="32x32" href="assets/logos/white-dragon-favicon-32.png">
   <link rel="apple-touch-icon" sizes="180x180" href="assets/logos/white-dragon-apple-touch.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#111720">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Hex Snake">
   <title>六角貪食蛇對戰</title>
   <link rel="stylesheet" href="src/styles.css">
 </head>
@@ -52,8 +57,12 @@
         </div>
       </header>
 
-      <div class="canvas-wrap" id="playArea">
+        <div class="canvas-wrap" id="playArea">
         <canvas id="game" aria-label="六角貪食蛇棋盤"></canvas>
+        <div class="perf-overlay" id="perfOverlay" aria-live="off" hidden>
+          <span id="perfFps">0 FPS</span>
+          <span id="perfFrameMs">0 ms</span>
+        </div>
         <button class="target-mode-indicator" id="targetModeSmallIndicator" type="button" data-profile-label="小" aria-label="顯示小招目標提示" title="小招目標">
           <span class="target-mode-icon" id="targetModeSmallIcon" aria-hidden="true"></span>
         </button>
@@ -79,6 +88,9 @@
               <button id="computerBattleButton" class="secondary" type="button">自動對弈</button>
               <button id="replayArchiveButton" class="secondary" type="button">重播紀錄</button>
             </div>
+            <div class="result-share-panel" id="resultSharePanel" hidden>
+              <div id="shareResultStatus" class="result-share-status" role="status" aria-live="polite" hidden></div>
+            </div>
             <button id="introCloseButton" class="secondary intro-close-button" type="button" hidden>關閉</button>
           </div>
         </div>
@@ -100,6 +112,16 @@
           </svg>
           <span class="replay-toggle-label">重播紀錄</span>
         </button>
+        <button class="stats-toggle" id="statsButton" type="button" aria-haspopup="dialog" aria-controls="statsModal" title="戰績" aria-label="戰績">
+          <svg class="settings-action-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 19V5"/>
+            <path d="M4 19h16"/>
+            <path d="M8 16v-5"/>
+            <path d="M12 16V8"/>
+            <path d="M16 16v-9"/>
+          </svg>
+          <span class="stats-toggle-label">戰績</span>
+        </button>
         <button class="settings-toggle" id="settingsToggle" type="button" aria-expanded="false" aria-controls="settingsContent" title="開局設定">
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -111,15 +133,19 @@
           <svg class="settings-action-icon surrender-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h2v18H5V3Z"/><path d="M8 4h11l-2.2 4 2.2 4H8V4Z"/></svg>
           <span class="settings-action-label">投降</span>
         </button>
-        <button class="gm-toggle" id="gmToggle" type="button" aria-expanded="false" aria-controls="gmContent" title="GM 設定" aria-label="GM 設定">
-          <span class="gm-letter" aria-hidden="true">G</span>
-          <span class="settings-action-label">GM</span>
+        <button class="network-toggle" id="networkToggle" type="button" aria-expanded="false" aria-controls="networkContent" title="LAN / Wi-Fi" aria-label="LAN / Wi-Fi">
+          <span class="gm-letter" aria-hidden="true">LAN</span>
+          <span class="settings-action-label">LAN</span>
         </button>
         </div>
         <div class="settings-content" id="settingsContent" hidden aria-modal="true" role="dialog" aria-label="開局設定">
         <div class="settings-dialog">
         <div class="settings-panel-header">
           <strong>開局設定</strong>
+          <div class="settings-page-bars" role="tablist" aria-label="Settings pages">
+            <button class="settings-page-bar is-active" type="button" role="tab" data-settings-page-button="settings" aria-label="Settings page" aria-selected="true"></button>
+            <button class="settings-page-bar" type="button" role="tab" data-settings-page-button="gm" aria-label="GM page" aria-selected="false"></button>
+          </div>
           <button class="secondary settings-panel-close" id="settingsCloseButton" type="button" aria-label="關閉開局設定">&times;</button>
         </div>
         <div class="settings-modal-body">
@@ -146,6 +172,20 @@
             <span class="settings-toggle-control">
               <input id="sfxMuteToggle" type="checkbox">
               <span>靜音</span>
+            </span>
+          </label>
+          <label class="field settings-toggle-field">
+            <span>低耗電</span>
+            <span class="settings-toggle-control">
+              <input id="lowPowerMode" type="checkbox">
+              <span>啟用</span>
+            </span>
+          </label>
+          <label class="field settings-toggle-field">
+            <span>FPS</span>
+            <span class="settings-toggle-control">
+              <input id="perfStatsToggle" type="checkbox">
+              <span>顯示</span>
             </span>
           </label>
         </div>
@@ -195,8 +235,27 @@
           <input id="dirKey4" data-keybind-dir="4" type="hidden" value="Z">
           <input id="dirKey5" data-keybind-dir="5" type="hidden" value="A">
         </div>
-        <button id="resetBestTimeButton" class="secondary" type="button">重設最久存活</button>
-        <button id="resetSettingsButton" class="secondary" type="button">回到預設值</button>
+        <div class="control-profile-panel" aria-label="設定配置檔">
+          <div class="field">
+            <label for="controlProfileName">配置檔名稱</label>
+            <input id="controlProfileName" type="text" maxlength="16" inputmode="text" placeholder="我的配置">
+          </div>
+          <div class="field">
+            <label for="controlProfileSelect">已存配置</label>
+            <select id="controlProfileSelect"></select>
+          </div>
+          <div class="control-profile-actions">
+            <button id="controlProfileSaveButton" class="secondary" type="button">保存</button>
+            <button id="controlProfileApplyButton" class="secondary" type="button">套用</button>
+            <button id="controlProfileDeleteButton" class="secondary" type="button">刪除</button>
+          </div>
+          <div id="controlProfileStatus" class="control-profile-status" role="status" aria-live="polite" hidden></div>
+        </div>
+        <div class="settings-utility-actions">
+          <button id="versionInfoButton" class="secondary" type="button">版本資訊</button>
+          <button id="resetBestTimeButton" class="secondary" type="button">重設最久存活</button>
+          <button id="resetSettingsButton" class="secondary" type="button">回到預設值</button>
+        </div>
         </div>
         </div>
         </div>
@@ -204,6 +263,10 @@
         <div class="settings-dialog">
         <div class="settings-panel-header">
           <strong>GM 設定</strong>
+          <div class="settings-page-bars" role="tablist" aria-label="Settings pages">
+            <button class="settings-page-bar" type="button" role="tab" data-settings-page-button="settings" aria-label="Settings page" aria-selected="false"></button>
+            <button class="settings-page-bar is-active" type="button" role="tab" data-settings-page-button="gm" aria-label="GM page" aria-selected="true"></button>
+          </div>
           <button class="secondary settings-panel-close" id="gmCloseButton" type="button" aria-label="關閉 GM 設定">&times;</button>
         </div>
         <div class="settings-modal-body">
@@ -257,6 +320,31 @@
             <button id="lateGameModeButton" class="secondary" type="button">後期模式</button>
           </div>
         </div>
+        </div>
+        </div>
+        </div>
+        <div class="settings-content" id="networkContent" hidden aria-modal="true" role="dialog" aria-label="LAN Wi-Fi multiplayer">
+        <div class="settings-dialog">
+        <div class="settings-panel-header">
+          <strong>LAN / Wi-Fi</strong>
+          <button class="secondary settings-panel-close" id="networkCloseButton" type="button" aria-label="Close LAN Wi-Fi">&times;</button>
+        </div>
+        <div class="settings-modal-body">
+          <section class="network-section" id="networkPanel" aria-label="LAN Wi-Fi multiplayer">
+            <h2>LAN / Wi-Fi</h2>
+            <div class="network-room-row">
+              <button id="networkCreateButton" type="button">Host</button>
+              <input id="networkRoomCodeInput" type="text" maxlength="4" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="CODE" aria-label="Room code">
+            </div>
+            <label class="field settings-toggle-field network-reveal-field">
+              <span>角色公開</span>
+              <span class="settings-toggle-control">
+                <input id="networkRevealRolesInput" type="checkbox">
+                <span>公開</span>
+              </span>
+            </label>
+            <div id="networkStatus" class="network-status" role="status" aria-live="polite">LAN mode ready.</div>
+          </section>
         </div>
         </div>
         </div>
@@ -364,6 +452,42 @@
       </div>
       <div id="favoriteReplayList"></div>
     </div>
+  </div>
+  <div class="replay-modal app-stats-modal" id="statsModal" hidden aria-modal="true" role="dialog" aria-labelledby="statsTitle">
+    <div class="replay-dialog app-stats-dialog">
+      <div class="replay-header">
+        <h2 id="statsTitle">戰績</h2>
+        <button id="statsModalClose" class="secondary replay-close" type="button" aria-label="關閉戰績">&times;</button>
+      </div>
+      <div id="statsSummary" class="app-stats-summary" aria-label="戰績摘要"></div>
+      <div class="replay-list-header">
+        <h3>最近 10 場</h3>
+        <span id="statsRecentCount">0 / 10</span>
+      </div>
+      <div id="statsRecentList"></div>
+      <div class="replay-list-header">
+        <h3>P1 角色熟練度</h3>
+        <span id="statsCharacterCount">0</span>
+      </div>
+      <div id="statsCharacterList"></div>
+      <div class="app-stats-actions">
+        <button id="statsClearButton" class="secondary" type="button">清除戰績</button>
+      </div>
+    </div>
+  </div>
+  <div class="replay-modal app-version-modal" id="versionModal" hidden aria-modal="true" role="dialog" aria-labelledby="versionTitle">
+    <div class="replay-dialog app-version-dialog">
+      <div class="replay-header">
+        <h2 id="versionTitle">版本資訊</h2>
+        <button id="versionModalClose" class="secondary replay-close" type="button" aria-label="關閉版本資訊">&times;</button>
+      </div>
+      <div id="versionInfoList" class="app-version-list" aria-label="版本資訊清單"></div>
+    </div>
+  </div>
+  <div class="pwa-update-prompt" id="pwaUpdatePrompt" hidden role="status" aria-live="polite">
+    <span>新版本已準備好。</span>
+    <button type="button" data-pwa-update-reload>重新啟動</button>
+    <button class="secondary" type="button" data-pwa-update-dismiss aria-label="稍後再說">稍後</button>
   </div>
 
   <script type="module" src="src/main.js"></script>

@@ -1,10 +1,18 @@
+const AudioRuntime = HexSnakeRuntime;
+const AudioStorage = AudioRuntime.storage;
+const AudioRootState = HexSnakeState;
+const AudioState = AudioRootState.audio;
+const AudioUiState = AudioRootState.ui;
+const AudioUI = HexSnakeUI;
+const AudioDom = HexSnakeDOM;
+
     let sfxContext = null;
     let sfxMaster = null;
     let sfxNoiseBuffer = null;
     let sfxUnlocked = false;
-    let sfxMuted = localStorage.getItem("hexSnakeSfxMuted") === "1";
-    HexSnakeState.audio.muted = sfxMuted;
-    HexSnakeState.audio.unlocked = sfxUnlocked;
+    let sfxMuted = AudioStorage.get("hexSnakeSfxMuted") === "1";
+    AudioState.muted = sfxMuted;
+    AudioState.unlocked = sfxUnlocked;
     const sfxLastPlayedAt = new Map();
     const sfxAssetCache = new Map();
 
@@ -51,15 +59,15 @@
         context.resume().catch(() => {});
       }
       sfxUnlocked = true;
-      HexSnakeState.audio.unlocked = sfxUnlocked;
+      AudioState.unlocked = sfxUnlocked;
       return true;
     }
 
     function setSfxMuted(muted) {
       sfxMuted = Boolean(muted);
-      HexSnakeState.audio.muted = sfxMuted;
-      sfxMuteToggle.checked = sfxMuted;
-      localStorage.setItem("hexSnakeSfxMuted", sfxMuted ? "1" : "0");
+      AudioState.muted = sfxMuted;
+      AudioDom.sfxMuteToggle.checked = sfxMuted;
+      AudioStorage.set("hexSnakeSfxMuted", sfxMuted ? "1" : "0");
       if (sfxMuted && sfxContext?.state === "running") {
         sfxContext.suspend().catch(() => {});
       } else if (!sfxMuted) {
@@ -72,12 +80,23 @@
     }
 
     function sfxAssetMode() {
-      return portraitVariantMode === "human" ? "human" : "beast";
+      return AudioUiState.portraitVariantMode === "human" ? "human" : "beast";
+    }
+
+    function deployAudioUrl(url) {
+      if (
+        window.__HEX_SNAKE_AUDIO_FORMAT__ === "m4a"
+        && typeof url === "string"
+        && /^assets\/audio\/characters\/.+\.wav$/i.test(url)
+      ) {
+        return url.replace(/\.wav$/i, ".m4a");
+      }
+      return url;
     }
 
     function sfxAssetUrl(character, eventName) {
       const characterId = character?.id || "dragon";
-      return `assets/audio/characters/${sfxAssetMode()}/${characterId}_${eventName}.wav`;
+      return deployAudioUrl(`assets/audio/characters/${sfxAssetMode()}/${characterId}_${eventName}.wav`);
     }
 
     function getSfxAssetBuffer(url) {
@@ -145,7 +164,7 @@
       return eventName === "victory" || eventName === "defeat" ? 0.7 : 0.45;
     }
 
-    function characterSfxProfile(characterId, variantMode = portraitVariantMode) {
+    function characterSfxProfile(characterId, variantMode = AudioUiState.portraitVariantMode) {
       const characterProfile = sfxCharacterProfiles[characterId] || sfxCharacterProfiles.dragon;
       const variantProfile = sfxVariantProfiles[variantMode] || sfxVariantProfiles.chibi;
       return {
@@ -252,8 +271,8 @@
       const nowMs = performance.now();
       if (!shouldPlaySfx(owner, eventName, nowMs)) return;
       const eventProfile = sfxEventProfiles[eventName] || sfxEventProfiles.select;
-      const character = options.character || characterFor(owner);
-      const profile = characterSfxProfile(character?.id || "dragon", portraitVariantMode);
+      const character = options.character || AudioUI.characterFor(owner);
+      const profile = characterSfxProfile(character?.id || "dragon", AudioUiState.portraitVariantMode);
       const base = profile.base * profile.pitch;
       const duration = eventProfile.duration * profile.decayScale;
       const gain = eventProfile.gain * sfxGainForOwner(owner, eventName) * (options.gainScale || 1);
@@ -329,3 +348,10 @@
         return sfxUnlocked;
       }
     });
+
+    Object.defineProperties(AudioUI.audio, Object.getOwnPropertyDescriptors(HexSnakeAudio));
+
+export {
+  HexSnakeAudio,
+  HexSnakeAudio as audio
+};

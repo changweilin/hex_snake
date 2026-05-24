@@ -36,6 +36,7 @@ function extractSources() {
 function stripCommentsAndStrings(source) {
   let out = "";
   let state = "code";
+  let regexCharClass = false;
   for (let index = 0; index < source.length; index += 1) {
     const char = source[index];
     const next = source[index + 1];
@@ -58,6 +59,34 @@ function stripCommentsAndStrings(source) {
       } else {
         out += char === "\n" ? "\n" : " ";
       }
+      continue;
+    }
+
+    if (state === "regex") {
+      if (char === "\n") {
+        state = "code";
+        regexCharClass = false;
+        out += "\n";
+        continue;
+      }
+      if (char === "\\") {
+        out += "  ";
+        index += 1;
+        continue;
+      }
+      if (char === "[") regexCharClass = true;
+      else if (char === "]") regexCharClass = false;
+      else if (char === "/" && !regexCharClass) {
+        state = "code";
+        regexCharClass = false;
+        out += " ";
+        while (/[a-z]/i.test(source[index + 1] || "")) {
+          out += " ";
+          index += 1;
+        }
+        continue;
+      }
+      out += " ";
       continue;
     }
 
@@ -85,6 +114,12 @@ function stripCommentsAndStrings(source) {
       index += 1;
       continue;
     }
+    if (char === "/" && shouldTreatSlashAsRegex(out)) {
+      state = "regex";
+      regexCharClass = false;
+      out += " ";
+      continue;
+    }
     if (char === "'") {
       state = "single";
       out += " ";
@@ -104,6 +139,11 @@ function stripCommentsAndStrings(source) {
     out += char;
   }
   return out;
+}
+
+function shouldTreatSlashAsRegex(strippedSoFar) {
+  const previous = previousNonWhitespace(strippedSoFar, strippedSoFar.length);
+  return !previous || /[({[=,:;!&|?+\-*%^~<>]/.test(previous);
 }
 
 function depthMapFor(stripped) {
@@ -133,16 +173,106 @@ function collectDeclarations(stripped, { topLevelOnly = false } = {}) {
       declarations.add(match[1]);
     }
   });
+
+  const destructuringPattern = /\b(?:const|let|var)\s+([{\[][^=;]+?[}\]])\s*=/g;
+  for (const match of stripped.matchAll(destructuringPattern)) {
+    if (topLevelOnly && depths[match.index] !== 0) continue;
+    extractBindingNames(match[1]).forEach(name => declarations.add(name));
+  }
+
   return declarations;
+}
+
+function previousNonWhitespace(stripped, index) {
+  for (let cursor = index - 1; cursor >= 0; cursor -= 1) {
+    if (!/\s/.test(stripped[cursor])) return stripped[cursor];
+  }
+  return "";
+}
+
+function isObjectPropertyKey(stripped, index, name) {
+  const before = previousNonWhitespace(stripped, index);
+  const after = stripped.slice(index + name.length);
+  return /[{,(]/.test(before) && /^\s*:/.test(after);
+}
+
+function isObjectMethodKey(stripped, index, name) {
+  const before = previousNonWhitespace(stripped, index);
+  const after = stripped.slice(index + name.length);
+  return /[{,]/.test(before) && /^\s*\([^)]*\)\s*\{/.test(after);
+}
+
+function findMatchingBrace(stripped, openIndex) {
+  let depth = 0;
+  for (let index = openIndex; index < stripped.length; index += 1) {
+    const char = stripped[index];
+    if (char === "{") depth += 1;
+    else if (char === "}") {
+      depth -= 1;
+      if (depth === 0) return index;
+    }
+  }
+  return -1;
+}
+
+function extractBindingNames(bindingSource) {
+  const names = new Set();
+  const pattern = /[A-Za-z_$][\w$]*/g;
+  for (const match of bindingSource.matchAll(pattern)) {
+    names.add(match[0]);
+  }
+  return names;
+}
+
+function collectFunctionLocalRanges(stripped) {
+  const ranges = [];
+  const addRange = (start, openIndex, params = "") => {
+    const closeIndex = findMatchingBrace(stripped, openIndex);
+    if (closeIndex < 0) return;
+    const locals = extractBindingNames(params);
+    const body = stripped.slice(openIndex + 1, closeIndex);
+
+    const simpleDeclarationPattern = /\b(?:const|let|var|function)\s+([A-Za-z_$][\w$]*)/g;
+    for (const declaration of body.matchAll(simpleDeclarationPattern)) {
+      locals.add(declaration[1]);
+    }
+
+    const destructuringDeclarationPattern = /\b(?:const|let|var)\s+([{\[][^=;]+?[}\]])\s*=/g;
+    for (const declaration of body.matchAll(destructuringDeclarationPattern)) {
+      extractBindingNames(declaration[1]).forEach(name => locals.add(name));
+    }
+
+    ranges.push({ start, end: closeIndex, locals });
+  };
+
+  const functionPattern = /\bfunction\b[^{]*\(([^)]*)\)\s*\{/g;
+  for (const match of stripped.matchAll(functionPattern)) {
+    addRange(match.index, match.index + match[0].lastIndexOf("{"), match[1]);
+  }
+
+  const arrowBlockPattern = /\b(?:const|let|var)\s+[A-Za-z_$][\w$]*\s*=\s*(?:async\s*)?(?:\(([^)]*)\)|([A-Za-z_$][\w$]*))\s*=>\s*\{/g;
+  for (const match of stripped.matchAll(arrowBlockPattern)) {
+    addRange(match.index, match.index + match[0].lastIndexOf("{"), match[1] || match[2] || "");
+  }
+
+  return ranges;
+}
+
+function isLocallyBound(localRanges, index, name) {
+  return localRanges.some(range => index >= range.start && index <= range.end && range.locals.has(name));
 }
 
 function collectReferences(stripped) {
   const references = new Set();
+  const localRanges = collectFunctionLocalRanges(stripped);
   const pattern = /[A-Za-z_$][\w$]*/g;
   for (const match of stripped.matchAll(pattern)) {
     const token = match[0];
     const previous = stripped[match.index - 1];
     if (previous === ".") continue;
+    if (isObjectPropertyKey(stripped, match.index, token)) continue;
+    if (isObjectMethodKey(stripped, match.index, token)) continue;
+    if (isLocallyBound(localRanges, match.index, token)) continue;
     if (keywords.has(token) || platformGlobals.has(token)) continue;
     references.add(token);
   }
@@ -212,7 +342,7 @@ function main() {
   const lines = [
     "# Legacy Global Dependencies",
     "",
-    "Generated by `npm run audit:globals`. This is a static heuristic for the current legacy `eval` loader in `src/main.js`; use it as a migration map, not as a compiler guarantee.",
+    "Generated by `npm run audit:globals`. This is a static heuristic for the current legacy concatenated module loader in `src/main.js`; use it as a migration map, not as a compiler guarantee.",
     "",
     "## Load Order",
     ""

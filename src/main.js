@@ -48,15 +48,31 @@ const pageLoadingProgress = (() => {
     root.classList.add("is-error");
   }
 
+  function usesOptimizedPortraitImages() {
+    return window.__HEX_SNAKE_IMAGE_FORMAT__ === "webp";
+  }
+
+  function loadingAssetUrl(src) {
+    if (
+      usesOptimizedPortraitImages()
+      && typeof src === "string"
+      && /^assets\/portraits\/.+\.png$/i.test(src)
+    ) {
+      return src.replace(/\.png$/i, ".webp");
+    }
+    return src;
+  }
+
   function portraitSource(portraitSet) {
     if (!portraitSet) return null;
-    const src = portraitSet.md || portraitSet.sm || portraitSet.full;
+    const sizes = usesOptimizedPortraitImages() ? ["sm", "md"] : ["sm", "md", "full"];
+    const src = portraitSet.md || portraitSet.sm || (!usesOptimizedPortraitImages() ? portraitSet.full : "");
     if (!src) return null;
-    const srcset = ["sm", "md", "full"]
+    const srcset = sizes
       .filter(size => portraitSet[size])
-      .map(size => `${portraitSet[size]} ${loadingPortraitWidths[size]}w`)
+      .map(size => `${loadingAssetUrl(portraitSet[size])} ${loadingPortraitWidths[size]}w`)
       .join(", ");
-    return { src, srcset };
+    return { src: loadingAssetUrl(src), srcset };
   }
 
   function buildPortraitSlides(characters) {
@@ -143,11 +159,16 @@ const pageLoadingProgress = (() => {
 })();
 
 async function loadLegacyModules() {
-  // Keep the legacy script in one evaluated scope while the source is split into smaller files.
-  const sources = ["src/state.js", "src/dom.js", "src/ui.js", "src/characters.js", "src/audio.js", "src/replay.js", "src/ai.js", "src/render.js", "src/game.js"];
+  // Keep the legacy code in one module scope while the source is split into smaller files.
+  const sources = ["src/platform/web.js", "src/state.js", "src/dom.js", "src/ui.js", "src/network.js", "src/characters.js", "src/audio.js", "src/replay.js", "src/stats.js", "src/about.js", "src/ai.js", "src/render.js", "src/game.js"];
   let loaded = 0;
 
   pageLoadingProgress.set(8, "Preparing");
+  if (window.__HEX_SNAKE_BUNDLED_LEGACY__) {
+    pageLoadingProgress.set(96, "Starting");
+    return;
+  }
+
   const parts = await Promise.all(sources.map(async source => {
     const response = await fetch(source);
     if (!response.ok) throw new Error(`Failed to load ${source}: ${response.status}`);
@@ -158,7 +179,50 @@ async function loadLegacyModules() {
   }));
 
   pageLoadingProgress.set(96, "Starting");
-  eval(parts.join("\n"));
+  const bundleUrl = URL.createObjectURL(new Blob([parts.join("\n")], { type: "text/javascript" }));
+  try {
+    await import(bundleUrl);
+  } finally {
+    URL.revokeObjectURL(bundleUrl);
+  }
+}
+
+function selectedLoaderMode() {
+  const params = new URLSearchParams(window.location.search);
+  return (params.get("hexSnakeLoader") || "legacy").trim().toLowerCase();
+}
+
+async function loadModuleShadowEntry() {
+  if (window.__HEX_SNAKE_BUNDLED_LEGACY__) {
+    return loadLegacyModules();
+  }
+
+  pageLoadingProgress.set(8, "Preparing module shadow");
+  const moduleShadow = await import("./main-module.js");
+  await moduleShadow.loadModuleShadow();
+  pageLoadingProgress.set(96, "Module shadow ready");
+}
+
+async function loadModuleGameEntry() {
+  if (window.__HEX_SNAKE_BUNDLED_LEGACY__) {
+    return loadLegacyModules();
+  }
+
+  pageLoadingProgress.set(8, "Preparing module loader");
+  const moduleEntry = await import("./main-module.js");
+  const contract = await moduleEntry.loadModuleGame();
+  if (!contract?.bootstrapsGameplay) {
+    throw new Error("Module loader did not bootstrap gameplay.");
+  }
+  pageLoadingProgress.set(96, "Module ready");
+}
+
+async function loadAppModules() {
+  const mode = selectedLoaderMode();
+  if (mode === "legacy") return loadLegacyModules();
+  if (mode === "module-shadow") return loadModuleShadowEntry();
+  if (mode === "module") return loadModuleGameEntry();
+  throw new Error(`Unknown Hex Snake loader mode: ${mode}`);
 }
 
 function showBootError(error) {
@@ -169,7 +233,7 @@ function showBootError(error) {
   document.body.appendChild(message);
 }
 
-loadLegacyModules()
+loadAppModules()
   .then(() => {
     if (document.readyState === "complete") {
       pageLoadingProgress.finish();

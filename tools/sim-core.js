@@ -3,9 +3,9 @@ const path = require("path");
 
 const FOOD_TYPES = ["protein", "fat", "fiber", "carb"];
 const LOBSTER_PALM_STEP_MS = 33.75;
-const SMALL_ATTACK_DELAY_SCALE = 0.31;
-const SMALL_ATTACK_COOLDOWN_SCALE = 0.29;
-const SANDWORM_REVEAL_BEFORE_IMPACT_MS = 200;
+const DEFAULT_SMALL_ATTACK_DELAY_SCALE = 0.31;
+const DEFAULT_SMALL_ATTACK_COOLDOWN_SCALE = 0.29;
+const DEFAULT_SANDWORM_REVEAL_BEFORE_IMPACT_MS = 200;
 const SANDWORM_UNDERGROUND_WINDOW_MS = 500;
 const DEFAULT_HP_PER_SNAKE_UNIT = 4;
 const DEFAULT_ATTACK_DAMAGE_MULTIPLIER = 1;
@@ -465,6 +465,18 @@ function attackBombCost(profile, balance) {
   return profile === "small" ? (balance.attack.smallAttackBombCost ?? 1) : balance.attack.bigAttackBombCost;
 }
 
+function smallAttackDelayScale(balance) {
+  return balance.attack?.smallAttackDelayScale ?? DEFAULT_SMALL_ATTACK_DELAY_SCALE;
+}
+
+function smallAttackCooldownScale(balance) {
+  return balance.attack?.smallAttackCooldownScale ?? DEFAULT_SMALL_ATTACK_COOLDOWN_SCALE;
+}
+
+function sandwormRevealBeforeImpactMs(balance) {
+  return balance?.attack?.sandwormRevealBeforeImpactMs ?? DEFAULT_SANDWORM_REVEAL_BEFORE_IMPACT_MS;
+}
+
 function highestStockFoodType(stock) {
   return FOOD_TYPES.reduce((best, type) => {
     const currentCount = stock[type] || 0;
@@ -489,14 +501,14 @@ function canAttack(fighter, profile, balance) {
 function attackStats(stock, profile, balance) {
   const isSmall = profile === "small";
   return {
-    delay: attackDelay(stock, balance) * (isSmall ? SMALL_ATTACK_DELAY_SCALE : 1),
+    delay: attackDelay(stock, balance) * (isSmall ? smallAttackDelayScale(balance) : 1),
     radius: Math.max(1, blastRadius(stock, balance) + (isSmall ? -1 : 0)),
     damage: attackDamage(stock, profile, balance)
   };
 }
 
 function morayFieldDurationMs(balance) {
-  return balance.attack.baseAttackDelayMs * SMALL_ATTACK_DELAY_SCALE * Math.max(1, ultimateSetting(balance, "moray", "durationBaseTicks", 4));
+  return balance.attack.baseAttackDelayMs * smallAttackDelayScale(balance) * Math.max(1, ultimateSetting(balance, "moray", "durationBaseTicks", 4));
 }
 
 function morayFieldTickMs(stock, balance) {
@@ -1454,7 +1466,7 @@ function expectedDamageAtUncached(state, fighter, cell) {
   let damage = 0;
   state.projectiles.forEach(projectile => {
     if (projectile.owner !== opponentOwner) return;
-    if (!isProjectileVisibleTo(fighter, projectile, state.now)) return;
+    if (!isProjectileVisibleTo(fighter, projectile, state.now, state.balance)) return;
     if (projectile.kind === "line" || projectile.kind === "lineHazardSetup") {
       const multiplier = projectile.lineCells?.reduce((best, lineCell) => (
         Math.max(best, lineBandDamageMultiplier(hexDistance(lineCell, cell), projectile))
@@ -1483,7 +1495,7 @@ function expectedDamageMapFor(state, fighter) {
   if (!cache) return null;
   if (cache.damageMaps.has(fighter.owner)) return cache.damageMaps.get(fighter.owner);
   const opponentOwner = fighter.owner === "player" ? "computer" : "player";
-  const hasVisibleThreat = state.projectiles.some(projectile => projectile.owner === opponentOwner && isProjectileVisibleTo(fighter, projectile, state.now))
+  const hasVisibleThreat = state.projectiles.some(projectile => projectile.owner === opponentOwner && isProjectileVisibleTo(fighter, projectile, state.now, state.balance))
     || state.hazards.some(hazard => hazard.owner === opponentOwner && state.now <= hazard.endAt);
   const damageMap = new Map();
   if (hasVisibleThreat) {
@@ -1502,11 +1514,11 @@ function expectedDamageAt(state, fighter, cell) {
   return expectedDamageAtUncached(state, fighter, cell);
 }
 
-function isProjectileVisibleTo(observer, projectile, now) {
+function isProjectileVisibleTo(observer, projectile, now, balance = null) {
   if (projectile.kind === "lobsterPalmSetup") return false;
   if (projectile.owner === observer.owner) return true;
   if (!projectile.sandwormHidden) return true;
-  return projectile.impactAt - now <= SANDWORM_REVEAL_BEFORE_IMPACT_MS;
+  return projectile.impactAt - now <= sandwormRevealBeforeImpactMs(balance);
 }
 
 function cellsWithinDistance(state, origin, minDistance, maxDistance) {
@@ -2161,7 +2173,7 @@ function scheduleBigAttack(state, attacker, defender, target, now, balance, stun
 
 function launchAttack(state, attacker, defender, profile, now, balance) {
   if (!canAttack(attacker, profile, balance)) return false;
-  const cooldownScale = profile === "small" ? SMALL_ATTACK_COOLDOWN_SCALE : 1;
+  const cooldownScale = profile === "small" ? smallAttackCooldownScale(balance) : 1;
   const attackProfile = profile === "small" ? "small" : "big";
   const lastAttack = typeof attacker.lastAttack === "number"
     ? attacker.lastAttack

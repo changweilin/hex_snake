@@ -1,4 +1,17 @@
-﻿let minGridSize = 6;
+let minGridSize = 6;
+const UiRuntime = HexSnakeRuntime;
+const UiRootState = HexSnakeState;
+const UiRegistry = HexSnakeUI;
+const UiControls = HexSnakeControls;
+const UiDom = HexSnakeDOM;
+const UiAudio = UiRegistry.audio;
+const UiGame = UiRegistry.uiGame;
+const UiReplay = UiRegistry.replay;
+const UiRender = HexSnakeRender;
+const UiStorage = UiRuntime.storage;
+const UiConfig = UiRootState.config;
+const UiGameState = UiRootState.game;
+const UiPresentationState = UiRootState.ui;
 let maxGridSize = 12;
 let minFoodCount = 1;
 let maxFoodCount = 4;
@@ -64,9 +77,9 @@ let maxMatchMs = 240000;
 let hpPerSnakeUnit = 10;
 let gameOverRestartDelayMs = 700;
 const gameOverContinuousVisualMaxWaitMs = 1000;
-const smallAttackDelayScale = 0.31;
-const smallAttackCooldownScale = 0.29;
-const sandwormRevealBeforeImpactMs = 200;
+let smallAttackDelayScale = 0.31;
+let smallAttackCooldownScale = 0.29;
+let sandwormRevealBeforeImpactMs = 200;
 const sandwormUndergroundWindowMs = 500;
 let defaultSettings = {
   gridSize: 10,
@@ -139,6 +152,12 @@ function applyBalanceConfig(config) {
     config.attack?.smallAttackFoodCost ?? smallAttackFoodCost;
   smallAttackBombCost =
     config.attack?.smallAttackBombCost ?? smallAttackBombCost;
+  smallAttackDelayScale =
+    config.attack?.smallAttackDelayScale ?? smallAttackDelayScale;
+  smallAttackCooldownScale =
+    config.attack?.smallAttackCooldownScale ?? smallAttackCooldownScale;
+  sandwormRevealBeforeImpactMs =
+    config.attack?.sandwormRevealBeforeImpactMs ?? sandwormRevealBeforeImpactMs;
   bigAttackBombCost = config.attack?.bigAttackBombCost ?? bigAttackBombCost;
   smallAttackDamageMultiplier =
     config.attack?.smallAttackDamageMultiplier ?? smallAttackDamageMultiplier;
@@ -216,27 +235,27 @@ function applyBalanceConfig(config) {
   computerCharacterId = defaultSettings.computerCharacterId;
   playerCharacterChoice = playerCharacterId;
   computerCharacterChoice = computerCharacterId;
-  gridSizeInput.min = minGridSize;
-  gridSizeInput.max = maxGridSize;
-  gridSizeInput.value = defaultSettings.gridSize;
-  foodCountInput.min = minFoodCount;
-  foodCountInput.max = maxFoodCount;
-  foodCountInput.value = defaultSettings.foodCount;
-  initialSpeedInput.min = minInitialSpeed;
-  initialSpeedInput.max = maxInitialSpeed;
-  initialSpeedInput.value = defaultSettings.initialSpeed;
-  initialLengthInput.min = minInitialLength;
-  initialLengthInput.max = maxInitialLength;
-  initialLengthInput.value = defaultSettings.initialLength;
-  initialEnergyInput.max = attackNeedTotal;
-  initialEnergyInput.value = defaultSettings.initialEnergy;
-  initialBombsInput.max = maxAmmo;
-  initialBombsInput.value = defaultSettings.initialBombs;
-  initialStockInputs.forEach((input) => {
+  UiDom.gridSizeInput.min = minGridSize;
+  UiDom.gridSizeInput.max = maxGridSize;
+  UiDom.gridSizeInput.value = defaultSettings.gridSize;
+  UiDom.foodCountInput.min = minFoodCount;
+  UiDom.foodCountInput.max = maxFoodCount;
+  UiDom.foodCountInput.value = defaultSettings.foodCount;
+  UiDom.initialSpeedInput.min = minInitialSpeed;
+  UiDom.initialSpeedInput.max = maxInitialSpeed;
+  UiDom.initialSpeedInput.value = defaultSettings.initialSpeed;
+  UiDom.initialLengthInput.min = minInitialLength;
+  UiDom.initialLengthInput.max = maxInitialLength;
+  UiDom.initialLengthInput.value = defaultSettings.initialLength;
+  UiDom.initialEnergyInput.max = attackNeedTotal;
+  UiDom.initialEnergyInput.value = defaultSettings.initialEnergy;
+  UiDom.initialBombsInput.max = maxAmmo;
+  UiDom.initialBombsInput.value = defaultSettings.initialBombs;
+  UiDom.initialStockInputs.forEach((input) => {
     input.max = maxFoodStock;
     input.value = defaultSettings.initialStock[input.dataset.initialStock] || 0;
   });
-  computerDifficultyInput.value = defaultSettings.computerDifficulty;
+  UiDom.computerDifficultyInput.value = defaultSettings.computerDifficulty;
   refreshTutorialSlides();
 }
 
@@ -490,19 +509,60 @@ function foodEffectDescription(type) {
   return type.effect || "";
 }
 
-const poseAliases = {
-  opening: "opening",
-  intro: "opening",
-  idle: "intro",
-  attack: "small",
-  small: "small",
-  big: "big",
-  victory: "victory",
-  defeat: "defeat",
-};
-const portraitPoses = new Set(Object.keys(poseAliases));
 let characters = [];
 let characterById = new Map();
+
+function hasCharacterCatalog() {
+  return characters.length > 0;
+}
+
+function hasCharacterId(characterId) {
+  return characterById.has(characterId);
+}
+
+function characterForId(characterId) {
+  return characterById.get(characterId) || null;
+}
+
+function characterList() {
+  return characters;
+}
+
+function setCharacterCatalog(nextCharacters) {
+  characters = Array.isArray(nextCharacters) ? nextCharacters : [];
+  characterById = new Map(
+    characters.map((character) => [character.id, character]),
+  );
+}
+
+function characterFallbackId(owner) {
+  const character =
+    owner === "computer"
+      ? characters[Math.min(1, characters.length - 1)]
+      : characters[0];
+  return character?.id || "";
+}
+
+function isRandomCharacterChoiceId(value) {
+  return value === randomCharacterChoiceId;
+}
+
+function isSelectableCharacterChoiceId(value) {
+  return isRandomCharacterChoiceId(value) || hasCharacterId(value);
+}
+
+Object.assign(UiRegistry, {
+  characterFallbackId,
+  characterForId,
+  characterList,
+  hasCharacterCatalog,
+  hasCharacterId,
+  isRandomCharacterChoiceId,
+  isSelectableCharacterChoiceId,
+  randomCharacterChoiceId,
+  setCharacterCatalog,
+});
+
 const colors = {
   cell: "#2a3445",
   cellAlt: "#303c4d",
@@ -527,7 +587,179 @@ const defaultKeybinds = {
   surrender: "t",
   directions: directions.map((direction) => direction.key),
 };
-let keybinds = loadKeybinds();
+
+Object.defineProperties(UiConfig, {
+  autoBattleSpeeds: {
+    get: () => autoBattleSpeeds,
+  },
+  attackNeedTotal: {
+    get: () => attackNeedTotal,
+  },
+  attackUltimateBalance: {
+    get: () => attackUltimateBalance,
+  },
+  attackSlowMs: {
+    get: () => attackSlowMs,
+  },
+  attackStunMs: {
+    get: () => attackStunMs,
+  },
+  baseAttackDelayMs: {
+    get: () => baseAttackDelayMs,
+  },
+  baseAttackStunChance: {
+    get: () => baseAttackStunChance,
+  },
+  baseBlastHexRadius: {
+    get: () => baseBlastHexRadius,
+  },
+  baseStepMs: {
+    get: () => baseStepMs,
+  },
+  balancedDualChance: {
+    get: () => balancedDualChance,
+  },
+  blackSpecialChance: {
+    get: () => blackSpecialChance,
+  },
+  blastDurationMs: {
+    get: () => blastDurationMs,
+  },
+  bodyHitMaxStunChanceBonus: {
+    get: () => bodyHitMaxStunChanceBonus,
+  },
+  bodyHitStunChance: {
+    get: () => bodyHitStunChance,
+  },
+  bodyHitStunChanceBonusPerPoint: {
+    get: () => bodyHitStunChanceBonusPerPoint,
+  },
+  collisionSlowMs: {
+    get: () => collisionSlowMs,
+  },
+  collisionStunMs: {
+    get: () => collisionStunMs,
+  },
+  defaultKeybinds: {
+    get: () => defaultKeybinds,
+  },
+  defaultSettings: {
+    get: () => defaultSettings,
+  },
+  colors: {
+    get: () => colors,
+  },
+  directions: {
+    get: () => directions,
+  },
+  foodTypeById: {
+    get: () => foodTypeById,
+  },
+  blackFoodEnergy: {
+    get: () => blackFoodEnergy,
+  },
+  dualColorStockGain: {
+    get: () => dualColorStockGain,
+  },
+  foodEnergy: {
+    get: () => foodEnergy,
+  },
+  foodTypes: {
+    get: () => foodTypes,
+  },
+  foodLabels: {
+    get: () => foodLabels,
+  },
+  gameOverContinuousVisualMaxWaitMs: {
+    get: () => gameOverContinuousVisualMaxWaitMs,
+  },
+  gameOverRestartDelayMs: {
+    get: () => gameOverRestartDelayMs,
+  },
+  hudFrameIntervalMs: {
+    get: () => hudFrameIntervalMs,
+  },
+  headHitMaxStunChanceBonus: {
+    get: () => headHitMaxStunChanceBonus,
+  },
+  headHitStunChance: {
+    get: () => headHitStunChance,
+  },
+  headHitStunChanceBonusPerPoint: {
+    get: () => headHitStunChanceBonusPerPoint,
+  },
+  hpPerSnakeUnit: {
+    get: () => hpPerSnakeUnit,
+  },
+  keyboardTargetModeLabels: {
+    get: () => keyboardTargetModeLabels,
+  },
+  keyboardTargetModes: {
+    get: () => keyboardTargetModes,
+  },
+  maxFoodCount: {
+    get: () => maxFoodCount,
+  },
+  maxFoodStock: {
+    get: () => maxFoodStock,
+  },
+  maxAmmo: {
+    get: () => maxAmmo,
+  },
+  maxCollisionParalysisMs: {
+    get: () => maxCollisionParalysisMs,
+  },
+  maxGridSize: {
+    get: () => maxGridSize,
+  },
+  maxInitialLength: {
+    get: () => maxInitialLength,
+  },
+  maxInitialSpeed: {
+    get: () => maxInitialSpeed,
+  },
+  maxMatchMs: {
+    get: () => maxMatchMs,
+  },
+  minFoodCount: {
+    get: () => minFoodCount,
+  },
+  minGridSize: {
+    get: () => minGridSize,
+  },
+  minInitialLength: {
+    get: () => minInitialLength,
+  },
+  minInitialSpeed: {
+    get: () => minInitialSpeed,
+  },
+  otherFoodWeight: {
+    get: () => otherFoodWeight,
+  },
+  preferredFoodWeight: {
+    get: () => preferredFoodWeight,
+  },
+  bigAttackBombCost: {
+    get: () => bigAttackBombCost,
+  },
+  smallAttackBombCost: {
+    get: () => smallAttackBombCost,
+  },
+  smallAttackDelayScale: {
+    get: () => smallAttackDelayScale,
+  },
+  smallAttackFoodCost: {
+    get: () => smallAttackFoodCost,
+  },
+  sandwormRevealBeforeImpactMs: {
+    get: () => sandwormRevealBeforeImpactMs,
+  },
+  singleColorStockGain: {
+    get: () => singleColorStockGain,
+  },
+});
+
+let keybinds = UiControls.loadKeybinds();
 let selectedAttackProfile = "small";
 const keyboardTargetModes = ["head", "centroid", "food"];
 const keyboardTargetModeLabels = {
@@ -554,6 +786,13 @@ let projectiles = [];
 let blasts = [];
 let hazards = [];
 const elementalSpriteCache = new Map();
+
+Object.defineProperties(UiGameState, {
+  elementalSpriteCache: {
+    get: () => elementalSpriteCache,
+  },
+});
+
 let boardShakeUntil = 0;
 let boardShakeStartedAt = 0;
 let boardShakeStrength = 0;
@@ -576,8 +815,8 @@ let playerEnergyFlashUntil = 0;
 let computerEnergyFlashUntil = 0;
 let playerBombFlashUntil = 0;
 let computerBombFlashUntil = 0;
-let best = Number(localStorage.getItem("hexSnakeBest") || 0);
-let bestTotalMs = Number(localStorage.getItem("hexSnakeBestTotalMs") || 0);
+let best = Number(UiStorage.get("hexSnakeBest") || 0);
+let bestTotalMs = Number(UiStorage.get("hexSnakeBestTotalMs") || 0);
 let totalElapsedMs = 0;
 let lastFeedElapsedMs = 0;
 let running = false;
@@ -585,10 +824,10 @@ let paused = false;
 let computerBattleMode = false;
 let playerAutoMode = false;
 let computerBattleManualOverride = false;
-let computerBattleSpeed = normalizeAutoBattleSpeed(
-  localStorage.getItem("hexSnakeAutoBattleSpeed"),
+let computerBattleSpeed = UiControls.normalizeAutoBattleSpeed(
+  UiStorage.get("hexSnakeAutoBattleSpeed"),
 );
-let relayModePreference = localStorage.getItem("hexSnakeRelayMode") === "1";
+let relayModePreference = UiStorage.get("hexSnakeRelayMode") === "1";
 let relayMode = false;
 let relayPlayerWins = 0;
 let relayComputerWins = 0;
@@ -602,6 +841,450 @@ let gameOverResultOwner = null;
 let gameOverPlayerLost = false;
 let gameOverComputerLost = false;
 let gameOver = false;
+
+Object.defineProperties(UiGameState, {
+  running: {
+    get: () => running,
+    set: (value) => {
+      running = Boolean(value);
+    },
+  },
+  paused: {
+    get: () => paused,
+    set: (value) => {
+      paused = Boolean(value);
+    },
+  },
+  gameOver: {
+    get: () => gameOver,
+    set: (value) => {
+      gameOver = Boolean(value);
+    },
+  },
+  computerBattleMode: {
+    get: () => computerBattleMode,
+    set: (value) => {
+      computerBattleMode = Boolean(value);
+    },
+  },
+  playerAutoMode: {
+    get: () => playerAutoMode,
+    set: (value) => {
+      playerAutoMode = Boolean(value);
+    },
+  },
+  computerBattleManualOverride: {
+    get: () => computerBattleManualOverride,
+    set: (value) => {
+      computerBattleManualOverride = Boolean(value);
+    },
+  },
+  computerBattleSpeed: {
+    get: () => computerBattleSpeed,
+    set: (value) => {
+      computerBattleSpeed = value;
+    },
+  },
+  relayModePreference: {
+    get: () => relayModePreference,
+    set: (value) => {
+      relayModePreference = Boolean(value);
+    },
+  },
+  relayMode: {
+    get: () => relayMode,
+    set: (value) => {
+      relayMode = Boolean(value);
+    },
+  },
+  relayPlayerWins: {
+    get: () => relayPlayerWins,
+    set: (value) => {
+      relayPlayerWins = value;
+    },
+  },
+  relayComputerWins: {
+    get: () => relayComputerWins,
+    set: (value) => {
+      relayComputerWins = value;
+    },
+  },
+  relayDraws: {
+    get: () => relayDraws,
+    set: (value) => {
+      relayDraws = value;
+    },
+  },
+  relayRestartTimer: {
+    get: () => relayRestartTimer,
+    set: (value) => {
+      relayRestartTimer = value;
+    },
+  },
+  gameOverRelayStartOptions: {
+    get: () => gameOverRelayStartOptions,
+    set: (value) => {
+      gameOverRelayStartOptions = value;
+    },
+  },
+  gameOverSettlementPending: {
+    get: () => gameOverSettlementPending,
+    set: (value) => {
+      gameOverSettlementPending = Boolean(value);
+    },
+  },
+  gameOverContinuousVisualDeadlineAt: {
+    get: () => gameOverContinuousVisualDeadlineAt,
+    set: (value) => {
+      gameOverContinuousVisualDeadlineAt = value;
+    },
+  },
+  gameOverLogoTransitionEndsAt: {
+    get: () => gameOverLogoTransitionEndsAt,
+    set: (value) => {
+      gameOverLogoTransitionEndsAt = value;
+    },
+  },
+  gameOverResultOwner: {
+    get: () => gameOverResultOwner,
+    set: (value) => {
+      gameOverResultOwner = value;
+    },
+  },
+  gameOverPlayerLost: {
+    get: () => gameOverPlayerLost,
+    set: (value) => {
+      gameOverPlayerLost = Boolean(value);
+    },
+  },
+  gameOverComputerLost: {
+    get: () => gameOverComputerLost,
+    set: (value) => {
+      gameOverComputerLost = Boolean(value);
+    },
+  },
+  gridSize: {
+    get: () => gridSize,
+    set: (value) => {
+      gridSize = value;
+    },
+  },
+  radius: {
+    get: () => radius,
+    set: (value) => {
+      radius = value;
+    },
+  },
+  foodCount: {
+    get: () => foodCount,
+    set: (value) => {
+      foodCount = value;
+    },
+  },
+  cells: {
+    get: () => cells,
+    set: (value) => {
+      cells = Array.isArray(value) ? value : [];
+    },
+  },
+  resourceEls: {
+    get: () => resourceEls,
+    set: (value) => {
+      resourceEls = value instanceof Map ? value : new Map();
+    },
+  },
+  cellSize: {
+    get: () => cellSize,
+    set: (value) => {
+      cellSize = value;
+    },
+  },
+  center: {
+    get: () => center,
+    set: (value) => {
+      center = value && typeof value === "object" ? value : { x: 0, y: 0 };
+    },
+  },
+  boardShakeUntil: {
+    get: () => boardShakeUntil,
+    set: (value) => {
+      boardShakeUntil = value;
+    },
+  },
+  boardShakeStartedAt: {
+    get: () => boardShakeStartedAt,
+    set: (value) => {
+      boardShakeStartedAt = value;
+    },
+  },
+  boardShakeStrength: {
+    get: () => boardShakeStrength,
+    set: (value) => {
+      boardShakeStrength = value;
+    },
+  },
+  boardShakeFrequency: {
+    get: () => boardShakeFrequency,
+    set: (value) => {
+      boardShakeFrequency = value;
+    },
+  },
+  boardShakeStyle: {
+    get: () => boardShakeStyle,
+    set: (value) => {
+      boardShakeStyle = value || "impact";
+    },
+  },
+  initialSpeed: {
+    get: () => initialSpeed,
+    set: (value) => {
+      initialSpeed = value;
+    },
+  },
+  gmMode: {
+    get: () => gmMode,
+    set: (value) => {
+      gmMode = Boolean(value);
+    },
+  },
+  initialLength: {
+    get: () => initialLength,
+    set: (value) => {
+      initialLength = value;
+    },
+  },
+  initialEnergy: {
+    get: () => initialEnergy,
+    set: (value) => {
+      initialEnergy = value;
+    },
+  },
+  initialBombs: {
+    get: () => initialBombs,
+    set: (value) => {
+      initialBombs = value;
+    },
+  },
+  initialStock: {
+    get: () => initialStock,
+    set: (value) => {
+      initialStock = value && typeof value === "object" ? value : {};
+    },
+  },
+  gmPresetMode: {
+    get: () => gmPresetMode,
+    set: (value) => {
+      gmPresetMode = value;
+    },
+  },
+  keybinds: {
+    get: () => keybinds,
+    set: (value) => {
+      keybinds = value;
+    },
+  },
+  selectedAttackProfile: {
+    get: () => selectedAttackProfile,
+    set: (value) => {
+      selectedAttackProfile = value;
+    },
+  },
+  keyToDir: {
+    get: () => keyToDir,
+    set: (value) => {
+      keyToDir = value instanceof Map ? value : new Map();
+    },
+  },
+  keyboardAttackAim: {
+    get: () => keyboardAttackAim,
+    set: (value) => {
+      keyboardAttackAim = value;
+    },
+  },
+  keyboardAttackPreview: {
+    get: () => keyboardAttackPreview,
+    set: (value) => {
+      keyboardAttackPreview = value;
+    },
+  },
+  keyboardAimHeldKeys: {
+    get: () => keyboardAimHeldKeys,
+    set: (value) => {
+      keyboardAimHeldKeys = value instanceof Set ? value : new Set();
+    },
+  },
+  pendingDirectionKeybind: {
+    get: () => pendingDirectionKeybind,
+    set: (value) => {
+      pendingDirectionKeybind = value;
+    },
+  },
+  targetMaxHex: {
+    get: () => targetMaxHex,
+    set: (value) => {
+      targetMaxHex = value;
+    },
+  },
+  playerCharacterChoice: {
+    get: () => playerCharacterChoice,
+    set: (value) => {
+      playerCharacterChoice = value;
+    },
+  },
+  computerCharacterChoice: {
+    get: () => computerCharacterChoice,
+    set: (value) => {
+      computerCharacterChoice = value;
+    },
+  },
+  playerCharacterId: {
+    get: () => playerCharacterId,
+    set: (value) => {
+      playerCharacterId = value;
+    },
+  },
+  computerCharacterId: {
+    get: () => computerCharacterId,
+    set: (value) => {
+      computerCharacterId = value;
+    },
+  },
+  computerDifficulty: {
+    get: () => computerDifficulty,
+    set: (value) => {
+      computerDifficulty = value;
+    },
+  },
+  dir: {
+    get: () => dir,
+    set: (value) => {
+      dir = value;
+    },
+  },
+  nextDir: {
+    get: () => nextDir,
+    set: (value) => {
+      nextDir = value;
+    },
+  },
+  computerDir: {
+    get: () => computerDir,
+    set: (value) => {
+      computerDir = value;
+    },
+  },
+  playerEnergyFlashUntil: {
+    get: () => playerEnergyFlashUntil,
+    set: (value) => {
+      playerEnergyFlashUntil = value;
+    },
+  },
+  computerEnergyFlashUntil: {
+    get: () => computerEnergyFlashUntil,
+    set: (value) => {
+      computerEnergyFlashUntil = value;
+    },
+  },
+  playerBombFlashUntil: {
+    get: () => playerBombFlashUntil,
+    set: (value) => {
+      playerBombFlashUntil = value;
+    },
+  },
+  computerBombFlashUntil: {
+    get: () => computerBombFlashUntil,
+    set: (value) => {
+      computerBombFlashUntil = value;
+    },
+  },
+  snake: {
+    get: () => snake,
+    set: (value) => {
+      snake = value;
+    },
+  },
+  computerSnake: {
+    get: () => computerSnake,
+    set: (value) => {
+      computerSnake = value;
+    },
+  },
+  foods: {
+    get: () => foods,
+    set: (value) => {
+      foods = Array.isArray(value) ? value : [];
+    },
+  },
+  projectiles: {
+    get: () => projectiles,
+    set: (value) => {
+      projectiles = Array.isArray(value) ? value : [];
+    },
+  },
+  blasts: {
+    get: () => blasts,
+    set: (value) => {
+      blasts = Array.isArray(value) ? value : [];
+    },
+  },
+  hazards: {
+    get: () => hazards,
+    set: (value) => {
+      hazards = Array.isArray(value) ? value : [];
+    },
+  },
+  playerHp: {
+    get: () => playerHp,
+    set: (value) => {
+      playerHp = value;
+    },
+  },
+  computerHp: {
+    get: () => computerHp,
+    set: (value) => {
+      computerHp = value;
+    },
+  },
+  playerStock: {
+    get: () => playerStock,
+    set: (value) => {
+      playerStock = value;
+    },
+  },
+  computerStock: {
+    get: () => computerStock,
+    set: (value) => {
+      computerStock = value;
+    },
+  },
+  playerAmmo: {
+    get: () => playerAmmo,
+    set: (value) => {
+      playerAmmo = value;
+    },
+  },
+  computerAmmo: {
+    get: () => computerAmmo,
+    set: (value) => {
+      computerAmmo = value;
+    },
+  },
+  playerAmmoCharge: {
+    get: () => playerAmmoCharge,
+    set: (value) => {
+      playerAmmoCharge = value;
+    },
+  },
+  computerAmmoCharge: {
+    get: () => computerAmmoCharge,
+    set: (value) => {
+      computerAmmoCharge = value;
+    },
+  },
+});
+
+let lastResultShareData = null;
+let resultShareInProgress = false;
 let lastPlayerStep = 0;
 let lastComputerStep = 0;
 let playerStunUntil = 0;
@@ -620,6 +1303,106 @@ let playerSandwormArmorFrom = 0;
 let playerSandwormArmorUntil = 0;
 let computerSandwormArmorFrom = 0;
 let computerSandwormArmorUntil = 0;
+
+Object.defineProperties(UiGameState, {
+  playerStunUntil: {
+    get: () => playerStunUntil,
+    set: (value) => {
+      playerStunUntil = value;
+    },
+  },
+  playerSlowUntil: {
+    get: () => playerSlowUntil,
+    set: (value) => {
+      playerSlowUntil = value;
+    },
+  },
+  playerCollisionParalysisMs: {
+    get: () => playerCollisionParalysisMs,
+    set: (value) => {
+      playerCollisionParalysisMs = value;
+    },
+  },
+  playerVulnerable: {
+    get: () => playerVulnerable,
+    set: (value) => {
+      playerVulnerable = Boolean(value);
+    },
+  },
+  computerStunUntil: {
+    get: () => computerStunUntil,
+    set: (value) => {
+      computerStunUntil = value;
+    },
+  },
+  computerSlowUntil: {
+    get: () => computerSlowUntil,
+    set: (value) => {
+      computerSlowUntil = value;
+    },
+  },
+  computerCollisionParalysisMs: {
+    get: () => computerCollisionParalysisMs,
+    set: (value) => {
+      computerCollisionParalysisMs = value;
+    },
+  },
+  computerVulnerable: {
+    get: () => computerVulnerable,
+    set: (value) => {
+      computerVulnerable = Boolean(value);
+    },
+  },
+  playerUndergroundFrom: {
+    get: () => playerUndergroundFrom,
+    set: (value) => {
+      playerUndergroundFrom = value;
+    },
+  },
+  playerUndergroundUntil: {
+    get: () => playerUndergroundUntil,
+    set: (value) => {
+      playerUndergroundUntil = value;
+    },
+  },
+  computerUndergroundFrom: {
+    get: () => computerUndergroundFrom,
+    set: (value) => {
+      computerUndergroundFrom = value;
+    },
+  },
+  computerUndergroundUntil: {
+    get: () => computerUndergroundUntil,
+    set: (value) => {
+      computerUndergroundUntil = value;
+    },
+  },
+  playerSandwormArmorFrom: {
+    get: () => playerSandwormArmorFrom,
+    set: (value) => {
+      playerSandwormArmorFrom = value;
+    },
+  },
+  playerSandwormArmorUntil: {
+    get: () => playerSandwormArmorUntil,
+    set: (value) => {
+      playerSandwormArmorUntil = value;
+    },
+  },
+  computerSandwormArmorFrom: {
+    get: () => computerSandwormArmorFrom,
+    set: (value) => {
+      computerSandwormArmorFrom = value;
+    },
+  },
+  computerSandwormArmorUntil: {
+    get: () => computerSandwormArmorUntil,
+    set: (value) => {
+      computerSandwormArmorUntil = value;
+    },
+  },
+});
+
 let lastVisiblePlayerSnake = [];
 let lastVisibleComputerSnake = [];
 let lastVisiblePlayerDir = 0;
@@ -636,8 +1419,154 @@ const hudFrameIntervalMs = 100;
 const replayRecordCheckIntervalMs = 100;
 let lastHudFrameAt = -Infinity;
 let lastReplayRecordCheckAt = -Infinity;
+
+Object.defineProperties(UiConfig, {
+  deadEndMinSpace: {
+    get: () => deadEndMinSpace,
+  },
+});
+
+Object.defineProperties(UiGameState, {
+  best: {
+    get: () => best,
+    set: (value) => {
+      best = value;
+    },
+  },
+  bestTotalMs: {
+    get: () => bestTotalMs,
+    set: (value) => {
+      bestTotalMs = value;
+    },
+  },
+  score: {
+    get: () => score,
+    set: (value) => {
+      score = value;
+    },
+  },
+  computerScore: {
+    get: () => computerScore,
+    set: (value) => {
+      computerScore = value;
+    },
+  },
+  totalElapsedMs: {
+    get: () => totalElapsedMs,
+    set: (value) => {
+      totalElapsedMs = value;
+    },
+  },
+  lastFeedElapsedMs: {
+    get: () => lastFeedElapsedMs,
+    set: (value) => {
+      lastFeedElapsedMs = value;
+    },
+  },
+  lastTimerFrame: {
+    get: () => lastTimerFrame,
+    set: (value) => {
+      lastTimerFrame = value;
+    },
+  },
+  lastHudFrameAt: {
+    get: () => lastHudFrameAt,
+    set: (value) => {
+      lastHudFrameAt = value;
+    },
+  },
+  lastPlayerStep: {
+    get: () => lastPlayerStep,
+    set: (value) => {
+      lastPlayerStep = value;
+    },
+  },
+  lastComputerStep: {
+    get: () => lastComputerStep,
+    set: (value) => {
+      lastComputerStep = value;
+    },
+  },
+  lastVisiblePlayerSnake: {
+    get: () => lastVisiblePlayerSnake,
+    set: (value) => {
+      lastVisiblePlayerSnake = Array.isArray(value) ? value : [];
+    },
+  },
+  lastVisibleComputerSnake: {
+    get: () => lastVisibleComputerSnake,
+    set: (value) => {
+      lastVisibleComputerSnake = Array.isArray(value) ? value : [];
+    },
+  },
+  lastVisiblePlayerDir: {
+    get: () => lastVisiblePlayerDir,
+    set: (value) => {
+      lastVisiblePlayerDir = value;
+    },
+  },
+  lastVisibleComputerDir: {
+    get: () => lastVisibleComputerDir,
+    set: (value) => {
+      lastVisibleComputerDir = value;
+    },
+  },
+  playerFoodTargetKey: {
+    get: () => playerFoodTargetKey,
+    set: (value) => {
+      playerFoodTargetKey = value;
+    },
+  },
+  computerFoodTargetKey: {
+    get: () => computerFoodTargetKey,
+    set: (value) => {
+      computerFoodTargetKey = value;
+    },
+  },
+  playerFoodTargetAt: {
+    get: () => playerFoodTargetAt,
+    set: (value) => {
+      playerFoodTargetAt = value;
+    },
+  },
+  computerFoodTargetAt: {
+    get: () => computerFoodTargetAt,
+    set: (value) => {
+      computerFoodTargetAt = value;
+    },
+  },
+  lastPlayerFoodAt: {
+    get: () => lastPlayerFoodAt,
+    set: (value) => {
+      lastPlayerFoodAt = value;
+    },
+  },
+  lastComputerFoodAt: {
+    get: () => lastComputerFoodAt,
+    set: (value) => {
+      lastComputerFoodAt = value;
+    },
+  },
+});
+
 let lastPlayerAttackMs = resetAttackCooldownTracker();
 let lastComputerAttackMs = resetAttackCooldownTracker();
+
+Object.defineProperties(UiGameState, {
+  lastPlayerAttackMs: {
+    get: () => lastPlayerAttackMs,
+    set: (value) => {
+      lastPlayerAttackMs = value;
+    },
+  },
+  lastComputerAttackMs: {
+    get: () => lastComputerAttackMs,
+    set: (value) => {
+      lastComputerAttackMs = value;
+    },
+  },
+});
+
 let rafId = 0;
 let previewDrawRafId = 0;
 let movePointerId = null;
@@ -665,9 +1594,165 @@ let selectedPortraitOwner = "player";
 let highlightedAttackProfile = null;
 let attackHighlightReleaseTimer = null;
 let moveStickReboundTimer = null;
+
+Object.defineProperties(UiGameState, {
+  keyboardAttackPreviewTimer: {
+    get: () => keyboardAttackPreviewTimer,
+    set: (value) => {
+      keyboardAttackPreviewTimer = value;
+    },
+  },
+  moduleHoldTimer: {
+    get: () => moduleHoldTimer,
+    set: (value) => {
+      moduleHoldTimer = value;
+    },
+  },
+  moveStickHoldTimer: {
+    get: () => moveStickHoldTimer,
+    set: (value) => {
+      moveStickHoldTimer = value;
+    },
+  },
+  moveStickReboundTimer: {
+    get: () => moveStickReboundTimer,
+    set: (value) => {
+      moveStickReboundTimer = value;
+    },
+  },
+  attackPointerLongPressTimer: {
+    get: () => attackPointerLongPressTimer,
+    set: (value) => {
+      attackPointerLongPressTimer = value;
+    },
+  },
+  attackHighlightReleaseTimer: {
+    get: () => attackHighlightReleaseTimer,
+    set: (value) => {
+      attackHighlightReleaseTimer = value;
+    },
+  },
+  highlightedAttackProfile: {
+    get: () => highlightedAttackProfile,
+    set: (value) => {
+      highlightedAttackProfile = value;
+    },
+  },
+  previewDrawRafId: {
+    get: () => previewDrawRafId,
+    set: (value) => {
+      previewDrawRafId = value;
+    },
+  },
+  directionalPreviewCacheKey: {
+    get: () => directionalPreviewCacheKey,
+    set: (value) => {
+      directionalPreviewCacheKey = value;
+    },
+  },
+  directionalPreviewCache: {
+    get: () => directionalPreviewCache,
+    set: (value) => {
+      directionalPreviewCache = value;
+    },
+  },
+  attackPointer: {
+    get: () => attackPointer,
+    set: (value) => {
+      attackPointer = value;
+    },
+  },
+  attackButtonPointerId: {
+    get: () => attackButtonPointerId,
+    set: (value) => {
+      attackButtonPointerId = value;
+    },
+  },
+  controlAttackPointer: {
+    get: () => controlAttackPointer,
+    set: (value) => {
+      controlAttackPointer = value;
+    },
+  },
+  portraitPoseTimers: {
+    get: () => portraitPoseTimers,
+    set: (value) => {
+      portraitPoseTimers = value && typeof value === "object" ? value : {};
+    },
+  },
+  attackCalloutTimers: {
+    get: () => attackCalloutTimers,
+    set: (value) => {
+      attackCalloutTimers = value && typeof value === "object" ? value : {};
+    },
+  },
+  movePointerId: {
+    get: () => movePointerId,
+    set: (value) => {
+      movePointerId = value;
+    },
+  },
+  targetPointerId: {
+    get: () => targetPointerId,
+    set: (value) => {
+      targetPointerId = value;
+    },
+  },
+  moveStickLocked: {
+    get: () => moveStickLocked,
+    set: (value) => {
+      moveStickLocked = Boolean(value);
+    },
+  },
+  moveStickEngaged: {
+    get: () => moveStickEngaged,
+    set: (value) => {
+      moveStickEngaged = Boolean(value);
+    },
+  },
+  movePointerStartedAt: {
+    get: () => movePointerStartedAt,
+    set: (value) => {
+      movePointerStartedAt = value;
+    },
+  },
+  movePointerStartX: {
+    get: () => movePointerStartX,
+    set: (value) => {
+      movePointerStartX = value;
+    },
+  },
+  movePointerStartY: {
+    get: () => movePointerStartY,
+    set: (value) => {
+      movePointerStartY = value;
+    },
+  },
+  movePointerMoved: {
+    get: () => movePointerMoved,
+    set: (value) => {
+      movePointerMoved = Boolean(value);
+    },
+  },
+  targetCell: {
+    get: () => targetCell,
+    set: (value) => {
+      targetCell = value;
+    },
+  },
+  targetActive: {
+    get: () => targetActive,
+    set: (value) => {
+      targetActive = Boolean(value);
+    },
+  },
+});
+
 let introDetailsOpen = false;
 let tutorialStepIndex = 0;
 const tutorialSeenKey = "hexSnakeTutorialSeen";
+const perfStatsKey = "hexSnakePerfStats";
+let perfStatsVisible = UiStorage.get(perfStatsKey) === "1";
 let tutorialSwipeStartX = null;
 let tutorialSwipeStartY = null;
 let tutorialSwipePointerId = null;
@@ -680,6 +1765,15 @@ let portraitInfoSwipeStartX = null;
 let portraitInfoSwipeStartY = null;
 let portraitIntroDidSwipe = false;
 let portraitLightboxDidSwipe = false;
+let networkIntroState = {
+  active: false,
+  ownOwner: "player",
+  revealOpponent: false,
+  knownChoices: {
+    player: true,
+    computer: true,
+  },
+};
 const portraitVariantModes = ["human", "beast", "chibi"];
 const defaultPortraitVariantMode = "human";
 const portraitVariantLabels = {
@@ -687,7 +1781,7 @@ const portraitVariantLabels = {
   beast: "幻獸版",
   chibi: "Q獸版",
 };
-const storedPortraitVariant = localStorage.getItem("hexSnakePortraitVariant");
+const storedPortraitVariant = UiStorage.get("hexSnakePortraitVariant");
 let portraitVariantMode = portraitVariantModes.includes(storedPortraitVariant)
   ? storedPortraitVariant
   : storedPortraitVariant === "full"
@@ -699,6 +1793,154 @@ let logoCountdownTimer = null;
 let logoTransitionSerial = 0;
 let startLogoCountdownPending = false;
 
+Object.defineProperties(UiGameState, {
+  rafId: {
+    get: () => rafId,
+    set: (value) => {
+      rafId = value;
+    },
+  },
+  restartUnlockAt: {
+    get: () => restartUnlockAt,
+    set: (value) => {
+      restartUnlockAt = value;
+    },
+  },
+});
+
+Object.defineProperties(UiPresentationState, {
+  portraitVariantMode: {
+    get: () => portraitVariantMode,
+  },
+  portraitVariantModes: {
+    get: () => portraitVariantModes,
+  },
+  defaultPortraitVariantMode: {
+    get: () => defaultPortraitVariantMode,
+  },
+  introDetailsOpen: {
+    get: () => introDetailsOpen,
+    set: (value) => {
+      introDetailsOpen = Boolean(value);
+    },
+  },
+  networkIntroState: {
+    get: () => networkIntroState,
+  },
+  perfStatsKey: {
+    get: () => perfStatsKey,
+  },
+  perfStatsVisible: {
+    get: () => perfStatsVisible,
+    set: (value) => {
+      perfStatsVisible = Boolean(value);
+    },
+  },
+  lastResultShareData: {
+    get: () => lastResultShareData,
+    set: (value) => {
+      lastResultShareData = value || null;
+    },
+  },
+  resultShareInProgress: {
+    get: () => resultShareInProgress,
+    set: (value) => {
+      resultShareInProgress = Boolean(value);
+    },
+  },
+  replayRecordCheckIntervalMs: {
+    get: () => replayRecordCheckIntervalMs,
+  },
+  lastReplayRecordCheckAt: {
+    get: () => lastReplayRecordCheckAt,
+    set: (value) => {
+      lastReplayRecordCheckAt = value;
+    },
+  },
+  selectedPortraitOwner: {
+    get: () => selectedPortraitOwner,
+    set: (value) => {
+      selectedPortraitOwner = value === "computer" ? "computer" : "player";
+    },
+  },
+  tutorialSwipeStartX: {
+    get: () => tutorialSwipeStartX,
+    set: (value) => {
+      tutorialSwipeStartX = value;
+    },
+  },
+  tutorialSwipeStartY: {
+    get: () => tutorialSwipeStartY,
+    set: (value) => {
+      tutorialSwipeStartY = value;
+    },
+  },
+  tutorialSwipePointerId: {
+    get: () => tutorialSwipePointerId,
+    set: (value) => {
+      tutorialSwipePointerId = value;
+    },
+  },
+  tutorialSwipeDidMove: {
+    get: () => tutorialSwipeDidMove,
+    set: (value) => {
+      tutorialSwipeDidMove = Boolean(value);
+    },
+  },
+  portraitSwipeStartX: {
+    get: () => portraitSwipeStartX,
+    set: (value) => {
+      portraitSwipeStartX = value;
+    },
+  },
+  portraitSwipeStartY: {
+    get: () => portraitSwipeStartY,
+    set: (value) => {
+      portraitSwipeStartY = value;
+    },
+  },
+  portraitSwipeOwner: {
+    get: () => portraitSwipeOwner,
+    set: (value) => {
+      portraitSwipeOwner =
+        value === "computer" || value === "player" ? value : null;
+    },
+  },
+  portraitInfoSwipeStartX: {
+    get: () => portraitInfoSwipeStartX,
+    set: (value) => {
+      portraitInfoSwipeStartX = value;
+    },
+  },
+  portraitInfoSwipeStartY: {
+    get: () => portraitInfoSwipeStartY,
+    set: (value) => {
+      portraitInfoSwipeStartY = value;
+    },
+  },
+  portraitIntroDidSwipe: {
+    get: () => portraitIntroDidSwipe,
+    set: (value) => {
+      portraitIntroDidSwipe = Boolean(value);
+    },
+  },
+  portraitLightboxDidSwipe: {
+    get: () => portraitLightboxDidSwipe,
+    set: (value) => {
+      portraitLightboxDidSwipe = Boolean(value);
+    },
+  },
+  startLogoCountdownPending: {
+    get: () => startLogoCountdownPending,
+    set: (value) => {
+      startLogoCountdownPending = Boolean(value);
+    },
+  },
+  logoTransitionDurationMs: {
+    get: () => logoTransitionDurationMs,
+  },
+});
+
 function fighterArt(
   character,
   pose = "idle",
@@ -709,17 +1951,17 @@ function fighterArt(
   const loadMode = portrait || pose === "attack" ? "eager" : "lazy";
   const initialSize = variant === "small" ? "sm" : "md";
   const src = portrait
-    ? portraitUrl(character, pose, initialSize)
-    : avatarUrl(character, initialSize);
+    ? UiRegistry.portraitUrl(character, pose, initialSize)
+    : UiRegistry.avatarUrl(character, initialSize);
   const srcset = portrait
-    ? portraitSrcset(character, pose)
-    : avatarSrcset(character);
+    ? UiRegistry.portraitSrcset(character, pose)
+    : UiRegistry.avatarSrcset(character);
   return `
         <img
           class="${imageClass}"
           src="${src}"
           srcset="${srcset}"
-          sizes="${portraitSizesAttribute(variant)}"
+          sizes="${UiRegistry.portraitSizesAttribute(variant)}"
           alt="${character.name}"
           decoding="async"
           loading="${loadMode}"
@@ -734,8 +1976,8 @@ function fighterPortraitImage(character, pose = "idle") {
   return `
         <img
           class="fighter-avatar-image portrait"
-          src="${avatarUrl(character, "sm")}"
-          srcset="${avatarSrcset(character)}"
+          src="${UiRegistry.avatarUrl(character, "sm")}"
+          srcset="${UiRegistry.avatarSrcset(character)}"
           sizes="72px"
           alt="${character.name}"
           decoding="async"
@@ -761,8 +2003,8 @@ function updateFighterPortraitImage(module, character, pose = "idle") {
     module.innerHTML = fighterPortraitImage(character, pose);
     return;
   }
-  const src = avatarUrl(character, "sm");
-  const srcset = avatarSrcset(character);
+  const src = UiRegistry.avatarUrl(character, "sm");
+  const srcset = UiRegistry.avatarSrcset(character);
   setImageAttributeIfChanged(image, "src", src);
   setImageAttributeIfChanged(image, "srcset", srcset);
   setImageAttributeIfChanged(image, "sizes", "72px");
@@ -775,7 +2017,7 @@ function updateFighterPortraitImage(module, character, pose = "idle") {
 
 function characterStyle(character, owner = null) {
   const ownerVars = owner
-    ? `--owner-color:${ownerMeta(owner).color};--owner-line:${ownerMeta(owner).line};`
+    ? `--owner-color:${UiRegistry.ownerMeta(owner).color};--owner-line:${UiRegistry.ownerMeta(owner).line};`
     : "";
   return `--fighter-color:${character.color};--fighter-line:${character.line};--fighter-accent:${character.accent};${ownerVars}`;
 }
@@ -832,12 +2074,15 @@ function characterStoryMarkup(character) {
   return `${motto}${moves}${story}`;
 }
 
-function formatIntroMotto(motto) {
+function formatIntroMotto(motto, options = {}) {
   const text = String(motto || "")
     .trim()
     .replace(/\r\n?/g, "\n")
     .replace(/[ \t]+/g, " ")
     .replace(/\s*\n+\s*/g, "\n");
+  if (options.singleLine) {
+    return `<span class="intro-avatar-motto-line">「${text}」</span>`;
+  }
   const punctuation = /[，。！？；：、,.!?;:]/u;
   const segments = [];
   let segment = "";
@@ -859,7 +2104,7 @@ function formatIntroMotto(motto) {
     .length;
   const splitUnit = (unit) => {
     const chars = [...String(unit || "").trim()];
-    if (chars.length <= 1) return [chars.join(""), ""];
+    if (chars.length <= 1) return [chars.join("")];
     const center = Math.ceil(chars.length / 2);
     let splitAt = center;
     while (splitAt < chars.length && punctuation.test(chars[splitAt])) {
@@ -892,6 +2137,7 @@ function formatIntroMotto(motto) {
           ];
         })();
   return lines
+    .filter(line => String(line || "").trim())
     .map((line, index) => {
       const prefix = index === 0 ? "「" : "　";
       const suffix = index === lines.length - 1 ? "」" : "　";
@@ -917,22 +2163,22 @@ function clearLogoTransitionTimers() {
 
 function clearLogoTransition() {
   clearLogoTransitionTimers();
-  overlay.classList.remove(...logoTransitionClassNames());
-  if (winnerPortrait.querySelector("[data-logo-transition]")) {
-    winnerPortrait.hidden = true;
-    winnerPortrait.innerHTML = "";
+  UiDom.overlay.classList.remove(...logoTransitionClassNames());
+  if (UiDom.winnerPortrait.querySelector("[data-logo-transition]")) {
+    UiDom.winnerPortrait.hidden = true;
+    UiDom.winnerPortrait.innerHTML = "";
   }
 }
 
 function isLogoTransitionActive() {
   return (
-    overlay.classList.contains("logo-transition") ||
+    UiDom.overlay.classList.contains("logo-transition") ||
     Boolean(logoTransitionTimer)
   );
 }
 
 function logoTransitionDirection() {
-  const node = winnerPortrait.querySelector("[data-logo-transition]");
+  const node = UiDom.winnerPortrait.querySelector("[data-logo-transition]");
   return node ? node.getAttribute("data-logo-transition") : null;
 }
 
@@ -1044,25 +2290,25 @@ function logoTransitionMessageMarkup(message = "") {
 function showLogoTransition(direction = "out", options = {}) {
   clearLogoTransitionTimers();
   const safeDirection = direction === "in" ? "in" : "out";
-  overlay.classList.remove(
+  UiDom.overlay.classList.remove(
     "intro-details",
     "tutorial-open",
     ...logoTransitionClassNames(),
   );
-  overlay.classList.add(
+  UiDom.overlay.classList.add(
     "show",
     "is-session-modal",
     "logo-transition",
     `logo-transition-${safeDirection}`,
   );
-  overlayTitle.hidden = true;
-  overlayText.hidden = true;
-  startButton.hidden = true;
-  computerBattleButton.hidden = true;
-  replayArchiveButton.hidden = true;
-  introCloseButton.hidden = true;
-  winnerPortrait.hidden = false;
-  winnerPortrait.innerHTML = `
+  UiDom.overlayTitle.hidden = true;
+  UiDom.overlayText.hidden = true;
+  UiDom.startButton.hidden = true;
+  UiDom.computerBattleButton.hidden = true;
+  UiDom.replayArchiveButton.hidden = true;
+  UiDom.introCloseButton.hidden = true;
+  UiDom.winnerPortrait.hidden = false;
+  UiDom.winnerPortrait.innerHTML = `
         <div class="logo-transition-card" data-logo-transition="${safeDirection}" aria-live="polite">
           <div class="logo-spiral-shell" aria-hidden="true">
             ${logoSpiralMarkup(safeDirection)}
@@ -1079,7 +2325,7 @@ function showLogoTransition(direction = "out", options = {}) {
 function playStartLogoCountdown() {
   if (isLogoTransitionActive()) return Promise.resolve(false);
   showLogoTransition("out", { countdown: true });
-  const countdownEl = winnerPortrait.querySelector("[data-logo-countdown]");
+  const countdownEl = UiDom.winnerPortrait.querySelector("[data-logo-countdown]");
   const startedAt = performance.now();
   logoCountdownTimer = setInterval(() => {
     const remaining = Math.max(
@@ -1114,9 +2360,9 @@ function foodIconGroupMarkup(typeIds, label) {
 let tutorialSlides = [];
 
 function buildTutorialSlides() {
-  const directionKeyText = keybinds.directions.map(keyLabel).join("/");
-  const smallKey = keyLabel(keybinds.smallAttack);
-  const bigKey = keyLabel(keybinds.bigAttack);
+  const directionKeyText = keybinds.directions.map(UiControls.keyLabel).join("/");
+  const smallKey = UiControls.keyLabel(keybinds.smallAttack);
+  const bigKey = UiControls.keyLabel(keybinds.bigAttack);
   const bigFoodCost = attackFoodCost("big");
   return [
     {
@@ -1191,8 +2437,8 @@ refreshTutorialSlides();
 let tutorialMoveCue = null;
 
 function tutorialCaptureCrop(type) {
-  const width = canvas.width || 1;
-  const height = canvas.height || 1;
+  const width = UiDom.canvas.width || 1;
+  const height = UiDom.canvas.height || 1;
   const shortSide = Math.min(width, height);
   if (type === "move") {
     return {
@@ -1220,10 +2466,10 @@ function tutorialCaptureCrop(type) {
 
 function tutorialCropPoint(cell, type) {
   const crop = tutorialCaptureCrop(type);
-  const point = axialToPixel(cell);
-  const rect = playArea.getBoundingClientRect();
-  const scaleX = rect.width ? canvas.width / rect.width : 1;
-  const scaleY = rect.height ? canvas.height / rect.height : 1;
+  const point = UiGame.axialToPixel(cell);
+  const rect = UiDom.playArea.getBoundingClientRect();
+  const scaleX = rect.width ? UiDom.canvas.width / rect.width : 1;
+  const scaleY = rect.height ? UiDom.canvas.height / rect.height : 1;
   const canvasPoint = {
     x: point.x * scaleX,
     y: point.y * scaleY,
@@ -1264,11 +2510,11 @@ function tutorialMoveArrowMarkup(cue) {
 
 function tutorialMoveFoodCell() {
   const head = snake?.[0] || { q: 0, r: 0 };
-  return nextWrappedCell(nextWrappedCell(head, 1), 1);
+  return UiGame.nextWrappedCell(UiGame.nextWrappedCell(head, 1), 1);
 }
 
 function tutorialCaptureUrl(type) {
-  if (!canvas.width || !canvas.height) return "";
+  if (!UiDom.canvas.width || !UiDom.canvas.height) return "";
   const now = performance.now();
   const originalBlasts = blasts;
   const originalFoods = foods;
@@ -1281,7 +2527,7 @@ function tutorialCaptureUrl(type) {
   try {
     if (type === "move" && snake?.[0]) {
       dir = 1;
-      snake = createStartingSnake(
+      snake = UiGame.createStartingSnake(
         { q: 0, r: 0 },
         dir,
         Math.max(3, defaultSettings.initialLength),
@@ -1299,7 +2545,7 @@ function tutorialCaptureUrl(type) {
     if (type === "small" && computerSnake?.[0]) {
       const hitHead = { q: 0, r: 0 };
       computerDir = 2;
-      computerSnake = createStartingSnake(
+      computerSnake = UiGame.createStartingSnake(
         hitHead,
         computerDir,
         Math.max(4, defaultSettings.initialLength + 1),
@@ -1307,7 +2553,7 @@ function tutorialCaptureUrl(type) {
       lastVisibleComputerSnake = computerSnake.map((segment) => ({
         ...segment,
       }));
-      snake = createStartingSnake(
+      snake = UiGame.createStartingSnake(
         { q: -2, r: 1 },
         1,
         Math.max(3, defaultSettings.initialLength),
@@ -1321,13 +2567,13 @@ function tutorialCaptureUrl(type) {
           target: { q: computerSnake[0].q, r: computerSnake[0].r },
           owner: "player",
           radius: Math.max(3.1, blastRadius(playerStock || initialStock) + 1.1),
-          visualType: attackVisualType("player", "small"),
+          visualType: UiGame.attackVisualType("player", "small"),
           startedAt: now - blastDurationMs * 0.02,
           endAt: now + blastDurationMs * 0.98,
         },
       ];
     }
-    draw();
+    UiRender.draw();
     const crop = tutorialCaptureCrop(type);
     const out = document.createElement("canvas");
     const targetWidth = Math.max(1, Math.round(crop.w));
@@ -1340,7 +2586,7 @@ function tutorialCaptureUrl(type) {
     outCtx.fillStyle = "#111720";
     outCtx.fillRect(0, 0, targetWidth, targetHeight);
     outCtx.drawImage(
-      canvas,
+      UiDom.canvas,
       crop.x,
       crop.y,
       crop.w,
@@ -1351,7 +2597,7 @@ function tutorialCaptureUrl(type) {
       targetHeight,
     );
     if (type === "small") {
-      const hitPoint = axialToPixel({ q: 0, r: 0 });
+      const hitPoint = UiGame.axialToPixel({ q: 0, r: 0 });
       const x = hitPoint.x - crop.x;
       const y = hitPoint.y - crop.y;
       const radiusPx = cellSize * 3.35;
@@ -1550,8 +2796,8 @@ function tutorialVisualMarkup(slide) {
 function renderTutorialSlide() {
   refreshTutorialSlides();
   const slide = tutorialSlides[tutorialStepIndex] || tutorialSlides[0];
-  winnerPortrait.hidden = false;
-  winnerPortrait.innerHTML = `
+  UiDom.winnerPortrait.hidden = false;
+  UiDom.winnerPortrait.innerHTML = `
         <div class="tutorial-card" role="group" tabindex="0" aria-label="新手教學 ${tutorialStepIndex + 1} / ${tutorialSlides.length}">
             <div class="tutorial-progress">${tutorialSlides.map((_, index) => `<span class="${index === tutorialStepIndex ? "is-active" : ""}"></span>`).join("")}</div>
           ${tutorialVisualMarkup(slide)}
@@ -1590,19 +2836,19 @@ function renderTutorialSlide() {
           </div>
         </div>
       `;
-  winnerPortrait.querySelector(".tutorial-card")?.focus();
+  UiDom.winnerPortrait.querySelector(".tutorial-card")?.focus();
 }
 
 function setTutorialChrome() {
-  overlay.classList.remove("intro-details");
-  overlay.classList.remove("is-session-modal");
-  overlay.classList.add("tutorial-open");
-  overlayTitle.hidden = true;
-  overlayText.hidden = true;
-  startButton.hidden = true;
-  computerBattleButton.hidden = true;
-  replayArchiveButton.hidden = true;
-  introCloseButton.hidden = true;
+  UiDom.overlay.classList.remove("intro-details");
+  UiDom.overlay.classList.remove("is-session-modal");
+  UiDom.overlay.classList.add("tutorial-open");
+  UiDom.overlayTitle.hidden = true;
+  UiDom.overlayText.hidden = true;
+  UiDom.startButton.hidden = true;
+  UiDom.computerBattleButton.hidden = true;
+  UiDom.replayArchiveButton.hidden = true;
+  UiDom.introCloseButton.hidden = true;
 }
 
 function showTutorial(startIndex = 0) {
@@ -1613,27 +2859,27 @@ function showTutorial(startIndex = 0) {
     Math.min(tutorialSlides.length - 1, startIndex),
   );
   setTutorialChrome();
-  overlay.classList.add("show");
-  characterStage.hidden = true;
+  UiDom.overlay.classList.add("show");
+  UiDom.characterStage.hidden = true;
   setCharacterStageOverlayMode(false);
   renderTutorialSlide();
 }
 
 function finishTutorial(markSeen = true) {
-  if (markSeen) localStorage.setItem(tutorialSeenKey, "1");
-  overlay.classList.remove("tutorial-open");
+  if (markSeen) UiStorage.set(tutorialSeenKey, "1");
+  UiDom.overlay.classList.remove("tutorial-open");
   renderIntroPortraits(false);
-  overlay.classList.add("show");
+  UiDom.overlay.classList.add("show");
 }
 
 function shouldShowTutorial() {
-  return localStorage.getItem(tutorialSeenKey) !== "1";
+  return UiStorage.get(tutorialSeenKey) !== "1";
 }
 
 function isTutorialOpen() {
   return (
-    overlay.classList.contains("show") &&
-    overlay.classList.contains("tutorial-open")
+    UiDom.overlay.classList.contains("show") &&
+    UiDom.overlay.classList.contains("tutorial-open")
   );
 }
 
@@ -1687,8 +2933,8 @@ function buildRulesContent() {
           <li style="${characterStyle(character)}">
             <span class="rules-character-avatar" aria-hidden="true">
               <img
-                src="${avatarUrl(character, "sm")}"
-                srcset="${avatarSrcset(character)}"
+                src="${UiRegistry.avatarUrl(character, "sm")}"
+                srcset="${UiRegistry.avatarSrcset(character)}"
                 sizes="58px"
                 alt=""
                 decoding="async"
@@ -1760,8 +3006,8 @@ function buildRulesContent() {
 }
 
 function openRulesModal() {
-  setSettingsOpen(false);
-  setGmOpen(false);
+  UiGame.setSettingsOpen(false);
+  UiGame.setGmOpen(false);
   rulesModal.hidden = false;
   rulesButton.setAttribute("aria-expanded", "true");
   rulesCloseButton.focus();
@@ -1773,66 +3019,102 @@ function closeRulesModal() {
   rulesButton.focus();
 }
 
+function setResultShareStatus(text = "", state = "") {
+  shareResultStatus.textContent = text;
+  shareResultStatus.hidden = !text;
+  resultSharePanel.hidden = !text;
+  if (state) shareResultStatus.dataset.state = state;
+  else delete shareResultStatus.dataset.state;
+}
+
+function updateResultSharePanel() {
+  const replayMode = typeof UiReplay.isPlaybackMode === "function" && UiReplay.isPlaybackMode();
+  const visible = Boolean(lastResultShareData) && gameOver && !replayMode && !UiDom.overlayTitle.hidden;
+  UiDom.overlayText.classList.toggle("is-copyable-result", visible && !resultShareInProgress);
+  if (visible) {
+    UiDom.overlayText.setAttribute("role", "button");
+    UiDom.overlayText.setAttribute("tabindex", "0");
+    UiDom.overlayText.setAttribute("title", "點擊複製對戰結果");
+    UiDom.overlayText.setAttribute("aria-label", `${UiDom.overlayText.textContent.trim()}。點擊複製對戰結果。`);
+  } else {
+    UiDom.overlayText.classList.remove("is-copyable-result");
+    UiDom.overlayText.removeAttribute("role");
+    UiDom.overlayText.removeAttribute("tabindex");
+    UiDom.overlayText.removeAttribute("title");
+    UiDom.overlayText.removeAttribute("aria-label");
+    setResultShareStatus("");
+  }
+}
+
+function setLastResultShareData(data) {
+  lastResultShareData = data || null;
+  if (!lastResultShareData) setResultShareStatus("");
+  updateResultSharePanel();
+}
+
 function setOverlayChromeVisible(visible) {
-  overlay.classList.remove(
+  UiDom.overlay.classList.remove(
     "intro-details",
     "tutorial-open",
     "is-session-modal",
     ...logoTransitionClassNames(),
   );
-  overlayTitle.hidden = !visible;
-  overlayText.hidden = !visible;
-  startButton.hidden = !visible;
-  computerBattleButton.hidden = !visible || (running && !gameOver);
-  replayArchiveButton.hidden = !visible;
-  introCloseButton.hidden = true;
+  UiDom.overlayTitle.hidden = !visible;
+  UiDom.overlayText.hidden = !visible;
+  UiDom.startButton.hidden = !visible;
+  UiDom.computerBattleButton.hidden = !visible || (running && !gameOver);
+  UiDom.replayArchiveButton.hidden = !visible;
+  UiDom.introCloseButton.hidden = true;
+  updateResultSharePanel();
 }
 
 function setIntroLobbyChrome() {
-  overlay.classList.remove(
+  UiDom.overlay.classList.remove(
     "intro-details",
     "tutorial-open",
     ...logoTransitionClassNames(),
   );
-  overlay.classList.add("is-session-modal");
-  overlayTitle.hidden = true;
-  overlayText.hidden = true;
-  startButton.hidden = false;
-  computerBattleButton.hidden = false;
-  replayArchiveButton.hidden = false;
-  introCloseButton.hidden = true;
-  startButton.textContent = "開始";
+  UiDom.overlay.classList.add("is-session-modal");
+  UiDom.overlayTitle.hidden = true;
+  UiDom.overlayText.hidden = true;
+  UiDom.startButton.hidden = false;
+  UiDom.computerBattleButton.hidden = false;
+  UiDom.replayArchiveButton.hidden = false;
+  UiDom.introCloseButton.hidden = true;
+  UiDom.startButton.textContent = "開始";
+  updateResultSharePanel();
 }
 
 function setIntroDetailsChrome() {
-  overlay.classList.add("intro-details");
-  overlay.classList.remove(
+  UiDom.overlay.classList.add("intro-details");
+  UiDom.overlay.classList.remove(
     "tutorial-open",
     "is-session-modal",
     ...logoTransitionClassNames(),
   );
-  overlayTitle.hidden = true;
-  overlayText.hidden = true;
-  startButton.hidden = true;
-  computerBattleButton.hidden = true;
-  replayArchiveButton.hidden = true;
-  introCloseButton.hidden = false;
+  UiDom.overlayTitle.hidden = true;
+  UiDom.overlayText.hidden = true;
+  UiDom.startButton.hidden = true;
+  UiDom.computerBattleButton.hidden = true;
+  UiDom.replayArchiveButton.hidden = true;
+  UiDom.introCloseButton.hidden = false;
+  updateResultSharePanel();
 }
 
 function setCharacterStageOverlayMode(active) {
-  characterStage.classList.toggle("is-overlay-visible", Boolean(active));
+  UiDom.characterStage.classList.toggle("is-overlay-visible", Boolean(active));
 }
 
 function buildCharacterStage(options = {}) {
-  characterStage.innerHTML = ["player", "computer"]
+  UiDom.characterStage.innerHTML = ["player", "computer"]
     .map((owner) => {
       const character = options.startLogoCharacters
-        ? startLogoCharacterFor(owner)
-        : characterFor(owner);
+        ? UiRegistry.startLogoCharacterFor(owner)
+        : UiRegistry.characterFor(owner);
       const holdHint = owner === "player" ? ' title="長按施放攻擊"' : "";
       return `
           <div class="fighter-card" data-owner="${owner}" style="${characterStyle(character, owner)}">
-            <div class="fighter-module ${owner === "player" ? "is-actionable" : ""}" data-module="${owner}" data-owner-mark="${ownerMeta(owner).mark}"${holdHint}>
+            <div class="fighter-module ${owner === "player" ? "is-actionable" : ""}" data-module="${owner}" data-owner-mark="${UiRegistry.ownerMeta(owner).mark}"${holdHint}>
               <div class="fighter-module-clip">
                 ${fighterPortraitImage(character, "idle")}
               </div>
@@ -1845,31 +3127,31 @@ function buildCharacterStage(options = {}) {
 }
 
 function showCharacterStage(options = {}) {
-  if (options.rebuild !== false || !characterStage.innerHTML) {
+  if (options.rebuild !== false || !UiDom.characterStage.innerHTML) {
     buildCharacterStage(options);
   }
-  characterStage.hidden = false;
+  UiDom.characterStage.hidden = false;
   setCharacterStageOverlayMode(options.overlay);
 }
 
 function hideCharacterStage() {
-  characterStage.hidden = true;
+  UiDom.characterStage.hidden = true;
   setCharacterStageOverlayMode(false);
 }
 
 function renderWinnerPortrait(owner, playerLost = false, computerLost = false) {
   setOverlayChromeVisible(true);
   if (!owner && !playerLost && !computerLost) {
-    winnerPortrait.hidden = true;
-    winnerPortrait.innerHTML = "";
-    characterStage.hidden = false;
+    UiDom.winnerPortrait.hidden = true;
+    UiDom.winnerPortrait.innerHTML = "";
+    UiDom.characterStage.hidden = false;
     setCharacterStageOverlayMode(false);
     return;
   }
   const playerPose = owner === "player" ? "victory" : "defeat";
   const computerPose = owner === "computer" ? "victory" : "defeat";
-  const playerCharacter = characterFor("player");
-  const computerCharacter = characterFor("computer");
+  const playerCharacter = UiRegistry.characterFor("player");
+  const computerCharacter = UiRegistry.characterFor("computer");
   const playerResult = owner
     ? owner === "player"
       ? "P1 勝利"
@@ -1880,20 +3162,20 @@ function renderWinnerPortrait(owner, playerLost = false, computerLost = false) {
       ? "P2 勝利"
       : "P2 敗北"
     : "P2 平手";
-  overlay.classList.add("is-session-modal");
-  winnerPortrait.hidden = false;
+  UiDom.overlay.classList.add("is-session-modal");
+  UiDom.winnerPortrait.hidden = false;
   hideCharacterStage();
-  winnerPortrait.innerHTML = `
+  UiDom.winnerPortrait.innerHTML = `
         <div class="portrait-pair result-pair">
           <div class="result-entry ${owner === "player" ? "is-winner" : ""} ${playerPose === "defeat" ? "is-defeated" : ""}" data-owner="player" data-result-owner="player" title="選擇 P1 角色" style="${characterStyle(playerCharacter, "player")}">
-            <div class="fighter-portrait result-portrait ${owner === "player" ? "is-winner" : ""} ${playerPose === "defeat" ? "is-defeated" : ""}" data-owner="player" data-owner-mark="${ownerMeta("player").mark}">
+            <div class="fighter-portrait result-portrait ${owner === "player" ? "is-winner" : ""} ${playerPose === "defeat" ? "is-defeated" : ""}" data-owner="player" data-owner-mark="${UiRegistry.ownerMeta("player").mark}">
               <span class="result-badge">${playerResult}</span>
               ${fighterArt(playerCharacter, playerPose, true)}
             </div>
             <span class="result-quote">「${resultLineForCharacter(playerCharacter, playerPose)}」</span>
           </div>
           <div class="result-entry ${owner === "computer" ? "is-winner" : ""} ${computerPose === "defeat" ? "is-defeated" : ""}" data-owner="computer" data-result-owner="computer" title="選擇 P2 角色" style="${characterStyle(computerCharacter, "computer")}">
-            <div class="fighter-portrait result-portrait ${owner === "computer" ? "is-winner" : ""} ${computerPose === "defeat" ? "is-defeated" : ""}" data-owner="computer" data-owner-mark="${ownerMeta("computer").mark}">
+            <div class="fighter-portrait result-portrait ${owner === "computer" ? "is-winner" : ""} ${computerPose === "defeat" ? "is-defeated" : ""}" data-owner="computer" data-owner-mark="${UiRegistry.ownerMeta("computer").mark}">
               <span class="result-badge">${computerResult}</span>
               ${fighterArt(computerCharacter, computerPose, true)}
             </div>
@@ -1903,48 +3185,109 @@ function renderWinnerPortrait(owner, playerLost = false, computerLost = false) {
       `;
 }
 
+function normalizeNetworkIntroState(state = {}) {
+  const ownOwner = state.ownOwner === "computer" ? "computer" : "player";
+  return {
+    active: Boolean(state.active),
+    ownOwner,
+    revealOpponent: Boolean(state.revealOpponent),
+    knownChoices: {
+      player: state.knownChoices?.player !== false,
+      computer: state.knownChoices?.computer !== false,
+    },
+  };
+}
+
+function setNetworkIntroState(state = {}) {
+  networkIntroState = normalizeNetworkIntroState(state);
+  if (
+    UiDom.overlay.classList.contains("show") &&
+    !UiDom.winnerPortrait.hidden &&
+    !UiDom.winnerPortrait.querySelector("[data-result-owner]") &&
+    !isLogoTransitionActive()
+  ) {
+    renderIntroPortraits(introDetailsOpen);
+  }
+}
+
+function isNetworkOpponentOwner(owner) {
+  return networkIntroState.active && owner !== networkIntroState.ownOwner;
+}
+
+function shouldHideNetworkOwner(owner) {
+  if (!isNetworkOpponentOwner(owner)) return false;
+  return !networkIntroState.revealOpponent || networkIntroState.knownChoices[owner] === false;
+}
+
+function networkHiddenPortraitMarkup(owner) {
+  return `
+        <div class="fighter-portrait is-random is-network-hidden" data-owner="${owner}" data-owner-mark="${UiRegistry.ownerMeta(owner).mark}" style="${characterStyle({
+          color: UiRegistry.ownerMeta(owner).color,
+          line: UiRegistry.ownerMeta(owner).line,
+          accent: "#fbbf24",
+        }, owner)}">
+          <span class="fighter-avatar-image random-portrait-mark" aria-hidden="true">?</span>
+        </div>
+      `;
+}
+
 function renderIntroPortraits(showDetails = introDetailsOpen) {
   introDetailsOpen = showDetails;
+  if (networkIntroState.active && selectedPortraitOwner !== networkIntroState.ownOwner) {
+    selectedPortraitOwner = networkIntroState.ownOwner;
+  }
   if (showDetails) setIntroDetailsChrome();
   else setIntroLobbyChrome();
-  const selectedCharacter = selectedCharacterFor(selectedPortraitOwner);
-  winnerPortrait.hidden = false;
+  const selectedCharacter = UiRegistry.selectedCharacterFor(selectedPortraitOwner);
+  UiDom.winnerPortrait.hidden = false;
   hideCharacterStage();
-  characterStage.innerHTML = "";
+  UiDom.characterStage.innerHTML = "";
   if (!showDetails) {
-    winnerPortrait.innerHTML = `
+    UiDom.winnerPortrait.innerHTML = `
           <div class="intro-avatar-gate">
             ${["player", "computer"]
               .map((owner) => {
-                const character = selectedCharacterFor(owner);
-                const isRandomChoice = isRandomCharacterChoice(owner);
+                const hideNetworkOwner = shouldHideNetworkOwner(owner);
+                const networkLocked = isNetworkOpponentOwner(owner);
+                const character = hideNetworkOwner ? null : UiRegistry.selectedCharacterFor(owner);
+                const isRandomChoice = UiRegistry.isRandomCharacterChoice(owner);
                 const logoCharacter = isRandomChoice
                   ? null
-                  : startLogoCharacterFor(owner);
+                  : UiRegistry.startLogoCharacterFor(owner);
                 const label = owner === "player" ? "P1" : "P2";
-                const motto = character?.motto || "機緣一轉，百人角色待君擇。\n心念既定，千道關卡隨我闖。";
+                const displayName = hideNetworkOwner
+                  ? "?"
+                  : character
+                    ? character.name
+                    : "隨機選擇";
+                const motto = hideNetworkOwner
+                  ? "?"
+                  : character?.motto || "開局抽選，答案稍後揭曉。";
+                const introAttrs = networkLocked
+                  ? `aria-label="${label} 角色由對手選擇" aria-disabled="true"`
+                  : `role="button" tabindex="0" data-open-intro="${owner}" aria-label="開啟${label}角色選擇"`;
                 return `
-                <div class="intro-avatar-button" role="button" tabindex="0" data-owner="${owner}" data-open-intro="${owner}" style="${characterStyle(
-                  character || {
-                    color: ownerMeta(owner).color,
-                    line: ownerMeta(owner).line,
+                <div class="intro-avatar-button ${networkLocked ? "is-network-locked" : ""}" data-owner="${owner}" style="${characterStyle(
+                   character || {
+                     color: UiRegistry.ownerMeta(owner).color,
+                     line: UiRegistry.ownerMeta(owner).line,
                     accent: "#fbbf24",
-                  },
-                  owner,
-                )}" aria-label="開啟${label}角色選擇">
+                   },
+                   owner,
+                )}" ${introAttrs}>
                   <div class="portrait-card-controls" data-portrait-swipe-owner="${owner}">
-                    ${character ? `<div class="fighter-portrait" data-owner="${owner}" data-owner-mark="${ownerMeta(owner).mark}">${fighterArt(character, "intro", true, "small")}</div>` : randomPortraitMarkup(owner)}
+                    ${hideNetworkOwner ? networkHiddenPortraitMarkup(owner) : character ? `<div class="fighter-portrait" data-owner="${owner}" data-owner-mark="${UiRegistry.ownerMeta(owner).mark}">${fighterArt(character, "intro", true, "small")}</div>` : UiRegistry.randomPortraitMarkup(owner)}
                   </div>
                   <div class="portrait-label-controls intro-avatar-label-controls">
-                    <button class="secondary portrait-arrow portrait-label-arrow" type="button" data-portrait-owner="${owner}" data-portrait-shift="-1" aria-label="${ownerMeta(owner).label} 上一位">‹</button>
-                    <span class="intro-avatar-label"><span class="owner-name ${owner === "player" ? "is-p1" : "is-p2"}">${ownerMeta(owner).label}</span> · ${character ? character.name : "隨機選擇"}</span>
-                    <button class="secondary portrait-arrow portrait-label-arrow" type="button" data-portrait-owner="${owner}" data-portrait-shift="1" aria-label="${ownerMeta(owner).label} 下一位">›</button>
+                    ${networkLocked ? "" : `<button class="secondary portrait-arrow portrait-label-arrow" type="button" data-portrait-owner="${owner}" data-portrait-shift="-1" aria-label="${UiRegistry.ownerMeta(owner).label} 上一位">‹</button>`}
+                    <span class="intro-avatar-label"><span class="owner-name ${owner === "player" ? "is-p1" : "is-p2"}">${UiRegistry.ownerMeta(owner).label}</span> · ${displayName}</span>
+                    ${networkLocked ? "" : `<button class="secondary portrait-arrow portrait-label-arrow" type="button" data-portrait-owner="${owner}" data-portrait-shift="1" aria-label="${UiRegistry.ownerMeta(owner).label} 下一位">›</button>`}
                   </div>
-                  <p class="intro-avatar-motto ${character ? "" : "is-placeholder"}">${formatIntroMotto(motto)}</p>
+                  <p class="intro-avatar-motto ${character && !hideNetworkOwner ? "" : "is-placeholder"}">${formatIntroMotto(motto, { singleLine: !character || hideNetworkOwner })}</p>
                   ${
-                    isRandomChoice
+                    hideNetworkOwner || isRandomChoice
                       ? `<span class="intro-avatar-logo" aria-hidden="true"><span class="random-portrait-mark intro-avatar-logo-mark">?</span></span>`
-                      : `<span class="intro-avatar-logo" aria-hidden="true"><img src="${avatarUrl(logoCharacter, "sm")}" srcset="${avatarSrcset(logoCharacter)}" sizes="52px" alt="${logoCharacter.name} 頭像" decoding="async" loading="lazy"></span>`
+                      : `<span class="intro-avatar-logo" aria-hidden="true"><img src="${UiRegistry.avatarUrl(logoCharacter, "sm")}" srcset="${UiRegistry.avatarSrcset(logoCharacter)}" sizes="52px" alt="${logoCharacter.name} 頭像" decoding="async" loading="lazy"></span>`
                   }
                 </div>
               `;
@@ -1954,29 +3297,39 @@ function renderIntroPortraits(showDetails = introDetailsOpen) {
         `;
     return;
   }
-  winnerPortrait.innerHTML = `
+  UiDom.winnerPortrait.innerHTML = `
         <div class="portrait-select" data-portrait-select>
           <div class="portrait-pair">
           ${["player", "computer"]
             .map((owner) => {
-              const character = selectedCharacterFor(owner);
+              const hideNetworkOwner = shouldHideNetworkOwner(owner);
+              const networkLocked = isNetworkOpponentOwner(owner);
+              const character = hideNetworkOwner ? null : UiRegistry.selectedCharacterFor(owner);
               const label = owner === "player" ? "P1" : "P2";
+              const displayName = hideNetworkOwner
+                ? "?"
+                : character
+                  ? character.name
+                  : "隨機選擇";
+              const optionAttrs = networkLocked
+                ? `aria-label="${label} 角色由對手選擇" aria-disabled="true"`
+                : `role="button" tabindex="0" data-portrait-owner="${owner}"`;
               return `
-                <div class="portrait-option ${owner === selectedPortraitOwner ? "is-selected" : ""}" role="button" tabindex="0" data-owner="${owner}" data-portrait-owner="${owner}" style="${characterStyle(
-                  character || {
-                    color: ownerMeta(owner).color,
-                    line: ownerMeta(owner).line,
+                <div class="portrait-option ${owner === selectedPortraitOwner ? "is-selected" : ""} ${networkLocked ? "is-network-locked" : ""}" data-owner="${owner}" ${optionAttrs} style="${characterStyle(
+                   character || {
+                     color: UiRegistry.ownerMeta(owner).color,
+                     line: UiRegistry.ownerMeta(owner).line,
                     accent: "#fbbf24",
                   },
                   owner,
                 )}">
                 <div class="portrait-card-controls" data-portrait-swipe-owner="${owner}">
-                  ${character ? `<div class="fighter-portrait" data-owner="${owner}" data-owner-mark="${ownerMeta(owner).mark}" data-full-portrait="${owner}">${fighterArt(character, "intro", true, "small")}</div>` : randomPortraitMarkup(owner)}
+                  ${hideNetworkOwner ? networkHiddenPortraitMarkup(owner) : character ? `<div class="fighter-portrait" data-owner="${owner}" data-owner-mark="${UiRegistry.ownerMeta(owner).mark}" data-full-portrait="${owner}">${fighterArt(character, "intro", true, "small")}</div>` : UiRegistry.randomPortraitMarkup(owner)}
                 </div>
                 <div class="portrait-label-controls">
-                  <button class="secondary portrait-arrow portrait-label-arrow" type="button" data-portrait-owner="${owner}" data-portrait-shift="-1" aria-label="${ownerMeta(owner).label} 上一位">‹</button>
-                  <span class="portrait-option-label"><span class="owner-name ${owner === "player" ? "is-p1" : "is-p2"}">${ownerMeta(owner).label}</span> · ${character ? character.name : "隨機選擇"}</span>
-                  <button class="secondary portrait-arrow portrait-label-arrow" type="button" data-portrait-owner="${owner}" data-portrait-shift="1" aria-label="${ownerMeta(owner).label} 下一位">›</button>
+                  ${networkLocked ? "" : `<button class="secondary portrait-arrow portrait-label-arrow" type="button" data-portrait-owner="${owner}" data-portrait-shift="-1" aria-label="${UiRegistry.ownerMeta(owner).label} 上一位">‹</button>`}
+                  <span class="portrait-option-label"><span class="owner-name ${owner === "player" ? "is-p1" : "is-p2"}">${UiRegistry.ownerMeta(owner).label}</span> · ${displayName}</span>
+                  ${networkLocked ? "" : `<button class="secondary portrait-arrow portrait-label-arrow" type="button" data-portrait-owner="${owner}" data-portrait-shift="1" aria-label="${UiRegistry.ownerMeta(owner).label} 下一位">›</button>`}
                 </div>
               </div>
             `;
@@ -1987,8 +3340,8 @@ function renderIntroPortraits(showDetails = introDetailsOpen) {
             <button class="secondary portrait-arrow" type="button" data-portrait-shift="-1" aria-label="上一位" onclick="applySelectedPortraitCharacter(-1)">‹</button>
             <div class="portrait-copy" style="${characterStyle(
               selectedCharacter || {
-                color: ownerMeta(selectedPortraitOwner).color,
-                line: ownerMeta(selectedPortraitOwner).line,
+                color: UiRegistry.ownerMeta(selectedPortraitOwner).color,
+                line: UiRegistry.ownerMeta(selectedPortraitOwner).line,
                 accent: "#fbbf24",
               },
               selectedPortraitOwner,
@@ -2025,28 +3378,31 @@ function setPortraitCharacterForOwner(
   if (selectedPortraitOwner === "player") {
     playerCharacterChoice = characterId;
     if (characterId === randomCharacterChoiceId) {
-      ensureStartLogoRandomCharacterId(selectedPortraitOwner);
+      UiRegistry.ensureStartLogoRandomCharacterId(selectedPortraitOwner);
     } else {
       playerCharacterId = characterId;
-      clearStartLogoRandomCharacterId(selectedPortraitOwner);
+      UiRegistry.clearStartLogoRandomCharacterId(selectedPortraitOwner);
     }
   } else {
     computerCharacterChoice = characterId;
     if (characterId === randomCharacterChoiceId) {
-      ensureStartLogoRandomCharacterId(selectedPortraitOwner);
+      UiRegistry.ensureStartLogoRandomCharacterId(selectedPortraitOwner);
     } else {
       computerCharacterId = characterId;
-      clearStartLogoRandomCharacterId(selectedPortraitOwner);
+      UiRegistry.clearStartLogoRandomCharacterId(selectedPortraitOwner);
     }
   }
-  syncCharacterInputs();
-  saveCharacterChoices();
+  UiRegistry.syncCharacterInputs();
+  UiRegistry.saveCharacterChoices();
   if (characterId !== randomCharacterChoiceId)
-    preloadPortraitsFor(selectedPortraitOwner);
+    UiRegistry.preloadPortraitsFor(selectedPortraitOwner);
   renderIntroPortraits(showDetails);
-  resize();
+  UiGame.resize();
+  if (typeof UiRegistry.onPortraitChoiceChanged === "function") {
+    UiRegistry.onPortraitChoiceChanged(selectedPortraitOwner);
+  }
   if (characterId !== randomCharacterChoiceId) {
-    HexSnakeAudio.playCharacter(owner, "select", {
+    UiAudio.playCharacter(owner, "select", {
       character: characterById.get(characterId),
       unlock: true,
     });
@@ -2059,7 +3415,7 @@ function setSelectedPortraitCharacter(characterId) {
 
 function applyPortraitCharacter(owner, delta, showDetails = introDetailsOpen) {
   const safeOwner = owner === "computer" ? "computer" : "player";
-  const currentId = characterChoiceFor(safeOwner);
+  const currentId = UiRegistry.characterChoiceFor(safeOwner);
   const choices = [
     randomCharacterChoiceId,
     ...characters.map((character) => character.id),
@@ -2075,20 +3431,20 @@ function applySelectedPortraitCharacter(delta) {
 }
 
 function renderPortraitLightbox() {
-  const character = characterFor(portraitLightboxOwner);
-  portraitLightboxImage.src = portraitUrl(character, "intro", "md");
-  portraitLightboxImage.srcset = portraitSrcset(character, "intro");
-  portraitLightboxImage.sizes = portraitSizesAttribute("full");
-  portraitLightboxImage.alt = character.name;
-  portraitLightboxImage.dataset.characterId = character.id;
-  portraitLightboxImage.dataset.portraitVariant = portraitVariantMode;
-  portraitLightboxCaption.textContent = `${ownerMeta(portraitLightboxOwner).label} / ${character.name} / ${portraitVariantLabels[portraitVariantMode] || portraitVariantMode}`;
+  const character = UiRegistry.characterFor(portraitLightboxOwner);
+  UiDom.portraitLightboxImage.src = UiRegistry.portraitUrl(character, "intro", "md");
+  UiDom.portraitLightboxImage.srcset = UiRegistry.portraitSrcset(character, "intro");
+  UiDom.portraitLightboxImage.sizes = UiRegistry.portraitSizesAttribute("full");
+  UiDom.portraitLightboxImage.alt = character.name;
+  UiDom.portraitLightboxImage.dataset.characterId = character.id;
+  UiDom.portraitLightboxImage.dataset.portraitVariant = portraitVariantMode;
+  UiDom.portraitLightboxCaption.textContent = `${UiRegistry.ownerMeta(portraitLightboxOwner).label} / ${character.name} / ${portraitVariantLabels[portraitVariantMode] || portraitVariantMode}`;
   updatePortraitVariantButtons();
 }
 
 function updatePortraitVariantButtons() {
   const currentIndex = portraitVariantModes.indexOf(portraitVariantMode);
-  portraitLightboxVariantButtons.forEach((button) => {
+  UiDom.portraitLightboxVariantButtons.forEach((button) => {
     const delta = button.dataset.portraitLightboxDirection === "up" ? -1 : 1;
     const nextMode =
       portraitVariantModes[
@@ -2105,21 +3461,21 @@ function updatePortraitVariantButtons() {
 
 function rerenderPortraitSurfaces() {
   if (isLogoTransitionActive()) return;
-  if (!characterStage.hidden) buildCharacterStage();
-  if (!portraitLightbox.hidden) renderPortraitLightbox();
-  if (overlay.classList.contains("show") && !winnerPortrait.hidden) {
-    const resultPortraits = winnerPortrait.querySelectorAll(
+  if (!UiDom.characterStage.hidden) buildCharacterStage();
+  if (!UiDom.portraitLightbox.hidden) renderPortraitLightbox();
+  if (UiDom.overlay.classList.contains("show") && !UiDom.winnerPortrait.hidden) {
+    const resultPortraits = UiDom.winnerPortrait.querySelectorAll(
       "[data-result-owner]",
     );
     if (resultPortraits.length) {
-      const playerResult = winnerPortrait.querySelector(
+      const playerResult = UiDom.winnerPortrait.querySelector(
         '[data-result-owner="player"]',
       );
-      const computerResult = winnerPortrait.querySelector(
+      const computerResult = UiDom.winnerPortrait.querySelector(
         '[data-result-owner="computer"]',
       );
       const winner =
-        winnerPortrait.querySelector(".result-entry.is-winner")?.dataset
+        UiDom.winnerPortrait.querySelector(".result-entry.is-winner")?.dataset
           .resultOwner || null;
       renderWinnerPortrait(
         winner,
@@ -2141,10 +3497,10 @@ function setPortraitVariantMode(mode) {
         : defaultPortraitVariantMode;
   if (portraitVariantMode === nextMode) return;
   portraitVariantMode = nextMode;
-  localStorage.setItem("hexSnakePortraitVariant", portraitVariantMode);
+  UiStorage.set("hexSnakePortraitVariant", portraitVariantMode);
   rerenderPortraitSurfaces();
-  preloadPortraitsFor("player");
-  preloadPortraitsFor("computer");
+  UiRegistry.preloadPortraitsFor("player");
+  UiRegistry.preloadPortraitsFor("computer");
 }
 
 function togglePortraitVariantMode() {
@@ -2168,13 +3524,13 @@ function openPortraitLightbox(owner) {
   portraitLightboxOwner = owner === "computer" ? "computer" : "player";
   selectedPortraitOwner = portraitLightboxOwner;
   renderPortraitLightbox();
-  portraitLightbox.hidden = false;
+  UiDom.portraitLightbox.hidden = false;
 }
 
 function shiftPortraitLightbox(delta) {
   selectedPortraitOwner = portraitLightboxOwner;
   const choices = characters.map((character) => character.id);
-  const currentId = characterFor(selectedPortraitOwner).id;
+  const currentId = UiRegistry.characterFor(selectedPortraitOwner).id;
   const currentIndex = Math.max(0, choices.indexOf(currentId));
   const nextChoice =
     choices[(currentIndex + delta + choices.length) % choices.length];
@@ -2183,14 +3539,14 @@ function shiftPortraitLightbox(delta) {
 }
 
 function closePortraitLightbox() {
-  portraitLightbox.hidden = true;
-  portraitLightboxImage.removeAttribute("src");
-  portraitLightboxImage.removeAttribute("srcset");
-  portraitLightboxImage.removeAttribute("sizes");
-  portraitLightboxImage.alt = "";
-  delete portraitLightboxImage.dataset.characterId;
-  delete portraitLightboxImage.dataset.portraitVariant;
-  portraitLightboxCaption.textContent = "";
+  UiDom.portraitLightbox.hidden = true;
+  UiDom.portraitLightboxImage.removeAttribute("src");
+  UiDom.portraitLightboxImage.removeAttribute("srcset");
+  UiDom.portraitLightboxImage.removeAttribute("sizes");
+  UiDom.portraitLightboxImage.alt = "";
+  delete UiDom.portraitLightboxImage.dataset.characterId;
+  delete UiDom.portraitLightboxImage.dataset.portraitVariant;
+  UiDom.portraitLightboxCaption.textContent = "";
 }
 
 function resultLineForCharacter(character, pose) {
@@ -2200,9 +3556,9 @@ function resultLineForCharacter(character, pose) {
 }
 
 function setFighterPose(owner, pose, duration = 0) {
-  const module = characterStage.querySelector(`[data-module="${owner}"]`);
+  const module = UiDom.characterStage.querySelector(`[data-module="${owner}"]`);
   if (!module) return;
-  const character = characterFor(owner);
+  const character = UiRegistry.characterFor(owner);
   updateFighterPortraitImage(module, character, pose);
   clearTimeout(portraitPoseTimers[owner]);
   if (duration > 0) {
@@ -2213,7 +3569,7 @@ function setFighterPose(owner, pose, duration = 0) {
 }
 
 function showFighterCallout(owner, text, options = {}) {
-  const callout = characterStage.querySelector(
+  const callout = UiDom.characterStage.querySelector(
     `[data-attack-callout="${owner}"]`,
   );
   if (!callout || !text) return;
@@ -2251,7 +3607,7 @@ function showFighterCallout(owner, text, options = {}) {
 }
 
 function showAttackCallout(owner, profile) {
-  const character = characterFor(owner);
+  const character = UiRegistry.characterFor(owner);
   showFighterCallout(
     owner,
     profile === "small" ? character.smallMove : character.bigMove,
@@ -2277,15 +3633,19 @@ function showStatusCallout(owner, text, options = {}) {
 }
 
 function showResultCallout(owner, pose) {
-  showFighterCallout(owner, resultLineForCharacter(characterFor(owner), pose), {
+  showFighterCallout(owner, resultLineForCharacter(UiRegistry.characterFor(owner), pose), {
     kind: pose === "victory" ? "victory" : "defeat",
     duration: null,
     locked: true,
   });
 }
 
+function clearFighterCallouts() {
+  lockedFighterCallouts.clear();
+}
+
 function buildResourceHud() {
-  resourceBoard.innerHTML = "";
+  UiDom.resourceBoard.innerHTML = "";
   resourceEls = new Map();
   [
     { owner: "player", title: "P1", color: colors.head },
@@ -2298,16 +3658,16 @@ function buildResourceHud() {
           <div class="resource-title">
             <span class="resource-owner"><span class="owner-name ${group.owner === "player" ? "is-p1" : "is-p2"}">${group.title}</span></span>
             <span class="resource-counters" data-total="${group.owner}">
-              <span class="resource-chip" data-resource="energy" data-energy-chip="${group.owner}" title="?賡?">
+              <span class="resource-chip" data-resource="energy" data-energy-chip="${group.owner}" title="能量">
                 <span class="resource-icon energy-icon" aria-hidden="true"></span>
-                <span class="resource-chip-track" data-energy-track="${group.owner}" role="meter" aria-label="?賡?" aria-valuemin="0">
+                <span class="resource-chip-track" data-energy-track="${group.owner}" role="meter" aria-label="能量" aria-valuemin="0">
                   <span class="resource-chip-fill" data-energy-fill="${group.owner}"></span>
                 </span>
                 <span class="resource-chip-value" data-energy-value="${group.owner}">0/0</span>
               </span>
-              <span class="resource-chip" data-resource="bomb" data-bomb-chip="${group.owner}" title="?詨?">
+              <span class="resource-chip" data-resource="bomb" data-bomb-chip="${group.owner}" title="炸彈">
                 <span class="resource-icon missile-icon" aria-hidden="true"></span>
-                <span class="resource-chip-track" data-bomb-track="${group.owner}" role="meter" aria-label="?詨?" aria-valuemin="0">
+                <span class="resource-chip-track" data-bomb-track="${group.owner}" role="meter" aria-label="炸彈" aria-valuemin="0">
                   <span class="resource-chip-fill" data-bomb-fill="${group.owner}"></span>
                 </span>
                 <span class="resource-chip-value" data-bomb-value="${group.owner}">0/0</span>
@@ -2327,13 +3687,13 @@ function buildResourceHud() {
           `;
       panel.append(row);
     });
-    resourceBoard.append(panel);
+    UiDom.resourceBoard.append(panel);
   });
-  resourceBoard.querySelectorAll("[data-count], [data-fill]").forEach((el) => {
+  UiDom.resourceBoard.querySelectorAll("[data-count], [data-fill]").forEach((el) => {
     if (el.dataset.count) resourceEls.set(`${el.dataset.count}-count`, el);
     if (el.dataset.fill) resourceEls.set(`${el.dataset.fill}-fill`, el);
   });
-  resourceBoard
+  UiDom.resourceBoard
     .querySelectorAll(
       "[data-energy-chip], [data-energy-track], [data-energy-fill], [data-energy-value], [data-bomb-chip], [data-bomb-track], [data-bomb-fill], [data-bomb-value]",
     )
@@ -2345,6 +3705,54 @@ function buildResourceHud() {
     });
 }
 
+Object.assign(UiRegistry, {
+  applyPortraitCharacter,
+  buildCharacterStage,
+  buildResourceHud,
+  buildRulesContent,
+  clearLogoTransition,
+  closePortraitLightbox,
+  closeRulesModal,
+  finishTutorial,
+  characterFallbackId,
+  characterForId,
+  characterList,
+  hasCharacterCatalog,
+  hasCharacterId,
+  hideCharacterStage,
+  isLogoTransitionActive,
+  isRandomCharacterChoiceId,
+  isSelectableCharacterChoiceId,
+  isTutorialOpen,
+  logoTransitionDirection,
+  moveTutorial,
+  openPortraitLightbox,
+  openRulesModal,
+  playStartLogoCountdown,
+  renderIntroPortraits,
+  renderWinnerPortrait,
+  randomCharacterChoiceId,
+  selectPortraitOwner,
+  setCharacterCatalog,
+  setCharacterStageOverlayMode,
+  setFighterPose,
+  setLastResultShareData,
+  setNetworkIntroState,
+  setOverlayChromeVisible,
+  setResultShareStatus,
+  shiftPortraitLightbox,
+  shiftPortraitVariantMode,
+  shouldShowTutorial,
+  showAttackCallout,
+  showCharacterStage,
+  showLogoTransition,
+  showResultCallout,
+  showStatusCallout,
+  showTutorial,
+  clearFighterCallouts,
+  updateResultSharePanel,
+});
+
 function emptyStock() {
   return Object.fromEntries(foodTypes.map((type) => [type.id, 0]));
 }
@@ -2354,20 +3762,20 @@ function startingStock() {
   return Object.fromEntries(
     foodTypes.map((type) => [
       type.id,
-      clampInitialStock(initialStock[type.id]),
+      UiGame.clampInitialStock(initialStock[type.id]),
     ]),
   );
 }
 
 function startingEnergy() {
   return gmMode
-    ? clampInitialEnergy(initialEnergy)
+    ? UiGame.clampInitialEnergy(initialEnergy)
     : defaultSettings.initialEnergy;
 }
 
 function startingBombs() {
   return gmMode
-    ? clampInitialBombs(initialBombs)
+    ? UiGame.clampInitialBombs(initialBombs)
     : defaultSettings.initialBombs;
 }
 
@@ -2436,7 +3844,7 @@ function moveInterval(stock) {
 function moveIntervalFor(owner, now) {
   const stock = owner === "player" ? playerStock : computerStock;
   const slowUntil = owner === "player" ? playerSlowUntil : computerSlowUntil;
-  const speedScale = isPlayerAutoControlActive() ? computerBattleSpeed : 1;
+  const speedScale = UiGame.isPlayerAutoControlActive() ? computerBattleSpeed : 1;
   return (moveInterval(stock) * (now < slowUntil ? 2 : 1)) / speedScale;
 }
 
@@ -2502,7 +3910,7 @@ function attackCooldownRemainingMs(
   now = performance.now(),
 ) {
   const stock = owner === "player" ? playerStock : computerStock;
-  const character = characterFor(owner);
+  const character = UiRegistry.characterFor(owner);
   const cooldownMs = attackProfileCooldown(stock, profile, character?.id);
   return Math.max(0, cooldownMs - (now - lastAttackMsFor(owner, profile)));
 }
@@ -2650,7 +4058,7 @@ function addRandomStock(stock, candidates = stockFoodTypeIds, amount = 1) {
 }
 
 function applyCharacterFoodStockBonus(owner, stock, types) {
-  const character = characterFor(owner);
+  const character = UiRegistry.characterFor(owner);
   const hasBlackFood = types.includes("black");
   const stockTypes = types.filter((typeId) =>
     stockFoodTypeIds.includes(typeId),
@@ -2704,3 +4112,50 @@ function formatTime(ms) {
   const seconds = totalSeconds % 60;
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
+
+Object.assign(UiRegistry, {
+  ammoChargeFor,
+  ammoFor,
+  attackBombCost,
+  attackCooldownRemainingMs,
+  attackDamage,
+  attackDelay,
+  attackFoodCost,
+  attackProfileCooldown,
+  attackStunChance,
+  blastRadius,
+  canAttack,
+  collectFood,
+  consumeAttackCost,
+  foodBonus,
+  foodHealAmount,
+  foodTypeIds,
+  formatTime,
+  highestStockFoodType,
+  isMovementStunned,
+  lastAttackMsFor,
+  loadBalanceConfig,
+  maxHpForSnake,
+  moveIntervalFor,
+  movementSpeed,
+  resetAttackCooldownTracker,
+  setLastAttackMsFor,
+  startingBombs,
+  startingEnergy,
+  startingStock,
+});
+
+const HexSnakeUICore = Object.freeze({
+  buildCharacterStage,
+  buildResourceHud,
+  buildRulesContent,
+  formatTime,
+  loadBalanceConfig,
+  renderIntroPortraits,
+  setOverlayChromeVisible
+});
+
+export {
+  HexSnakeUICore,
+  HexSnakeUICore as uiCore
+};

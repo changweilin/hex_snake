@@ -1,0 +1,8 @@
+# Copy this file to android/signing.properties and fill in local values.
+# Do not commit android/signing.properties or keystore files.
+#
+# The keystore path may be absolute or relative to the android/ directory.
+storeFile=release.keystore
+storePassword=change-me
+keyAlias=upload
+keyPassword=change-me

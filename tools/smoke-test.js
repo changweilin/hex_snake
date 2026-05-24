@@ -110,6 +110,62 @@ function createReplayFixture(options = {}) {
   };
 }
 
+function createStatsFixture() {
+  return {
+    version: 1,
+    totals: {
+      matches: 2,
+      playerWins: 1,
+      computerWins: 1,
+      draws: 0,
+      playerScore: 5,
+      computerScore: 5,
+      totalDurationMs: 108000,
+      bestPlayerScore: 4
+    },
+    recent: [
+      {
+        id: "stats-smoke-1",
+        createdAt: "2026-05-09T00:02:00.000Z",
+        winnerOwner: "player",
+        playerScore: 4,
+        computerScore: 2,
+        durationMs: 65000,
+        playerCharacterId: "dragon",
+        computerCharacterId: "sandworm",
+        mode: "player",
+        difficulty: "medium",
+        surrendered: false
+      },
+      {
+        id: "stats-smoke-2",
+        createdAt: "2026-05-09T00:01:00.000Z",
+        winnerOwner: "computer",
+        playerScore: 1,
+        computerScore: 3,
+        durationMs: 43000,
+        playerCharacterId: "dragon",
+        computerCharacterId: "moray",
+        mode: "autoBattle",
+        difficulty: "high",
+        surrendered: true
+      }
+    ],
+    characters: {
+      dragon: {
+        played: 2,
+        wins: 1,
+        losses: 1,
+        draws: 0,
+        score: 5,
+        bestScore: 4,
+        durationMs: 108000,
+        lastPlayedAt: "2026-05-09T00:02:00.000Z"
+      }
+    }
+  };
+}
+
 function requestOk(url) {
   return new Promise(resolve => {
     const request = http.get(url, response => {
@@ -198,6 +254,18 @@ async function expectText(page, selector, expected, label) {
   console.log(`ok - ${label}`);
 }
 
+async function expectTextMatches(page, selector, patternSource, label) {
+  await page.waitForFunction(
+    ({ selector, patternSource }) => {
+      const text = document.querySelector(selector)?.textContent?.trim() || "";
+      return new RegExp(patternSource).test(text);
+    },
+    { selector, patternSource },
+    { timeout: actionTimeoutMs }
+  );
+  console.log(`ok - ${label}`);
+}
+
 async function expectControlValue(page, selector, expected, label) {
   await page.waitForFunction(
     ({ selector, expected }) => document.querySelector(selector)?.value === expected,
@@ -220,11 +288,41 @@ async function clickModalBackdrop(page, selector) {
   await page.locator(selector).click({ position: { x: 6, y: 6 }, timeout: actionTimeoutMs });
 }
 
+async function clearBlockingOverlay(page) {
+  await page.locator("#overlay").evaluate(overlay => {
+    overlay.classList.remove("show", "intro-details");
+  });
+}
+
+async function openGmSettings(page, label) {
+  await page.locator("#settingsToggle").click({ timeout: actionTimeoutMs });
+  await expectVisible(page, "#settingsContent", "settings panel opens before GM page");
+  await page.locator('#settingsContent [data-settings-page-button="gm"]').click({ timeout: actionTimeoutMs });
+  await expectVisible(page, "#gmContent", label);
+}
+
 async function setRangeValue(page, selector, value) {
   await page.locator(selector).evaluate((input, nextValue) => {
     input.value = nextValue;
     input.dispatchEvent(new Event("input", { bubbles: true }));
   }, value);
+}
+
+async function setChangedValue(page, selector, value) {
+  await page.locator(selector).evaluate((input, nextValue) => {
+    input.value = nextValue;
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  }, value);
+}
+
+async function expectChecked(page, selector, expected, label) {
+  await page.waitForFunction(
+    ({ selector, expected }) => Boolean(document.querySelector(selector)?.checked) === expected,
+    { selector, expected },
+    { timeout: actionTimeoutMs }
+  );
+  console.log(`ok - ${label}`);
 }
 
 async function playAreaPoint(page, xRatio = 0.5, yRatio = 0.5) {
@@ -276,6 +374,199 @@ async function exerciseSettingsModal(page) {
   await expectVisible(page, "#settingsContent", "settings panel reopens");
   await clickModalBackdrop(page, "#settingsContent");
   await expectHidden(page, "#settingsContent", "settings panel closes from backdrop");
+}
+
+async function exerciseNetworkPanel(page) {
+  await page.locator("#networkToggle").click({ timeout: actionTimeoutMs });
+  await expectVisible(page, "#networkContent", "LAN panel opens");
+  await expectControlAttribute(page, "#networkToggle", "aria-expanded", "true", "LAN toggle marks expanded");
+  await expectTextMatches(page, "#networkStatus", "LAN mode ready|Connected to LAN relay", "LAN status initializes");
+  await page.locator("#networkCreateButton").click({ timeout: actionTimeoutMs });
+  await page.waitForFunction(() => /^[A-Z0-9]{4}$/.test(document.querySelector("#networkRoomCodeInput")?.value || ""), null, { timeout: actionTimeoutMs });
+  await expectText(page, "#networkCreateButton", "Leave", "LAN host button switches to leave");
+  await expectTextMatches(page, "#networkStatus", "Hosting|Waiting", "LAN host status updates");
+  await page.locator("#networkCreateButton").click({ timeout: actionTimeoutMs });
+  await expectControlValue(page, "#networkRoomCodeInput", "", "LAN room clears after leave");
+  await expectText(page, "#networkCreateButton", "Host", "LAN leave button switches back to host");
+  await page.keyboard.press("Escape");
+  await expectHidden(page, "#networkContent", "LAN panel closes with Escape");
+  await expectControlAttribute(page, "#networkToggle", "aria-expanded", "false", "LAN toggle clears expanded");
+}
+
+async function exerciseStatsModal(page) {
+  await page.locator("#statsButton").click({ timeout: actionTimeoutMs });
+  await expectVisible(page, "#statsModal", "stats modal opens");
+  await expectText(page, "#statsTotalMatches", "2", "stats total matches come from storage");
+  await expectText(page, "#statsWinRate", "50%", "stats win rate is calculated");
+  await expectText(page, "#statsRecentCount", "2 / 10", "stats recent matches are listed");
+  await expectVisible(page, '[data-stats-record-id="stats-smoke-1"]', "stats recent row is visible");
+  await expectVisible(page, '[data-stats-character-id="dragon"]', "stats character mastery row is visible");
+  await page.keyboard.press("Escape");
+  await expectHidden(page, "#statsModal", "stats modal closes with Escape");
+
+  await page.locator("#statsButton").click({ timeout: actionTimeoutMs });
+  await expectVisible(page, "#statsModal", "stats modal reopens");
+  await clickModalBackdrop(page, "#statsModal");
+  await expectHidden(page, "#statsModal", "stats modal closes from backdrop");
+}
+
+async function exerciseVersionModal(page) {
+  await page.locator("#settingsToggle").click({ timeout: actionTimeoutMs });
+  await expectVisible(page, "#settingsContent", "settings panel opens for version info");
+  await page.locator("#versionInfoButton").click({ timeout: actionTimeoutMs });
+  await expectVisible(page, "#versionModal", "version modal opens");
+  await expectText(page, "#versionAppName", "Hex Snake", "version modal shows app name");
+  await expectText(page, "#versionPlatform", "web", "version modal shows platform adapter");
+  await expectVisible(page, "#versionBuildVersion", "version modal shows build id");
+  await page.keyboard.press("Escape");
+  await expectHidden(page, "#versionModal", "version modal closes with Escape");
+  await clickModalBackdrop(page, "#settingsContent");
+  await expectHidden(page, "#settingsContent", "settings panel closes after version check");
+}
+
+async function exerciseControlProfiles(page) {
+  await page.locator("#settingsToggle").click({ timeout: actionTimeoutMs });
+  await expectVisible(page, "#settingsContent", "settings panel opens for control profiles");
+  await page.locator("#computerDifficulty").selectOption("high", { timeout: actionTimeoutMs });
+  await page.locator("#leftHandMode").check({ timeout: actionTimeoutMs });
+  await page.locator("#lowPowerMode").check({ timeout: actionTimeoutMs });
+  await page.locator("#perfStatsToggle").check({ timeout: actionTimeoutMs });
+  await clickModalBackdrop(page, "#settingsContent");
+  await expectHidden(page, "#settingsContent", "settings panel closes before GM profile setup");
+  await clearBlockingOverlay(page);
+
+  await openGmSettings(page, "GM panel opens for control profile setup");
+  await setChangedValue(page, "#gridSize", "8");
+  await setChangedValue(page, "#foodCount", "2");
+  await setChangedValue(page, "#initialSpeed", "1.5");
+  await setChangedValue(page, "#initialLength", "5");
+  await setChangedValue(page, "#initialEnergy", "3");
+  await setChangedValue(page, "#initialBombs", "2");
+  await setChangedValue(page, "#initialProtein", "4");
+  await clickModalBackdrop(page, "#gmContent");
+  await expectHidden(page, "#gmContent", "GM panel closes before profile save");
+
+  await page.locator("#settingsToggle").click({ timeout: actionTimeoutMs });
+  await expectVisible(page, "#settingsContent", "settings panel reopens for control profile save");
+  await page.locator("#controlProfileName").fill("Smoke Controls", { timeout: actionTimeoutMs });
+  await page.locator("#controlProfileSaveButton").click({ timeout: actionTimeoutMs });
+  await expectText(page, "#controlProfileStatus", "配置檔已儲存。", "control profile saves current settings");
+  await page.waitForFunction(
+    () => {
+      const profiles = JSON.parse(localStorage.getItem("hexSnakeControlProfilesV1") || "[]");
+      const selectedId = localStorage.getItem("hexSnakeSelectedControlProfileV1");
+      return profiles.some(profile =>
+        profile.id === selectedId
+        && profile.name === "Smoke Controls"
+        && profile.config?.keybinds?.smallAttack === "q"
+        && profile.config?.leftHandMode === true
+        && profile.config?.gameSettings?.computerDifficulty === "high"
+        && profile.config?.gameSettings?.gridSize === 8
+        && profile.config?.gameSettings?.initialStock?.protein === 4
+        && profile.config?.preferences?.lowPowerMode === true
+        && profile.config?.preferences?.perfStatsVisible === true
+      );
+    },
+    null,
+    { timeout: actionTimeoutMs }
+  );
+  console.log("ok - control profile is written to localStorage");
+
+  await page.locator("#smallAttackKey").click({ timeout: actionTimeoutMs });
+  await page.keyboard.press("U");
+  await expectControlValue(page, "#smallAttackKey", "U", "small attack key can change before profile apply");
+  await page.locator("#computerDifficulty").selectOption("low", { timeout: actionTimeoutMs });
+  await page.locator("#leftHandMode").uncheck({ timeout: actionTimeoutMs });
+  await page.locator("#lowPowerMode").uncheck({ timeout: actionTimeoutMs });
+  await page.locator("#perfStatsToggle").uncheck({ timeout: actionTimeoutMs });
+  await clickModalBackdrop(page, "#settingsContent");
+  await expectHidden(page, "#settingsContent", "settings panel closes before profile divergence");
+  await clearBlockingOverlay(page);
+  await openGmSettings(page, "GM panel opens for profile divergence");
+  await setChangedValue(page, "#gridSize", "10");
+  await setChangedValue(page, "#foodCount", "4");
+  await setChangedValue(page, "#initialSpeed", "1");
+  await setChangedValue(page, "#initialLength", "3");
+  await setChangedValue(page, "#initialEnergy", "0");
+  await setChangedValue(page, "#initialBombs", "0");
+  await setChangedValue(page, "#initialProtein", "0");
+  await clickModalBackdrop(page, "#gmContent");
+  await expectHidden(page, "#gmContent", "GM panel closes after profile divergence");
+
+  await page.reload({ waitUntil: "networkidle", timeout: startupTimeoutMs });
+  await expectVisible(page, "#startButton", "app reloads after control profile save");
+  await page.locator("#settingsToggle").click({ timeout: actionTimeoutMs });
+  await expectVisible(page, "#settingsContent", "settings panel opens after control profile reload");
+  await page.waitForFunction(
+    () => {
+      const select = document.querySelector("#controlProfileSelect");
+      const selectedId = localStorage.getItem("hexSnakeSelectedControlProfileV1");
+      return Boolean(
+        select
+        && selectedId
+        && select.value === selectedId
+        && [...select.options].some(option => option.value === selectedId && option.textContent === "Smoke Controls")
+      );
+    },
+    null,
+    { timeout: actionTimeoutMs }
+  );
+  console.log("ok - control profile persists after reload");
+  await expectControlValue(page, "#smallAttackKey", "U", "changed keybind persists before profile reload apply");
+  await expectControlValue(page, "#computerDifficulty", "low", "changed difficulty persists before profile reload apply");
+  await expectChecked(page, "#leftHandMode", false, "changed left hand mode persists before profile reload apply");
+
+  await page.locator("#controlProfileApplyButton").click({ timeout: actionTimeoutMs });
+  await expectText(page, "#controlProfileStatus", "配置檔已套用。", "control profile applies saved settings");
+  await expectControlValue(page, "#smallAttackKey", "Q", "control profile restores saved keybind after reload");
+  await expectControlValue(page, "#computerDifficulty", "high", "control profile restores saved difficulty");
+  await expectChecked(page, "#leftHandMode", true, "control profile restores left hand mode");
+  await expectChecked(page, "#lowPowerMode", true, "control profile restores low power mode");
+  await expectChecked(page, "#perfStatsToggle", true, "control profile restores FPS toggle");
+  await page.waitForFunction(
+    () => {
+      const gmSettings = JSON.parse(localStorage.getItem("hexSnakeGmSettings") || "{}");
+      return document.querySelector("#gridSize")?.value === "8"
+        && document.querySelector("#foodCount")?.value === "2"
+        && document.querySelector("#initialSpeed")?.value === "1.5"
+        && document.querySelector("#initialLength")?.value === "5"
+        && document.querySelector("#initialEnergy")?.value === "3"
+        && document.querySelector("#initialBombs")?.value === "2"
+        && document.querySelector("#initialProtein")?.value === "4"
+        && gmSettings.gridSize === 8
+        && gmSettings.foodCount === 2
+        && gmSettings.initialStock?.protein === 4;
+    },
+    null,
+    { timeout: actionTimeoutMs }
+  );
+  console.log("ok - control profile restores saved GM settings");
+
+  await page.locator("#controlProfileDeleteButton").click({ timeout: actionTimeoutMs });
+  await expectText(page, "#controlProfileStatus", "配置檔已刪除。", "control profile deletes saved controls");
+  await page.waitForFunction(
+    () => {
+      const profiles = JSON.parse(localStorage.getItem("hexSnakeControlProfilesV1") || "[]");
+      return profiles.length === 0 && !localStorage.getItem("hexSnakeSelectedControlProfileV1");
+    },
+    null,
+    { timeout: actionTimeoutMs }
+  );
+  console.log("ok - control profile is removed from localStorage");
+  await page.waitForFunction(
+    () => {
+      const select = document.querySelector("#controlProfileSelect");
+      return select?.disabled && select.options.length === 1 && select.options[0].textContent === "尚無配置";
+    },
+    null,
+    { timeout: actionTimeoutMs }
+  );
+  console.log("ok - control profile list returns to empty");
+  await page.locator("#resetSettingsButton").click({ timeout: actionTimeoutMs });
+  await clickModalBackdrop(page, "#settingsContent");
+  await expectHidden(page, "#settingsContent", "settings panel closes after control profile check");
+  await page.reload({ waitUntil: "networkidle", timeout: startupTimeoutMs });
+  await expectVisible(page, "#startButton", "app reloads after control profile cleanup");
 }
 
 async function openFirstPortraitLightbox(page) {
@@ -438,6 +729,30 @@ async function exerciseAutoBattleControls(page) {
   console.log("ok - auto battle pause toggles");
 }
 
+async function exerciseResultShare(page) {
+  await expectVisible(page, "#surrenderButton", "surrender button remains available before share");
+  await page.locator("#surrenderButton").click({ timeout: actionTimeoutMs });
+  await expectVisible(page, "#overlayText", "result text appears after match end");
+  const shareButtonCount = await page.locator("#shareResultButton").count();
+  if (shareButtonCount) throw new Error("result share button should be removed");
+  await page.waitForFunction(
+    () => document.querySelector("#overlayText")?.classList.contains("is-copyable-result"),
+    null,
+    { timeout: actionTimeoutMs }
+  );
+  console.log("ok - result text is copyable");
+  await page.locator("#overlayText").click({ timeout: actionTimeoutMs });
+  await expectText(page, "#shareResultStatus", "結果已複製。", "result text copies to clipboard");
+  await page.waitForFunction(
+    () => window.__hexSnakeSmokeShareText?.includes("Hex Snake 對戰結果")
+      && window.__hexSnakeSmokeShareText?.includes("比分：P1")
+      && window.__hexSnakeSmokeShareText?.includes("模式：自動對弈"),
+    null,
+    { timeout: actionTimeoutMs }
+  );
+  console.log("ok - result share text is copied");
+}
+
 async function runViewportSmoke(browser, url, profile) {
   const context = await browser.newContext({
     viewport: profile.viewport,
@@ -446,22 +761,50 @@ async function runViewportSmoke(browser, url, profile) {
     hasTouch: Boolean(profile.hasTouch)
   });
 
-  await context.addInitScript(replayFixture => {
-    localStorage.setItem("hexSnakeSfxMuted", "1");
-    localStorage.setItem("hexSnakeTutorialSeen", "1");
-    localStorage.removeItem("hexSnakeReplaySpeed");
-    localStorage.setItem("hexSnakeReplayRecent", JSON.stringify(replayFixture));
-    localStorage.setItem("hexSnakeReplayFavorites", "[]");
-  }, [
-    createReplayFixture(),
-    createReplayFixture({
-      id: replayFixtureNextId,
-      createdAt: "2026-05-09T00:01:00.000Z",
-      computerCharacterId: "moray",
-      durationMs: 7000,
-      title: "Smoke replay fixture next"
-    })
-  ]);
+  await context.addInitScript(fixtures => {
+    try {
+      Object.defineProperty(navigator, "share", { configurable: true, value: undefined });
+      Object.defineProperty(navigator, "canShare", { configurable: true, value: undefined });
+      const originalExecCommand = document.execCommand?.bind(document);
+      Object.defineProperty(document, "execCommand", {
+        configurable: true,
+        value: command => String(command).toLowerCase() === "copy" ? false : Boolean(originalExecCommand?.(command))
+      });
+      Object.defineProperty(navigator, "clipboard", {
+        configurable: true,
+        value: {
+          writeText: async text => {
+            window.__hexSnakeSmokeShareText = String(text);
+          }
+        }
+      });
+    } catch {
+      window.__hexSnakeSmokeShareText = "";
+    }
+    if (!localStorage.getItem("__hexSnakeSmokeSeeded")) {
+      localStorage.setItem("__hexSnakeSmokeSeeded", "1");
+      localStorage.setItem("hexSnakeSfxMuted", "1");
+      localStorage.setItem("hexSnakeTutorialSeen", "1");
+      localStorage.removeItem("hexSnakeReplaySpeed");
+      localStorage.removeItem("hexSnakeControlProfilesV1");
+      localStorage.removeItem("hexSnakeSelectedControlProfileV1");
+      localStorage.setItem("hexSnakeReplayRecent", JSON.stringify(fixtures.replays));
+      localStorage.setItem("hexSnakeReplayFavorites", "[]");
+      localStorage.setItem("hexSnakeMatchStatsV1", JSON.stringify(fixtures.stats));
+    }
+  }, {
+    stats: createStatsFixture(),
+    replays: [
+      createReplayFixture(),
+      createReplayFixture({
+        id: replayFixtureNextId,
+        createdAt: "2026-05-09T00:01:00.000Z",
+        computerCharacterId: "moray",
+        durationMs: 7000,
+        title: "Smoke replay fixture next"
+      })
+    ]
+  });
 
   const page = await context.newPage();
   const consoleErrors = [];
@@ -490,10 +833,15 @@ async function runViewportSmoke(browser, url, profile) {
 
   await exerciseRulesModal(page);
   await exerciseSettingsModal(page);
+  await exerciseNetworkPanel(page);
+  await exerciseControlProfiles(page);
+  await exerciseVersionModal(page);
+  await exerciseStatsModal(page);
 
   await exerciseReplayRegression(page);
 
   await exerciseAutoBattleControls(page);
+  await exerciseResultShare(page);
 
   if (consoleErrors.length || pageErrors.length) {
     throw new Error([

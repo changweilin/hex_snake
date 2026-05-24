@@ -41,8 +41,14 @@ async function preparePage(page, player, computer) {
     localStorage.setItem("hexSnakePlayerCharacterId", player);
     localStorage.setItem("hexSnakeComputerCharacterId", computer);
     localStorage.setItem("hexSnakeSfxMuted", "1");
+    localStorage.setItem("hexSnakeTutorialSeen", "1");
   }, { player, computer });
   await page.reload({ waitUntil: "networkidle" });
+  await page.locator("#game").waitFor({ state: "visible", timeout: 15000 });
+  const introClose = page.locator("#introCloseButton");
+  if (await introClose.isVisible({ timeout: 1000 }).catch(() => false)) {
+    await introClose.click();
+  }
   await page.locator("#computerBattleButton").waitFor({ state: "visible", timeout: 15000 });
 }
 

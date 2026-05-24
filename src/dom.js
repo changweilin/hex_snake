@@ -1,6 +1,9 @@
     const canvas = document.querySelector("#game");
     const ctx = canvas.getContext("2d");
     const playArea = document.querySelector("#playArea");
+    const perfOverlay = document.querySelector("#perfOverlay");
+    const perfFps = document.querySelector("#perfFps");
+    const perfFrameMs = document.querySelector("#perfFrameMs");
     const targetModeSmallIndicator = document.querySelector("#targetModeSmallIndicator");
     const targetModeBigIndicator = document.querySelector("#targetModeBigIndicator");
     const targetModeSmallIcon = document.querySelector("#targetModeSmallIcon");
@@ -15,7 +18,10 @@
     const startButton = document.querySelector("#startButton");
     const computerBattleButton = document.querySelector("#computerBattleButton");
     const replayArchiveButton = document.querySelector("#replayArchiveButton");
+    const resultSharePanel = document.querySelector("#resultSharePanel");
+    const shareResultStatus = document.querySelector("#shareResultStatus");
     const settingsReplayButton = document.querySelector("#settingsReplayButton");
+    const statsButton = document.querySelector("#statsButton");
     const replayControls = document.querySelector("#replayControls");
     const replayReverseButton = document.querySelector("#replayReverseButton");
     const replayPlayButton = document.querySelector("#replayPlayButton");
@@ -33,6 +39,14 @@
     const favoriteReplayList = document.querySelector("#favoriteReplayList");
     const recentReplayCount = document.querySelector("#recentReplayCount");
     const favoriteReplayCount = document.querySelector("#favoriteReplayCount");
+    const statsModal = document.querySelector("#statsModal");
+    const statsModalClose = document.querySelector("#statsModalClose");
+    const statsSummary = document.querySelector("#statsSummary");
+    const statsRecentCount = document.querySelector("#statsRecentCount");
+    const statsRecentList = document.querySelector("#statsRecentList");
+    const statsCharacterCount = document.querySelector("#statsCharacterCount");
+    const statsCharacterList = document.querySelector("#statsCharacterList");
+    const statsClearButton = document.querySelector("#statsClearButton");
     const autoBattlePanel = document.querySelector("#autoBattlePanel");
     const autoBattleSpeedSelect = document.querySelector("#autoBattleSpeedSelect");
     const autoSpeedMenu = document.querySelector("#autoSpeedMenu");
@@ -67,6 +81,8 @@
     const keyboardBigAimButton = document.querySelector("#keyboardBigAimButton");
     const leftHandModeInput = document.querySelector("#leftHandMode");
     const sfxMuteToggle = document.querySelector("#sfxMuteToggle");
+    const lowPowerModeInput = document.querySelector("#lowPowerMode");
+    const perfStatsToggle = document.querySelector("#perfStatsToggle");
     const surrenderButton = document.querySelector("#surrenderButton");
     const joyZone = document.querySelector("#joyZone");
     const rulesButton = document.querySelector("#rulesButton");
@@ -88,8 +104,18 @@
     const playerCharacterInput = document.querySelector("#playerCharacter");
     const computerCharacterInput = document.querySelector("#computerCharacter");
     const keybindInputs = [...document.querySelectorAll("[id$='AttackKey'], #pauseKey, #surrenderKey, [data-keybind-dir]")];
+    const controlProfileNameInput = document.querySelector("#controlProfileName");
+    const controlProfileSelect = document.querySelector("#controlProfileSelect");
+    const controlProfileSaveButton = document.querySelector("#controlProfileSaveButton");
+    const controlProfileApplyButton = document.querySelector("#controlProfileApplyButton");
+    const controlProfileDeleteButton = document.querySelector("#controlProfileDeleteButton");
+    const controlProfileStatus = document.querySelector("#controlProfileStatus");
     const resetBestTimeButton = document.querySelector("#resetBestTimeButton");
     const resetSettingsButton = document.querySelector("#resetSettingsButton");
+    const versionInfoButton = document.querySelector("#versionInfoButton");
+    const versionModal = document.querySelector("#versionModal");
+    const versionModalClose = document.querySelector("#versionModalClose");
+    const versionInfoList = document.querySelector("#versionInfoList");
     const realModeButton = document.querySelector("#realModeButton");
     const midGameModeButton = document.querySelector("#midGameModeButton");
     const ultimateModeButton = document.querySelector("#ultimateModeButton");
@@ -100,10 +126,14 @@
       mid: midGameModeButton,
       late: lateGameModeButton
     };
-    const gmToggle = document.querySelector("#gmToggle");
-    const gmLetter = gmToggle.querySelector(".gm-letter");
+    const networkToggle = document.querySelector("#networkToggle");
+    const gmLetter = networkToggle.querySelector(".gm-letter");
     const gmContent = document.querySelector("#gmContent");
     const gmCloseButton = document.querySelector("#gmCloseButton");
+    const settingsPageButtons = [...document.querySelectorAll("[data-settings-page-button]")];
+    const networkContent = document.querySelector("#networkContent");
+    const networkCloseButton = document.querySelector("#networkCloseButton");
+    const networkRevealRolesInput = document.querySelector("#networkRevealRolesInput");
     const settingsToggle = document.querySelector("#settingsToggle");
     const settingsContent = document.querySelector("#settingsContent");
     const settingsCloseButton = document.querySelector("#settingsCloseButton");
@@ -112,4 +142,152 @@
     const keyEls = [...document.querySelectorAll(".key")];
     const mobileInputQuery = window.matchMedia("(hover: none), (pointer: coarse), (max-width: 900px)");
 
-    document.body.append(settingsContent, gmContent);
+    document.body.append(settingsContent, gmContent, networkContent);
+
+    const HexSnakeDOM = Object.freeze({
+      canvas,
+      ctx,
+      playArea,
+      perfOverlay,
+      perfFps,
+      perfFrameMs,
+      targetModeSmallIndicator,
+      targetModeBigIndicator,
+      targetModeSmallIcon,
+      targetModeBigIcon,
+      cooldownSmallIndicator,
+      cooldownBigIndicator,
+      cooldownSmallValue,
+      cooldownBigValue,
+      overlay,
+      overlayTitle,
+      overlayText,
+      startButton,
+      computerBattleButton,
+      replayArchiveButton,
+      resultSharePanel,
+      shareResultStatus,
+      settingsReplayButton,
+      statsButton,
+      replayControls,
+      replayReverseButton,
+      replayPlayButton,
+      replayPrevButton,
+      replayNextButton,
+      replayTimeline,
+      replaySpeedSelect,
+      replaySpeedMenu,
+      replayExitButton,
+      replayTime,
+      replayModal,
+      replayModalClose,
+      replayMessage,
+      recentReplayList,
+      favoriteReplayList,
+      recentReplayCount,
+      favoriteReplayCount,
+      statsModal,
+      statsModalClose,
+      statsSummary,
+      statsRecentCount,
+      statsRecentList,
+      statsCharacterCount,
+      statsCharacterList,
+      statsClearButton,
+      autoBattlePanel,
+      autoBattleSpeedSelect,
+      autoSpeedMenu,
+      autoPauseButton,
+      relayPanel,
+      relayModeInput,
+      relayScore,
+      introCloseButton,
+      winnerPortrait,
+      portraitLightbox,
+      portraitLightboxImage,
+      portraitLightboxCaption,
+      portraitLightboxClose,
+      portraitLightboxShiftButtons,
+      portraitLightboxVariantButtons,
+      statusEl,
+      scoreEl,
+      computerScoreEl,
+      playerHealthBar,
+      computerHealthBar,
+      bestEl,
+      playerSpeedEl,
+      computerSpeedEl,
+      totalTimeEl,
+      lastFeedTimeEl,
+      bestTimeEl,
+      stick,
+      controlRow,
+      smallAttackButton,
+      bigAttackButton,
+      keyboardSmallAimButton,
+      keyboardBigAimButton,
+      leftHandModeInput,
+      sfxMuteToggle,
+      lowPowerModeInput,
+      perfStatsToggle,
+      surrenderButton,
+      joyZone,
+      rulesButton,
+      rulesModal,
+      rulesContent,
+      rulesCloseButton,
+      hexDirButtons,
+      settingsDirButtons,
+      settingsDirHint,
+      gridSizeInput,
+      foodCountInput,
+      computerDifficultyInput,
+      initialSpeedInput,
+      gmSettings,
+      initialLengthInput,
+      initialEnergyInput,
+      initialBombsInput,
+      initialStockInputs,
+      playerCharacterInput,
+      computerCharacterInput,
+      keybindInputs,
+      controlProfileNameInput,
+      controlProfileSelect,
+      controlProfileSaveButton,
+      controlProfileApplyButton,
+      controlProfileDeleteButton,
+      controlProfileStatus,
+      resetBestTimeButton,
+      resetSettingsButton,
+      versionInfoButton,
+      versionModal,
+      versionModalClose,
+      versionInfoList,
+      realModeButton,
+      midGameModeButton,
+      ultimateModeButton,
+      lateGameModeButton,
+      gmPresetButtons,
+      networkToggle,
+      gmLetter,
+      gmContent,
+      gmCloseButton,
+      settingsPageButtons,
+      networkContent,
+      networkCloseButton,
+      networkRevealRolesInput,
+      settingsToggle,
+      settingsContent,
+      settingsCloseButton,
+      characterStage,
+      resourceBoard,
+      keyEls,
+      mobileInputQuery
+    });
+
+    window.HexSnakeDOM = HexSnakeDOM;
+
+    export {
+      HexSnakeDOM,
+      HexSnakeDOM as dom
+    };
