@@ -3118,10 +3118,6 @@
       display: none;
     }
 
-    .network-section.has-room .network-room-row {
-      grid-template-columns: minmax(56px, 0.7fr) minmax(96px, 1fr) minmax(58px, 0.7fr);
-    }
-
     #networkRoomCodeInput {
       width: 100%;
       min-width: 0;
@@ -3145,11 +3141,10 @@
       cursor: text;
     }
 
-    .network-room-meta,
     .network-status {
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      justify-content: flex-start;
       gap: 8px;
       min-width: 0;
       color: var(--muted);
@@ -3157,14 +3152,7 @@
       line-height: 1.25;
     }
 
-    .network-room-meta strong {
-      color: #fde68a;
-      font-size: 1rem;
-      font-variant-numeric: tabular-nums;
-    }
-
     .network-status {
-      justify-content: flex-start;
       min-height: 18px;
     }
 

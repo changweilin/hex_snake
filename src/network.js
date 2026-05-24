@@ -5,11 +5,9 @@ const NetUI = HexSnakeUI;
 const HexSnakeNet = (() => {
   const statusText = document.querySelector("#networkStatus");
   const panel = document.querySelector("#networkPanel");
-  const roomCodeText = document.querySelector("#networkRoomCode");
   const roomCodeInput = document.querySelector("#networkRoomCodeInput");
   const createButton = document.querySelector("#networkCreateButton");
   const joinButton = document.querySelector("#networkJoinButton");
-  const leaveButton = document.querySelector("#networkLeaveButton");
   const listeners = new Set();
   let socket = null;
   let connectPromise = null;
@@ -75,14 +73,14 @@ const HexSnakeNet = (() => {
   }
 
   function updateUi() {
-    if (roomCodeText) roomCodeText.textContent = roomCode || "----";
     syncRoomCodeInput();
-    if (createButton) createButton.disabled = Boolean(role);
-    if (joinButton) joinButton.disabled = Boolean(role) || Boolean(pendingJoinCode);
-    if (leaveButton) {
-      leaveButton.hidden = !role;
-      leaveButton.disabled = !role;
+    if (createButton) {
+      createButton.disabled = Boolean(pendingJoinCode);
+      createButton.textContent = role ? "Leave" : "Host";
+      createButton.classList.toggle("secondary", Boolean(role));
+      createButton.setAttribute("aria-label", role ? "Leave LAN room" : "Host LAN room");
     }
+    if (joinButton) joinButton.disabled = Boolean(role) || Boolean(pendingJoinCode);
     panel?.classList.toggle("has-room", Boolean(role));
   }
 
@@ -387,12 +385,15 @@ const HexSnakeNet = (() => {
   }
 
   createButton?.addEventListener("click", () => {
+    if (role) {
+      leaveRoom();
+      return;
+    }
     createRoom().catch(error => setStatus(error.message, "error"));
   });
   joinButton?.addEventListener("click", () => {
     joinRoom().catch(error => showJoinFailure(error.message));
   });
-  leaveButton?.addEventListener("click", leaveRoom);
   roomCodeInput?.addEventListener("input", () => {
     if (roomCodeInput.readOnly) return;
     roomCodeInput.value = roomCodeInput.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4);

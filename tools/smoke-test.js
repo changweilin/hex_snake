@@ -382,10 +382,12 @@ async function exerciseNetworkPanel(page) {
   await expectControlAttribute(page, "#networkToggle", "aria-expanded", "true", "LAN toggle marks expanded");
   await expectTextMatches(page, "#networkStatus", "LAN mode ready|Connected to LAN relay", "LAN status initializes");
   await page.locator("#networkCreateButton").click({ timeout: actionTimeoutMs });
-  await expectTextMatches(page, "#networkRoomCode", "^[A-Z0-9]{4}$", "LAN host room code is shown");
+  await page.waitForFunction(() => /^[A-Z0-9]{4}$/.test(document.querySelector("#networkRoomCodeInput")?.value || ""), null, { timeout: actionTimeoutMs });
+  await expectText(page, "#networkCreateButton", "Leave", "LAN host button switches to leave");
   await expectTextMatches(page, "#networkStatus", "Hosting|Waiting", "LAN host status updates");
-  await page.locator("#networkLeaveButton").click({ timeout: actionTimeoutMs });
-  await expectText(page, "#networkRoomCode", "----", "LAN room clears after leave");
+  await page.locator("#networkCreateButton").click({ timeout: actionTimeoutMs });
+  await expectControlValue(page, "#networkRoomCodeInput", "", "LAN room clears after leave");
+  await expectText(page, "#networkCreateButton", "Host", "LAN leave button switches back to host");
   await page.keyboard.press("Escape");
   await expectHidden(page, "#networkContent", "LAN panel closes with Escape");
   await expectControlAttribute(page, "#networkToggle", "aria-expanded", "false", "LAN toggle clears expanded");
