@@ -32,6 +32,10 @@ const HexSnakeNet = (() => {
   let baseStatusText = "";
   let baseStatusState = "";
 
+  function clearRoomCodeInput() {
+    if (roomCodeInput) roomCodeInput.value = "";
+  }
+
   function clampSnapshotInterval(value) {
     const parsed = Number(value);
     if (!Number.isFinite(parsed)) return 100;
@@ -57,7 +61,6 @@ const HexSnakeNet = (() => {
 
   function updateUi() {
     if (roomCodeText) roomCodeText.textContent = roomCode || "----";
-    if (roomCodeInput && !roomCodeInput.matches(":focus")) roomCodeInput.value = roomCodeInput.value.toUpperCase();
     if (createButton) createButton.disabled = Boolean(role);
     if (joinButton) joinButton.disabled = Boolean(role) || Boolean(pendingJoinCode);
     if (leaveButton) {
@@ -100,6 +103,8 @@ const HexSnakeNet = (() => {
     inGame = false;
     lifecycle = "idle";
     lastServerSeq = 0;
+    pendingJoinCode = "";
+    clearRoomCodeInput();
     if (!options.preserveDesired) {
       desiredRole = null;
       desiredRoomCode = "";
@@ -114,11 +119,8 @@ const HexSnakeNet = (() => {
     updateUi();
     const text = message || "Room pairing failed.";
     setStatus(text, "error");
-    if (roomCodeInput && attemptedCode) {
-      roomCodeInput.value = attemptedCode;
-      roomCodeInput.focus();
-      roomCodeInput.select?.();
-    }
+    clearRoomCodeInput();
+    if (roomCodeInput && attemptedCode) roomCodeInput.focus();
     window.alert?.(`配對失敗：${text}`);
   }
 
@@ -145,6 +147,7 @@ const HexSnakeNet = (() => {
     }
     if (message.type === "room-created" || message.type === "room-joined") {
       pendingJoinCode = "";
+      clearRoomCodeInput();
       role = message.role;
       roomCode = message.roomCode;
       desiredRole = role;
@@ -326,7 +329,19 @@ const HexSnakeNet = (() => {
       return;
     }
     send({ type: "leave-room" });
+    clearRoomCodeInput();
     resetRoomState();
+  }
+
+  function notifyPageExit() {
+    if (!socket || !role) return;
+    manualDisconnect = true;
+    send({ type: "leave-room" });
+    try {
+      socket.close(1000, "page-exit");
+    } catch {
+      // Best effort during page teardown.
+    }
   }
 
   function sendGameMessage(payload) {
@@ -373,6 +388,8 @@ const HexSnakeNet = (() => {
     event.preventDefault();
     joinRoom().catch(error => showJoinFailure(error.message));
   });
+  window.addEventListener("pagehide", notifyPageExit);
+  window.addEventListener("beforeunload", notifyPageExit);
 
   updateUi();
   setStatus(window.WebSocket ? "LAN mode ready. Host or join on the same Wi-Fi." : "WebSocket is not supported.", window.WebSocket ? "" : "error");

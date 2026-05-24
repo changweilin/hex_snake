@@ -2074,12 +2074,15 @@ function characterStoryMarkup(character) {
   return `${motto}${moves}${story}`;
 }
 
-function formatIntroMotto(motto) {
+function formatIntroMotto(motto, options = {}) {
   const text = String(motto || "")
     .trim()
     .replace(/\r\n?/g, "\n")
     .replace(/[ \t]+/g, " ")
     .replace(/\s*\n+\s*/g, "\n");
+  if (options.singleLine) {
+    return `<span class="intro-avatar-motto-line">「${text}」</span>`;
+  }
   const punctuation = /[，。！？；：、,.!?;:]/u;
   const segments = [];
   let segment = "";
@@ -2101,7 +2104,7 @@ function formatIntroMotto(motto) {
     .length;
   const splitUnit = (unit) => {
     const chars = [...String(unit || "").trim()];
-    if (chars.length <= 1) return [chars.join(""), ""];
+    if (chars.length <= 1) return [chars.join("")];
     const center = Math.ceil(chars.length / 2);
     let splitAt = center;
     while (splitAt < chars.length && punctuation.test(chars[splitAt])) {
@@ -2134,6 +2137,7 @@ function formatIntroMotto(motto) {
           ];
         })();
   return lines
+    .filter(line => String(line || "").trim())
     .map((line, index) => {
       const prefix = index === 0 ? "「" : "　";
       const suffix = index === lines.length - 1 ? "」" : "　";
@@ -3258,7 +3262,7 @@ function renderIntroPortraits(showDetails = introDetailsOpen) {
                     : "隨機選擇";
                 const motto = hideNetworkOwner
                   ? "?"
-                  : character?.motto || "機緣一轉，百人角色待君擇。\n心念既定，千道關卡隨我闖。";
+                  : character?.motto || "開局抽選，答案稍後揭曉。";
                 const introAttrs = networkLocked
                   ? `aria-label="${label} 角色由對手選擇" aria-disabled="true"`
                   : `role="button" tabindex="0" data-open-intro="${owner}" aria-label="開啟${label}角色選擇"`;
@@ -3279,7 +3283,7 @@ function renderIntroPortraits(showDetails = introDetailsOpen) {
                     <span class="intro-avatar-label"><span class="owner-name ${owner === "player" ? "is-p1" : "is-p2"}">${UiRegistry.ownerMeta(owner).label}</span> · ${displayName}</span>
                     ${networkLocked ? "" : `<button class="secondary portrait-arrow portrait-label-arrow" type="button" data-portrait-owner="${owner}" data-portrait-shift="1" aria-label="${UiRegistry.ownerMeta(owner).label} 下一位">›</button>`}
                   </div>
-                  <p class="intro-avatar-motto ${character && !hideNetworkOwner ? "" : "is-placeholder"}">${formatIntroMotto(motto)}</p>
+                  <p class="intro-avatar-motto ${character && !hideNetworkOwner ? "" : "is-placeholder"}">${formatIntroMotto(motto, { singleLine: !character || hideNetworkOwner })}</p>
                   ${
                     hideNetworkOwner || isRandomChoice
                       ? `<span class="intro-avatar-logo" aria-hidden="true"><span class="random-portrait-mark intro-avatar-logo-mark">?</span></span>`

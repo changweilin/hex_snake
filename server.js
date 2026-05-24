@@ -12,6 +12,8 @@ const websocketGuid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 const wsClients = new Set();
 const rooms = new Map();
 const roomLifecycles = new Set(["waiting", "ready", "running", "ended"]);
+const clientStaleMs = 10000;
+const heartbeatSweepMs = 3000;
 
 const types = {
   ".html": "text/html; charset=utf-8",
@@ -82,6 +84,9 @@ function handleRequest(req, res) {
 function createServer() {
   const server = http.createServer(handleRequest);
   server.on("upgrade", handleWebSocketUpgrade);
+  const heartbeatTimer = setInterval(pruneStaleClients, heartbeatSweepMs);
+  heartbeatTimer.unref?.();
+  server.on("close", () => clearInterval(heartbeatTimer));
   return server;
 }
 
@@ -127,6 +132,25 @@ function sendWebSocket(client, data) {
   } catch {
     return false;
   }
+}
+
+function closeWebSocketClient(client, reason = "disconnect") {
+  if (!client) return;
+  leaveRoom(client, reason);
+  wsClients.delete(client);
+  try {
+    client.socket.destroy();
+  } catch {
+    // Socket may already be gone.
+  }
+}
+
+function pruneStaleClients(now = Date.now()) {
+  wsClients.forEach(client => {
+    if (now - (client.lastSeenAt || 0) > clientStaleMs) {
+      closeWebSocketClient(client, "timeout");
+    }
+  });
 }
 
 function setRoomLifecycle(room, lifecycle) {
@@ -397,20 +421,22 @@ function handleWebSocketUpgrade(req, socket) {
     id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
     socket,
     buffer: Buffer.alloc(0),
+    lastSeenAt: Date.now(),
     roomCode: null,
     role: null
   };
   wsClients.add(client);
   sendWebSocket(client, { type: "hello", id: client.id });
 
-  socket.on("data", chunk => decodeWebSocketFrames(client, chunk));
+  socket.on("data", chunk => {
+    client.lastSeenAt = Date.now();
+    decodeWebSocketFrames(client, chunk);
+  });
   socket.on("close", () => {
-    leaveRoom(client, "disconnect");
-    wsClients.delete(client);
+    closeWebSocketClient(client, "disconnect");
   });
   socket.on("error", () => {
-    leaveRoom(client, "error");
-    wsClients.delete(client);
+    closeWebSocketClient(client, "error");
   });
 }
 
