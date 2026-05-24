@@ -61,6 +61,11 @@ function resolveRequest(urlPath) {
 }
 
 function handleRequest(req, res) {
+  if ((req.url || "").split("?")[0] === "/api/network-urls") {
+    send(res, 200, JSON.stringify({ urls: getNetworkUrls() }), "application/json; charset=utf-8");
+    return;
+  }
+
   const resolved = resolveRequest(req.url || "/");
 
   if (!resolved.filePath) {
@@ -440,8 +445,24 @@ function handleWebSocketUpgrade(req, socket) {
   });
 }
 
+function isLoopbackHost(value) {
+  const normalized = String(value || "").toLowerCase();
+  return normalized === "localhost" || normalized === "127.0.0.1" || normalized === "::1";
+}
+
+function isAnyHost(value) {
+  const normalized = String(value || "").toLowerCase();
+  return normalized === "0.0.0.0" || normalized === "::" || normalized === "";
+}
+
 function getNetworkUrls() {
   const urls = [`http://localhost:${port}`];
+  if (isLoopbackHost(host)) return [...new Set(urls)];
+  if (!isAnyHost(host)) {
+    urls.push(`http://${host}:${port}`);
+    return [...new Set(urls)];
+  }
+
   const interfaces = os.networkInterfaces();
 
   Object.values(interfaces).forEach(entries => {

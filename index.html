@@ -336,6 +336,14 @@
               <button id="networkCreateButton" type="button">Host</button>
               <input id="networkRoomCodeInput" type="text" maxlength="4" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="CODE" aria-label="Room code">
             </div>
+            <div id="networkInvitePanel" class="network-invite-panel" hidden>
+              <div class="network-invite-header">
+                <span>Scan to join</span>
+                <button id="networkCopyInviteButton" class="secondary network-copy-button" type="button">Copy</button>
+              </div>
+              <div id="networkInviteQr" class="network-invite-qr" aria-label="LAN join QR code"></div>
+              <a id="networkInviteUrl" class="network-invite-url" href="#" target="_blank" rel="noopener noreferrer"></a>
+            </div>
             <label class="field settings-toggle-field network-reveal-field">
               <span>角色公開</span>
               <span class="settings-toggle-control">

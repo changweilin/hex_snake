@@ -4502,8 +4502,18 @@
       Dom.rulesButton.setAttribute("aria-expanded", "false");
     }
 
+    function closeWaitingHostNetworkRoom() {
+      const closed = networkAdapter()?.closeWaitingHostRoom?.() === true;
+      if (!closed) return false;
+      resetNetworkLobbyState();
+      setSettingsLocked(false);
+      updateSettingsActionMode();
+      return true;
+    }
+
     function setSettingsOpen(open, options = {}) {
       const previousPage = currentSettingsPage();
+      if (open && !Dom.networkContent.hidden) closeWaitingHostNetworkRoom();
       Dom.settingsContent.hidden = !open;
       if (!open) setPendingDirectionKeybind(null);
       if (open) {
@@ -4550,6 +4560,7 @@
     }
 
     function setNetworkOpen(open) {
+      if (!open && !Dom.networkContent.hidden) closeWaitingHostNetworkRoom();
       Dom.networkContent.hidden = !open;
       if (open) {
         closeRulesPanelForOverlay();
