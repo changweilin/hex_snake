@@ -33,7 +33,22 @@ const HexSnakeNet = (() => {
   let baseStatusState = "";
 
   function clearRoomCodeInput() {
-    if (roomCodeInput) roomCodeInput.value = "";
+    if (!roomCodeInput) return;
+    roomCodeInput.value = "";
+    roomCodeInput.readOnly = false;
+    roomCodeInput.setAttribute("aria-label", "Room code");
+  }
+
+  function syncRoomCodeInput() {
+    if (!roomCodeInput) return;
+    if (role === "host" && roomCode) {
+      roomCodeInput.value = roomCode;
+      roomCodeInput.readOnly = true;
+      roomCodeInput.setAttribute("aria-label", "Host room code");
+      return;
+    }
+    if (role) clearRoomCodeInput();
+    else roomCodeInput.readOnly = false;
   }
 
   function clampSnapshotInterval(value) {
@@ -61,6 +76,7 @@ const HexSnakeNet = (() => {
 
   function updateUi() {
     if (roomCodeText) roomCodeText.textContent = roomCode || "----";
+    syncRoomCodeInput();
     if (createButton) createButton.disabled = Boolean(role);
     if (joinButton) joinButton.disabled = Boolean(role) || Boolean(pendingJoinCode);
     if (leaveButton) {
@@ -378,6 +394,7 @@ const HexSnakeNet = (() => {
   });
   leaveButton?.addEventListener("click", leaveRoom);
   roomCodeInput?.addEventListener("input", () => {
+    if (roomCodeInput.readOnly) return;
     roomCodeInput.value = roomCodeInput.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4);
     if (roomCodeInput.value.length === 4) {
       joinRoom(roomCodeInput.value).catch(error => showJoinFailure(error.message));

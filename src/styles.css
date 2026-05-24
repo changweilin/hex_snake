@@ -3138,6 +3138,13 @@
       letter-spacing: 0;
     }
 
+    #networkRoomCodeInput[readonly] {
+      border-color: rgba(245, 158, 11, 0.68);
+      color: #fde68a;
+      background: rgba(245, 158, 11, 0.12);
+      cursor: text;
+    }
+
     .network-room-meta,
     .network-status {
       display: flex;
