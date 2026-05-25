@@ -1026,6 +1026,22 @@
       }
     }
 
+    function matchHistoryTabForEntry(entry = "recent") {
+      if (entry === "post-match") return GamePresentationState.lastResultShareData ? "share" : "recent";
+      if (entry === "mastery" || entry === "favorite" || entry === "share") return entry;
+      return "recent";
+    }
+
+    function openMatchHistoryFromEntry(event) {
+      const entry = event?.currentTarget?.dataset?.matchHistoryEntry || "recent";
+      GameReplay.openModal(matchHistoryTabForEntry(entry));
+    }
+
+    function copyCurrentResultFromControl(event) {
+      event?.preventDefault?.();
+      copyCurrentResult();
+    }
+
     function beginStartLogoCountdown() {
       if (isNetworkGuestActive()) {
         setStatus("LAN guest is waiting for Host to start.");
@@ -5347,20 +5363,17 @@
       event.preventDefault();
       GameUI.showTutorial(0);
     });
-    Dom.replayArchiveButton.addEventListener("click", () => {
-      GameReplay.openModal(GamePresentationState.lastResultShareData ? "share" : "recent");
+    [Dom.replayArchiveButton, Dom.settingsReplayButton, Dom.statsButton].forEach(button => {
+      button.addEventListener("click", openMatchHistoryFromEntry);
     });
-    Dom.settingsReplayButton.addEventListener("click", () => GameReplay.openModal("recent"));
     Dom.overlayText.addEventListener("click", event => {
       if (!Dom.overlayText.classList.contains("is-copyable-result")) return;
-      event.preventDefault();
-      copyCurrentResult();
+      copyCurrentResultFromControl(event);
     });
     Dom.overlayText.addEventListener("keydown", event => {
       if (!Dom.overlayText.classList.contains("is-copyable-result")) return;
       if (event.key !== "Enter" && event.key !== " ") return;
-      event.preventDefault();
-      copyCurrentResult();
+      copyCurrentResultFromControl(event);
     });
     Dom.controlProfileSelect.addEventListener("change", () => {
       selectedControlProfileId = Dom.controlProfileSelect.value;
@@ -5373,9 +5386,8 @@
     Dom.controlProfileSaveButton.addEventListener("click", saveCurrentControlProfile);
     Dom.controlProfileApplyButton.addEventListener("click", applySelectedControlProfile);
     Dom.controlProfileDeleteButton.addEventListener("click", deleteSelectedControlProfile);
-    Dom.statsButton.addEventListener("click", () => GameStats.openModal("mastery"));
     Dom.statsClearButton.addEventListener("click", GameStats.clear);
-    Dom.matchHistoryShareCopyButton.addEventListener("click", copyCurrentResult);
+    Dom.matchHistoryShareCopyButton.addEventListener("click", copyCurrentResultFromControl);
     Dom.matchHistorySystemShareButton.addEventListener("click", shareCurrentResult);
     Dom.versionInfoButton.addEventListener("click", GameAbout.openModal);
     Dom.versionModalClose.addEventListener("click", GameAbout.closeModal);

@@ -86,7 +86,7 @@
             <div class="dialog-actions">
               <button id="startButton" type="button">開始</button>
               <button id="computerBattleButton" class="secondary" type="button">自動對弈</button>
-              <button id="replayArchiveButton" class="secondary" type="button">戰報</button>
+              <button id="replayArchiveButton" class="secondary" type="button" data-match-history-entry="post-match">戰報</button>
             </div>
             <button id="introCloseButton" class="secondary intro-close-button" type="button" hidden>關閉</button>
           </div>
@@ -101,7 +101,7 @@
           <svg class="settings-action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 0 4 22V5.5Z"/><path d="M8 7h8"/><path d="M8 11h8"/></svg>
           <span class="settings-action-label">規則</span>
         </button>
-        <button class="replay-toggle" id="settingsReplayButton" type="button" aria-haspopup="dialog" aria-controls="replayModal" title="戰報" aria-label="戰報">
+        <button class="replay-toggle" id="settingsReplayButton" type="button" data-match-history-entry="recent" aria-haspopup="dialog" aria-controls="replayModal" title="戰報" aria-label="戰報">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M5 5h14"/>
             <path d="M5 12h9"/>
@@ -110,7 +110,7 @@
           </svg>
           <span class="replay-toggle-label">戰報</span>
         </button>
-        <button class="stats-toggle" id="statsButton" type="button" aria-haspopup="dialog" aria-controls="replayModal" title="戰績" aria-label="戰績" hidden>
+        <button class="stats-toggle" id="statsButton" type="button" data-match-history-entry="mastery" aria-haspopup="dialog" aria-controls="replayModal" title="戰績" aria-label="戰績" hidden>
           <svg class="settings-action-icon" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M4 19V5"/>
             <path d="M4 19h16"/>
