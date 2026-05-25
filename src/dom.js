@@ -35,12 +35,19 @@
     const replayModal = document.querySelector("#replayModal");
     const replayModalClose = document.querySelector("#replayModalClose");
     const replayMessage = document.querySelector("#replayMessage");
+    const matchHistoryTabButtons = [...document.querySelectorAll("[data-match-history-tab]")];
+    const matchHistoryPanels = [...document.querySelectorAll("[data-match-history-panel]")];
+    const matchHistoryShareEmpty = document.querySelector("#matchHistoryShareEmpty");
+    const matchHistoryShareContent = document.querySelector("#matchHistoryShareContent");
+    const matchHistorySharePreview = document.querySelector("#matchHistorySharePreview");
+    const matchHistoryShareCopyButton = document.querySelector("#matchHistoryShareCopyButton");
+    const matchHistorySystemShareButton = document.querySelector("#matchHistorySystemShareButton");
     const recentReplayList = document.querySelector("#recentReplayList");
     const favoriteReplayList = document.querySelector("#favoriteReplayList");
     const recentReplayCount = document.querySelector("#recentReplayCount");
     const favoriteReplayCount = document.querySelector("#favoriteReplayCount");
-    const statsModal = document.querySelector("#statsModal");
-    const statsModalClose = document.querySelector("#statsModalClose");
+    const statsModal = replayModal;
+    const statsModalClose = replayModalClose;
     const statsSummary = document.querySelector("#statsSummary");
     const statsRecentCount = document.querySelector("#statsRecentCount");
     const statsRecentList = document.querySelector("#statsRecentList");
@@ -182,6 +189,13 @@
       replayModal,
       replayModalClose,
       replayMessage,
+      matchHistoryTabButtons,
+      matchHistoryPanels,
+      matchHistoryShareEmpty,
+      matchHistoryShareContent,
+      matchHistorySharePreview,
+      matchHistoryShareCopyButton,
+      matchHistorySystemShareButton,
       recentReplayList,
       favoriteReplayList,
       recentReplayCount,

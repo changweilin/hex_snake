@@ -288,14 +288,22 @@ const HexSnakeStats = (() => {
     renderCharacterMastery(stats);
   }
 
-  function openModal() {
+  function openModal(tab = "recent") {
     if (StatsGameState.running && !StatsGameState.gameOver) return;
     StatsUI.clearRelayRestartTimer();
+    if (typeof StatsUI.replay.openModal === "function") {
+      StatsUI.replay.openModal(tab);
+      return;
+    }
     refreshModal();
     StatsDom.statsModal.hidden = false;
   }
 
   function closeModal() {
+    if (typeof StatsUI.replay.closeModal === "function") {
+      StatsUI.replay.closeModal();
+      return;
+    }
     StatsDom.statsModal.hidden = true;
   }
 

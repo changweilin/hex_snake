@@ -997,6 +997,35 @@
       }
     }
 
+    async function shareCurrentResult() {
+      if (!GamePresentationState.lastResultShareData || GamePresentationState.resultShareInProgress) return;
+      const shareData = GamePresentationState.lastResultShareData;
+      GamePresentationState.resultShareInProgress = true;
+      GameUI.updateResultSharePanel();
+      GameUI.setResultShareStatus("正在開啟分享...");
+      try {
+        if (await GamePlatform.share.canShare(shareData) && await GamePlatform.share.share(shareData)) {
+          GameUI.setResultShareStatus("已開啟系統分享。", "success");
+          return;
+        }
+        if (await GamePlatform.share.copyText(resultCopyText(shareData))) {
+          GameUI.setResultShareStatus("此裝置不支援系統分享，已複製戰報。", "success");
+          return;
+        }
+        GameUI.setResultShareStatus("此瀏覽器無法分享或複製戰報。", "error");
+      } catch (error) {
+        if (error?.name === "AbortError") {
+          GameUI.setResultShareStatus("已取消分享。");
+        } else {
+          console.warn("Unable to share result.", error);
+          GameUI.setResultShareStatus("分享失敗，請稍後再試。", "error");
+        }
+      } finally {
+        GamePresentationState.resultShareInProgress = false;
+        GameUI.updateResultSharePanel();
+      }
+    }
+
     function beginStartLogoCountdown() {
       if (isNetworkGuestActive()) {
         setStatus("LAN guest is waiting for Host to start.");
@@ -4669,10 +4698,6 @@
         GameReplay.closeModal();
         return true;
       }
-      if (!Dom.statsModal.hidden) {
-        GameStats.closeModal();
-        return true;
-      }
       if (!Dom.versionModal.hidden) {
         GameAbout.closeModal();
         return true;
@@ -5322,8 +5347,10 @@
       event.preventDefault();
       GameUI.showTutorial(0);
     });
-    Dom.replayArchiveButton.addEventListener("click", GameReplay.openModal);
-    Dom.settingsReplayButton.addEventListener("click", GameReplay.openModal);
+    Dom.replayArchiveButton.addEventListener("click", () => {
+      GameReplay.openModal(GamePresentationState.lastResultShareData ? "share" : "recent");
+    });
+    Dom.settingsReplayButton.addEventListener("click", () => GameReplay.openModal("recent"));
     Dom.overlayText.addEventListener("click", event => {
       if (!Dom.overlayText.classList.contains("is-copyable-result")) return;
       event.preventDefault();
@@ -5346,13 +5373,10 @@
     Dom.controlProfileSaveButton.addEventListener("click", saveCurrentControlProfile);
     Dom.controlProfileApplyButton.addEventListener("click", applySelectedControlProfile);
     Dom.controlProfileDeleteButton.addEventListener("click", deleteSelectedControlProfile);
-    Dom.statsButton.addEventListener("click", GameStats.openModal);
-    Dom.statsModalClose.addEventListener("click", GameStats.closeModal);
+    Dom.statsButton.addEventListener("click", () => GameStats.openModal("mastery"));
     Dom.statsClearButton.addEventListener("click", GameStats.clear);
-    Dom.statsModal.addEventListener("pointerdown", event => {
-      if (event.target === Dom.statsModal) GameStats.closeModal();
-    });
-    Dom.statsModal.querySelector(".app-stats-dialog").addEventListener("pointerdown", event => event.stopPropagation());
+    Dom.matchHistoryShareCopyButton.addEventListener("click", copyCurrentResult);
+    Dom.matchHistorySystemShareButton.addEventListener("click", shareCurrentResult);
     Dom.versionInfoButton.addEventListener("click", GameAbout.openModal);
     Dom.versionModalClose.addEventListener("click", GameAbout.closeModal);
     Dom.versionModal.addEventListener("pointerdown", event => {
@@ -5365,9 +5389,14 @@
     });
     Dom.replayModal.querySelector(".replay-dialog").addEventListener("pointerdown", event => event.stopPropagation());
     Dom.replayModal.addEventListener("click", event => {
+      const tabButton = event.target.closest("[data-match-history-tab]");
       const playButton = event.target.closest("[data-replay-play]");
       const favoriteButton = event.target.closest("[data-replay-favorite]");
       const deleteButton = event.target.closest("[data-replay-delete]");
+      if (tabButton) {
+        GameReplay.setTab(tabButton.dataset.matchHistoryTab);
+        return;
+      }
       if (playButton) {
         const record = GameReplay.findRecord(playButton.dataset.replayPlay);
         if (record) GameReplay.startPlayback(record);
@@ -6005,10 +6034,6 @@
       }
       if (!Dom.replayModal.hidden) {
         if (event.key === "Escape" || event.key === "Esc") GameReplay.closeModal();
-        return;
-      }
-      if (!Dom.statsModal.hidden) {
-        if (event.key === "Escape" || event.key === "Esc") GameStats.closeModal();
         return;
       }
       if (GameUI.isLogoTransitionActive()) {

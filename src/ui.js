@@ -3019,12 +3019,27 @@ function closeRulesModal() {
   rulesButton.focus();
 }
 
+function resultShareText(data) {
+  return [data?.text, data?.url].filter(Boolean).join("\n");
+}
+
+function updateMatchHistorySharePanel() {
+  if (!UiDom.matchHistorySharePreview) return;
+  const hasShareData = Boolean(lastResultShareData);
+  UiDom.matchHistoryShareEmpty.hidden = hasShareData;
+  UiDom.matchHistoryShareContent.hidden = !hasShareData;
+  UiDom.matchHistorySharePreview.textContent = hasShareData ? resultShareText(lastResultShareData) : "";
+  UiDom.matchHistoryShareCopyButton.disabled = !hasShareData || resultShareInProgress;
+  UiDom.matchHistorySystemShareButton.disabled = !hasShareData || resultShareInProgress;
+}
+
 function setResultShareStatus(text = "", state = "") {
-  shareResultStatus.textContent = text;
-  shareResultStatus.hidden = !text;
-  resultSharePanel.hidden = !text;
-  if (state) shareResultStatus.dataset.state = state;
-  else delete shareResultStatus.dataset.state;
+  UiDom.shareResultStatus.textContent = text;
+  UiDom.shareResultStatus.hidden = !text;
+  UiDom.resultSharePanel.hidden = !text;
+  if (state) UiDom.shareResultStatus.dataset.state = state;
+  else delete UiDom.shareResultStatus.dataset.state;
+  updateMatchHistorySharePanel();
 }
 
 function updateResultSharePanel() {
@@ -3044,6 +3059,7 @@ function updateResultSharePanel() {
     UiDom.overlayText.removeAttribute("aria-label");
     setResultShareStatus("");
   }
+  updateMatchHistorySharePanel();
 }
 
 function setLastResultShareData(data) {
@@ -3750,6 +3766,7 @@ Object.assign(UiRegistry, {
   showStatusCallout,
   showTutorial,
   clearFighterCallouts,
+  updateMatchHistorySharePanel,
   updateResultSharePanel,
 });
 
