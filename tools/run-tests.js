@@ -1,6 +1,7 @@
 const assert = require("node:assert/strict");
 const fs = require("fs");
 const path = require("path");
+const RulesCore = require("../src/rules-core");
 const {
   createSchedule,
   createUnorderedPairs,
@@ -137,6 +138,18 @@ function balanceWithResourceOverrides(overrides) {
   };
 }
 
+function runtimeConfigFromBalance(sourceBalance) {
+  return {
+    foodTypes: FOOD_TYPES.map(id => ({ id })),
+    ...sourceBalance.resources,
+    ...sourceBalance.attack,
+    ...sourceBalance.movement,
+    ...sourceBalance.health,
+    ...sourceBalance.foodWeights,
+    attackUltimateBalance: sourceBalance.attack.ultimates
+  };
+}
+
 test("dev server rejects malformed and escaped paths", () => {
   assert.equal(resolveRequest("/").filePath, path.join(root, "index.html"));
   assert.equal(resolveRequest("/%E0%A4%A").status, 400);
@@ -216,6 +229,25 @@ test("attack costs and damage calculations match core rules", () => {
   assert.ok(Math.abs(stats.damage - bigStats.damage * balance.attack.smallAttackDamageMultiplier / balance.attack.bigAttackDamageMultiplier) < 1e-9);
   const damage = damageSnake([{ q: 0, r: 0 }, { q: 1, r: 0 }], { q: 0, r: 0 }, stats.radius, stats.damage, balance);
   assert.ok(damage > 0);
+});
+
+test("shared rules core supports simulator and runtime-shaped configs", () => {
+  const runtimeConfig = runtimeConfigFromBalance(balance);
+  const stock = { protein: 2, fat: 3, fiber: 4, carb: 5 };
+  assert.deepEqual(RulesCore.attackStats(stock, "small", runtimeConfig), attackStats(stock, "small", balance));
+  assert.equal(RulesCore.nextWrappedCell({ q: 0, r: -5 }, 0, 5).r, 5);
+  assert.equal(RulesCore.damageSnake([{ q: 0, r: 0 }, { q: 1, r: 0 }], { q: 0, r: 0 }, 2, 10), damageSnake([{ q: 0, r: 0 }, { q: 1, r: 0 }], { q: 0, r: 0 }, 2, 10, balance));
+
+  const simCharacter = characterById.get("sandworm");
+  const runtimeCharacter = { ...simCharacter, food: simCharacter.foodPreference };
+  delete runtimeCharacter.foodPreference;
+  const simFighter = { stock: emptyStock(), ammo: 0, ammoCharge: 0, character: simCharacter };
+  const runtimeFighter = { stock: RulesCore.emptyStock(runtimeConfig), ammo: 0, ammoCharge: 0, character: runtimeCharacter };
+  collectFood(simFighter, { types: ["fat"] }, balance, createFixedRng([0]));
+  RulesCore.collectFood(runtimeFighter, { types: ["fat"] }, runtimeConfig, createFixedRng([0]));
+  assert.deepEqual(runtimeFighter.stock, simFighter.stock);
+  assert.equal(runtimeFighter.ammo, simFighter.ammo);
+  assert.equal(runtimeFighter.ammoCharge, simFighter.ammoCharge);
 });
 
 test("full fat stock doubles attack damage", () => {

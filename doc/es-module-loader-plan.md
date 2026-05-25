@@ -23,6 +23,7 @@ Native module loader 必須保持 `doc/es-module-export-map.md` 的初始化順�
 Shared order:
 
 1. platform target: `src/platform/web.js` or `src/platform/mobile.js`
+2. `src/rules-core.js`
 2. `src/state.js`
 3. `src/dom.js`
 4. `src/ui.js`

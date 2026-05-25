@@ -1,4 +1,5 @@
 import { runtime } from "./platform/web.js";
+import "./rules-core.js";
 import { controls, render, renderGame, state, uiRegistry } from "./state.js";
 import { dom } from "./dom.js";
 import { uiCore } from "./ui.js";
@@ -14,6 +15,7 @@ import { gameShell } from "./game.js";
 
 const moduleShadowSourceOrder = [
   "src/platform/web.js",
+  "src/rules-core.js",
   "src/state.js",
   "src/dom.js",
   "src/ui.js",
@@ -32,7 +34,8 @@ const moduleShadowContract = Object.freeze({
   mode: "module-shadow",
   entry: "src/main-module.js",
   bootstrapsGameplay: false,
-  imports: Object.freeze(["runtime", "state", "uiRegistry", "render", "renderGame", "controls", "dom", "uiCore", "network", "characters", "audio", "replay", "stats", "about", "ai", "renderHooks", "gameShell"]),
+  imports: Object.freeze(["runtime", "rulesCore", "state", "uiRegistry", "render", "renderGame", "controls", "dom", "uiCore", "network", "characters", "audio", "replay", "stats", "about", "ai", "renderHooks", "gameShell"]),
+  rulesReady: Boolean(globalThis.HexSnakeRules?.attackStats && globalThis.HexSnakeRules?.collectFood),
   domReady: Boolean(dom.canvas && dom.ctx && dom.overlay),
   uiReady: Boolean(uiCore.loadBalanceConfig && uiCore.buildCharacterStage && uiCore.formatTime),
   serviceReady: Boolean(network.lifecycle && about.refresh),

@@ -1,29 +1,16 @@
 const fs = require("fs");
 const path = require("path");
+const RulesCore = require("../src/rules-core");
 
-const FOOD_TYPES = ["protein", "fat", "fiber", "carb"];
+const { DIRECTIONS, FOOD_TYPES } = RulesCore;
 const LOBSTER_PALM_STEP_MS = 33.75;
-const DEFAULT_SMALL_ATTACK_DELAY_SCALE = 0.31;
-const DEFAULT_SMALL_ATTACK_COOLDOWN_SCALE = 0.29;
-const DEFAULT_SANDWORM_REVEAL_BEFORE_IMPACT_MS = 200;
 const SANDWORM_UNDERGROUND_WINDOW_MS = 500;
-const DEFAULT_HP_PER_SNAKE_UNIT = 4;
-const DEFAULT_ATTACK_DAMAGE_MULTIPLIER = 1;
 const FOOD_TARGET_SWITCH_MS = 20000;
 const FOOD_RACE_TIE_WINDOW = 0.05;
 const DEAD_END_MIN_SPACE = 5;
 const AI_LOOKAHEAD_DEPTH = 3;
 const AI_LOOKAHEAD_BEAM_WIDTH = 3;
 const AI_LOOKAHEAD_FUTURE_DISCOUNT = 0.65;
-const SMALL_ATTACK_FOOD_COST = 2;
-const DIRECTIONS = [
-  { q: 0, r: -1 },
-  { q: 1, r: -1 },
-  { q: 1, r: 0 },
-  { q: 0, r: 1 },
-  { q: -1, r: 1 },
-  { q: -1, r: 0 }
-];
 
 function hashSeed(input) {
   let hash = 2166136261;
@@ -98,100 +85,47 @@ function isHighAiDifficultyValue(value) {
 }
 
 function keyOf(cell) {
-  return `${cell.q},${cell.r}`;
+  return RulesCore.keyOf(cell);
 }
 
 function cellKeySet(cellList = []) {
-  return new Set(cellList.map(cell => keyOf(cell)));
+  return RulesCore.cellKeySet(cellList);
 }
 
 function hexDistance(a, b) {
-  const as = -a.q - a.r;
-  const bs = -b.q - b.r;
-  return (Math.abs(a.q - b.q) + Math.abs(a.r - b.r) + Math.abs(as - bs)) / 2;
+  return RulesCore.hexDistance(a, b);
 }
 
 function createBoard(gridSize) {
-  const radius = gridSize - 1;
-  const cells = [];
-  for (let q = -radius; q <= radius; q += 1) {
-    for (let r = -radius; r <= radius; r += 1) {
-      if (Math.abs(q + r) <= radius) cells.push({ q, r });
-    }
-  }
-  return { radius, cells, ...buildBoardTopology(radius, cells) };
+  return RulesCore.createBoard(gridSize);
 }
 
 function isInside(cell, radius) {
-  return Math.abs(cell.q) <= radius && Math.abs(cell.r) <= radius && Math.abs(cell.q + cell.r) <= radius;
+  return RulesCore.isInside(cell, radius);
 }
 
 function nextCell(head, direction) {
-  const delta = DIRECTIONS[direction];
-  return { q: head.q + delta.q, r: head.r + delta.r };
+  return RulesCore.nextCell(head, direction);
 }
 
 function nextWrappedCell(head, direction, radius) {
-  const next = nextCell(head, direction);
-  if (isInside(next, radius)) return next;
-  const oppositeDirection = (direction + 3) % 6;
-  let wrapped = head;
-  while (isInside(nextCell(wrapped, oppositeDirection), radius)) {
-    wrapped = nextCell(wrapped, oppositeDirection);
-  }
-  return wrapped;
+  return RulesCore.nextWrappedCell(head, direction, radius);
 }
 
 function buildBoardTopology(radius, cells) {
-  const cellIndexByKey = new Map(cells.map((cell, index) => [keyOf(cell), index]));
-  const neighbors = cells.map(cell => DIRECTIONS.map((_, direction) => {
-    const next = nextWrappedCell(cell, direction, radius);
-    return cellIndexByKey.get(keyOf(next));
-  }));
-  const nearbyOne = cells.map(cell => cells
-    .map((candidate, index) => ({ candidate, index }))
-    .filter(({ candidate }) => hexDistance(candidate, cell) <= 1)
-    .map(({ index }) => index));
-  const wrappedDistances = cells.map((_, sourceIndex) => {
-    const row = new Uint16Array(cells.length);
-    row.fill(65535);
-    row[sourceIndex] = 0;
-    const queue = [sourceIndex];
-    for (let index = 0; index < queue.length; index += 1) {
-      const currentIndex = queue[index];
-      const nextDistance = row[currentIndex] + 1;
-      neighbors[currentIndex].forEach(nextIndex => {
-        if (!Number.isInteger(nextIndex) || row[nextIndex] !== 65535) return;
-        row[nextIndex] = nextDistance;
-        queue.push(nextIndex);
-      });
-    }
-    return row;
-  });
-  return { cellIndexByKey, neighbors, nearbyOne, wrappedDistances };
+  return RulesCore.buildBoardTopology(radius, cells);
 }
 
 function createStartingSnake(head, direction, length, radius) {
-  const segments = [{ ...head }];
-  let cursor = { ...head };
-  const bodyDirection = (direction + 3) % 6;
-  const used = new Set([keyOf(cursor)]);
-  while (segments.length < length) {
-    const next = nextWrappedCell(cursor, bodyDirection, radius);
-    if (used.has(keyOf(next))) break;
-    segments.push(next);
-    used.add(keyOf(next));
-    cursor = next;
-  }
-  return segments;
+  return RulesCore.createStartingSnake(head, direction, length, radius);
 }
 
 function emptyStock() {
-  return Object.fromEntries(FOOD_TYPES.map(type => [type, 0]));
+  return RulesCore.emptyStock();
 }
 
 function clamp(value, min, max) {
-  return Math.min(max, Math.max(min, value));
+  return RulesCore.clamp(value, min, max);
 }
 
 function clampWeight(value, fallback = 1) {
@@ -207,91 +141,55 @@ function mergeWeights(defaults, overrides = {}) {
 }
 
 function wrappedDistance(state, start, target) {
-  if (!start || !target) return Number.POSITIVE_INFINITY;
-  if (keyOf(start) === keyOf(target)) return 0;
-  const startIndex = state.cellIndexByKey?.get(keyOf(start));
-  const targetIndex = state.cellIndexByKey?.get(keyOf(target));
-  if (Number.isInteger(startIndex) && Number.isInteger(targetIndex) && state.wrappedDistances?.[startIndex]) {
-    const cachedDistance = state.wrappedDistances[startIndex][targetIndex];
-    if (cachedDistance !== 65535) return cachedDistance;
-  }
-  const seen = new Set([keyOf(start)]);
-  const queue = [{ cell: start, distance: 0 }];
-  for (let index = 0; index < queue.length; index += 1) {
-    const current = queue[index];
-    for (let direction = 0; direction < DIRECTIONS.length; direction += 1) {
-      const next = nextWrappedCell(current.cell, direction, state.radius);
-      const nextKey = keyOf(next);
-      if (seen.has(nextKey)) continue;
-      if (nextKey === keyOf(target)) return current.distance + 1;
-      seen.add(nextKey);
-      queue.push({ cell: next, distance: current.distance + 1 });
-    }
-  }
-  return hexDistance(start, target);
+  return RulesCore.wrappedDistance(state, start, target);
 }
 
 function addStock(stock, typeId, amount, balance) {
-  stock[typeId] = clamp((stock[typeId] || 0) + amount, 0, balance.resources.maxFoodStock);
+  RulesCore.addStock(stock, typeId, amount, balance);
 }
 
 function addRandomStock(stock, candidates, amount, balance, rng) {
-  const available = candidates.filter(type => FOOD_TYPES.includes(type));
-  if (!available.length) return;
-  addStock(stock, rng.item(available), amount, balance);
+  RulesCore.addRandomStock(stock, candidates, amount, balance, rng);
 }
 
 function foodBonus(stock, typeId, perPoint, maxBonus) {
-  return Math.min(maxBonus, (stock[typeId] || 0) * perPoint);
+  return RulesCore.foodBonus(stock, typeId, perPoint, maxBonus);
 }
 
 function moveMultiplier(stock, balance) {
-  return 1 + foodBonus(stock, "fiber", balance.movement.moveBonusPerPoint, balance.movement.maxMoveBonus);
+  return RulesCore.moveMultiplier(stock, balance);
 }
 
 function damageMultiplier(stock, balance) {
-  return 2 + foodBonus(stock, "fat", balance.attack.damageBonusPerPoint, balance.attack.maxDamageBonus);
+  return RulesCore.damageMultiplier(stock, balance);
 }
 
 function attackDamageMultiplier(profile, balance) {
-  const value = profile === "small"
-    ? balance.attack?.smallAttackDamageMultiplier
-    : balance.attack?.bigAttackDamageMultiplier;
-  return Number.isFinite(value) ? value : DEFAULT_ATTACK_DAMAGE_MULTIPLIER;
+  return RulesCore.attackDamageMultiplier(profile, balance);
 }
 
 function attackDamage(stock, profile, balance) {
-  return damageMultiplier(stock, balance) * attackDamageMultiplier(profile, balance);
+  return RulesCore.attackDamage(stock, profile, balance);
 }
 
 function areaMultiplier(stock, balance) {
-  const perPoint = balance.attack.proteinRangeBonusPerPoint ?? (1 / balance.resources.maxFoodStock);
-  return 1 + foodBonus(stock, "protein", perPoint, balance.attack.maxProteinRangeBonus ?? 1);
+  return RulesCore.areaMultiplier(stock, balance);
 }
 
 function attackSpeedMultiplier(stock, balance) {
-  return 1 + foodBonus(stock, "carb", balance.attack.attackSpeedBonusPerPoint, balance.attack.maxAttackSpeedBonus);
+  return RulesCore.attackSpeedMultiplier(stock, balance);
 }
 
 function attackCooldownMultiplier(stock, balance) {
-  return 1 + foodBonus(stock, "fiber", balance.attack.attackSpeedBonusPerPoint, balance.attack.maxAttackSpeedBonus);
+  return RulesCore.attackCooldownMultiplier(stock, balance);
 }
 
 function attackStunChance(stock, balance, baseChance = balance.attack.baseAttackStunChance) {
-  return Math.min(1, baseChance + foodBonus(stock, "carb", balance.attack.attackStunChanceBonusPerPoint, balance.attack.maxAttackStunChanceBonus));
+  return RulesCore.attackStunChance(stock, balance, baseChance);
 }
 
 function attackHitStunChances(stock, balance) {
-  const bodyBase = balance.attack.bodyHitStunChance ?? 0.15;
-  const bodyPerPoint = balance.attack.bodyHitStunChanceBonusPerPoint ?? balance.attack.attackStunChanceBonusPerPoint;
-  const bodyMaxBonus = balance.attack.bodyHitMaxStunChanceBonus ?? balance.attack.maxAttackStunChanceBonus;
-  const headBase = balance.attack.headHitStunChance ?? balance.attack.baseAttackStunChance;
-  const headPerPoint = balance.attack.headHitStunChanceBonusPerPoint ?? balance.attack.attackStunChanceBonusPerPoint * 2;
-  const headMaxBonus = balance.attack.headHitMaxStunChanceBonus ?? 0.4;
-  return {
-    body: Math.min(1, bodyBase + foodBonus(stock, "carb", bodyPerPoint, bodyMaxBonus)),
-    head: Math.min(1, headBase + foodBonus(stock, "carb", headPerPoint, headMaxBonus))
-  };
+  return RulesCore.attackHitStunChances(stock, balance);
 }
 
 function moveInterval(fighter, balance, now) {
@@ -351,12 +249,7 @@ function projectedStockAfterFood(stock, balance, food) {
 }
 
 function canAttackWithResources(stock, ammo, profile, balance) {
-  if (ammo < attackBombCost(profile, balance)) return false;
-  const cost = attackFoodCost(profile, balance);
-  if (profile === "small") {
-    return FOOD_TYPES.reduce((best, type) => Math.max(best, stock[type] || 0), 0) >= cost;
-  }
-  return FOOD_TYPES.every(type => (stock[type] || 0) >= cost);
+  return RulesCore.canAttackWithResources(stock, ammo, profile, balance);
 }
 
 function foodResourceValueFor(fighter, food, balance, state = null) {
@@ -430,81 +323,63 @@ function occupiedSignature(state, occupied) {
 }
 
 function attackDelay(stock, balance) {
-  return balance.attack.baseAttackDelayMs / attackSpeedMultiplier(stock, balance);
+  return RulesCore.attackDelay(stock, balance);
 }
 
 function attackCooldown(stock, balance, profile = "big", characterId = null) {
-  const baseCooldown = profile === "big" && characterId
-    ? ultimateSetting(balance, characterId, "bigCooldownMs", balance.attack.baseAttackCooldownMs)
-    : balance.attack.baseAttackCooldownMs;
-  return baseCooldown / attackCooldownMultiplier(stock, balance);
+  return RulesCore.attackCooldown(stock, balance, profile, characterId);
 }
 
 function blastRadius(stock, balance) {
-  return balance.attack.baseBlastHexRadius * areaMultiplier(stock, balance);
+  return RulesCore.blastRadius(stock, balance);
 }
 
 function hpPerSnakeUnit(balance) {
-  const value = balance?.health?.hpPerSnakeUnit;
-  return Number.isFinite(value) ? value : DEFAULT_HP_PER_SNAKE_UNIT;
+  return RulesCore.hpPerSnakeUnit(balance);
 }
 
 function maxHpForSnake(snake = [], balance = null) {
-  return ((snake?.length || 0) + 1) * hpPerSnakeUnit(balance);
+  return RulesCore.maxHpForSnake(snake, balance);
 }
 
 function foodHealAmount(balance = null) {
-  return hpPerSnakeUnit(balance);
+  return RulesCore.foodHealAmount(balance);
 }
 
 function attackFoodCost(profile = "big", balance = null) {
-  return profile === "small" ? (balance?.attack?.smallAttackFoodCost ?? SMALL_ATTACK_FOOD_COST) : 2;
+  return RulesCore.attackFoodCost(profile, balance);
 }
 
 function attackBombCost(profile, balance) {
-  return profile === "small" ? (balance.attack.smallAttackBombCost ?? 1) : balance.attack.bigAttackBombCost;
+  return RulesCore.attackBombCost(profile, balance);
 }
 
 function smallAttackDelayScale(balance) {
-  return balance.attack?.smallAttackDelayScale ?? DEFAULT_SMALL_ATTACK_DELAY_SCALE;
+  return RulesCore.smallAttackDelayScale(balance);
 }
 
 function smallAttackCooldownScale(balance) {
-  return balance.attack?.smallAttackCooldownScale ?? DEFAULT_SMALL_ATTACK_COOLDOWN_SCALE;
+  return RulesCore.smallAttackCooldownScale(balance);
 }
 
 function sandwormRevealBeforeImpactMs(balance) {
-  return balance?.attack?.sandwormRevealBeforeImpactMs ?? DEFAULT_SANDWORM_REVEAL_BEFORE_IMPACT_MS;
+  return RulesCore.sandwormRevealBeforeImpactMs(balance);
 }
 
 function highestStockFoodType(stock) {
-  return FOOD_TYPES.reduce((best, type) => {
-    const currentCount = stock[type] || 0;
-    const bestCount = best ? (stock[best] || 0) : -Infinity;
-    return currentCount > bestCount ? type : best;
-  }, null);
+  return RulesCore.highestStockFoodType(stock);
 }
 
 function hasAttackFoodCost(stock, profile, balance) {
-  const cost = attackFoodCost(profile, balance);
-  if (profile === "small") {
-    const highestType = highestStockFoodType(stock);
-    return Boolean(highestType) && (stock[highestType] || 0) >= cost;
-  }
-  return FOOD_TYPES.every(type => (stock[type] || 0) >= cost);
+  return RulesCore.hasAttackFoodCost(stock, profile, balance);
 }
 
 function canAttack(fighter, profile, balance) {
-  return fighter.ammo >= attackBombCost(profile, balance) && hasAttackFoodCost(fighter.stock, profile, balance);
+  return RulesCore.canAttack(fighter, profile, balance);
 }
 
 function attackStats(stock, profile, balance) {
-  const isSmall = profile === "small";
-  return {
-    delay: attackDelay(stock, balance) * (isSmall ? smallAttackDelayScale(balance) : 1),
-    radius: Math.max(1, blastRadius(stock, balance) + (isSmall ? -1 : 0)),
-    damage: attackDamage(stock, profile, balance)
-  };
+  return RulesCore.attackStats(stock, profile, balance);
 }
 
 function morayFieldDurationMs(balance) {
@@ -520,140 +395,51 @@ function morayFieldDamageTicks(stock, balance) {
 }
 
 function bandDistanceFromTotalWidth(totalWidth) {
-  return Math.max(0, Math.floor((totalWidth - 1) / 2));
+  return RulesCore.bandDistanceFromTotalWidth(totalWidth);
 }
 
 function bandShapeFromTotalWidth(totalWidth) {
-  const fullDamageWidth = bandDistanceFromTotalWidth(totalWidth);
-  const fullTotalWidth = fullDamageWidth * 2 + 1;
-  const outerDamageMultiplier = Math.max(0, Math.min(1, (totalWidth - fullTotalWidth) / 2));
-  return {
-    width: fullDamageWidth + (outerDamageMultiplier > 0 ? 1 : 0),
-    fullDamageWidth,
-    outerDamageMultiplier
-  };
+  return RulesCore.bandShapeFromTotalWidth(totalWidth);
 }
 
 function lineBandDamageMultiplier(distance, band) {
-  if (distance > (band?.width ?? 0)) return 0;
-  if (distance <= (band?.fullDamageWidth ?? 0)) return 1;
-  return band?.outerDamageMultiplier ?? 1;
+  return RulesCore.lineBandDamageMultiplier(distance, band);
 }
 
 function convertFullEnergyToAmmo(fighter, balance) {
-  if (fighter.ammoCharge < balance.resources.attackNeedTotal || fighter.ammo >= balance.resources.maxAmmo) return false;
-  fighter.ammo = Math.min(balance.resources.maxAmmo, fighter.ammo + 1);
-  fighter.ammoCharge = 0;
-  return true;
+  return RulesCore.convertFullEnergyToAmmo(fighter, balance);
 }
 
 function consumeAttackCost(fighter, profile, balance) {
-  const cost = attackFoodCost(profile, balance);
-  const bombCost = attackBombCost(profile, balance);
-  const hadFullEnergy = fighter.ammoCharge >= balance.resources.attackNeedTotal;
-  const hadFullBombs = fighter.ammo >= balance.resources.maxAmmo;
-  if (profile === "small") {
-    const highestType = highestStockFoodType(fighter.stock);
-    if (highestType) fighter.stock[highestType] = Math.max(0, (fighter.stock[highestType] || 0) - cost);
-  } else {
-    FOOD_TYPES.forEach(type => {
-      fighter.stock[type] = Math.max(0, fighter.stock[type] - cost);
-    });
-  }
-  fighter.ammo = Math.max(0, fighter.ammo - bombCost);
-  if (bombCost > 0 && hadFullEnergy && hadFullBombs) convertFullEnergyToAmmo(fighter, balance);
+  RulesCore.consumeAttackCost(fighter, profile, balance);
 }
 
 function addAmmoCharge(fighter, amount, balance) {
-  fighter.ammoCharge += amount;
-  if (fighter.ammoCharge >= balance.resources.attackNeedTotal) {
-    if (fighter.ammo < balance.resources.maxAmmo) {
-      fighter.ammo = Math.min(balance.resources.maxAmmo, fighter.ammo + 1);
-      fighter.ammoCharge = 0;
-    } else {
-      fighter.ammoCharge = balance.resources.attackNeedTotal;
-    }
-  }
+  RulesCore.addAmmoCharge(fighter, amount, balance);
 }
 
 function randomFoodType(preferredFoodId, balance, rng) {
-  if (!preferredFoodId || preferredFoodId === "balanced") return rng.item(FOOD_TYPES);
-  let roll = rng.next();
-  for (const type of FOOD_TYPES) {
-    const weight = type === preferredFoodId ? balance.foodWeights.preferred : balance.foodWeights.other;
-    if (roll < weight) return type;
-    roll -= weight;
-  }
-  return FOOD_TYPES[FOOD_TYPES.length - 1];
+  return RulesCore.randomFoodType(preferredFoodId, balance, rng);
 }
 
 function randomFoodTypeIdsForCharacter(character, balance, rng) {
-  if (character?.specialFood === "black" && rng.next() < balance.foodWeights.blackSpecialChance) return ["black"];
-  if (character?.specialFood === "black") return [randomFoodType(null, balance, rng)];
-  const preferredFoodId = character?.foodPreference || "balanced";
-  const first = randomFoodType(preferredFoodId, balance, rng);
-  if (preferredFoodId !== "balanced" || rng.next() >= balance.foodWeights.balancedDualChance) return [first];
-  const second = rng.item(FOOD_TYPES.filter(type => type !== first));
-  return [first, second];
+  return RulesCore.randomFoodTypeIdsForCharacter(character, balance, rng);
 }
 
 function applyCharacterFoodStockBonus(fighter, food, balance, rng) {
-  const types = food?.types || [];
-  const character = fighter?.character;
-  if (!character) return;
-  const preferredFood = character?.foodPreference || "balanced";
-  const hasBlackFood = types.includes("black");
-  const stockTypes = types.filter(type => FOOD_TYPES.includes(type));
-  const isBlackSpecialist = character?.specialFood === "black" || preferredFood === "black";
-  if (isBlackSpecialist) {
-    if (!hasBlackFood) return;
-    const roll = rng.next();
-    const doubleChance = balance.resources.blackFoodDoubleBonusChance ?? (1 / 15);
-    const singleChance = balance.resources.blackFoodBonusChance ?? (1 / 3);
-    if (roll < doubleChance) {
-      addRandomStock(fighter.stock, FOOD_TYPES, 2, balance, rng);
-    } else if (roll < doubleChance + singleChance) {
-      addRandomStock(fighter.stock, FOOD_TYPES, 1, balance, rng);
-    }
-    return;
-  }
-  if (preferredFood === "balanced") {
-    const candidates = hasBlackFood ? FOOD_TYPES : stockTypes;
-    const chance = balance.resources.balancedFoodBonusChance ?? 0.2;
-    if (candidates.length && rng.next() < chance) {
-      addRandomStock(fighter.stock, candidates, 1, balance, rng);
-    }
-    return;
-  }
-  const chance = balance.resources.favoriteFoodBonusChance ?? 0.5;
-  if (stockTypes.length === 1 && stockTypes[0] === preferredFood && rng.next() < chance) {
-    addStock(fighter.stock, stockTypes[0], 1, balance);
-  }
+  RulesCore.applyCharacterFoodStockBonus(fighter, food, balance, rng);
 }
 
 function collectFood(fighter, food, balance, rng) {
-  if (food.types.includes("black")) {
-    addStock(fighter.stock, rng.item(FOOD_TYPES), 1, balance);
-    addAmmoCharge(fighter, balance.resources.blackFoodEnergy, balance);
-    applyCharacterFoodStockBonus(fighter, food, balance, rng);
-    return;
-  }
-  const gain = food.types.length > 1 ? balance.resources.dualColorStockGain : balance.resources.singleColorStockGain;
-  food.types.forEach(type => addStock(fighter.stock, type, gain, balance));
-  applyCharacterFoodStockBonus(fighter, food, balance, rng);
-  addAmmoCharge(fighter, balance.resources.foodEnergy, balance);
+  RulesCore.collectFood(fighter, food, balance, rng);
 }
 
 function damageSnake(parts, target, radius, damageScale, balance) {
-  return parts.reduce((total, segment) => {
-    const multiplier = circleDamageMultiplier(hexDistance(segment, target), radius);
-    return total + damageScale * multiplier;
-  }, 0);
+  return RulesCore.damageSnake(parts, target, radius, damageScale, balance);
 }
 
 function circleDamageMultiplier(distance, radius) {
-  if (!Number.isFinite(radius) || radius <= 0) return distance === 0 ? 1 : 0;
-  return Math.max(0, Math.min(1, 1 - distance / radius));
+  return RulesCore.circleDamageMultiplier(distance, radius);
 }
 
 function circleAttackHitsHead(parts, target, radius) {
@@ -666,16 +452,7 @@ function stunChanceForHeadHit(hitHead, projectile) {
 }
 
 function damageSnakeCells(parts, effectCells, width, damageScale, excludedCells = [], minDistance = 0, outerDamageMultiplier = 1, fullDamageWidth = 0) {
-  const excluded = cellKeySet(excludedCells);
-  return parts.reduce((total, segment) => {
-    if (excluded.has(keyOf(segment))) return total;
-    const bestMultiplier = effectCells.reduce((best, cell) => {
-      const distance = hexDistance(segment, cell);
-      if (distance < minDistance || distance > width) return best;
-      return Math.max(best, lineBandDamageMultiplier(distance, { width, fullDamageWidth, outerDamageMultiplier }));
-    }, 0);
-    return bestMultiplier > 0 ? total + damageScale * bestMultiplier : total;
-  }, 0);
+  return RulesCore.damageSnakeCells(parts, effectCells, width, damageScale, excludedCells, minDistance, outerDamageMultiplier, fullDamageWidth);
 }
 
 function lineProjectileHitsHead(parts, projectile) {

@@ -5,6 +5,7 @@
     const GameRuntimeState = GameRootState.game;
     const GamePresentationState = GameRootState.ui;
     const GameUI = HexSnakeUI;
+    const GameRules = globalThis.HexSnakeRules;
     const GameDom = HexSnakeDOM;
     const { keyLabel, normalizeAutoBattleSpeed, normalizeKey } = GameControls;
     const Dom = GameDom;
@@ -748,7 +749,7 @@
     }
 
     function keyOf(cell) {
-      return `${cell.q},${cell.r}`;
+      return GameRules.keyOf(cell);
     }
 
     function stableVariantIndex(cell, salt = 0, count = 1) {
@@ -759,8 +760,7 @@
     }
 
     function isInside(cell) {
-      const s = -cell.q - cell.r;
-      return Math.max(Math.abs(cell.q), Math.abs(cell.r), Math.abs(s)) <= GameRuntimeState.radius;
+      return GameRules.isInside(cell, GameRuntimeState.radius);
     }
 
     function axialToPixel(cell) {
@@ -827,19 +827,7 @@
     }
 
     function createStartingSnake(head, direction, length) {
-      const segments = [{ ...head }];
-      let cursor = { ...head };
-      const bodyDirection = (direction + 3) % 6;
-      const used = new Set([keyOf(cursor)]);
-      while (segments.length < length) {
-        const next = nextWrappedCell(cursor, bodyDirection);
-        const nextKey = keyOf(next);
-        if (used.has(nextKey)) break;
-        segments.push(next);
-        used.add(nextKey);
-        cursor = next;
-      }
-      return segments;
+      return GameRules.createStartingSnake(head, direction, length, GameRuntimeState.radius, GameConfig.directions);
     }
 
     function resetGame() {
@@ -1162,37 +1150,8 @@
       Dom.overlay.classList.add("show");
     }
 
-    function randomFoodType(preferredFoodId = null) {
-      if (!preferredFoodId || preferredFoodId === "balanced") {
-        return GameConfig.foodTypes[Math.floor(Math.random() * GameConfig.foodTypes.length)];
-      }
-      let roll = Math.random();
-      for (const type of GameConfig.foodTypes) {
-        const weight = type.id === preferredFoodId ? GameConfig.preferredFoodWeight : GameConfig.otherFoodWeight;
-        if (roll < weight) return type;
-        roll -= weight;
-      }
-      return GameConfig.foodTypes[GameConfig.foodTypes.length - 1];
-    }
-
-    function randomFoodTypeIds(preferredFoodId = null, dualColor = false) {
-      const firstType = randomFoodType(preferredFoodId);
-      if (!dualColor) return [firstType.id];
-      const secondOptions = GameConfig.foodTypes.filter(type => type.id !== firstType.id);
-      const secondType = secondOptions[Math.floor(Math.random() * secondOptions.length)];
-      return [firstType.id, secondType.id];
-    }
-
     function randomFoodTypeIdsForCharacter(character) {
-      if (character?.specialFood === "black" && Math.random() < GameConfig.blackSpecialChance) {
-        return ["black"];
-      }
-      if (character?.specialFood === "black") {
-        return randomFoodTypeIds(null, false);
-      }
-      const preferredFoodId = character ? character.food : null;
-      const dualColor = character?.food === "balanced" && Math.random() < GameConfig.balancedDualChance;
-      return randomFoodTypeIds(preferredFoodId, dualColor);
+      return GameRules.randomFoodTypeIdsForCharacter(character, GameConfig);
     }
 
     function placeFoods(preferredOwners = []) {
@@ -2260,26 +2219,15 @@
     }
 
     function hexDistance(a, b) {
-      const as = -a.q - a.r;
-      const bs = -b.q - b.r;
-      return (Math.abs(a.q - b.q) + Math.abs(a.r - b.r) + Math.abs(as - bs)) / 2;
+      return GameRules.hexDistance(a, b);
     }
 
     function nextCell(head, direction) {
-      const delta = GameConfig.directions[direction];
-      return { q: head.q + delta.q, r: head.r + delta.r };
+      return GameRules.nextCell(head, direction, GameConfig.directions);
     }
 
     function nextWrappedCell(head, direction) {
-      const next = nextCell(head, direction);
-      if (isInside(next)) return next;
-
-      const oppositeDirection = (direction + 3) % 6;
-      let wrapped = head;
-      while (isInside(nextCell(wrapped, oppositeDirection))) {
-        wrapped = nextCell(wrapped, oppositeDirection);
-      }
-      return wrapped;
+      return GameRules.nextWrappedCell(head, direction, GameRuntimeState.radius, GameConfig.directions);
     }
 
     function directionalAttackTarget(direction) {
@@ -2314,33 +2262,19 @@
     }
 
     function attackStats(stock, profile = "big") {
-      const isSmall = profile === "small";
-      return {
-        delay: GameUI.attackDelay(stock) * (isSmall ? GameConfig.smallAttackDelayScale : 1),
-        radius: Math.max(1, GameUI.blastRadius(stock) + (isSmall ? -1 : 0)),
-        damage: GameUI.attackDamage(stock, profile)
-      };
+      return GameRules.attackStats(stock, profile, GameConfig);
     }
 
     function bandDistanceFromTotalWidth(totalWidth) {
-      return Math.max(0, Math.floor((totalWidth - 1) / 2));
+      return GameRules.bandDistanceFromTotalWidth(totalWidth);
     }
 
     function bandShapeFromTotalWidth(totalWidth) {
-      const fullDamageWidth = bandDistanceFromTotalWidth(totalWidth);
-      const fullTotalWidth = fullDamageWidth * 2 + 1;
-      const outerDamageMultiplier = Math.max(0, Math.min(1, (totalWidth - fullTotalWidth) / 2));
-      return {
-        width: fullDamageWidth + (outerDamageMultiplier > 0 ? 1 : 0),
-        fullDamageWidth,
-        outerDamageMultiplier
-      };
+      return GameRules.bandShapeFromTotalWidth(totalWidth);
     }
 
     function lineBandDamageMultiplier(distance, band) {
-      if (distance > (band?.width ?? 0)) return 0;
-      if (distance <= (band?.fullDamageWidth ?? 0)) return 1;
-      return band?.outerDamageMultiplier ?? 1;
+      return GameRules.lineBandDamageMultiplier(distance, band);
     }
 
     function ownerDirection(owner) {
@@ -2466,7 +2400,7 @@
     }
 
     function cellKeySet(cellList = []) {
-      return new Set(cellList.map(cell => keyOf(cell)));
+      return GameRules.cellKeySet(cellList);
     }
 
     function cellsNearCells(effectCells, width, excludedCells = [], minDistance = 0) {
@@ -2614,10 +2548,7 @@
     }
 
     function attackHitStunChances(stock) {
-      return {
-        body: Math.min(1, GameConfig.bodyHitStunChance + GameUI.foodBonus(stock, "carb", GameConfig.bodyHitStunChanceBonusPerPoint, GameConfig.bodyHitMaxStunChanceBonus)),
-        head: Math.min(1, GameConfig.headHitStunChance + GameUI.foodBonus(stock, "carb", GameConfig.headHitStunChanceBonusPerPoint, GameConfig.headHitMaxStunChanceBonus))
-      };
+      return GameRules.attackHitStunChances(stock, GameConfig);
     }
 
     function scheduleCharacterBigAttack(owner, character, source, target, now, stock, stunChance, options = {}) {
@@ -2910,15 +2841,11 @@
     }
 
     function damageSnake(parts, target, radius, damageScale) {
-      return parts.reduce((total, segment) => {
-        const multiplier = circleDamageMultiplier(hexDistance(segment, target), radius);
-        return total + damageScale * multiplier;
-      }, 0);
+      return GameRules.damageSnake(parts, target, radius, damageScale);
     }
 
     function circleDamageMultiplier(distance, radius) {
-      if (!Number.isFinite(radius) || radius <= 0) return distance === 0 ? 1 : 0;
-      return Math.max(0, Math.min(1, 1 - distance / radius));
+      return GameRules.circleDamageMultiplier(distance, radius);
     }
 
     function circleAttackHitsHead(parts, target, radius) {
@@ -2931,16 +2858,7 @@
     }
 
     function damageSnakeCells(parts, effectCells, width, damageScale, excludedCells = [], minDistance = 0, outerDamageMultiplier = 1, fullDamageWidth = 0) {
-      const excluded = cellKeySet(excludedCells);
-      return parts.reduce((total, segment) => {
-        if (excluded.has(keyOf(segment))) return total;
-        const bestMultiplier = effectCells.reduce((bestValue, cell) => {
-          const distance = hexDistance(segment, cell);
-          if (distance < minDistance || distance > width) return bestValue;
-          return Math.max(bestValue, lineBandDamageMultiplier(distance, { width, fullDamageWidth, outerDamageMultiplier }));
-        }, 0);
-        return bestMultiplier > 0 ? total + damageScale * bestMultiplier : total;
-      }, 0);
+      return GameRules.damageSnakeCells(parts, effectCells, width, damageScale, excludedCells, minDistance, outerDamageMultiplier, fullDamageWidth);
     }
 
     function lineProjectileHitsHead(parts, projectile) {
