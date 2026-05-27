@@ -911,6 +911,50 @@
       align-items: stretch;
     }
 
+    .result-highlights {
+      position: relative;
+      z-index: 12;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      margin: 0 0 12px;
+    }
+
+    .result-highlights[hidden] {
+      display: none;
+    }
+
+    .result-highlight-card {
+      display: grid;
+      gap: 3px;
+      min-width: 0;
+      padding: 9px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(8, 12, 18, 0.42);
+      text-align: left;
+    }
+
+    .result-highlight-card strong {
+      color: #fef3c7;
+      font-size: 1.02rem;
+      line-height: 1.05;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .result-highlight-card span {
+      color: var(--ink);
+      font-size: 0.78rem;
+      font-weight: 850;
+    }
+
+    .result-highlight-card small {
+      color: var(--muted);
+      font-size: 0.7rem;
+      line-height: 1.25;
+      overflow-wrap: anywhere;
+    }
+
     .result-share-panel {
       position: relative;
       z-index: 12;
@@ -2434,6 +2478,42 @@
       border-color: rgba(250, 204, 21, 0.34);
       color: #fef3c7;
       background: rgba(250, 204, 21, 0.11);
+    }
+
+    .app-stats-highlight {
+      margin-top: 0.34rem;
+      color: #fde68a;
+      font-size: 0.78rem;
+      font-weight: 800;
+      line-height: 1.3;
+    }
+
+    .achievement-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 0.45rem;
+    }
+
+    .achievement-badge {
+      display: inline-grid;
+      place-items: center;
+      min-height: 23px;
+      padding: 3px 7px;
+      border-radius: 999px;
+      border: 1px solid rgba(250, 204, 21, 0.32);
+      background: rgba(250, 204, 21, 0.1);
+      color: #fef3c7;
+      font-size: 0.72rem;
+      font-weight: 850;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .achievement-badge.is-locked {
+      border-color: rgba(148, 163, 184, 0.22);
+      background: rgba(148, 163, 184, 0.08);
+      color: var(--muted);
     }
 
     .app-stats-actions {
@@ -6618,13 +6698,18 @@
 
       .dialog-actions {
         grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 6px;
+        gap: 4px;
       }
 
       .dialog-actions button {
-        min-height: 36px;
-        padding: 7px 5px;
-        font-size: clamp(0.68rem, 2.9vw, 0.82rem);
+        min-width: 0;
+        min-height: 34px;
+        padding: 6px 3px;
+        overflow: hidden;
+        font-size: clamp(0.62rem, 2.45vw, 0.76rem);
+        line-height: 1.1;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
       .overlay.is-session-modal {
@@ -6711,6 +6796,28 @@
         margin-bottom: 8px;
         font-size: 0.76rem;
         line-height: 1.18;
+      }
+
+      .overlay.is-session-modal .result-highlights {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 4px;
+        margin-bottom: 6px;
+      }
+
+      .overlay.is-session-modal .result-highlight-card {
+        gap: 2px;
+        padding: 5px 4px;
+      }
+
+      .overlay.is-session-modal .result-highlight-card strong {
+        font-size: 0.76rem;
+        line-height: 1.05;
+      }
+
+      .overlay.is-session-modal .result-highlight-card span,
+      .overlay.is-session-modal .result-highlight-card small {
+        font-size: 0.58rem;
+        line-height: 1.08;
       }
 
       .overlay.is-session-modal .intro-avatar-button {

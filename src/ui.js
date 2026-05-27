@@ -3080,7 +3080,8 @@ function setOverlayChromeVisible(visible) {
   UiDom.overlayText.hidden = !visible;
   UiDom.startButton.hidden = !visible;
   UiDom.computerBattleButton.hidden = !visible || (running && !gameOver);
-  UiDom.replayArchiveButton.hidden = !visible;
+  UiDom.skillTrainingButton.hidden = !visible || (running && !gameOver);
+  UiDom.replayArchiveButton.hidden = true;
   UiDom.introCloseButton.hidden = true;
   updateResultSharePanel();
 }
@@ -3096,7 +3097,8 @@ function setIntroLobbyChrome() {
   UiDom.overlayText.hidden = true;
   UiDom.startButton.hidden = false;
   UiDom.computerBattleButton.hidden = false;
-  UiDom.replayArchiveButton.hidden = false;
+  UiDom.skillTrainingButton.hidden = false;
+  UiDom.replayArchiveButton.hidden = true;
   UiDom.introCloseButton.hidden = true;
   UiDom.startButton.textContent = "開始";
   updateResultSharePanel();
@@ -3113,6 +3115,7 @@ function setIntroDetailsChrome() {
   UiDom.overlayText.hidden = true;
   UiDom.startButton.hidden = true;
   UiDom.computerBattleButton.hidden = true;
+  UiDom.skillTrainingButton.hidden = true;
   UiDom.replayArchiveButton.hidden = true;
   UiDom.introCloseButton.hidden = false;
   updateResultSharePanel();

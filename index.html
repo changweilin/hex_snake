@@ -83,10 +83,15 @@
             <div id="winnerPortrait" hidden></div>
             <h2 id="overlayTitle">準備開局</h2>
             <p id="overlayText">每吃 1 個食物獲得 2 點能量，集滿 6 點獲得 1 枚炸彈，最多 3 枚；HP 上限為（蛇長 + 1）× 10；能量與炸彈都滿時，施放消耗炸彈的招式會立刻把滿能量轉為 1 枚炸彈；小招消耗目前最高的食物庫存 2 點與 1 枚炸彈，大招消耗 2 枚炸彈與四種庫存各 2 點。</p>
+            <div class="result-highlights" id="resultHighlights" hidden></div>
             <div class="dialog-actions">
               <button id="startButton" type="button">開始</button>
               <button id="computerBattleButton" class="secondary" type="button">自動對弈</button>
-              <button id="replayArchiveButton" class="secondary" type="button" data-match-history-entry="post-match">戰報</button>
+              <button id="skillTrainingButton" class="secondary" type="button">技能訓練</button>
+              <button id="replayArchiveButton" class="secondary" type="button" data-match-history-entry="post-match" hidden>戰報</button>
+            </div>
+            <div class="result-share-panel" id="resultSharePanel" hidden>
+              <div id="shareResultStatus" class="result-share-status" role="status" aria-live="polite" hidden></div>
             </div>
             <button id="introCloseButton" class="secondary intro-close-button" type="button" hidden>關閉</button>
           </div>
@@ -101,7 +106,7 @@
           <svg class="settings-action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 0 4 22V5.5Z"/><path d="M8 7h8"/><path d="M8 11h8"/></svg>
           <span class="settings-action-label">規則</span>
         </button>
-        <button class="replay-toggle" id="settingsReplayButton" type="button" data-match-history-entry="recent" aria-haspopup="dialog" aria-controls="replayModal" title="戰報" aria-label="戰報">
+        <button class="replay-toggle" id="settingsReplayButton" type="button" data-match-history-entry="post-match" aria-haspopup="dialog" aria-controls="replayModal" title="戰報" aria-label="戰報">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M5 5h14"/>
             <path d="M5 12h9"/>
@@ -110,7 +115,7 @@
           </svg>
           <span class="replay-toggle-label">戰報</span>
         </button>
-        <button class="stats-toggle" id="statsButton" type="button" data-match-history-entry="mastery" aria-haspopup="dialog" aria-controls="replayModal" title="戰績" aria-label="戰績" hidden>
+        <button class="stats-toggle" id="statsButton" type="button" data-match-history-entry="mastery" aria-haspopup="dialog" aria-controls="replayModal" title="熟練度" aria-label="熟練度" hidden>
           <svg class="settings-action-icon" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M4 19V5"/>
             <path d="M4 19h16"/>
