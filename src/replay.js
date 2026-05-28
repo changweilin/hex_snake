@@ -8,6 +8,7 @@
     const replaySnapshotIntervalMs = 200;
     const replayMaxSnapshots = 900;
     const replayPlaybackSpeeds = [0.25, 0.5, 0.75, 1, 1.5, 2, 4];
+    const matchHistoryTabs = new Set(["recent", "favorite", "mastery", "share"]);
     let activeReplayRecording = null;
     let lastReplaySnapshotAt = -Infinity;
     let replayMode = false;
@@ -17,6 +18,7 @@
     let replayReturnState = null;
     let replayRafId = 0;
     let replaySurrendered = false;
+    let activeMatchHistoryTab = "recent";
     const ReplayRootState = HexSnakeState;
     const GameState = ReplayRootState.game;
     const UiState = ReplayRootState.ui;
@@ -293,13 +295,30 @@
       ReplayDom.favoriteReplayCount.textContent = `${favorites.length} / ${replayLimit}`;
       renderReplayList(ReplayDom.recentReplayList, recent, false);
       renderReplayList(ReplayDom.favoriteReplayList, favorites, true);
+      ReplayUI.stats.refresh?.();
+      ReplayUI.updateResultSharePanel?.();
     }
 
-    function openReplayModal() {
+    function setMatchHistoryTab(tab = "recent") {
+      const nextTab = matchHistoryTabs.has(tab) ? tab : "recent";
+      activeMatchHistoryTab = nextTab;
+      ReplayDom.matchHistoryTabButtons.forEach(button => {
+        const selected = button.dataset.matchHistoryTab === nextTab;
+        button.classList.toggle("is-active", selected);
+        button.setAttribute("aria-selected", selected ? "true" : "false");
+        button.tabIndex = selected ? 0 : -1;
+      });
+      ReplayDom.matchHistoryPanels.forEach(panel => {
+        panel.hidden = panel.dataset.matchHistoryPanel !== nextTab;
+      });
+    }
+
+    function openReplayModal(tab = "recent") {
       if (GameState.running && !GameState.gameOver) return;
       ReplayGame.clearRelayRestartTimer();
       setReplayMessage("");
       refreshReplayModal();
+      setMatchHistoryTab(tab);
       ReplayDom.replayModal.hidden = false;
     }
 
@@ -664,6 +683,11 @@
       },
       openModal: openReplayModal,
       closeModal: closeReplayModal,
+      refreshModal: refreshReplayModal,
+      setTab: setMatchHistoryTab,
+      get activeTab() {
+        return activeMatchHistoryTab;
+      },
       findRecord: findReplayRecord,
       toggleFavorite: toggleReplayFavorite,
       deleteRecord: deleteReplayRecord,

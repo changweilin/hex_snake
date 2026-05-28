@@ -13,6 +13,7 @@ const buildTarget = buildArgs.has("--mobile") ? "mobile" : "web";
 const platformSource = buildTarget === "mobile" ? "src/platform/mobile.js" : "src/platform/web.js";
 const legacySources = [
   platformSource,
+  "src/rules-core.js",
   "src/state.js",
   "src/dom.js",
   "src/ui.js",

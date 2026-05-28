@@ -14,6 +14,7 @@
 
 | Order | Web source | Mobile source | Creates / extends | Downstream needs |
 | --- | --- | --- | --- | --- |
+| 1.5 | `src/rules-core.js` | `src/rules-core.js` | `HexSnakeRules` pure board / resource / attack rules | UI runtime adapters, game helpers, simulator |
 | 1 | `src/platform/web.js` | `src/platform/mobile.js` | `HexSnakeStorage`、`HexSnakePlatform`、`HexSnakeRuntime` | 所有需要 storage、display、haptics、share、lifecycle 的模組 |
 | 2 | `src/state.js` | `src/state.js` | `HexSnakeState`、`HexSnakeUI` 子 registry、`HexSnakeRender`、`HexSnakeRenderGame`、`HexSnakeControls` | DOM、UI、services、AI、render、game |
 | 3 | `src/dom.js` | `src/dom.js` | `HexSnakeDOM` | UI、replay、stats、about、render、game |
@@ -34,6 +35,7 @@
 
 | Surface | Current owner | Shape | Formal ESM target |
 | --- | --- | --- | --- |
+| `HexSnakeRules` | `src/rules-core.js` | frozen pure rule core for board topology, wrapping, resource math, food collection, and attack damage | browser global plus CommonJS export for simulator parity |
 | `HexSnakeRuntime` | `src/platform/web.js` / `src/platform/mobile.js` | frozen `{ platform, storage }` adapter | named `runtime` / `platform` / `storage` exports implemented |
 | `HexSnakeState` | `src/state.js` | mutable state namespaces: `audio`、`config`、`game`、`replay`、`ui` | named `state` export implemented |
 | `HexSnakeUI` | `src/state.js` creates via `StateUIRegistry`; `src/ui.js` and services extend | shared registry with `about`、`ai`、`aiGame`、`audio`、`replay`、`replayGame`、`stats`、`uiGame`; UI self-references use `UiRegistry` | named `uiRegistry` export implemented until UI/game split is complete |

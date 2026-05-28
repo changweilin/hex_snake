@@ -15,8 +15,10 @@
     const overlay = document.querySelector("#overlay");
     const overlayTitle = document.querySelector("#overlayTitle");
     const overlayText = document.querySelector("#overlayText");
+    const resultHighlights = document.querySelector("#resultHighlights");
     const startButton = document.querySelector("#startButton");
     const computerBattleButton = document.querySelector("#computerBattleButton");
+    const skillTrainingButton = document.querySelector("#skillTrainingButton");
     const replayArchiveButton = document.querySelector("#replayArchiveButton");
     const resultSharePanel = document.querySelector("#resultSharePanel");
     const shareResultStatus = document.querySelector("#shareResultStatus");
@@ -35,12 +37,20 @@
     const replayModal = document.querySelector("#replayModal");
     const replayModalClose = document.querySelector("#replayModalClose");
     const replayMessage = document.querySelector("#replayMessage");
+    const matchHistoryTabButtons = [...document.querySelectorAll("[data-match-history-tab]")];
+    const matchHistoryPanels = [...document.querySelectorAll("[data-match-history-panel]")];
+    const matchHistoryShareEmpty = document.querySelector("#matchHistoryShareEmpty");
+    const matchHistoryShareContent = document.querySelector("#matchHistoryShareContent");
+    const matchHistorySharePreview = document.querySelector("#matchHistorySharePreview");
+    const matchHistoryShareCopyButton = document.querySelector("#matchHistoryShareCopyButton");
+    const matchHistorySystemShareButton = document.querySelector("#matchHistorySystemShareButton");
+    const matchHistoryEntryButtons = [...document.querySelectorAll("[data-match-history-entry]")];
     const recentReplayList = document.querySelector("#recentReplayList");
     const favoriteReplayList = document.querySelector("#favoriteReplayList");
     const recentReplayCount = document.querySelector("#recentReplayCount");
     const favoriteReplayCount = document.querySelector("#favoriteReplayCount");
-    const statsModal = document.querySelector("#statsModal");
-    const statsModalClose = document.querySelector("#statsModalClose");
+    const statsModal = replayModal;
+    const statsModalClose = replayModalClose;
     const statsSummary = document.querySelector("#statsSummary");
     const statsRecentCount = document.querySelector("#statsRecentCount");
     const statsRecentList = document.querySelector("#statsRecentList");
@@ -139,6 +149,8 @@
     const settingsCloseButton = document.querySelector("#settingsCloseButton");
     const characterStage = document.querySelector("#characterStage");
     const resourceBoard = document.querySelector("#resourceBoard");
+    const mobileSheetTabs = document.querySelector("#mobileSheetTabs");
+    const mobileSheetTabButtons = [...document.querySelectorAll("[data-mobile-sheet-tab]")];
     const keyEls = [...document.querySelectorAll(".key")];
     const mobileInputQuery = window.matchMedia("(hover: none), (pointer: coarse), (max-width: 900px)");
 
@@ -162,8 +174,10 @@
       overlay,
       overlayTitle,
       overlayText,
+      resultHighlights,
       startButton,
       computerBattleButton,
+      skillTrainingButton,
       replayArchiveButton,
       resultSharePanel,
       shareResultStatus,
@@ -182,6 +196,14 @@
       replayModal,
       replayModalClose,
       replayMessage,
+      matchHistoryTabButtons,
+      matchHistoryPanels,
+      matchHistoryShareEmpty,
+      matchHistoryShareContent,
+      matchHistorySharePreview,
+      matchHistoryShareCopyButton,
+      matchHistorySystemShareButton,
+      matchHistoryEntryButtons,
       recentReplayList,
       favoriteReplayList,
       recentReplayCount,
@@ -281,6 +303,8 @@
       settingsCloseButton,
       characterStage,
       resourceBoard,
+      mobileSheetTabs,
+      mobileSheetTabButtons,
       keyEls,
       mobileInputQuery
     });

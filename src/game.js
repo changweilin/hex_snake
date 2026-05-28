@@ -5,6 +5,7 @@
     const GameRuntimeState = GameRootState.game;
     const GamePresentationState = GameRootState.ui;
     const GameUI = HexSnakeUI;
+    const GameRules = globalThis.HexSnakeRules;
     const GameDom = HexSnakeDOM;
     const { keyLabel, normalizeAutoBattleSpeed, normalizeKey } = GameControls;
     const Dom = GameDom;
@@ -26,6 +27,7 @@
     const controlProfilesKey = "hexSnakeControlProfilesV1";
     const selectedControlProfileKey = "hexSnakeSelectedControlProfileV1";
     const controlProfileLimit = 8;
+    const skillTrainingResourceRefillMs = 5000;
     let controlProfiles = loadControlProfiles();
     let selectedControlProfileId = String(GameStorage.get(selectedControlProfileKey) || "").slice(0, 48);
 
@@ -543,6 +545,12 @@
       Dom.computerDifficultyInput.value = GameRuntimeState.computerDifficulty;
     }
 
+    function restoreTrainingComputerDifficulty() {
+      const previousDifficulty = GameRuntimeState.trainingPreviousComputerDifficulty;
+      if (previousDifficulty) setComputerDifficulty(previousDifficulty);
+      GameRuntimeState.trainingPreviousComputerDifficulty = null;
+    }
+
     function setInitialSpeed(value) {
       GameRuntimeState.initialSpeed = clampInitialSpeed(value);
       Dom.initialSpeedInput.value = GameRuntimeState.initialSpeed;
@@ -714,6 +722,11 @@
       Dom.settingsToggle.hidden = showSurrender;
       Dom.surrenderButton.hidden = !showSurrender;
       Dom.surrenderButton.disabled = !showSurrender;
+      Dom.mobileSheetTabs?.parentElement?.classList.toggle("is-match-active", showSurrender);
+      const surrenderLabel = GameRuntimeState.trainingMode ? "離開" : "投降";
+      Dom.surrenderButton.title = surrenderLabel;
+      Dom.surrenderButton.setAttribute("aria-label", surrenderLabel);
+      Dom.surrenderButton.querySelector(".settings-action-label").textContent = surrenderLabel;
       Dom.networkToggle.classList.toggle("is-auto", showSurrender && !networkRoomActive);
       Dom.networkToggle.classList.toggle("is-disconnect", networkRoomActive);
       Dom.networkToggle.classList.toggle("is-active", networkRoomActive || (showSurrender ? isPlayerAutoControlActive() : !Dom.networkContent.hidden));
@@ -748,7 +761,7 @@
     }
 
     function keyOf(cell) {
-      return `${cell.q},${cell.r}`;
+      return GameRules.keyOf(cell);
     }
 
     function stableVariantIndex(cell, salt = 0, count = 1) {
@@ -759,8 +772,7 @@
     }
 
     function isInside(cell) {
-      const s = -cell.q - cell.r;
-      return Math.max(Math.abs(cell.q), Math.abs(cell.r), Math.abs(s)) <= GameRuntimeState.radius;
+      return GameRules.isInside(cell, GameRuntimeState.radius);
     }
 
     function axialToPixel(cell) {
@@ -827,24 +839,13 @@
     }
 
     function createStartingSnake(head, direction, length) {
-      const segments = [{ ...head }];
-      let cursor = { ...head };
-      const bodyDirection = (direction + 3) % 6;
-      const used = new Set([keyOf(cursor)]);
-      while (segments.length < length) {
-        const next = nextWrappedCell(cursor, bodyDirection);
-        const nextKey = keyOf(next);
-        if (used.has(nextKey)) break;
-        segments.push(next);
-        used.add(nextKey);
-        cursor = next;
-      }
-      return segments;
+      return GameRules.createStartingSnake(head, direction, length, GameRuntimeState.radius, GameConfig.directions);
     }
 
     function resetGame() {
       clearGameOverSettlementTimer();
       GameUI.renderWinnerPortrait(null);
+      setResultHighlights([]);
       Object.values(GameRuntimeState.portraitPoseTimers).forEach(clearTimeout);
       GameRuntimeState.portraitPoseTimers = {};
       Object.values(GameRuntimeState.attackCalloutTimers).forEach(clearTimeout);
@@ -878,6 +879,11 @@
       GameRuntimeState.projectiles = [];
       GameRuntimeState.blasts = [];
       GameRuntimeState.hazards = [];
+      GameRuntimeState.matchHighlights = createMatchHighlights();
+      GameRuntimeState.attackSerial = 0;
+      GameRuntimeState.trainingMode = false;
+      GameRuntimeState.trainingStats = null;
+      GameRuntimeState.trainingNextResourceRefillElapsedMs = 0;
       GameRuntimeState.boardShakeUntil = 0;
       GameRuntimeState.boardShakeStartedAt = 0;
       GameRuntimeState.boardShakeStrength = 0;
@@ -936,6 +942,43 @@
       setStatus("準備就緒。右搖桿移動，左搖桿瞄準攻擊。");
     }
 
+    function refillSkillTrainingResources(now = performance.now(), options = {}) {
+      if (!GameRuntimeState.trainingMode) return false;
+      GameRuntimeState.playerStock = Object.fromEntries(GameConfig.foodTypes.map(type => [type.id, GameConfig.maxFoodStock]));
+      GameRuntimeState.playerAmmo = GameConfig.maxAmmo;
+      GameRuntimeState.playerAmmoCharge = GameConfig.attackNeedTotal;
+      if (options.flash !== false) {
+        GameRuntimeState.playerEnergyFlashUntil = now + 1200;
+        GameRuntimeState.playerBombFlashUntil = now + 1200;
+      }
+      updateHud();
+      return true;
+    }
+
+    function queueNextSkillTrainingResourceRefill() {
+      GameRuntimeState.trainingNextResourceRefillElapsedMs = GameRuntimeState.totalElapsedMs + skillTrainingResourceRefillMs;
+    }
+
+    function updateSkillTrainingResourceRefill(now) {
+      if (!GameRuntimeState.trainingMode) return;
+      if (!GameRuntimeState.trainingNextResourceRefillElapsedMs) {
+        queueNextSkillTrainingResourceRefill();
+        return;
+      }
+      if (GameRuntimeState.totalElapsedMs < GameRuntimeState.trainingNextResourceRefillElapsedMs) return;
+      refillSkillTrainingResources(now);
+      queueNextSkillTrainingResourceRefill();
+    }
+
+    function startSkillTraining() {
+      if (GameReplay.isPlaybackMode() || isNetworkRoomActive()) return false;
+      if (!GameUI.hasCharacterCatalog()) {
+        window.location.reload();
+        return false;
+      }
+      return startGame({ skillTraining: true, computerDifficulty: "novice" });
+    }
+
     function canRestartAfterGameOver() {
       return !GameRuntimeState.gameOverSettlementPending && performance.now() >= GameRuntimeState.restartUnlockAt;
     }
@@ -945,6 +988,7 @@
     }
 
     function currentModeLabel(endedInAutoMode = false) {
+      if (GameRuntimeState.trainingMode) return "技能訓練";
       if (GameRuntimeState.relayMode) return "接力賽";
       if (GameRuntimeState.computerBattleMode) return "自動對弈";
       if (endedInAutoMode) return "Auto 操作";
@@ -955,7 +999,215 @@
       return Dom.computerDifficultyInput.selectedOptions[0]?.textContent?.trim() || GameRuntimeState.computerDifficulty;
     }
 
-    function buildResultShareData({ winnerOwner, plainResultText, scoreText, resultReason, endedInAutoMode }) {
+    function emptyOwnerHighlights() {
+      return {
+        casts: { small: 0, big: 0 },
+        hits: { small: 0, big: 0 },
+        damageDealt: 0,
+        resourcesSpent: 0,
+        highestDamage: 0,
+        keyKills: 0
+      };
+    }
+
+    function createMatchHighlights() {
+      return {
+        player: emptyOwnerHighlights(),
+        computer: emptyOwnerHighlights(),
+        highestDamage: null,
+        keyKill: null,
+        hitAttackIds: []
+      };
+    }
+
+    function ensureMatchHighlights() {
+      if (!GameRuntimeState.matchHighlights) GameRuntimeState.matchHighlights = createMatchHighlights();
+      return GameRuntimeState.matchHighlights;
+    }
+
+    function ownerHighlights(owner) {
+      const highlights = ensureMatchHighlights();
+      if (owner !== "player" && owner !== "computer") return null;
+      if (!highlights[owner]) highlights[owner] = emptyOwnerHighlights();
+      return highlights[owner];
+    }
+
+    function skillCountTotal(counts = {}) {
+      return (Number(counts.small) || 0) + (Number(counts.big) || 0);
+    }
+
+    function resourceEfficiency(ownerStats = {}) {
+      const spent = Number(ownerStats.resourcesSpent) || 0;
+      return spent > 0 ? (Number(ownerStats.damageDealt) || 0) / spent : 0;
+    }
+
+    function formatHighlightNumber(value, digits = 1) {
+      if (!Number.isFinite(value)) return "0";
+      const rounded = Number(value.toFixed(digits));
+      return Number.isInteger(rounded) ? String(rounded) : String(rounded);
+    }
+
+    function ownerLabel(owner) {
+      return owner === "player" ? "P1" : owner === "computer" ? "P2" : "無";
+    }
+
+    function profileLabel(profile) {
+      return profile === "small" ? "小招" : "大招";
+    }
+
+    function attackResourceCostUnits(profile = "big") {
+      const bombUnits = GameUI.attackBombCost(profile) * GameConfig.attackNeedTotal;
+      const foodUnits = profile === "small"
+        ? GameUI.attackFoodCost("small")
+        : GameConfig.foodTypes.length * GameUI.attackFoodCost("big");
+      return bombUnits + foodUnits;
+    }
+
+    function nextAttackId(owner, profile, now = performance.now()) {
+      GameRuntimeState.attackSerial = (GameRuntimeState.attackSerial || 0) + 1;
+      return `${owner}-${profile}-${Math.round(now)}-${GameRuntimeState.attackSerial}`;
+    }
+
+    function recordSkillCast(owner, profile = "big", attackId = "", options = {}) {
+      const stats = ownerHighlights(owner);
+      if (!stats) return;
+      const safeProfile = profile === "small" ? "small" : "big";
+      stats.casts[safeProfile] += 1;
+      stats.resourcesSpent += Math.max(0, Number(options.resourcesSpent) || 0);
+      if (attackId) {
+        const highlights = ensureMatchHighlights();
+        highlights.lastAttackId = attackId;
+      }
+    }
+
+    function recordSkillHit(owner, profile = "big", attackId = "") {
+      const stats = ownerHighlights(owner);
+      if (!stats) return;
+      const safeProfile = profile === "small" ? "small" : "big";
+      const highlights = ensureMatchHighlights();
+      const key = attackId || `${owner}-${safeProfile}-${Math.round(performance.now())}`;
+      if (highlights.hitAttackIds.includes(key)) return;
+      highlights.hitAttackIds.push(key);
+      stats.hits[safeProfile] += 1;
+    }
+
+    function recordDamageEvent(source, targetOwner, amount, now, beforeHp) {
+      const attacker = source?.owner;
+      if (attacker !== "player" && attacker !== "computer") return;
+      if (attacker === targetOwner) return;
+      if (!(amount > 0)) return;
+      const profile = source.profile === "small" ? "small" : "big";
+      const stats = ownerHighlights(attacker);
+      const roundedAmount = Number(amount) || 0;
+      stats.damageDealt += roundedAmount;
+      stats.highestDamage = Math.max(stats.highestDamage, roundedAmount);
+      recordSkillHit(attacker, profile, source.attackId);
+      const event = {
+        owner: attacker,
+        target: targetOwner,
+        profile,
+        amount: roundedAmount,
+        atMs: Math.round(GameRuntimeState.totalElapsedMs || now || 0)
+      };
+      const highlights = ensureMatchHighlights();
+      if (!highlights.highestDamage || roundedAmount > highlights.highestDamage.amount) {
+        highlights.highestDamage = event;
+      }
+      if (beforeHp > 0 && beforeHp - roundedAmount <= 0) {
+        stats.keyKills += 1;
+        highlights.keyKill = event;
+      }
+    }
+
+    function publicOwnerHighlights(owner) {
+      const stats = ownerHighlights(owner) || emptyOwnerHighlights();
+      return {
+        casts: { ...stats.casts },
+        hits: { ...stats.hits },
+        damageDealt: Math.round(stats.damageDealt * 10) / 10,
+        resourcesSpent: Math.round(stats.resourcesSpent * 10) / 10,
+        highestDamage: Math.round(stats.highestDamage * 10) / 10,
+        keyKills: stats.keyKills
+      };
+    }
+
+    function publicDamageEvent(event) {
+      if (!event) return null;
+      return {
+        owner: event.owner,
+        target: event.target,
+        profile: event.profile,
+        amount: Math.round((Number(event.amount) || 0) * 10) / 10,
+        atMs: Math.round(Number(event.atMs) || 0)
+      };
+    }
+
+    function finalizeMatchHighlights() {
+      const highlights = ensureMatchHighlights();
+      return {
+        player: publicOwnerHighlights("player"),
+        computer: publicOwnerHighlights("computer"),
+        highestDamage: publicDamageEvent(highlights.highestDamage),
+        keyKill: publicDamageEvent(highlights.keyKill)
+      };
+    }
+
+    function resultHighlightItems(highlights = finalizeMatchHighlights()) {
+      const player = highlights.player || emptyOwnerHighlights();
+      const castTotal = skillCountTotal(player.casts);
+      const hitTotal = skillCountTotal(player.hits);
+      const items = [
+        {
+          label: "技能命中",
+          value: `${hitTotal}/${Math.max(castTotal, hitTotal)}`,
+          detail: `小 ${player.hits?.small || 0}/${player.casts?.small || 0} · 大 ${player.hits?.big || 0}/${player.casts?.big || 0}`
+        },
+        {
+          label: "最高傷害",
+          value: highlights.highestDamage?.amount ? formatHighlightNumber(highlights.highestDamage.amount) : "0",
+          detail: highlights.highestDamage?.owner
+            ? `${ownerLabel(highlights.highestDamage.owner)} ${profileLabel(highlights.highestDamage.profile)}`
+            : "尚未造成技能傷害"
+        },
+        {
+          label: "關鍵擊殺",
+          value: highlights.keyKill?.owner ? ownerLabel(highlights.keyKill.owner) : "無",
+          detail: highlights.keyKill?.owner
+            ? `${profileLabel(highlights.keyKill.profile)} 終結 ${ownerLabel(highlights.keyKill.target)}`
+            : "本局沒有技能收尾"
+        },
+        {
+          label: "資源效率",
+          value: formatHighlightNumber(resourceEfficiency(player)),
+          detail: `${formatHighlightNumber(player.damageDealt)} 傷害 / ${formatHighlightNumber(player.resourcesSpent)} 資源`
+        }
+      ];
+      return items;
+    }
+
+    function setResultHighlights(items = []) {
+      if (!Dom.resultHighlights) return;
+      Dom.resultHighlights.innerHTML = "";
+      Dom.resultHighlights.hidden = !items.length;
+      items.forEach(item => {
+        const card = document.createElement("div");
+        card.className = "result-highlight-card";
+        const value = document.createElement("strong");
+        value.textContent = item.value;
+        const label = document.createElement("span");
+        label.textContent = item.label;
+        const detail = document.createElement("small");
+        detail.textContent = item.detail;
+        card.append(value, label, detail);
+        Dom.resultHighlights.append(card);
+      });
+    }
+
+    function resultHighlightLines(highlights = finalizeMatchHighlights()) {
+      return resultHighlightItems(highlights).map(item => `${item.label}：${item.value}（${item.detail}）`);
+    }
+
+    function buildResultShareData({ winnerOwner, plainResultText, scoreText, resultReason, endedInAutoMode, highlights }) {
       const playerCharacter = GameUI.characterFor("player");
       const computerCharacter = GameUI.characterFor("computer");
       const url = window.location.href.split("#")[0];
@@ -967,6 +1219,7 @@
         `時間：${GameUI.formatTime(GameRuntimeState.totalElapsedMs)}`,
         `模式：${currentModeLabel(endedInAutoMode)}`,
         `難度：${currentDifficultyLabel()}`,
+        ...resultHighlightLines(highlights),
         resultReason,
         winnerOwner ? `勝者：${winnerOwner === "player" ? "P1" : "P2"}` : "勝者：平手"
       ];
@@ -995,6 +1248,51 @@
         GamePresentationState.resultShareInProgress = false;
         GameUI.updateResultSharePanel();
       }
+    }
+
+    async function shareCurrentResult() {
+      if (!GamePresentationState.lastResultShareData || GamePresentationState.resultShareInProgress) return;
+      const shareData = GamePresentationState.lastResultShareData;
+      GamePresentationState.resultShareInProgress = true;
+      GameUI.updateResultSharePanel();
+      GameUI.setResultShareStatus("正在開啟分享...");
+      try {
+        if (await GamePlatform.share.canShare(shareData) && await GamePlatform.share.share(shareData)) {
+          GameUI.setResultShareStatus("已開啟系統分享。", "success");
+          return;
+        }
+        if (await GamePlatform.share.copyText(resultCopyText(shareData))) {
+          GameUI.setResultShareStatus("此裝置不支援系統分享，已複製戰報。", "success");
+          return;
+        }
+        GameUI.setResultShareStatus("此瀏覽器無法分享或複製戰報。", "error");
+      } catch (error) {
+        if (error?.name === "AbortError") {
+          GameUI.setResultShareStatus("已取消分享。");
+        } else {
+          console.warn("Unable to share result.", error);
+          GameUI.setResultShareStatus("分享失敗，請稍後再試。", "error");
+        }
+      } finally {
+        GamePresentationState.resultShareInProgress = false;
+        GameUI.updateResultSharePanel();
+      }
+    }
+
+    function matchHistoryTabForEntry(entry = "recent") {
+      if (entry === "post-match") return GamePresentationState.lastResultShareData ? "share" : "recent";
+      if (entry === "mastery" || entry === "favorite" || entry === "share") return entry;
+      return "recent";
+    }
+
+    function openMatchHistoryFromEntry(event) {
+      const entry = event?.currentTarget?.dataset?.matchHistoryEntry || "recent";
+      GameReplay.openModal(matchHistoryTabForEntry(entry));
+    }
+
+    function copyCurrentResultFromControl(event) {
+      event?.preventDefault?.();
+      copyCurrentResult();
     }
 
     function beginStartLogoCountdown() {
@@ -1039,6 +1337,8 @@
       }
       if (GameReplay.isPlaybackMode()) return false;
       if (GameRuntimeState.gameOver && !canRestartAfterGameOver()) return false;
+      const skillTraining = Boolean(options.skillTraining);
+      const previousTrainingDifficulty = Dom.computerDifficultyInput.value || GameRuntimeState.computerDifficulty;
       clearGameOverSettlementTimer();
       clearRelayRestartTimer();
       GameRuntimeState.computerBattleMode = Boolean(options.computerBattle);
@@ -1056,14 +1356,26 @@
       setInitialBombs(Dom.initialBombsInput.value);
       Dom.initialStockInputs.forEach(input => setInitialStock(input.dataset.initialStock, input.value));
       saveGmSettings();
+      if (skillTraining) {
+        GameRuntimeState.trainingPreviousComputerDifficulty = previousTrainingDifficulty;
+        setComputerDifficulty(options.computerDifficulty || "novice");
+      } else {
+        restoreTrainingComputerDifficulty();
+      }
       resolveCharacterChoicesForStart();
       resetGame();
+      GameRuntimeState.trainingMode = skillTraining;
+      GameRuntimeState.trainingStats = null;
       GameAudio.warmup([GameUI.characterFor("player"), GameUI.characterFor("computer")]);
       GameAudio.playCharacter("player", "start", { unlock: true });
       GameAudio.playCharacter("computer", "start", { delay: 0.08, gainScale: 0.75 });
       GameRuntimeState.running = true;
       setSettingsLocked(true);
-      setStatus("對戰中：吃食物累積能量，集滿可獲得炸彈。");
+      if (skillTraining) {
+        refillSkillTrainingResources(performance.now());
+        queueNextSkillTrainingResourceRefill();
+      }
+      setStatus(skillTraining ? "技能訓練：開場滿資源，每 5 秒補滿一次；電腦固定為新手難度。" : "對戰中：吃食物累積能量，集滿可獲得炸彈。");
       Dom.overlay.classList.remove("show");
       GameUI.showCharacterStage({ rebuild: false, "overlay": false });
       updateAutoBattleControls();
@@ -1088,6 +1400,7 @@
     function returnToStartScreen() {
       clearGameOverSettlementTimer();
       clearRelayRestartTimer();
+      restoreTrainingComputerDifficulty();
       GameRuntimeState.computerBattleMode = false;
       GameRuntimeState.playerAutoMode = false;
       GameRuntimeState.computerBattleManualOverride = false;
@@ -1099,7 +1412,7 @@
       Dom.overlayText.textContent = "重新選擇角色後按開始。";
       Dom.startButton.textContent = "開始";
       Dom.computerBattleButton.hidden = false;
-      Dom.replayArchiveButton.hidden = false;
+      Dom.replayArchiveButton.hidden = true;
       GameUI.renderIntroPortraits(false);
       Dom.overlay.classList.add("show");
       resetNetworkReadyState();
@@ -1117,37 +1430,8 @@
       Dom.overlay.classList.add("show");
     }
 
-    function randomFoodType(preferredFoodId = null) {
-      if (!preferredFoodId || preferredFoodId === "balanced") {
-        return GameConfig.foodTypes[Math.floor(Math.random() * GameConfig.foodTypes.length)];
-      }
-      let roll = Math.random();
-      for (const type of GameConfig.foodTypes) {
-        const weight = type.id === preferredFoodId ? GameConfig.preferredFoodWeight : GameConfig.otherFoodWeight;
-        if (roll < weight) return type;
-        roll -= weight;
-      }
-      return GameConfig.foodTypes[GameConfig.foodTypes.length - 1];
-    }
-
-    function randomFoodTypeIds(preferredFoodId = null, dualColor = false) {
-      const firstType = randomFoodType(preferredFoodId);
-      if (!dualColor) return [firstType.id];
-      const secondOptions = GameConfig.foodTypes.filter(type => type.id !== firstType.id);
-      const secondType = secondOptions[Math.floor(Math.random() * secondOptions.length)];
-      return [firstType.id, secondType.id];
-    }
-
     function randomFoodTypeIdsForCharacter(character) {
-      if (character?.specialFood === "black" && Math.random() < GameConfig.blackSpecialChance) {
-        return ["black"];
-      }
-      if (character?.specialFood === "black") {
-        return randomFoodTypeIds(null, false);
-      }
-      const preferredFoodId = character ? character.food : null;
-      const dualColor = character?.food === "balanced" && Math.random() < GameConfig.balancedDualChance;
-      return randomFoodTypeIds(preferredFoodId, dualColor);
+      return GameRules.randomFoodTypeIdsForCharacter(character, GameConfig);
     }
 
     function placeFoods(preferredOwners = []) {
@@ -1328,6 +1612,19 @@
 
     function setStatus(text) {
       Dom.statusEl.textContent = text;
+    }
+
+    function setMobileSheetTab(tab = "actions") {
+      const tabs = new Set(["actions", "resources", "settings", "report"]);
+      const nextTab = tabs.has(tab) ? tab : "actions";
+      const sheet = Dom.mobileSheetTabs?.parentElement;
+      if (sheet) sheet.dataset.mobileTab = nextTab;
+      Dom.mobileSheetTabButtons.forEach(button => {
+        const selected = button.dataset.mobileSheetTab === nextTab;
+        button.classList.toggle("is-active", selected);
+        button.setAttribute("aria-selected", selected ? "true" : "false");
+        button.tabIndex = selected ? 0 : -1;
+      });
     }
 
     function autoBattleSpeedLabel(value) {
@@ -2215,26 +2512,15 @@
     }
 
     function hexDistance(a, b) {
-      const as = -a.q - a.r;
-      const bs = -b.q - b.r;
-      return (Math.abs(a.q - b.q) + Math.abs(a.r - b.r) + Math.abs(as - bs)) / 2;
+      return GameRules.hexDistance(a, b);
     }
 
     function nextCell(head, direction) {
-      const delta = GameConfig.directions[direction];
-      return { q: head.q + delta.q, r: head.r + delta.r };
+      return GameRules.nextCell(head, direction, GameConfig.directions);
     }
 
     function nextWrappedCell(head, direction) {
-      const next = nextCell(head, direction);
-      if (isInside(next)) return next;
-
-      const oppositeDirection = (direction + 3) % 6;
-      let wrapped = head;
-      while (isInside(nextCell(wrapped, oppositeDirection))) {
-        wrapped = nextCell(wrapped, oppositeDirection);
-      }
-      return wrapped;
+      return GameRules.nextWrappedCell(head, direction, GameRuntimeState.radius, GameConfig.directions);
     }
 
     function directionalAttackTarget(direction) {
@@ -2269,33 +2555,19 @@
     }
 
     function attackStats(stock, profile = "big") {
-      const isSmall = profile === "small";
-      return {
-        delay: GameUI.attackDelay(stock) * (isSmall ? GameConfig.smallAttackDelayScale : 1),
-        radius: Math.max(1, GameUI.blastRadius(stock) + (isSmall ? -1 : 0)),
-        damage: GameUI.attackDamage(stock, profile)
-      };
+      return GameRules.attackStats(stock, profile, GameConfig);
     }
 
     function bandDistanceFromTotalWidth(totalWidth) {
-      return Math.max(0, Math.floor((totalWidth - 1) / 2));
+      return GameRules.bandDistanceFromTotalWidth(totalWidth);
     }
 
     function bandShapeFromTotalWidth(totalWidth) {
-      const fullDamageWidth = bandDistanceFromTotalWidth(totalWidth);
-      const fullTotalWidth = fullDamageWidth * 2 + 1;
-      const outerDamageMultiplier = Math.max(0, Math.min(1, (totalWidth - fullTotalWidth) / 2));
-      return {
-        width: fullDamageWidth + (outerDamageMultiplier > 0 ? 1 : 0),
-        fullDamageWidth,
-        outerDamageMultiplier
-      };
+      return GameRules.bandShapeFromTotalWidth(totalWidth);
     }
 
     function lineBandDamageMultiplier(distance, band) {
-      if (distance > (band?.width ?? 0)) return 0;
-      if (distance <= (band?.fullDamageWidth ?? 0)) return 1;
-      return band?.outerDamageMultiplier ?? 1;
+      return GameRules.lineBandDamageMultiplier(distance, band);
     }
 
     function ownerDirection(owner) {
@@ -2421,7 +2693,7 @@
     }
 
     function cellKeySet(cellList = []) {
-      return new Set(cellList.map(cell => keyOf(cell)));
+      return GameRules.cellKeySet(cellList);
     }
 
     function cellsNearCells(effectCells, width, excludedCells = [], minDistance = 0) {
@@ -2510,7 +2782,8 @@
       headStunChance,
       vulnerabilityChance,
       visualType,
-      hand
+      hand,
+      attackId
     }) {
       const path = lobsterFistPath(source, direction, targetSnake);
       const hits = pathHits(path, targetSnake);
@@ -2536,7 +2809,8 @@
         burstDamage,
         stunChance,
         headStunChance,
-        vulnerabilityChance
+        vulnerabilityChance,
+        attackId
       });
       const burstHits = firstHit ? [firstHit] : [{ cell: endCell, index: Math.max(0, travelPath.length - 1) }];
       burstHits.forEach(hit => {
@@ -2555,12 +2829,13 @@
           radius: contactRadius,
           damage: contactDamage,
           burstRadius,
-          burstDamage,
-          stunChance,
-          headStunChance,
-          vulnerabilityChance
+            burstDamage,
+            stunChance,
+            headStunChance,
+            vulnerabilityChance,
+            attackId
+          });
         });
-      });
       return travelDelay;
     }
 
@@ -2569,10 +2844,7 @@
     }
 
     function attackHitStunChances(stock) {
-      return {
-        body: Math.min(1, GameConfig.bodyHitStunChance + GameUI.foodBonus(stock, "carb", GameConfig.bodyHitStunChanceBonusPerPoint, GameConfig.bodyHitMaxStunChanceBonus)),
-        head: Math.min(1, GameConfig.headHitStunChance + GameUI.foodBonus(stock, "carb", GameConfig.headHitStunChanceBonusPerPoint, GameConfig.headHitMaxStunChanceBonus))
-      };
+      return GameRules.attackHitStunChances(stock, GameConfig);
     }
 
     function scheduleCharacterBigAttack(owner, character, source, target, now, stock, stunChance, options = {}) {
@@ -2615,7 +2887,8 @@
               headStunChance: options.hitStunChances?.head ?? stunChance,
               vulnerabilityChance: palmVulnerabilityChance,
               visualType,
-              hand
+              hand,
+              attackId: options.attackId
             }));
           } else {
             const maxSteps = Math.max(1, Math.ceil((GameRuntimeState.radius * 2 + 1) / 2));
@@ -2640,7 +2913,8 @@
               burstDamage,
               stunChance,
               headStunChance: options.hitStunChances?.head ?? stunChance,
-              vulnerabilityChance: palmVulnerabilityChance
+              vulnerabilityChance: palmVulnerabilityChance,
+              attackId: options.attackId
             });
           }
         }
@@ -2676,7 +2950,8 @@
           damage,
           stunChance,
           headStunChance: options.hitStunChances?.head ?? stunChance,
-          stackStun: true
+          stackStun: true,
+          attackId: options.attackId
         });
         return durationMs;
       }
@@ -2698,6 +2973,8 @@
           minDistance: 0,
           outerDamageMultiplier: extensionDamageMultiplier,
           visualType: attackVisualType(owner, "big"),
+          profile: "big",
+          attackId: options.attackId,
           damage: bigDamage * GameAI.ultimateDamageMultiplier(character.id),
           stunChance,
           headStunChance: options.hitStunChances?.head ?? stunChance,
@@ -2745,7 +3022,8 @@
           hidden: true,
           sandwormHidden: true,
           sandwormParalyzeOnBody: true,
-          sandwormKillOnHead: true
+          sandwormKillOnHead: true,
+          attackId: options.attackId
         });
         return delay;
       }
@@ -2779,7 +3057,8 @@
             headStunChance: options.hitStunChances?.head ?? stunChance,
             flat: true,
             ignoreCasterInterrupt: true,
-            visualType
+            visualType,
+            attackId: options.attackId
           });
         }
         return firstImpactDelay + (volleys - 1) * 2000;
@@ -2804,14 +3083,15 @@
             radius: small.radius,
             damage,
             stunChance,
-            headStunChance: options.hitStunChances?.head ?? stunChance
+            headStunChance: options.hitStunChances?.head ?? stunChance,
+            attackId: options.attackId
           });
         }
         return firstImpactDelay + volleyIntervalMs * 2;
       }
 
       const big = attackStats(stock, "big");
-      pushCircleAttack({ owner, profile: "big", target, createdAt: now, impactAt: now + big.delay, delay: big.delay, radius: big.radius, damage: big.damage * GameAI.ultimateDamageMultiplier(character.id), stunChance, headStunChance: options.hitStunChances?.head ?? stunChance });
+      pushCircleAttack({ owner, profile: "big", target, createdAt: now, impactAt: now + big.delay, delay: big.delay, radius: big.radius, damage: big.damage * GameAI.ultimateDamageMultiplier(character.id), stunChance, headStunChance: options.hitStunChances?.head ?? stunChance, attackId: options.attackId });
       return big.delay;
     }
 
@@ -2829,6 +3109,10 @@
       const vulnerabilityChance = !isSmall && character.id === "lobster"
         ? lobsterPalmVulnerabilityChance(stock)
         : 0;
+      const attackId = nextAttackId(owner, profile, now);
+      recordSkillCast(owner, profile, attackId, {
+        resourcesSpent: attackResourceCostUnits(profile)
+      });
       GameUI.consumeAttackCost(owner, stock, profile);
       if (owner === "player") {
         GameUI.setLastAttackMsFor(owner, profile, now);
@@ -2840,7 +3124,7 @@
       GameAudio.playCharacter(owner, isSmall ? "small" : "big");
       const poseDuration = isSmall
         ? stats.delay
-        : scheduleCharacterBigAttack(owner, character, source, target, now, stock, stunChance, { ...options, vulnerabilityChance, hitStunChances });
+        : scheduleCharacterBigAttack(owner, character, source, target, now, stock, stunChance, { ...options, vulnerabilityChance, hitStunChances, attackId });
       if (isSmall) {
         GameRuntimeState.projectiles.push({
           kind: "circle",
@@ -2855,7 +3139,8 @@
           radius: stats.radius,
           damage: stats.damage,
           stunChance,
-          headStunChance: hitStunChances.head
+          headStunChance: hitStunChances.head,
+          attackId
         });
       }
       GameUI.setFighterPose(owner, "attack", Math.max(180, Math.min(poseDuration, 520)));
@@ -2865,15 +3150,11 @@
     }
 
     function damageSnake(parts, target, radius, damageScale) {
-      return parts.reduce((total, segment) => {
-        const multiplier = circleDamageMultiplier(hexDistance(segment, target), radius);
-        return total + damageScale * multiplier;
-      }, 0);
+      return GameRules.damageSnake(parts, target, radius, damageScale);
     }
 
     function circleDamageMultiplier(distance, radius) {
-      if (!Number.isFinite(radius) || radius <= 0) return distance === 0 ? 1 : 0;
-      return Math.max(0, Math.min(1, 1 - distance / radius));
+      return GameRules.circleDamageMultiplier(distance, radius);
     }
 
     function circleAttackHitsHead(parts, target, radius) {
@@ -2886,16 +3167,7 @@
     }
 
     function damageSnakeCells(parts, effectCells, width, damageScale, excludedCells = [], minDistance = 0, outerDamageMultiplier = 1, fullDamageWidth = 0) {
-      const excluded = cellKeySet(excludedCells);
-      return parts.reduce((total, segment) => {
-        if (excluded.has(keyOf(segment))) return total;
-        const bestMultiplier = effectCells.reduce((bestValue, cell) => {
-          const distance = hexDistance(segment, cell);
-          if (distance < minDistance || distance > width) return bestValue;
-          return Math.max(bestValue, lineBandDamageMultiplier(distance, { width, fullDamageWidth, outerDamageMultiplier }));
-        }, 0);
-        return bestMultiplier > 0 ? total + damageScale * bestMultiplier : total;
-      }, 0);
+      return GameRules.damageSnakeCells(parts, effectCells, width, damageScale, excludedCells, minDistance, outerDamageMultiplier, fullDamageWidth);
     }
 
     function lineProjectileHitsHead(parts, projectile) {
@@ -2958,9 +3230,10 @@
       else GameRuntimeState.computerVulnerable = vulnerable;
     }
 
-    function applyBlastDamage(owner, damage, now = performance.now()) {
-      if (damage <= 0) return;
-      if (isOwnerDamageImmune(owner, now)) return;
+    function applyBlastDamage(owner, damage, now = performance.now(), source = null) {
+      if (damage <= 0) return 0;
+      if (isOwnerDamageImmune(owner, now)) return 0;
+      const beforeHp = owner === "player" ? GameRuntimeState.playerHp : GameRuntimeState.computerHp;
       const finalDamage = isOwnerVulnerable(owner) ? damage * 2 : damage;
       if (isOwnerVulnerable(owner)) setOwnerVulnerable(owner, false);
       if (owner === "player") {
@@ -2968,6 +3241,8 @@
       } else {
         GameRuntimeState.computerHp = Math.max(0, GameRuntimeState.computerHp - finalDamage);
       }
+      recordDamageEvent(source, owner, finalDamage, now, beforeHp);
+      return finalDamage;
     }
 
     function interruptCasting(owner) {
@@ -3099,6 +3374,7 @@
             visualType: projectile.visualType,
             damage: projectile.damage,
             profile: projectile.profile,
+            attackId: projectile.attackId,
             stunChance: projectile.stunChance,
             headStunChance: projectile.headStunChance,
             stackStun: projectile.stackStun,
@@ -3127,7 +3403,8 @@
               headStunChance: projectile.headStunChance,
               vulnerabilityChance: projectile.vulnerabilityChance,
               visualType: projectile.visualType,
-              hand: projectile.hand
+              hand: projectile.hand,
+              attackId: projectile.attackId
             });
           }
           return;
@@ -3180,15 +3457,17 @@
         if (isOwnerDamageImmune("player", now)) playerDamage = 0;
         if (isOwnerDamageImmune("computer", now)) computerDamage = 0;
         triggerSmallHitShake(projectile, playerDamage, computerDamage, now);
-        applyBlastDamage("player", playerDamage, now);
-        applyBlastDamage("computer", computerDamage, now);
-        if (projectile.owner !== "player" && playerDamage > 0) applyAttackStun("player", playerStunChance, now, { stack: projectile.stackStun });
-        if (projectile.owner !== "computer" && computerDamage > 0) applyAttackStun("computer", computerStunChance, now, { stack: projectile.stackStun });
-        if (projectile.owner !== "player" && playerDamage > 0 && projectile.vulnerabilityChance > 0) applyVulnerability("player", projectile.vulnerabilityChance, now);
-        if (projectile.owner !== "computer" && computerDamage > 0 && projectile.vulnerabilityChance > 0) applyVulnerability("computer", projectile.vulnerabilityChance, now);
+        const playerAppliedDamage = applyBlastDamage("player", playerDamage, now, projectile);
+        const computerAppliedDamage = applyBlastDamage("computer", computerDamage, now, projectile);
+        if (projectile.owner !== "player" && playerAppliedDamage > 0) applyAttackStun("player", playerStunChance, now, { stack: projectile.stackStun });
+        if (projectile.owner !== "computer" && computerAppliedDamage > 0) applyAttackStun("computer", computerStunChance, now, { stack: projectile.stackStun });
+        if (projectile.owner !== "player" && playerAppliedDamage > 0 && projectile.vulnerabilityChance > 0) applyVulnerability("player", projectile.vulnerabilityChance, now);
+        if (projectile.owner !== "computer" && computerAppliedDamage > 0 && projectile.vulnerabilityChance > 0) applyVulnerability("computer", projectile.vulnerabilityChance, now);
       });
       GameRuntimeState.blasts = GameRuntimeState.blasts.filter(blast => now <= blast.endAt);
-      if (GameRuntimeState.playerHp <= 0 || GameRuntimeState.computerHp <= 0) endGame(GameRuntimeState.playerHp <= 0, GameRuntimeState.computerHp <= 0);
+      if (GameRuntimeState.playerHp <= 0 || GameRuntimeState.computerHp <= 0) {
+        endGame(GameRuntimeState.playerHp <= 0, GameRuntimeState.computerHp <= 0);
+      }
     }
 
     function addProjectileBlastVisual(projectile, now, options = {}) {
@@ -3272,6 +3551,8 @@
           radius: explosionRadius,
           width: explosionRadius,
           visualType: projectile.visualType === "dragon-spirit-big" ? "dragon-spirit-radiation" : "lobster-radiation",
+          profile: projectile.profile || "big",
+          attackId: projectile.attackId,
           damage: options.radiationDamage ?? 0,
           stunChance: 0,
           startedAt: now,
@@ -3366,25 +3647,27 @@
         if (hazard.owner === "computer") computerDamage = 0;
         if (isOwnerDamageImmune("player", now)) playerDamage = 0;
         if (isOwnerDamageImmune("computer", now)) computerDamage = 0;
-        applyBlastDamage("player", playerDamage, now);
-        applyBlastDamage("computer", computerDamage, now);
-        if (hazard.owner !== "player" && playerDamage > 0 && hazard.slowChance > 0) {
+        const playerAppliedDamage = applyBlastDamage("player", playerDamage, now, hazard);
+        const computerAppliedDamage = applyBlastDamage("computer", computerDamage, now, hazard);
+        if (hazard.owner !== "player" && playerAppliedDamage > 0 && hazard.slowChance > 0) {
           applyAttackSlow("player", hazard.slowChance, hazard.slowDurationMs ?? 2000, now, { stack: hazard.slowStack });
         }
-        if (hazard.owner !== "computer" && computerDamage > 0 && hazard.slowChance > 0) {
+        if (hazard.owner !== "computer" && computerAppliedDamage > 0 && hazard.slowChance > 0) {
           applyAttackSlow("computer", hazard.slowChance, hazard.slowDurationMs ?? 2000, now, { stack: hazard.slowStack });
         }
-        if (canApplyStun && hazard.owner !== "player" && playerDamage > 0) {
+        if (canApplyStun && hazard.owner !== "player" && playerAppliedDamage > 0) {
           applyAttackStun("player", playerStunChance, now, { interrupt: false, stack: hazard.stackStun });
         }
-        if (canApplyStun && hazard.owner !== "computer" && computerDamage > 0) {
+        if (canApplyStun && hazard.owner !== "computer" && computerAppliedDamage > 0) {
           applyAttackStun("computer", computerStunChance, now, { interrupt: false, stack: hazard.stackStun });
         }
         if (Number.isFinite(hazard.stunTicksRemaining)) {
           hazard.stunTicksRemaining = Math.max(0, hazard.stunTicksRemaining - 1);
         }
       });
-      if (GameRuntimeState.playerHp <= 0 || GameRuntimeState.computerHp <= 0) endGame(GameRuntimeState.playerHp <= 0, GameRuntimeState.computerHp <= 0);
+      if (GameRuntimeState.playerHp <= 0 || GameRuntimeState.computerHp <= 0) {
+        endGame(GameRuntimeState.playerHp <= 0, GameRuntimeState.computerHp <= 0);
+      }
     }
 
     function advanceOwnerMovement(owner, next, eatenFood) {
@@ -3588,6 +3871,7 @@
           ? "computer"
           : null;
       const plainResultText = winnerOwner === "player" ? "P1 勝利" : winnerOwner === "computer" ? "P2 勝利" : "平手";
+      const matchHighlights = finalizeMatchHighlights();
       try {
         GameStats.recordMatch({
           winnerOwner,
@@ -3596,9 +3880,10 @@
           durationMs: Math.round(GameRuntimeState.totalElapsedMs),
           playerCharacterId: GameRuntimeState.playerCharacterId,
           computerCharacterId: GameRuntimeState.computerCharacterId,
-          mode: GameRuntimeState.relayMode ? "relay" : GameRuntimeState.computerBattleMode ? "autoBattle" : endedInAutoMode ? "playerAuto" : "player",
+          mode: GameRuntimeState.trainingMode ? "training" : GameRuntimeState.relayMode ? "relay" : GameRuntimeState.computerBattleMode ? "autoBattle" : endedInAutoMode ? "playerAuto" : "player",
           difficulty: GameRuntimeState.computerDifficulty,
-          surrendered: Boolean(GameRootState.replay.surrendered)
+          surrendered: Boolean(GameRootState.replay.surrendered),
+          highlights: matchHighlights
         });
       } catch (error) {
         console.warn("Unable to record match stats.", error);
@@ -3623,8 +3908,10 @@
         plainResultText,
         scoreText,
         resultReason,
-        endedInAutoMode
+        endedInAutoMode,
+        highlights: matchHighlights
       }));
+      setResultHighlights(resultHighlightItems(matchHighlights));
       setStatus(`對戰結束：${plainResultText}`);
       Dom.overlayTitle.innerHTML = resultTitleHtml;
       GameAudio.playCharacter("player", winnerOwner === "player" ? "victory" : "defeat", { gainScale: winnerOwner ? 1 : 0.82 });
@@ -3694,6 +3981,7 @@
           endGame(true, true);
           return;
         }
+        updateSkillTrainingResourceRefill(now);
       } else {
         GameRuntimeState.lastTimerFrame = now;
       }
@@ -4352,6 +4640,15 @@
 
     function surrenderGame() {
       if (GameReplay.isPlaybackMode()) return;
+      if (GameRuntimeState.trainingMode) {
+        GameRuntimeState.running = false;
+        cancelAnimationFrame(GameRuntimeState.rafId);
+        GameRuntimeState.rafId = 0;
+        setSettingsLocked(false);
+        returnToStartScreen();
+        setStatus("技能訓練已結束。");
+        return;
+      }
       const networkMatchActive = isNetworkMatchInProgress();
       if ((!GameRuntimeState.running && !networkMatchActive) || GameRuntimeState.gameOver) {
         if (GameRuntimeState.computerBattleMode && GameRuntimeState.relayMode) {
@@ -4667,10 +4964,6 @@
       }
       if (!Dom.replayModal.hidden) {
         GameReplay.closeModal();
-        return true;
-      }
-      if (!Dom.statsModal.hidden) {
-        GameStats.closeModal();
         return true;
       }
       if (!Dom.versionModal.hidden) {
@@ -5313,6 +5606,7 @@
     Dom.surrenderButton.addEventListener("click", surrenderGame);
     Dom.rulesButton.addEventListener("click", GameUI.openRulesModal);
     Dom.rulesCloseButton.addEventListener("click", GameUI.closeRulesModal);
+    Dom.skillTrainingButton.addEventListener("click", startSkillTraining);
     Dom.rulesContent.addEventListener("click", event => {
       if (event.target.closest("[data-open-tutorial]")) GameUI.showTutorial(0);
     });
@@ -5322,18 +5616,20 @@
       event.preventDefault();
       GameUI.showTutorial(0);
     });
-    Dom.replayArchiveButton.addEventListener("click", GameReplay.openModal);
-    Dom.settingsReplayButton.addEventListener("click", GameReplay.openModal);
+    Dom.mobileSheetTabButtons.forEach(button => {
+      button.addEventListener("click", () => setMobileSheetTab(button.dataset.mobileSheetTab));
+    });
+    Dom.matchHistoryEntryButtons.forEach(button => {
+      button.addEventListener("click", openMatchHistoryFromEntry);
+    });
     Dom.overlayText.addEventListener("click", event => {
       if (!Dom.overlayText.classList.contains("is-copyable-result")) return;
-      event.preventDefault();
-      copyCurrentResult();
+      copyCurrentResultFromControl(event);
     });
     Dom.overlayText.addEventListener("keydown", event => {
       if (!Dom.overlayText.classList.contains("is-copyable-result")) return;
       if (event.key !== "Enter" && event.key !== " ") return;
-      event.preventDefault();
-      copyCurrentResult();
+      copyCurrentResultFromControl(event);
     });
     Dom.controlProfileSelect.addEventListener("change", () => {
       selectedControlProfileId = Dom.controlProfileSelect.value;
@@ -5346,13 +5642,9 @@
     Dom.controlProfileSaveButton.addEventListener("click", saveCurrentControlProfile);
     Dom.controlProfileApplyButton.addEventListener("click", applySelectedControlProfile);
     Dom.controlProfileDeleteButton.addEventListener("click", deleteSelectedControlProfile);
-    Dom.statsButton.addEventListener("click", GameStats.openModal);
-    Dom.statsModalClose.addEventListener("click", GameStats.closeModal);
     Dom.statsClearButton.addEventListener("click", GameStats.clear);
-    Dom.statsModal.addEventListener("pointerdown", event => {
-      if (event.target === Dom.statsModal) GameStats.closeModal();
-    });
-    Dom.statsModal.querySelector(".app-stats-dialog").addEventListener("pointerdown", event => event.stopPropagation());
+    Dom.matchHistoryShareCopyButton.addEventListener("click", copyCurrentResultFromControl);
+    Dom.matchHistorySystemShareButton.addEventListener("click", shareCurrentResult);
     Dom.versionInfoButton.addEventListener("click", GameAbout.openModal);
     Dom.versionModalClose.addEventListener("click", GameAbout.closeModal);
     Dom.versionModal.addEventListener("pointerdown", event => {
@@ -5365,9 +5657,14 @@
     });
     Dom.replayModal.querySelector(".replay-dialog").addEventListener("pointerdown", event => event.stopPropagation());
     Dom.replayModal.addEventListener("click", event => {
+      const tabButton = event.target.closest("[data-match-history-tab]");
       const playButton = event.target.closest("[data-replay-play]");
       const favoriteButton = event.target.closest("[data-replay-favorite]");
       const deleteButton = event.target.closest("[data-replay-delete]");
+      if (tabButton) {
+        GameReplay.setTab(tabButton.dataset.matchHistoryTab);
+        return;
+      }
       if (playButton) {
         const record = GameReplay.findRecord(playButton.dataset.replayPlay);
         if (record) GameReplay.startPlayback(record);
@@ -6007,10 +6304,6 @@
         if (event.key === "Escape" || event.key === "Esc") GameReplay.closeModal();
         return;
       }
-      if (!Dom.statsModal.hidden) {
-        if (event.key === "Escape" || event.key === "Esc") GameStats.closeModal();
-        return;
-      }
       if (GameUI.isLogoTransitionActive()) {
         if ((event.key === "Enter" || event.key === " ") && skipLogoTransition()) {
           event.preventDefault();
@@ -6259,6 +6552,7 @@
       syncLowPowerMode();
       setPerfStatsVisible(GamePresentationState.perfStatsVisible);
       updateAttackButtons();
+      setMobileSheetTab("actions");
       resetGame();
       resize();
       GameUI.renderIntroPortraits(false);

@@ -160,7 +160,7 @@ const pageLoadingProgress = (() => {
 
 async function loadLegacyModules() {
   // Keep the legacy code in one module scope while the source is split into smaller files.
-  const sources = ["src/platform/web.js", "src/state.js", "src/dom.js", "src/ui.js", "src/network.js", "src/characters.js", "src/audio.js", "src/replay.js", "src/stats.js", "src/about.js", "src/ai.js", "src/render.js", "src/game.js"];
+  const sources = ["src/platform/web.js", "src/rules-core.js", "src/state.js", "src/dom.js", "src/ui.js", "src/network.js", "src/characters.js", "src/audio.js", "src/replay.js", "src/stats.js", "src/about.js", "src/ai.js", "src/render.js", "src/game.js"];
   let loaded = 0;
 
   pageLoadingProgress.set(8, "Preparing");

@@ -3,6 +3,7 @@ const UiRuntime = HexSnakeRuntime;
 const UiRootState = HexSnakeState;
 const UiRegistry = HexSnakeUI;
 const UiControls = HexSnakeControls;
+const UiRules = globalThis.HexSnakeRules;
 const UiDom = HexSnakeDOM;
 const UiAudio = UiRegistry.audio;
 const UiGame = UiRegistry.uiGame;
@@ -3019,12 +3020,27 @@ function closeRulesModal() {
   rulesButton.focus();
 }
 
+function resultShareText(data) {
+  return [data?.text, data?.url].filter(Boolean).join("\n");
+}
+
+function updateMatchHistorySharePanel() {
+  if (!UiDom.matchHistorySharePreview) return;
+  const hasShareData = Boolean(lastResultShareData);
+  UiDom.matchHistoryShareEmpty.hidden = hasShareData;
+  UiDom.matchHistoryShareContent.hidden = !hasShareData;
+  UiDom.matchHistorySharePreview.textContent = hasShareData ? resultShareText(lastResultShareData) : "";
+  UiDom.matchHistoryShareCopyButton.disabled = !hasShareData || resultShareInProgress;
+  UiDom.matchHistorySystemShareButton.disabled = !hasShareData || resultShareInProgress;
+}
+
 function setResultShareStatus(text = "", state = "") {
-  shareResultStatus.textContent = text;
-  shareResultStatus.hidden = !text;
-  resultSharePanel.hidden = !text;
-  if (state) shareResultStatus.dataset.state = state;
-  else delete shareResultStatus.dataset.state;
+  UiDom.shareResultStatus.textContent = text;
+  UiDom.shareResultStatus.hidden = !text;
+  UiDom.resultSharePanel.hidden = !text;
+  if (state) UiDom.shareResultStatus.dataset.state = state;
+  else delete UiDom.shareResultStatus.dataset.state;
+  updateMatchHistorySharePanel();
 }
 
 function updateResultSharePanel() {
@@ -3044,6 +3060,7 @@ function updateResultSharePanel() {
     UiDom.overlayText.removeAttribute("aria-label");
     setResultShareStatus("");
   }
+  updateMatchHistorySharePanel();
 }
 
 function setLastResultShareData(data) {
@@ -3063,7 +3080,8 @@ function setOverlayChromeVisible(visible) {
   UiDom.overlayText.hidden = !visible;
   UiDom.startButton.hidden = !visible;
   UiDom.computerBattleButton.hidden = !visible || (running && !gameOver);
-  UiDom.replayArchiveButton.hidden = !visible;
+  UiDom.skillTrainingButton.hidden = !visible || (running && !gameOver);
+  UiDom.replayArchiveButton.hidden = true;
   UiDom.introCloseButton.hidden = true;
   updateResultSharePanel();
 }
@@ -3079,7 +3097,8 @@ function setIntroLobbyChrome() {
   UiDom.overlayText.hidden = true;
   UiDom.startButton.hidden = false;
   UiDom.computerBattleButton.hidden = false;
-  UiDom.replayArchiveButton.hidden = false;
+  UiDom.skillTrainingButton.hidden = false;
+  UiDom.replayArchiveButton.hidden = true;
   UiDom.introCloseButton.hidden = true;
   UiDom.startButton.textContent = "開始";
   updateResultSharePanel();
@@ -3096,6 +3115,7 @@ function setIntroDetailsChrome() {
   UiDom.overlayText.hidden = true;
   UiDom.startButton.hidden = true;
   UiDom.computerBattleButton.hidden = true;
+  UiDom.skillTrainingButton.hidden = true;
   UiDom.replayArchiveButton.hidden = true;
   UiDom.introCloseButton.hidden = false;
   updateResultSharePanel();
@@ -3750,11 +3770,12 @@ Object.assign(UiRegistry, {
   showStatusCallout,
   showTutorial,
   clearFighterCallouts,
+  updateMatchHistorySharePanel,
   updateResultSharePanel,
 });
 
 function emptyStock() {
-  return Object.fromEntries(foodTypes.map((type) => [type.id, 0]));
+  return UiRules.emptyStock(UiConfig);
 }
 
 function startingStock() {
@@ -3780,11 +3801,11 @@ function startingBombs() {
 }
 
 function foodBonus(stock, typeId, perPoint, maxBonus) {
-  return Math.min(maxBonus, stock[typeId] * perPoint);
+  return UiRules.foodBonus(stock, typeId, perPoint, maxBonus);
 }
 
 function moveMultiplier(stock) {
-  return 1 + foodBonus(stock, "fiber", moveBonusPerPoint, maxMoveBonus);
+  return UiRules.moveMultiplier(stock, UiConfig);
 }
 
 function movementSpeed(stock) {
@@ -3795,46 +3816,31 @@ function movementSpeed(stock) {
 }
 
 function damageMultiplier(stock) {
-  return 2 + foodBonus(stock, "fat", damageBonusPerPoint, maxDamageBonus);
+  return UiRules.damageMultiplier(stock, UiConfig);
 }
 
 function attackDamageMultiplier(profile = "big") {
-  return profile === "small"
-    ? smallAttackDamageMultiplier
-    : bigAttackDamageMultiplier;
+  return UiRules.attackDamageMultiplier(profile, UiConfig);
 }
 
 function attackDamage(stock, profile = "big") {
-  return damageMultiplier(stock) * attackDamageMultiplier(profile);
+  return UiRules.attackDamage(stock, profile, UiConfig);
 }
 
 function areaMultiplier(stock) {
-  return 1 + foodBonus(stock, "protein", proteinRangeBonusPerPoint, 1);
+  return UiRules.areaMultiplier(stock, UiConfig);
 }
 
 function attackSpeedMultiplier(stock) {
-  return (
-    1 + foodBonus(stock, "carb", attackSpeedBonusPerPoint, maxAttackSpeedBonus)
-  );
+  return UiRules.attackSpeedMultiplier(stock, UiConfig);
 }
 
 function attackCooldownMultiplier(stock) {
-  return (
-    1 + foodBonus(stock, "fiber", attackSpeedBonusPerPoint, maxAttackSpeedBonus)
-  );
+  return UiRules.attackCooldownMultiplier(stock, UiConfig);
 }
 
 function attackStunChance(stock, baseChance = baseAttackStunChance) {
-  return Math.min(
-    1,
-    baseChance +
-      foodBonus(
-        stock,
-        "carb",
-        attackStunChanceBonusPerPoint,
-        maxAttackStunChanceBonus,
-      ),
-  );
+  return UiRules.attackStunChance(stock, UiConfig, baseChance);
 }
 
 function moveInterval(stock) {
@@ -3853,23 +3859,15 @@ function isMovementStunned(owner, now) {
 }
 
 function attackDelay(stock) {
-  return baseAttackDelayMs / attackSpeedMultiplier(stock);
+  return UiRules.attackDelay(stock, UiConfig);
 }
 
 function attackCooldown(stock, profile = "big", characterId = null) {
-  const baseCooldown =
-    profile === "big" && characterId
-      ? (attackUltimateBalance?.[characterId]?.bigCooldownMs ??
-        baseAttackCooldownMs)
-      : baseAttackCooldownMs;
-  return baseCooldown / attackCooldownMultiplier(stock);
+  return UiRules.attackCooldown(stock, UiConfig, profile, characterId);
 }
 
 function attackProfileCooldown(stock, profile = "big", characterId = null) {
-  return (
-    attackCooldown(stock, profile, characterId) *
-    (profile === "small" ? smallAttackCooldownScale : 1)
-  );
+  return UiRules.attackProfileCooldown(stock, UiConfig, profile, characterId);
 }
 
 function resetAttackCooldownTracker() {
@@ -3916,40 +3914,32 @@ function attackCooldownRemainingMs(
 }
 
 function blastRadius(stock) {
-  return baseBlastHexRadius * areaMultiplier(stock);
+  return UiRules.blastRadius(stock, UiConfig);
 }
 
 function maxHpForSnake(snakeParts = []) {
-  return ((snakeParts?.length || 0) + 1) * hpPerSnakeUnit;
+  return UiRules.maxHpForSnake(snakeParts, UiConfig);
 }
 
 function foodHealAmount() {
-  return hpPerSnakeUnit;
+  return UiRules.foodHealAmount(UiConfig);
 }
 
 function attackFoodCost(profile = "big") {
-  return profile === "small" ? smallAttackFoodCost : 2;
+  return UiRules.attackFoodCost(profile, UiConfig);
 }
 
 function attackBombCost(profile = "big") {
-  return profile === "small" ? smallAttackBombCost : bigAttackBombCost;
+  return UiRules.attackBombCost(profile, UiConfig);
 }
 
 function highestStockFoodType(stock) {
-  return foodTypes.reduce((best, type) => {
-    const currentCount = stock[type.id] || 0;
-    const bestCount = best ? stock[best.id] || 0 : -Infinity;
-    return currentCount > bestCount ? type : best;
-  }, null);
+  const typeId = UiRules.highestStockFoodType(stock, UiConfig);
+  return foodTypeById.get(typeId) || null;
 }
 
 function hasAttackFoodCost(stock, profile = "big") {
-  const cost = attackFoodCost(profile);
-  if (profile === "small") {
-    const highestType = highestStockFoodType(stock);
-    return Boolean(highestType) && (stock[highestType.id] || 0) >= cost;
-  }
-  return foodTypes.every((type) => stock[type.id] >= cost);
+  return UiRules.hasAttackFoodCost(stock, profile, UiConfig);
 }
 
 function ammoFor(owner) {
@@ -3962,10 +3952,7 @@ function ammoChargeFor(owner) {
 
 function canAttack(owner, profile = "big") {
   const stock = owner === "player" ? playerStock : computerStock;
-  return (
-    ammoFor(owner) >= attackBombCost(profile) &&
-    hasAttackFoodCost(stock, profile)
-  );
+  return UiRules.canAttackWithResources(stock, ammoFor(owner), profile, UiConfig);
 }
 
 function convertFullEnergyToAmmo(owner) {
@@ -4009,101 +3996,42 @@ function consumeAttackCost(owner, stock, profile = "big") {
   }
 }
 
-function addStock(stock, typeId, amount = 1) {
-  stock[typeId] = Math.min(maxFoodStock, stock[typeId] + amount);
-}
-
-function addAmmoCharge(owner, amount = 1) {
-  if (owner === "player") {
-    playerAmmoCharge += amount;
-    if (playerAmmoCharge >= attackNeedTotal) {
-      if (playerAmmo < maxAmmo) {
-        playerAmmo = Math.min(maxAmmo, playerAmmo + 1);
-        playerAmmoCharge = 0;
-      } else {
-        playerAmmoCharge = attackNeedTotal;
-      }
-      playerEnergyFlashUntil = performance.now() + 1700;
-    }
-  } else {
-    computerAmmoCharge += amount;
-    if (computerAmmoCharge >= attackNeedTotal) {
-      if (computerAmmo < maxAmmo) {
-        computerAmmo = Math.min(maxAmmo, computerAmmo + 1);
-        computerAmmoCharge = 0;
-      } else {
-        computerAmmoCharge = attackNeedTotal;
-      }
-      computerEnergyFlashUntil = performance.now() + 1700;
-    }
-  }
-}
-
 function foodTypeIds(food) {
   if (Array.isArray(food.types) && food.types.length) return food.types;
   return food.type ? [food.type] : [];
 }
 
-function randomStockFoodTypeId(candidates = stockFoodTypeIds) {
-  const available = candidates.filter((typeId) =>
-    stockFoodTypeIds.includes(typeId),
-  );
-  if (!available.length) return null;
-  return available[Math.floor(Math.random() * available.length)];
-}
-
-function addRandomStock(stock, candidates = stockFoodTypeIds, amount = 1) {
-  const typeId = randomStockFoodTypeId(candidates);
-  if (typeId) addStock(stock, typeId, amount);
-}
-
-function applyCharacterFoodStockBonus(owner, stock, types) {
-  const character = UiRegistry.characterFor(owner);
-  const hasBlackFood = types.includes("black");
-  const stockTypes = types.filter((typeId) =>
-    stockFoodTypeIds.includes(typeId),
-  );
-  if (character?.specialFood === "black") {
-    if (!hasBlackFood) return;
-    const roll = Math.random();
-    if (roll < blackFoodDoubleBonusChance) {
-      addRandomStock(stock, stockFoodTypeIds, 2);
-    } else if (roll < blackFoodDoubleBonusChance + blackFoodBonusChance) {
-      addRandomStock(stock, stockFoodTypeIds, 1);
-    }
-    return;
-  }
-  if (character?.food === "balanced") {
-    const candidates = hasBlackFood ? stockFoodTypeIds : stockTypes;
-    if (candidates.length && Math.random() < balancedFoodBonusChance) {
-      addRandomStock(stock, candidates, 1);
-    }
-    return;
-  }
-  if (
-    stockTypes.length === 1 &&
-    stockTypes[0] === character?.food &&
-    Math.random() < favoriteFoodBonusChance
-  ) {
-    addStock(stock, stockTypes[0], 1);
-  }
+function runtimeRulesRng() {
+  return {
+    next: () => Math.random(),
+    int: (max) => Math.floor(Math.random() * max),
+    item: (items) => items[Math.floor(Math.random() * items.length)],
+  };
 }
 
 function collectFood(owner, food) {
   const stock = owner === "player" ? playerStock : computerStock;
   const types = foodTypeIds(food);
-  if (types.includes("black")) {
-    const randomType = foodTypes[Math.floor(Math.random() * foodTypes.length)];
-    addStock(stock, randomType.id, 1);
-    addAmmoCharge(owner, blackFoodEnergy);
-    applyCharacterFoodStockBonus(owner, stock, types);
-    return;
+  const beforeAmmo = ammoFor(owner);
+  const beforeCharge = ammoChargeFor(owner);
+  const fighter = {
+    stock,
+    ammo: beforeAmmo,
+    ammoCharge: beforeCharge,
+    character: UiRegistry.characterFor(owner),
+  };
+  UiRules.collectFood(fighter, { ...food, types }, UiConfig, runtimeRulesRng());
+  const energyGain = types.includes("black") ? blackFoodEnergy : foodEnergy;
+  const shouldFlashEnergy = beforeCharge + energyGain >= attackNeedTotal;
+  if (owner === "player") {
+    playerAmmo = fighter.ammo;
+    playerAmmoCharge = fighter.ammoCharge;
+    if (shouldFlashEnergy) playerEnergyFlashUntil = performance.now() + 1700;
+  } else {
+    computerAmmo = fighter.ammo;
+    computerAmmoCharge = fighter.ammoCharge;
+    if (shouldFlashEnergy) computerEnergyFlashUntil = performance.now() + 1700;
   }
-  const stockGain =
-    types.length > 1 ? dualColorStockGain : singleColorStockGain;
-  types.forEach((typeId) => addStock(stock, typeId, stockGain));
-  applyCharacterFoodStockBonus(owner, stock, types);
-  addAmmoCharge(owner, foodEnergy);
 }
 
 function formatTime(ms) {

@@ -911,6 +911,50 @@
       align-items: stretch;
     }
 
+    .result-highlights {
+      position: relative;
+      z-index: 12;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      margin: 0 0 12px;
+    }
+
+    .result-highlights[hidden] {
+      display: none;
+    }
+
+    .result-highlight-card {
+      display: grid;
+      gap: 3px;
+      min-width: 0;
+      padding: 9px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(8, 12, 18, 0.42);
+      text-align: left;
+    }
+
+    .result-highlight-card strong {
+      color: #fef3c7;
+      font-size: 1.02rem;
+      line-height: 1.05;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .result-highlight-card span {
+      color: var(--ink);
+      font-size: 0.78rem;
+      font-weight: 850;
+    }
+
+    .result-highlight-card small {
+      color: var(--muted);
+      font-size: 0.7rem;
+      line-height: 1.25;
+      overflow-wrap: anywhere;
+    }
+
     .result-share-panel {
       position: relative;
       z-index: 12;
@@ -2271,6 +2315,10 @@
       box-shadow: 0 24px 70px rgba(0, 0, 0, 0.46);
     }
 
+    .match-history-dialog {
+      width: min(900px, 100%);
+    }
+
     .replay-header,
     .replay-list-header,
     .replay-row,
@@ -2289,6 +2337,42 @@
     .replay-header h2,
     .replay-list-header h3 {
       margin: 0;
+    }
+
+    .match-history-tabs {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 6px;
+      padding: 0.75rem 1rem 0.35rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .match-history-tab {
+      min-width: 0;
+      min-height: 36px;
+      padding: 7px 9px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      background: rgba(8, 12, 18, 0.34);
+      color: var(--muted);
+      font-size: 0.84rem;
+      font-weight: 850;
+    }
+
+    .match-history-tab.is-active {
+      border-color: rgba(245, 158, 11, 0.64);
+      background: rgba(245, 158, 11, 0.14);
+      color: #fde68a;
+    }
+
+    .match-history-tab:focus-visible {
+      outline: 2px solid rgba(245, 158, 11, 0.34);
+      outline-offset: 2px;
+    }
+
+    .match-history-panel[hidden],
+    .match-history-share-content[hidden] {
+      display: none;
     }
 
     .replay-list-header {
@@ -2396,11 +2480,81 @@
       background: rgba(250, 204, 21, 0.11);
     }
 
+    .app-stats-highlight {
+      margin-top: 0.34rem;
+      color: #fde68a;
+      font-size: 0.78rem;
+      font-weight: 800;
+      line-height: 1.3;
+    }
+
+    .achievement-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 0.45rem;
+    }
+
+    .achievement-badge {
+      display: inline-grid;
+      place-items: center;
+      min-height: 23px;
+      padding: 3px 7px;
+      border-radius: 999px;
+      border: 1px solid rgba(250, 204, 21, 0.32);
+      background: rgba(250, 204, 21, 0.1);
+      color: #fef3c7;
+      font-size: 0.72rem;
+      font-weight: 850;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .achievement-badge.is-locked {
+      border-color: rgba(148, 163, 184, 0.22);
+      background: rgba(148, 163, 184, 0.08);
+      color: var(--muted);
+    }
+
     .app-stats-actions {
       display: flex;
       justify-content: flex-end;
       padding: 0.85rem 1rem 1rem;
       border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .match-history-share-content {
+      display: grid;
+      gap: 12px;
+      padding: 0 1rem 1rem;
+    }
+
+    .match-history-share-preview {
+      max-height: min(42vh, 360px);
+      margin: 0;
+      overflow: auto;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      padding: 0.9rem;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      background: rgba(8, 12, 18, 0.46);
+      color: var(--ink);
+      font-family: inherit;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    .match-history-share-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .match-history-panel .result-share-panel {
+      margin-top: 0;
+      padding: 0 1rem 1rem;
     }
 
     .app-version-modal {
@@ -2442,6 +2596,10 @@
     }
 
     @media (max-width: 520px) {
+      .match-history-tabs {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
       .app-stats-summary {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
@@ -2986,6 +3144,22 @@
       border: 1px solid var(--line);
     }
 
+    .replay-dialog .match-history-tab {
+      width: 100%;
+      min-width: 0;
+      min-height: 36px;
+      padding: 7px 9px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(8, 12, 18, 0.34);
+      color: var(--muted);
+    }
+
+    .replay-dialog .match-history-tab.is-active {
+      border-color: rgba(245, 158, 11, 0.64);
+      background: rgba(245, 158, 11, 0.14);
+      color: #fde68a;
+    }
+
     .pwa-update-prompt {
       position: fixed;
       right: max(16px, env(safe-area-inset-right));
@@ -3261,7 +3435,7 @@
 
     .settings-actions {
       display: grid;
-      grid-template-columns: repeat(5, minmax(42px, 1fr));
+      grid-template-columns: repeat(4, minmax(42px, 1fr));
       justify-self: end;
       align-items: stretch;
       gap: 6px;
@@ -6079,7 +6253,7 @@
 
       .side .settings-section .settings-actions {
         display: grid;
-        grid-template-columns: repeat(5, minmax(34px, 1fr));
+        grid-template-columns: repeat(4, minmax(34px, 1fr));
         gap: 4px;
         justify-self: stretch;
         width: 100%;
@@ -6524,13 +6698,18 @@
 
       .dialog-actions {
         grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 6px;
+        gap: 4px;
       }
 
       .dialog-actions button {
-        min-height: 36px;
-        padding: 7px 5px;
-        font-size: clamp(0.68rem, 2.9vw, 0.82rem);
+        min-width: 0;
+        min-height: 34px;
+        padding: 6px 3px;
+        overflow: hidden;
+        font-size: clamp(0.62rem, 2.45vw, 0.76rem);
+        line-height: 1.1;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
       .overlay.is-session-modal {
@@ -6617,6 +6796,28 @@
         margin-bottom: 8px;
         font-size: 0.76rem;
         line-height: 1.18;
+      }
+
+      .overlay.is-session-modal .result-highlights {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 4px;
+        margin-bottom: 6px;
+      }
+
+      .overlay.is-session-modal .result-highlight-card {
+        gap: 2px;
+        padding: 5px 4px;
+      }
+
+      .overlay.is-session-modal .result-highlight-card strong {
+        font-size: 0.76rem;
+        line-height: 1.05;
+      }
+
+      .overlay.is-session-modal .result-highlight-card span,
+      .overlay.is-session-modal .result-highlight-card small {
+        font-size: 0.58rem;
+        line-height: 1.08;
       }
 
       .overlay.is-session-modal .intro-avatar-button {

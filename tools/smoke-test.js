@@ -394,20 +394,23 @@ async function exerciseNetworkPanel(page) {
 }
 
 async function exerciseStatsModal(page) {
-  await page.locator("#statsButton").click({ timeout: actionTimeoutMs });
-  await expectVisible(page, "#statsModal", "stats modal opens");
+  await page.locator("#settingsReplayButton").click({ timeout: actionTimeoutMs });
+  await expectVisible(page, "#replayModal", "match history modal opens from history button");
+  await expectControlAttribute(page, "#matchHistoryRecentTab", "aria-selected", "true", "recent tab opens by default");
   await expectText(page, "#statsTotalMatches", "2", "stats total matches come from storage");
   await expectText(page, "#statsWinRate", "50%", "stats win rate is calculated");
   await expectText(page, "#statsRecentCount", "2 / 10", "stats recent matches are listed");
   await expectVisible(page, '[data-stats-record-id="stats-smoke-1"]', "stats recent row is visible");
+  await page.locator("#matchHistoryMasteryTab").click({ timeout: actionTimeoutMs });
+  await expectVisible(page, "#matchHistoryMasteryPanel", "character mastery tab opens");
   await expectVisible(page, '[data-stats-character-id="dragon"]', "stats character mastery row is visible");
   await page.keyboard.press("Escape");
-  await expectHidden(page, "#statsModal", "stats modal closes with Escape");
+  await expectHidden(page, "#replayModal", "match history modal closes with Escape");
 
-  await page.locator("#statsButton").click({ timeout: actionTimeoutMs });
-  await expectVisible(page, "#statsModal", "stats modal reopens");
-  await clickModalBackdrop(page, "#statsModal");
-  await expectHidden(page, "#statsModal", "stats modal closes from backdrop");
+  await page.locator("#settingsReplayButton").click({ timeout: actionTimeoutMs });
+  await expectVisible(page, "#replayModal", "match history modal reopens");
+  await clickModalBackdrop(page, "#replayModal");
+  await expectHidden(page, "#replayModal", "match history modal closes from backdrop");
 }
 
 async function exerciseVersionModal(page) {
@@ -698,6 +701,7 @@ async function exerciseReplayRegression(page) {
   await page.locator(`[data-replay-delete="${replayFixtureNextId}"]`).first().click({ timeout: actionTimeoutMs });
   await expectText(page, "#recentReplayCount", "0 / 5", "replay record can be deleted");
   await expectVisible(page, "#recentReplayList .replay-empty", "replay recent empty state is visible");
+  await page.locator("#matchHistoryFavoriteTab").click({ timeout: actionTimeoutMs });
   await expectVisible(page, "#favoriteReplayList .replay-empty", "replay favorite empty state is visible");
   await page.locator("#replayModalClose").click({ timeout: actionTimeoutMs });
   await expectHidden(page, "#replayModal", "replay modal closes after deletion");
@@ -735,14 +739,13 @@ async function exerciseResultShare(page) {
   await expectVisible(page, "#overlayText", "result text appears after match end");
   const shareButtonCount = await page.locator("#shareResultButton").count();
   if (shareButtonCount) throw new Error("result share button should be removed");
-  await page.waitForFunction(
-    () => document.querySelector("#overlayText")?.classList.contains("is-copyable-result"),
-    null,
-    { timeout: actionTimeoutMs }
-  );
-  console.log("ok - result text is copyable");
-  await page.locator("#overlayText").click({ timeout: actionTimeoutMs });
-  await expectText(page, "#shareResultStatus", "結果已複製。", "result text copies to clipboard");
+  await page.locator("#replayArchiveButton").click({ timeout: actionTimeoutMs });
+  await expectVisible(page, "#replayModal", "match history opens from game-over report button");
+  await expectControlAttribute(page, "#matchHistoryShareTab", "aria-selected", "true", "share tab opens after a match");
+  await expectVisible(page, "#matchHistorySharePreview", "result share preview is visible");
+  await expectTextMatches(page, "#matchHistorySharePreview", "Hex Snake 對戰結果", "share tab shows result text");
+  await page.locator("#matchHistoryShareCopyButton").click({ timeout: actionTimeoutMs });
+  await expectText(page, "#shareResultStatus", "結果已複製。", "result text copies from match history");
   await page.waitForFunction(
     () => window.__hexSnakeSmokeShareText?.includes("Hex Snake 對戰結果")
       && window.__hexSnakeSmokeShareText?.includes("比分：P1")
@@ -751,6 +754,8 @@ async function exerciseResultShare(page) {
     { timeout: actionTimeoutMs }
   );
   console.log("ok - result share text is copied");
+  await page.locator("#replayModalClose").click({ timeout: actionTimeoutMs });
+  await expectHidden(page, "#replayModal", "match history closes after share");
 }
 
 async function runViewportSmoke(browser, url, profile) {

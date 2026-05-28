@@ -61,6 +61,7 @@ function expectFileExcludes(relativePath, label, bannedTokens) {
 }
 
 const sharedOrder = [
+  "src/rules-core.js",
   "src/state.js",
   "src/dom.js",
   "src/ui.js",
@@ -109,6 +110,7 @@ const mainSource = read("src/main.js");
 
 const mainModuleSource = read("src/main-module.js");
 [
+  'import "./rules-core.js";',
   'import { runtime } from "./platform/web.js";',
   'from "./state.js"',
   'import { dom } from "./dom.js";',
@@ -125,6 +127,7 @@ const mainModuleSource = read("src/main-module.js");
   "module-shadow",
   "bootstrapsGameplay: false",
   "domReady",
+  "rulesReady",
   "uiReady",
   "serviceReady",
   "catalogReady",
@@ -209,6 +212,10 @@ const requiredRegistrations = [
   ["src/platform/web.js", "storage: HexSnakeStorage"],
   ["src/platform/mobile.js", "platform: HexSnakePlatform"],
   ["src/platform/mobile.js", "storage: HexSnakeStorage"],
+  ["src/rules-core.js", "root.HexSnakeRules = api;"],
+  ["src/rules-core.js", "module.exports = api;"],
+  ["src/rules-core.js", "attackStats"],
+  ["src/rules-core.js", "collectFood"],
   ["src/state.js", "const StateRuntime = HexSnakeRuntime;"],
   ["src/state.js", "const StateStorage = StateRuntime.storage;"],
   ["src/state.js", "const StateConfig = HexSnakeState.config;"],
@@ -1020,6 +1027,7 @@ const docText = read("doc/es-module-export-map.md");
   "src/platform/mobile.js",
   "src/state.js",
   "src/dom.js",
+  "src/rules-core.js",
   "src/ui.js",
   "src/network.js",
   "src/characters.js",
@@ -1067,6 +1075,7 @@ const loaderPlanText = read("doc/es-module-loader-plan.md");
   "hexSnakeLoader=module-shadow",
   "src/platform/web.js",
   "src/platform/mobile.js",
+  "src/rules-core.js",
   "src/state.js",
   "src/dom.js",
   "src/ui.js",

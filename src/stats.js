@@ -34,6 +34,46 @@ const HexSnakeStats = (() => {
     return Number.isFinite(number) ? number : 0;
   }
 
+  function normalizeSkillCounts(value = {}) {
+    return {
+      small: numberOrZero(value.small),
+      big: numberOrZero(value.big)
+    };
+  }
+
+  function normalizeOwnerHighlights(value = {}) {
+    return {
+      casts: normalizeSkillCounts(value.casts),
+      hits: normalizeSkillCounts(value.hits),
+      damageDealt: numberOrZero(value.damageDealt),
+      resourcesSpent: numberOrZero(value.resourcesSpent),
+      highestDamage: numberOrZero(value.highestDamage),
+      keyKills: numberOrZero(value.keyKills)
+    };
+  }
+
+  function normalizeDamageEvent(value = {}) {
+    if (!value || typeof value !== "object") return null;
+    const amount = numberOrZero(value.amount);
+    if (amount <= 0) return null;
+    return {
+      owner: value.owner === "player" || value.owner === "computer" ? value.owner : null,
+      target: value.target === "player" || value.target === "computer" ? value.target : null,
+      profile: value.profile === "small" ? "small" : "big",
+      amount,
+      atMs: numberOrZero(value.atMs)
+    };
+  }
+
+  function normalizeHighlights(value = {}) {
+    return {
+      player: normalizeOwnerHighlights(value.player),
+      computer: normalizeOwnerHighlights(value.computer),
+      highestDamage: normalizeDamageEvent(value.highestDamage),
+      keyKill: normalizeDamageEvent(value.keyKill)
+    };
+  }
+
   function normalizeRecord(record) {
     if (!record || typeof record !== "object") return null;
     const id = String(record.id || "");
@@ -49,7 +89,8 @@ const HexSnakeStats = (() => {
       computerCharacterId: record.computerCharacterId || "",
       mode: record.mode || "player",
       difficulty: record.difficulty || "",
-      surrendered: Boolean(record.surrendered)
+      surrendered: Boolean(record.surrendered),
+      highlights: normalizeHighlights(record.highlights)
     };
   }
 
@@ -62,6 +103,12 @@ const HexSnakeStats = (() => {
       score: numberOrZero(entry.score),
       bestScore: numberOrZero(entry.bestScore),
       durationMs: numberOrZero(entry.durationMs),
+      skillCasts: normalizeSkillCounts(entry.skillCasts),
+      skillHits: normalizeSkillCounts(entry.skillHits),
+      damageDealt: numberOrZero(entry.damageDealt),
+      resourcesSpent: numberOrZero(entry.resourcesSpent),
+      highestDamage: numberOrZero(entry.highestDamage),
+      keyKills: numberOrZero(entry.keyKills),
       lastPlayedAt: entry.lastPlayedAt || ""
     };
   }
@@ -119,6 +166,7 @@ const HexSnakeStats = (() => {
     if (mode === "relay") return "接力賽";
     if (mode === "autoBattle") return "自動對弈";
     if (mode === "playerAuto") return "P1 Auto";
+    if (mode === "training") return "技能訓練";
     return "P1 戰鬥";
   }
 
@@ -142,6 +190,49 @@ const HexSnakeStats = (() => {
       hour: "2-digit",
       minute: "2-digit"
     });
+  }
+
+  function skillTotal(counts = {}) {
+    return numberOrZero(counts.small) + numberOrZero(counts.big);
+  }
+
+  function resourceEfficiency(value = {}) {
+    const spent = numberOrZero(value.resourcesSpent);
+    if (spent <= 0) return 0;
+    return numberOrZero(value.damageDealt) / spent;
+  }
+
+  function formatDecimal(value, digits = 1) {
+    if (!Number.isFinite(value)) return "0";
+    const rounded = Number(value.toFixed(digits));
+    return Number.isInteger(rounded) ? String(rounded) : String(rounded);
+  }
+
+  function masteryLevel(row) {
+    return Math.max(
+      1,
+      Math.min(
+        30,
+        1
+          + Math.floor(row.played / 2)
+          + Math.floor(row.wins / 2)
+          + Math.floor(skillTotal(row.skillHits) / 4)
+          + Math.floor(row.keyKills / 2)
+      )
+    );
+  }
+
+  function achievementBadges(row) {
+    const efficiency = resourceEfficiency(row);
+    return [
+      { label: "首勝", unlocked: row.wins >= 1 },
+      { label: "熟手", unlocked: row.played >= 5 },
+      { label: "小招命中", unlocked: row.skillHits.small >= 5 },
+      { label: "大招命中", unlocked: row.skillHits.big >= 3 },
+      { label: "高傷害", unlocked: row.highestDamage >= 24 },
+      { label: "關鍵擊殺", unlocked: row.keyKills >= 1 },
+      { label: "資源效率", unlocked: efficiency >= 1.2 && row.damageDealt >= 30 }
+    ].filter(badge => badge.unlocked);
   }
 
   function recordMatch(match) {
@@ -168,10 +259,23 @@ const HexSnakeStats = (() => {
 
     if (record.playerCharacterId) {
       const row = stats.characters[record.playerCharacterId] || normalizeCharacterStats();
+      const playerHighlights = record.highlights.player;
       row.played += 1;
       row.score += record.playerScore;
       row.bestScore = Math.max(row.bestScore, record.playerScore);
       row.durationMs += record.durationMs;
+      row.skillCasts.small += playerHighlights.casts.small;
+      row.skillCasts.big += playerHighlights.casts.big;
+      row.skillHits.small += playerHighlights.hits.small;
+      row.skillHits.big += playerHighlights.hits.big;
+      row.damageDealt += playerHighlights.damageDealt;
+      row.resourcesSpent += playerHighlights.resourcesSpent;
+      row.highestDamage = Math.max(
+        row.highestDamage,
+        playerHighlights.highestDamage,
+        record.highlights.highestDamage?.owner === "player" ? record.highlights.highestDamage.amount : 0
+      );
+      row.keyKills += playerHighlights.keyKills;
       row.lastPlayedAt = record.createdAt;
       if (record.winnerOwner === "player") row.wins += 1;
       else if (record.winnerOwner === "computer") row.losses += 1;
@@ -227,6 +331,20 @@ const HexSnakeStats = (() => {
       meta.className = "replay-meta";
       meta.textContent = `${modeLabel(record.mode)} · ${characterName(record.playerCharacterId)} vs ${characterName(record.computerCharacterId)} · ${StatsUI.formatTime(record.durationMs)}${record.surrendered ? " · 投降" : ""}`;
       details.append(title, meta);
+      const playerHighlights = record.highlights.player;
+      const castTotal = skillTotal(playerHighlights.casts);
+      const hitTotal = skillTotal(playerHighlights.hits);
+      const highlightParts = [];
+      if (castTotal || hitTotal) highlightParts.push(`技能命中 ${hitTotal}/${Math.max(castTotal, hitTotal)}`);
+      if (record.highlights.highestDamage?.amount) highlightParts.push(`最高傷害 ${formatDecimal(record.highlights.highestDamage.amount)}`);
+      if (record.highlights.keyKill?.owner) highlightParts.push("關鍵擊殺");
+      if (playerHighlights.resourcesSpent > 0) highlightParts.push(`資源效率 ${formatDecimal(resourceEfficiency(playerHighlights))}`);
+      if (highlightParts.length) {
+        const highlights = document.createElement("div");
+        highlights.className = "app-stats-highlight";
+        highlights.textContent = highlightParts.join(" · ");
+        details.append(highlights);
+      }
 
       const badge = document.createElement("span");
       badge.className = `app-stats-badge ${record.winnerOwner === "player" ? "is-win" : record.winnerOwner === "computer" ? "is-loss" : "is-draw"}`;
@@ -267,11 +385,25 @@ const HexSnakeStats = (() => {
       const details = document.createElement("div");
       const title = document.createElement("span");
       title.className = "replay-title";
-      title.textContent = characterName(row.characterId);
+      title.textContent = `${characterName(row.characterId)} · Lv.${masteryLevel(row)}`;
       const meta = document.createElement("div");
       meta.className = "replay-meta";
-      meta.textContent = `${row.played} 場 · ${row.wins} 勝 ${row.losses} 敗 ${row.draws} 平 · 最高 ${row.bestScore} · ${StatsUI.formatTime(row.durationMs)}`;
-      details.append(title, meta);
+      meta.textContent = `${row.played} 場 · ${row.wins} 勝 ${row.losses} 敗 ${row.draws} 平 · 命中 ${skillTotal(row.skillHits)}/${Math.max(1, skillTotal(row.skillCasts))} · 最高傷害 ${formatDecimal(row.highestDamage)} · 資源效率 ${formatDecimal(resourceEfficiency(row))}`;
+      const badges = document.createElement("div");
+      badges.className = "achievement-badges";
+      achievementBadges(row).forEach(badgeInfo => {
+        const badgeEl = document.createElement("span");
+        badgeEl.className = "achievement-badge";
+        badgeEl.textContent = badgeInfo.label;
+        badges.append(badgeEl);
+      });
+      if (!badges.children.length) {
+        const badgeEl = document.createElement("span");
+        badgeEl.className = "achievement-badge is-locked";
+        badgeEl.textContent = "尚未解鎖徽章";
+        badges.append(badgeEl);
+      }
+      details.append(title, meta, badges);
 
       const badge = document.createElement("span");
       badge.className = "app-stats-badge";
@@ -288,14 +420,22 @@ const HexSnakeStats = (() => {
     renderCharacterMastery(stats);
   }
 
-  function openModal() {
+  function openModal(tab = "recent") {
     if (StatsGameState.running && !StatsGameState.gameOver) return;
     StatsUI.clearRelayRestartTimer();
+    if (typeof StatsUI.replay.openModal === "function") {
+      StatsUI.replay.openModal(tab);
+      return;
+    }
     refreshModal();
     StatsDom.statsModal.hidden = false;
   }
 
   function closeModal() {
+    if (typeof StatsUI.replay.closeModal === "function") {
+      StatsUI.replay.closeModal();
+      return;
+    }
     StatsDom.statsModal.hidden = true;
   }
 

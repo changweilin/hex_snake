@@ -83,10 +83,12 @@
             <div id="winnerPortrait" hidden></div>
             <h2 id="overlayTitle">準備開局</h2>
             <p id="overlayText">每吃 1 個食物獲得 2 點能量，集滿 6 點獲得 1 枚炸彈，最多 3 枚；HP 上限為（蛇長 + 1）× 10；能量與炸彈都滿時，施放消耗炸彈的招式會立刻把滿能量轉為 1 枚炸彈；小招消耗目前最高的食物庫存 2 點與 1 枚炸彈，大招消耗 2 枚炸彈與四種庫存各 2 點。</p>
+            <div class="result-highlights" id="resultHighlights" hidden></div>
             <div class="dialog-actions">
               <button id="startButton" type="button">開始</button>
               <button id="computerBattleButton" class="secondary" type="button">自動對弈</button>
-              <button id="replayArchiveButton" class="secondary" type="button">重播紀錄</button>
+              <button id="skillTrainingButton" class="secondary" type="button">技能訓練</button>
+              <button id="replayArchiveButton" class="secondary" type="button" data-match-history-entry="post-match" hidden>戰報</button>
             </div>
             <div class="result-share-panel" id="resultSharePanel" hidden>
               <div id="shareResultStatus" class="result-share-status" role="status" aria-live="polite" hidden></div>
@@ -104,15 +106,16 @@
           <svg class="settings-action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 0 4 22V5.5Z"/><path d="M8 7h8"/><path d="M8 11h8"/></svg>
           <span class="settings-action-label">規則</span>
         </button>
-        <button class="replay-toggle" id="settingsReplayButton" type="button" title="重播紀錄" aria-label="重播紀錄">
+        <button class="replay-toggle" id="settingsReplayButton" type="button" data-match-history-entry="post-match" aria-haspopup="dialog" aria-controls="replayModal" title="戰報" aria-label="戰報">
           <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M4 7v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7"/>
-            <path d="M7 4h10"/>
-            <path d="M9 9l6 3-6 3V9Z"/>
+            <path d="M5 5h14"/>
+            <path d="M5 12h9"/>
+            <path d="M5 19h14"/>
+            <path d="M17 10l3 2-3 2v-4Z"/>
           </svg>
-          <span class="replay-toggle-label">重播紀錄</span>
+          <span class="replay-toggle-label">戰報</span>
         </button>
-        <button class="stats-toggle" id="statsButton" type="button" aria-haspopup="dialog" aria-controls="statsModal" title="戰績" aria-label="戰績">
+        <button class="stats-toggle" id="statsButton" type="button" data-match-history-entry="mastery" aria-haspopup="dialog" aria-controls="replayModal" title="熟練度" aria-label="熟練度" hidden>
           <svg class="settings-action-icon" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M4 19V5"/>
             <path d="M4 19h16"/>
@@ -442,44 +445,61 @@
     <button class="secondary portrait-lightbox-variant" type="button" data-portrait-lightbox-direction="down" aria-label="Next portrait version">&darr; Q獸版</button>
     <button id="portraitLightboxClose" class="secondary portrait-lightbox-close" type="button">關閉</button>
   </div>
-  <div class="replay-modal" id="replayModal" hidden aria-modal="true" role="dialog" aria-labelledby="replayTitle">
-    <div class="replay-dialog">
+  <div class="replay-modal match-history-modal" id="replayModal" hidden aria-modal="true" role="dialog" aria-labelledby="replayTitle">
+    <div class="replay-dialog match-history-dialog">
       <div class="replay-header">
-        <h2 id="replayTitle">重播紀錄</h2>
-        <button id="replayModalClose" class="secondary replay-close" type="button" aria-label="關閉重播紀錄">&times;</button>
+        <h2 id="replayTitle">Match History / 戰報</h2>
+        <button id="replayModalClose" class="secondary replay-close" type="button" aria-label="關閉戰報">&times;</button>
+      </div>
+      <div class="match-history-tabs" role="tablist" aria-label="戰報分類">
+        <button id="matchHistoryRecentTab" class="match-history-tab is-active" type="button" role="tab" data-match-history-tab="recent" aria-controls="matchHistoryRecentPanel" aria-selected="true">最近</button>
+        <button id="matchHistoryFavoriteTab" class="match-history-tab" type="button" role="tab" data-match-history-tab="favorite" aria-controls="matchHistoryFavoritePanel" aria-selected="false">收藏</button>
+        <button id="matchHistoryMasteryTab" class="match-history-tab" type="button" role="tab" data-match-history-tab="mastery" aria-controls="matchHistoryMasteryPanel" aria-selected="false">角色熟練度</button>
+        <button id="matchHistoryShareTab" class="match-history-tab" type="button" role="tab" data-match-history-tab="share" aria-controls="matchHistorySharePanel" aria-selected="false">分享</button>
       </div>
       <div id="replayMessage" class="replay-message"></div>
-      <div class="replay-list-header">
-        <h3>最近 5 場</h3>
-        <span id="recentReplayCount">0 / 5</span>
+      <div id="matchHistoryRecentPanel" class="match-history-panel" role="tabpanel" data-match-history-panel="recent" aria-labelledby="matchHistoryRecentTab">
+        <div id="statsSummary" class="app-stats-summary" aria-label="戰績摘要"></div>
+        <div class="replay-list-header">
+          <h3>最近 10 場</h3>
+          <span id="statsRecentCount">0 / 10</span>
+        </div>
+        <div id="statsRecentList"></div>
+        <div class="replay-list-header">
+          <h3>最近重播 5 場</h3>
+          <span id="recentReplayCount">0 / 5</span>
+        </div>
+        <div id="recentReplayList"></div>
       </div>
-      <div id="recentReplayList"></div>
-      <div class="replay-list-header">
-        <h3>我的最愛 5 場</h3>
-        <span id="favoriteReplayCount">0 / 5</span>
+      <div id="matchHistoryFavoritePanel" class="match-history-panel" role="tabpanel" data-match-history-panel="favorite" aria-labelledby="matchHistoryFavoriteTab" hidden>
+        <div class="replay-list-header">
+          <h3>收藏重播 5 場</h3>
+          <span id="favoriteReplayCount">0 / 5</span>
+        </div>
+        <div id="favoriteReplayList"></div>
       </div>
-      <div id="favoriteReplayList"></div>
-    </div>
-  </div>
-  <div class="replay-modal app-stats-modal" id="statsModal" hidden aria-modal="true" role="dialog" aria-labelledby="statsTitle">
-    <div class="replay-dialog app-stats-dialog">
-      <div class="replay-header">
-        <h2 id="statsTitle">戰績</h2>
-        <button id="statsModalClose" class="secondary replay-close" type="button" aria-label="關閉戰績">&times;</button>
+      <div id="matchHistoryMasteryPanel" class="match-history-panel" role="tabpanel" data-match-history-panel="mastery" aria-labelledby="matchHistoryMasteryTab" hidden>
+        <div class="replay-list-header">
+          <h3>P1 角色熟練度</h3>
+          <span id="statsCharacterCount">0</span>
+        </div>
+        <div id="statsCharacterList"></div>
+        <div class="app-stats-actions">
+          <button id="statsClearButton" class="secondary" type="button">清除戰績</button>
+        </div>
       </div>
-      <div id="statsSummary" class="app-stats-summary" aria-label="戰績摘要"></div>
-      <div class="replay-list-header">
-        <h3>最近 10 場</h3>
-        <span id="statsRecentCount">0 / 10</span>
-      </div>
-      <div id="statsRecentList"></div>
-      <div class="replay-list-header">
-        <h3>P1 角色熟練度</h3>
-        <span id="statsCharacterCount">0</span>
-      </div>
-      <div id="statsCharacterList"></div>
-      <div class="app-stats-actions">
-        <button id="statsClearButton" class="secondary" type="button">清除戰績</button>
+      <div id="matchHistorySharePanel" class="match-history-panel" role="tabpanel" data-match-history-panel="share" aria-labelledby="matchHistoryShareTab" hidden>
+        <div id="matchHistoryShareEmpty" class="replay-empty">完成一場對戰後，可在這裡複製或分享賽後戰報。</div>
+        <div id="matchHistoryShareContent" class="match-history-share-content" hidden>
+          <pre id="matchHistorySharePreview" class="match-history-share-preview" aria-label="賽後戰報內容"></pre>
+          <div class="match-history-share-actions">
+            <button id="matchHistoryShareCopyButton" type="button">複製戰報</button>
+            <button id="matchHistorySystemShareButton" class="secondary" type="button">系統分享</button>
+          </div>
+        </div>
+        <div class="result-share-panel" id="resultSharePanel" hidden>
+          <div id="shareResultStatus" class="result-share-status" role="status" aria-live="polite" hidden></div>
+        </div>
       </div>
     </div>
   </div>
