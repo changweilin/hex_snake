@@ -3046,6 +3046,7 @@ function setResultShareStatus(text = "", state = "") {
 function updateResultSharePanel() {
   const replayMode = typeof UiReplay.isPlaybackMode === "function" && UiReplay.isPlaybackMode();
   const visible = Boolean(lastResultShareData) && gameOver && !replayMode && !UiDom.overlayTitle.hidden;
+  UiDom.replayArchiveButton.hidden = !visible;
   UiDom.overlayText.classList.toggle("is-copyable-result", visible && !resultShareInProgress);
   if (visible) {
     UiDom.overlayText.setAttribute("role", "button");
