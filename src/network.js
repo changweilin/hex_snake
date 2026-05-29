@@ -554,6 +554,10 @@ const HexSnakeNet = (() => {
       return;
     }
     if (message.type === "peer-joined") {
+      // peer-joined arrives before the authoritative peer-state, so reflect the
+      // new peer immediately. Otherwise a stale peerCount of 1 lets the host's
+      // panel-close path tear down the room right after pairing.
+      peerCount = Math.max(peerCount, 2);
       setStatus("P2 joined. Host can start the match.", "ok");
       emitGameMessage({ type: "network-state", event: "peer-joined", role, roomCode, peerCount, lifecycle }, message.role, message);
       return;
