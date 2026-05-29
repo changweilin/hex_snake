@@ -3505,41 +3505,11 @@
     }
 
     .network-toggle.is-disconnect .gm-letter {
-      position: relative;
-      width: 1.35rem;
-      height: 1.35rem;
-      font-size: 0;
-      line-height: 1;
-    }
-
-    .network-toggle.is-disconnect .gm-letter::before,
-    .network-toggle.is-disconnect .gm-letter::after {
-      content: "";
-      position: absolute;
-      left: 50%;
-      transform: translateX(-50%);
-      pointer-events: none;
-    }
-
-    .network-toggle.is-disconnect .gm-letter::before {
-      top: 0.23rem;
-      width: 0.86rem;
-      height: 0.86rem;
-      border: 2px solid currentColor;
-      border-top-color: transparent;
-      border-radius: 50%;
-    }
-
-    .network-toggle.is-disconnect .gm-letter::after {
-      top: 0.02rem;
-      width: 2px;
-      height: 0.62rem;
-      border-radius: 999px;
-      background: currentColor;
-    }
-
-    .settings-section .network-toggle.is-disconnect .gm-letter {
-      font-size: 0;
+      font-size: 0.62rem;
+      line-height: 1.05;
+      letter-spacing: 0;
+      text-align: center;
+      white-space: nowrap;
     }
 
     .settings-toggle:hover,

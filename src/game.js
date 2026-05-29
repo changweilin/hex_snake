@@ -711,9 +711,18 @@
       Dom.lateGameModeButton.disabled = gmLocked;
     }
 
+    function networkConnectionLabel() {
+      const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+      const type = connection?.type;
+      if (type === "wifi") return "Wi-Fi";
+      if (type === "ethernet") return "LAN";
+      return "LAN/Wi-Fi";
+    }
+
     function updateSettingsActionMode() {
       const showSurrender = (GameRuntimeState.running || isNetworkMatchInProgress()) && !GameRuntimeState.gameOver && !GameReplay.isPlaybackMode();
       const networkRoomActive = isNetworkRoomActive();
+      const connectionLabel = networkConnectionLabel();
       if (showSurrender) {
         setSettingsOpen(false);
         setGmOpen(false);
@@ -730,9 +739,10 @@
       Dom.networkToggle.classList.toggle("is-auto", showSurrender && !networkRoomActive);
       Dom.networkToggle.classList.toggle("is-disconnect", networkRoomActive);
       Dom.networkToggle.classList.toggle("is-active", networkRoomActive || (showSurrender ? isPlayerAutoControlActive() : !Dom.networkContent.hidden));
-      Dom.gmLetter.textContent = networkRoomActive ? "⏻" : showSurrender ? "Auto" : "LAN";
-      Dom.networkToggle.title = networkRoomActive ? "斷線" : showSurrender ? "Auto 操作" : "LAN / Wi-Fi";
-      Dom.networkToggle.setAttribute("aria-label", networkRoomActive ? "斷線" : showSurrender ? "Auto 操作" : "LAN / Wi-Fi");
+      Dom.gmLetter.textContent = networkRoomActive ? connectionLabel : showSurrender ? "Auto" : "Link";
+      Dom.networkToggle.querySelector(".settings-action-label").textContent = networkRoomActive ? connectionLabel : showSurrender ? "Auto" : "Link";
+      Dom.networkToggle.title = networkRoomActive ? `斷線（${connectionLabel}）` : showSurrender ? "Auto 操作" : "Link";
+      Dom.networkToggle.setAttribute("aria-label", networkRoomActive ? `已連線（${connectionLabel}），點擊斷線` : showSurrender ? "Auto 操作" : "Link");
       Dom.networkToggle.setAttribute("aria-expanded", showSurrender ? "false" : Dom.networkToggle.getAttribute("aria-expanded"));
       Dom.networkToggle.disabled = networkRoomActive ? false : showSurrender ? false : Dom.networkToggle.disabled;
     }
@@ -5068,6 +5078,8 @@
 
     Dom.settingsToggle.addEventListener("click", toggleSettings);
     Dom.networkToggle.addEventListener("click", toggleNetworkSettings);
+    (navigator.connection || navigator.mozConnection || navigator.webkitConnection)
+      ?.addEventListener?.("change", () => updateSettingsActionMode());
     Dom.settingsCloseButton.addEventListener("click", () => setSettingsOpen(false));
     Dom.gmCloseButton.addEventListener("click", () => setGmOpen(false));
     Dom.networkCloseButton.addEventListener("click", () => setNetworkOpen(false));
