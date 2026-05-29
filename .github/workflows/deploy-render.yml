@@ -1,0 +1,42 @@
+name: Deploy relay to Render
+
+# Gates the WebSocket relay with the routing test, then triggers a Render
+# deploy via a deploy-hook secret. Render itself runs the build/start defined
+# in render.yaml. If the secret is not configured the deploy step is skipped,
+# so this workflow is safe to merge before Render is wired up.
+
+on:
+  push:
+    branches:
+      - master
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Relay routing test
+        run: npm run test:network
+
+      - name: Trigger Render deploy
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
+            echo "RENDER_DEPLOY_HOOK_URL secret not set; skipping deploy trigger."
+            exit 0
+          fi
+          curl -fsSL -X POST "$RENDER_DEPLOY_HOOK_URL"
+          echo "Render deploy triggered."

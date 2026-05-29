@@ -1,0 +1,22 @@
+# Render Blueprint: hosts the Hex Snake static game AND the LAN/Wi-Fi
+# WebSocket relay from a single URL. The client connects back to its own
+# origin (wss://<host>/ws), so loading the game from the Render URL makes
+# multiplayer work over any network (different Wi-Fi, hotspot, cellular).
+#
+# One-click deploy: in Render, New > Blueprint, point it at this repo.
+services:
+  - type: web
+    name: hex-snake
+    runtime: node
+    plan: free
+    autoDeploy: true
+    buildCommand: npm ci && npm run build
+    startCommand: node server.js --dist
+    # server.js serves JSON 200 here; used as the liveness probe.
+    healthCheckPath: /api/network-urls
+    envVars:
+      # server.js reads process.env.PORT (Render injects it) and HOST.
+      - key: NODE_VERSION
+        value: "20"
+      - key: HOST
+        value: 0.0.0.0
