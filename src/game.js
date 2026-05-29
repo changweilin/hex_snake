@@ -714,9 +714,10 @@
     function networkConnectionLabel() {
       const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
       const type = connection?.type;
-      if (type === "wifi") return "Wi-Fi";
-      if (type === "ethernet") return "LAN";
-      return "LAN/Wi-Fi";
+      // Wired/ethernet shows LAN; otherwise (wifi, or desktop browsers that do
+      // not expose connection.type) default to Wi-Fi, the primary play scenario.
+      if (type === "ethernet" || type === "wimax") return "LAN";
+      return "Wi-Fi";
     }
 
     function updateSettingsActionMode() {
